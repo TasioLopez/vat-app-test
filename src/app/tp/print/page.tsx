@@ -6,10 +6,21 @@ import TPPrintableClient from "@/components/tp/TPPrintableClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page({ searchParams }: { searchParams: { employeeId?: string } }) {
-  const employeeId = searchParams?.employeeId;
+// Support Next 14 (object) and Next 15 (Promise) searchParams
+type SP = { employeeId?: string; u?: string };
+function isPromise<T>(v: unknown): v is Promise<T> {
+  return !!v && typeof (v as any).then === "function";
+}
+
+export default async function Page(props: { searchParams: SP | Promise<SP> }) {
+  const sp = isPromise<SP>(props.searchParams)
+    ? await props.searchParams
+    : props.searchParams;
+
+  const employeeId = sp.employeeId;
   if (!employeeId) throw new Error("Employee ID is required");
 
+  // SSR Supabase session (Next 15+: cookies() can be awaited)
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,11 +34,14 @@ export default async function Page({ searchParams }: { searchParams: { employeeI
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const data = await loadTPData(employeeId, {
-    preferredConsultantUserId: user?.id,
-  });
+  // Fallback to ?u=<userId> if SSR auth/user is unavailable
+  const preferredConsultantUserId = user?.id ?? sp.u ?? undefined;
+
+  const data = await loadTPData(employeeId, { preferredConsultantUserId });
 
   return <TPPrintableClient employeeId={employeeId} data={data} />;
 }
