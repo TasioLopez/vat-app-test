@@ -87,8 +87,6 @@ export async function POST(req: NextRequest) {
       to: email,
       subject: "You're invited to join VAT",
       html: `
-<!DOCTYPE html>
-<html>
   <head>
     <meta charset="UTF-8" />
     <title>You're invited!</title>
@@ -129,7 +127,6 @@ export async function POST(req: NextRequest) {
       </tr>
     </table>
   </body>
-</html>
       `,
     });
 
