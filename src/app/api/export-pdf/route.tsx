@@ -4,8 +4,6 @@ import chromium from "@sparticuz/chromium";
 import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
 import path from "node:path";
-
-// ✅ NEW: get session user (optional, used for robust fallback)
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
@@ -13,44 +11,80 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// ----------------------------------------------------------------------------------
-// URL + Chrome helpers
+/** Base URL resolver WITHOUT env usage */
 function getBaseUrl(req: NextRequest) {
-    const env = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/, "");
-    if (env) return env;
-
-    const proto =
-        req.headers.get("x-forwarded-proto") ??
-        (process.env.NODE_ENV === "production" ? "https" : "http");
-    const host =
-        req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "localhost:3000";
-    return `${proto}://${host}`;
+  const proto = req.headers.get("x-forwarded-proto");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (proto && host) return `${proto}://${host}`;
+  const origin = req.nextUrl?.origin;
+  if (origin) return origin;
+  throw new Error("Cannot resolve base URL from request.");
 }
 
+/** Find a local Chrome (only used if `puppeteer` isn’t installed) — NO env vars */
 function resolveLocalChrome(): string | null {
-    const envPath =
-        process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH || "";
-    if (envPath && fs.existsSync(envPath)) return envPath;
+  const candidates =
+    process.platform === "win32"
+      ? [
+          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+          "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+          path.join(process.env.LOCALAPPDATA ?? "", "Google\\Chrome\\Application\\chrome.exe"),
+          path.join(process.env.PROGRAMFILES ?? "", "Google\\Chrome\\Application\\chrome.exe"),
+          path.join(process.env["PROGRAMFILES(X86)"] ?? "", "Google\\Chrome\\Application\\chrome.exe"),
+        ]
+      : process.platform === "darwin"
+      ? [
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+          "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+        ]
+      : ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium"];
 
-    const candidates =
-        process.platform === "win32"
-            ? [
-                "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-                "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-                path.join(
-                    process.env.LOCALAPPDATA ?? "",
-                    "Google\\Chrome\\Application\\chrome.exe"
-                ),
-            ]
-            : process.platform === "darwin"
-                ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
-                : ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
-
-    for (const p of candidates) if (p && fs.existsSync(p)) return p;
-    return null;
+  for (const p of candidates) if (p && fs.existsSync(p)) return p;
+  return null;
 }
-// ----------------------------------------------------------------------------------
 
+/** Launch a browser appropriate to the environment */
+async function launchBrowser() {
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (isProd) {
+    const puppeteer = await import("puppeteer-core");
+    return puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+
+  // Dev: prefer full puppeteer (bundled Chromium → zero config)
+  try {
+    const puppeteer = await import("puppeteer");
+    const execPath =
+      typeof (puppeteer as any).executablePath === "function"
+        ? (puppeteer as any).executablePath()
+        : undefined;
+
+    return puppeteer.launch({
+      headless: true,
+      executablePath: execPath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  } catch {
+    // Fallback: puppeteer-core + auto-found system Chrome (no env)
+    const puppeteerCore = await import("puppeteer-core");
+    const executablePath = resolveLocalChrome();
+    if (!executablePath) {
+      throw new Error(
+        "No local Chrome found. Install Google Chrome OR add `puppeteer` as a devDependency."
+      );
+    }
+    return puppeteerCore.launch({
+      headless: true,
+      executablePath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
+}
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams;
@@ -65,7 +99,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // ✅ Read current session user from the incoming request cookies (server side)
   const cookieStore = await cookies();
   const ssr = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -81,45 +114,19 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await ssr.auth.getUser();
 
   const base = getBaseUrl(req);
-
-  // ✅ Add fallback user id in the print URL (so /tp/print can pass it to loadTP if SSR fails)
   const printUrl =
     `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1` +
     (user?.id ? `&u=${encodeURIComponent(user.id)}` : "");
 
-  let browser: import("puppeteer-core").Browser | null = null;
+  let browser: any = null;
 
   try {
-    const puppeteer = await import("puppeteer-core");
-
-    if (process.env.NODE_ENV !== "production") {
-      const executablePath = resolveLocalChrome();
-      if (!executablePath) {
-        throw new Error("Could not find a local Chrome. Install Google Chrome or set PUPPETEER_EXECUTABLE_PATH to the Chrome binary.");
-      }
-      browser = await puppeteer.launch({
-        headless: true,
-        executablePath,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-    } else {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          ...chromium.args,
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--font-render-hinting=medium",
-          "--disable-gpu",
-        ],
-        executablePath: await chromium.executablePath(),
-      });
-    }
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
 
-    // ✅ CRITICAL: forward the user's cookies to the headless browser request
+    // forward request cookies (auth)
     const cookieHeader = req.headers.get("cookie") || "";
     if (cookieHeader) {
       await page.setExtraHTTPHeaders({ cookie: cookieHeader });
@@ -133,7 +140,7 @@ export async function GET(req: NextRequest) {
 
     await page.evaluate(async () => {
       // @ts-ignore
-      if (document.fonts?.ready) await (document as any).fonts.ready;
+      if ((document as any).fonts?.ready) await (document as any).fonts.ready;
     });
 
     await page.addStyleTag({
@@ -154,8 +161,11 @@ export async function GET(req: NextRequest) {
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    // ... Supabase storage code unchanged ...
-    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    // Upload to Supabase Storage
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
     const pathKey = `documents/${employeeId}/tp-final-${Date.now()}.pdf`;
 
     const { error: uploadErr } = await supabase.storage
@@ -182,10 +192,10 @@ export async function GET(req: NextRequest) {
       return new Response(null, { status: 307, headers: { Location: signedUrl } });
     }
     if (mode === "json") {
-      return new Response(JSON.stringify({ ok: true, path: pathKey, filename, signedUrl }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-      });
+      return new Response(
+        JSON.stringify({ ok: true, path: pathKey, filename, signedUrl }),
+        { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }
+      );
     }
 
     return new Response(pdfBuffer, {
@@ -198,11 +208,15 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("export-pdf error:", err);
-    return new Response(JSON.stringify({ error: "PDF generation failed", detail: String(err?.message || err) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "PDF generation failed", detail: String(err?.message || err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   } finally {
-    try { await browser?.close(); } catch {}
+    try {
+      const pages = (await browser?.pages?.()) || [];
+      await Promise.allSettled(pages.map((p: any) => p.close().catch(() => {})));
+      await browser?.close();
+    } catch {}
   }
 }
