@@ -87,10 +87,49 @@ export async function POST(req: NextRequest) {
       to: email,
       subject: "You're invited to join VAT",
       html: `
-        <p>Hi ${first_name ?? ""}${first_name ? "," : ""}</p>
-        <p>You’ve been invited to join VAT.
-        <a href="${signupUrl.toString()}">Click here to sign up</a>.</p>
-        <p><small>This link is valid for 24 hours.</small></p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>You're invited!</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8f9fb; margin: 0; padding: 0;">
+    <table width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8f9fb; padding: 40px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+            <tr>
+              <td style="padding: 30px; text-align: center; background-color: #4f46e5; color: #ffffff;">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 600;">Welcome to VAT Assist 🎉</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 30px; color: #333333; font-size: 16px; line-height: 1.6;">
+                <p>Hi there,</p>
+                <p>You’ve been invited to join <strong>VAT Assist</strong>. To get started, please confirm your email address and set up your account.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="{{ .ConfirmationURL }}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">
+                    Confirm Your Account
+                  </a>
+                </div>
+                <p>If the button above doesn’t work, copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #4f46e5;">{{ .ConfirmationURL }}</p>
+                <p style="margin-top: 30px;">We’re excited to have you on board!</p>
+                <p>The <strong>VAT Assist</strong> Team</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 13px; color: #666;">
+                <p style="margin: 0;">If you didn’t request this, you can safely ignore this email.</p>
+                <p style="margin: 5px 0 0;">© 2025 VAT Assist. All rights reserved.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
       `,
     });
 
