@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // ...
     await transporter.sendMail({
       from: `"VAT App" <${process.env.SMTP_USER}>`,
       to: email,
@@ -106,12 +107,12 @@ export async function POST(req: NextRequest) {
                 <p>Hi there,</p>
                 <p>You’ve been invited to join <strong>VAT Assist</strong>. To get started, please confirm your email address and set up your account.</p>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="{{ .ConfirmationURL }}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">
+                  <a href="${signupUrl.toString()}" style="background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">
                     Confirm Your Account
                   </a>
                 </div>
                 <p>If the button above doesn’t work, copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #4f46e5;">{{ .ConfirmationURL }}</p>
+                <p style="word-break: break-all; color: #4f46e5;">${signupUrl.toString()}</p>
                 <p style="margin-top: 30px;">We’re excited to have you on board!</p>
                 <p>The <strong>VAT Assist</strong> Team</p>
               </td>
