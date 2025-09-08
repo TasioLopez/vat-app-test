@@ -22,9 +22,9 @@ function SignupForm() {
   const token = searchParams.get("token") ?? "";
 
   const [firstName, setFirstName] = useState("");
-  const [lastName,  setLastName]  = useState("");
-  const [password,  setPassword]  = useState("");
-  const [error,     setError]     = useState("");
+  const [lastName, setLastName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   // Create the Supabase browser client once
   const supabase = useMemo(() => {
@@ -91,38 +91,40 @@ function SignupForm() {
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-xl font-semibold mb-4">Voltooi uw aanmelding</h1>
-      <p className="text-sm mb-2 text-gray-600">Email: {email || "—"}</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="w-full max-w-md bg-white shadow rounded-lg p-6">
+        <h1 className="text-xl font-semibold mb-4">Voltooi uw aanmelding</h1>
+        <p className="text-sm mb-2 text-gray-600">Email: {email || "—"}</p>
 
-      <input
-        placeholder="Voornaam"
-        value={firstName}
-        onChange={(e) => setFirstName(e.target.value)}
-        className="mb-2 w-full border p-2"
-      />
-      <input
-        placeholder="Achternaam"
-        value={lastName}
-        onChange={(e) => setLastName(e.target.value)}
-        className="mb-2 w-full border p-2"
-      />
-      <input
-        type="password"
-        placeholder="Wachtwoord"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="mb-2 w-full border p-2"
-      />
+        <input
+          placeholder="Voornaam"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          className="mb-2 w-full border p-2 rounded"
+        />
+        <input
+          placeholder="Achternaam"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="mb-2 w-full border p-2 rounded"
+        />
+        <input
+          type="password"
+          placeholder="Wachtwoord"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="mb-2 w-full border p-2 rounded"
+        />
 
-      <button
-        onClick={handleSignup}
-        className="bg-blue-600 text-white px-4 py-2 rounded w-full"
-      >
-        Indienen
-      </button>
+        <button
+          onClick={handleSignup}
+          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+        >
+          Indienen
+        </button>
 
-      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+      </div>
     </div>
   );
 }
