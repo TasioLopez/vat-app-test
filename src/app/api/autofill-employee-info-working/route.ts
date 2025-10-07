@@ -23,12 +23,13 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Simple text extraction from PDF using a different approach
+// Real PDF text extraction using pdf-parse
 async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
   try {
-    // For now, return a placeholder that indicates we're processing the document
-    // In a real implementation, you would use a PDF parsing library
-    return 'PDF content extracted - this would contain the actual text from the document';
+    // Import pdf-parse dynamically to avoid build issues
+    const pdf = await import('pdf-parse');
+    const data = await pdf.default(buffer);
+    return data.text || '';
   } catch (error) {
     console.error('PDF extraction failed:', error);
     return '';
@@ -59,15 +60,17 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 3. FML/IZP (derde prioriteit)
 4. OVERIG (laagste prioriteit)
 
+BELANGRIJK: Je MOET alle velden invullen. Als informatie niet expliciet in de documenten staat, gebruik dan "Niet vermeld" of een redelijke inschatting.
+
 Haal de volgende gegevens uit de documenten:
-- Beroep of functie van de werknemer (current_job)
-- Relevante werkervaring (work_experience)
-- Opleidingsniveau (education_level) - Kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO
+- Beroep of functie van de werknemer (current_job) - VERPLICHT
+- Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
+- Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO
 - Rijbewijs (drivers_license) - true/false
 - Vervoer beschikbaar (has_transport) - true/false
 - Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
 - Contracturen (contract_hours) - aantal uren per week
-- Andere werkgevers (other_employers) - indien vermeld
+- Andere werkgevers (other_employers) - VERPLICHT, vermeld alle andere werkgevers of "Geen andere werkgevers"
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
 - Heeft de werknemer een computer thuis? (has_computer) - true/false
 
@@ -193,11 +196,14 @@ export async function GET(req: NextRequest) {
 
         // Extract text from PDF
         const text = await extractTextFromPdfSimple(buffer);
+        console.log('📄 Extracted text length:', text.length, 'from', doc.name);
         if (text && text.trim().length > 10) {
           const docType = doc.type || 'UNKNOWN';
           documentTexts.push(`=== ${docType.toUpperCase()} ===\n${text.trim()}`);
           processedCount++;
-          console.log('✅ Extracted text from:', doc.name);
+          console.log('✅ Successfully processed:', doc.name, 'Type:', docType, 'Text preview:', text.substring(0, 100) + '...');
+        } else {
+          console.warn('⚠️ No text extracted from:', doc.name);
         }
       } catch (error) {
         console.error('Error processing document:', doc.name, error);
