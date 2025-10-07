@@ -242,7 +242,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             const res = await fetch(`/api/autofill-employee-info?employeeId=${employeeId}`);
             const json = await res.json();
 
-            if (json.details) {
+            if (!res.ok) {
+                throw new Error(json.error || `HTTP ${res.status}: ${res.statusText}`);
+            }
+
+            if (json.details && Object.keys(json.details).length > 0) {
                 const fields = Object.keys(json.details);
 
                 // Create a new updated version of the employeeDetails object
@@ -261,9 +265,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 await supabase
                     .from('employee_details')
                     .upsert([updatedDetails], { onConflict: 'employee_id' });
+
+                alert('AI autofill succesvol uitgevoerd!');
+            } else {
+                alert('Geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
             }
         } catch (err) {
             console.error('Autofill mislukt:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Onbekende fout opgetreden';
+            alert(`Autofill mislukt: ${errorMessage}`);
         } finally {
             setAiLoading(false);
         }

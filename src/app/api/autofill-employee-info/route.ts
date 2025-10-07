@@ -1,15 +1,9 @@
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
+import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID } from '@/lib/api-utils';
+import { OpenAIService } from '@/lib/openai-service';
+import { SupabaseService } from '@/lib/supabase-service';
 import pdf from 'pdf-parse';
 import type { ChatCompletionMessageParam } from 'openai/resources';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 function splitIntoChunks(text: string, maxLen = 4000): string[] {
   const lines = text.split('\n');
@@ -70,9 +64,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
-    if (!employeeId) {
-      return new Response(JSON.stringify({ error: 'Ontbrekende employeeId' }), { status: 400 });
-    }
+    
+    // Validate input
+    validateRequiredFields({ employeeId }, ['employeeId']);
+    validateUUID(employeeId!, 'Employee ID');
+
+    const supabaseService = SupabaseService.getInstance();
+    const supabase = supabaseService.getClient();
 
     const { data: docs, error } = await supabase
       .from('documents')
@@ -80,7 +78,10 @@ export async function GET(req: NextRequest) {
       .eq('employee_id', employeeId);
 
     if (error || !docs?.length) {
-      return new Response(JSON.stringify({ error: 'No documents found' }), { status: 404 });
+      return createSuccessResponse(
+        { details: {} },
+        'No documents found for this employee'
+      );
     }
 
     const sections: string[] = [];
@@ -115,9 +116,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (!sections.length) {
-      return new Response(
-        JSON.stringify({ error: 'No readable content in uploaded documents' }),
-        { status: 400 }
+      return createSuccessResponse(
+        { details: {} },
+        'No readable content in uploaded documents'
       );
     }
 
@@ -148,63 +149,56 @@ Zorg dat elk veld gebaseerd is op expliciete informatie uit het document.
       ...chunks.map((chunk) => ({ role: 'user', content: chunk })) as ChatCompletionMessageParam[]
     ];
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      temperature: 0,
-      messages,
-      tools: [
-        {
-          type: 'function',
-          function: {
-            name: 'extract_employee_fields',
-            description: 'Extract structured employee profile fields',
-            parameters: {
-              type: 'object',
-              properties: {
-                current_job: { type: 'string' },
-                work_experience: { type: 'string' },
-                education_level: { type: 'string' },
-                drivers_license: { type: 'boolean' },
-                has_transport: { type: 'boolean' },
-                dutch_speaking: { type: 'boolean' },
-                dutch_writing: { type: 'boolean' },
-                dutch_reading: { type: 'boolean' },
-                has_computer: { type: 'boolean' },
-                computer_skills: { type: 'integer', minimum: 1, maximum: 5 },
-                contract_hours: { type: 'integer' },
-                other_employers: { type: 'string' }
-              },
-              required: ['current_job', 'education_level']
-            }
-          }
+    const openaiService = OpenAIService.getInstance();
+    
+    const toolSchema = {
+      type: "function" as const,
+      function: {
+        name: "extract_employee_fields",
+        description: "Extract structured employee profile fields",
+        parameters: {
+          type: "object" as const,
+          properties: {
+            current_job: { type: "string" as const },
+            work_experience: { type: "string" as const },
+            education_level: { type: "string" as const },
+            drivers_license: { type: "boolean" as const },
+            has_transport: { type: "boolean" as const },
+            dutch_speaking: { type: "boolean" as const },
+            dutch_writing: { type: "boolean" as const },
+            dutch_reading: { type: "boolean" as const },
+            has_computer: { type: "boolean" as const },
+            computer_skills: { type: "integer" as const, minimum: 1, maximum: 5 },
+            contract_hours: { type: "integer" as const },
+            other_employers: { type: "string" as const }
+          },
+          required: ["current_job", "education_level"]
         }
-      ],
-      tool_choice: {
-        type: 'function',
-        function: { name: 'extract_employee_fields' }
       }
-    });
+    };
 
-    const args = response.choices[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const result = await openaiService.generateContent(
+      systemPrompt,
+      chunks.join('\n\n'),
+      toolSchema,
+      { temperature: 0 }
+    );
 
-    try {
-      const details = JSON.parse(args || '{}');
-      return new Response(
-        JSON.stringify({ details, autofilled_fields: Object.keys(details) }),
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-    } catch (err) {
-      console.error('❌ Kon assistent output niet verwerken:', err);
-      return new Response(
-        JSON.stringify({ error: 'Ongeldige assistent output' }),
-        { status: 500 }
+    if (!result) {
+      return createSuccessResponse(
+        { details: {} },
+        'Failed to generate content from documents'
       );
     }
-  } catch (err: any) {
-    console.error('❌ Unexpected server error:', err);
-    return new Response(
-      JSON.stringify({ error: 'Unexpected server error', details: err.message }),
-      { status: 500 }
+
+    return createSuccessResponse(
+      { 
+        details: result, 
+        autofilled_fields: Object.keys(result) 
+      },
+      'Employee information successfully extracted'
     );
+  } catch (error) {
+    return handleAPIError(error);
   }
 }
