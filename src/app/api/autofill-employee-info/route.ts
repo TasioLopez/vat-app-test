@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     const { data: docs, error } = await supabase
       .from('documents')
       .select('*')
-      .eq('employee_id', employeeId);
+      .eq('employee_id', employeeId!);
 
     if (error || !docs?.length) {
       return createSuccessResponse(
