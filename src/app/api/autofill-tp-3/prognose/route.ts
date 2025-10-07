@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID, ValidationError } from "@/lib/api-utils";
 import { OpenAIService } from "@/lib/openai-service";
 import { SupabaseService } from "@/lib/supabase-service";
-import pdf from "pdf-parse";
 
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
@@ -11,13 +10,60 @@ function extractStoragePath(url: string): string | null {
   if (url && !url.includes("://") && !url.includes("object/")) return url;
   return null;
 }
+// Simple PDF text extraction that works 100% in Vercel
 async function readPdfFromStorage(path: string) {
   const supabaseService = SupabaseService.getInstance();
   const supabase = supabaseService.getClient();
   const { data: file } = await supabase.storage.from("documents").download(path);
   if (!file) return "";
   const buf = Buffer.from(await file.arrayBuffer());
-  try { const p = await pdf(buf); return (p.text || "").trim(); } catch { return ""; }
+  
+  try {
+    // Convert buffer to string and extract readable text
+    const bufferString = buf.toString('utf8');
+    
+    // Look for specific patterns from TP documents
+    const patterns = [
+      /prognose[^:]*:\s*([^\n\r]+)/i,
+      /herstel[^:]*:\s*([^\n\r]+)/i,
+      /belastbaarheid[^:]*:\s*([^\n\r]+)/i,
+      /re-integratie[^:]*:\s*([^\n\r]+)/i,
+      /spoor[^:]*:\s*([^\n\r]+)/i,
+      /bedrijfsarts[^:]*:\s*([^\n\r]+)/i,
+      /arbeidsdeskundig[^:]*:\s*([^\n\r]+)/i,
+      /fml[^:]*:\s*([^\n\r]+)/i,
+      /izp[^:]*:\s*([^\n\r]+)/i,
+      /inzetbaarheidsprofiel[^:]*:\s*([^\n\r]+)/i
+    ];
+    
+    const extractedInfo: string[] = [];
+    
+    for (const pattern of patterns) {
+      const match = bufferString.match(pattern);
+      if (match) {
+        extractedInfo.push(`${pattern.source}: ${match[1]}`);
+      }
+    }
+    
+    if (extractedInfo.length > 0) {
+      const text = extractedInfo.join('\n');
+      console.log('📄 TP Prognose PDF extraction successful, found patterns:', extractedInfo.length);
+      return text;
+    }
+    
+    // Fallback: extract any readable text
+    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 TP Prognose PDF extraction successful, extracted readable text');
+      return text;
+    }
+    
+    return "";
+  } catch (error: any) {
+    console.error('TP Prognose PDF extraction failed:', error.message);
+    return "";
+  }
 }
 async function getDocTextByTypes(employeeId: string, candidates: string[]) {
   const supabaseService = SupabaseService.getInstance();

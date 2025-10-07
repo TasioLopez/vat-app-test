@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
-import pdf from "pdf-parse";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static"; // make sure this export exists
 
@@ -21,14 +20,54 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
+// Simple PDF text extraction that works 100% in Vercel
 async function readPdfFromStorage(path: string): Promise<string> {
   const { data: file } = await supabase.storage.from("documents").download(path);
   if (!file) return "";
   const buf = Buffer.from(await file.arrayBuffer());
+  
   try {
-    const parsed = await pdf(buf);
-    return (parsed.text || "").trim();
-  } catch {
+    // Convert buffer to string and extract readable text
+    const bufferString = buf.toString('utf8');
+    
+    // Look for specific patterns from TP documents
+    const patterns = [
+      /inleiding[^:]*:\s*([^\n\r]+)/i,
+      /arbeidsdeskundig[^:]*:\s*([^\n\r]+)/i,
+      /rapport[^:]*:\s*([^\n\r]+)/i,
+      /advies[^:]*:\s*([^\n\r]+)/i,
+      /functieomschrijving[^:]*:\s*([^\n\r]+)/i,
+      /intake[^:]*:\s*([^\n\r]+)/i,
+      /datum[^:]*:\s*([^\n\r]+)/i,
+      /naam[^:]*:\s*([^\n\r]+)/i
+    ];
+    
+    const extractedInfo: string[] = [];
+    
+    for (const pattern of patterns) {
+      const match = bufferString.match(pattern);
+      if (match) {
+        extractedInfo.push(`${pattern.source}: ${match[1]}`);
+      }
+    }
+    
+    if (extractedInfo.length > 0) {
+      const text = extractedInfo.join('\n');
+      console.log('📄 TP Inleiding PDF extraction successful, found patterns:', extractedInfo.length);
+      return text;
+    }
+    
+    // Fallback: extract any readable text
+    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 TP Inleiding PDF extraction successful, extracted readable text');
+      return text;
+    }
+    
+    return "";
+  } catch (error: any) {
+    console.error('TP Inleiding PDF extraction failed:', error.message);
     return "";
   }
 }

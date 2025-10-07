@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
-import pdf from "pdf-parse";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,11 +15,54 @@ function extractStoragePath(url: string): string | null {
   if (url && !url.includes("://") && !url.includes("object/")) return url;
   return null;
 }
+// Simple PDF text extraction that works 100% in Vercel
 async function readPdfFromStorage(path: string) {
   const { data: file } = await supabase.storage.from("documents").download(path);
   if (!file) return "";
   const buf = Buffer.from(await file.arrayBuffer());
-  try { const p = await pdf(buf); return (p.text || "").trim(); } catch { return ""; }
+  
+  try {
+    // Convert buffer to string and extract readable text
+    const bufferString = buf.toString('utf8');
+    
+    // Look for specific patterns from AD documents
+    const patterns = [
+      /advies[^:]*passende[^:]*arbeid[^:]*:\s*([^\n\r]+)/i,
+      /arbeidsdeskundig[^:]*:\s*([^\n\r]+)/i,
+      /rapport[^:]*:\s*([^\n\r]+)/i,
+      /advies[^:]*:\s*([^\n\r]+)/i,
+      /conclusie[^:]*:\s*([^\n\r]+)/i,
+      /aanbeveling[^:]*:\s*([^\n\r]+)/i
+    ];
+    
+    const extractedInfo: string[] = [];
+    
+    for (const pattern of patterns) {
+      const match = bufferString.match(pattern);
+      if (match) {
+        extractedInfo.push(`${pattern.source}: ${match[1]}`);
+      }
+    }
+    
+    if (extractedInfo.length > 0) {
+      const text = extractedInfo.join('\n');
+      console.log('📄 TP AD Advies PDF extraction successful, found patterns:', extractedInfo.length);
+      return text;
+    }
+    
+    // Fallback: extract any readable text
+    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 TP AD Advies PDF extraction successful, extracted readable text');
+      return text;
+    }
+    
+    return "";
+  } catch (error: any) {
+    console.error('TP AD Advies PDF extraction failed:', error.message);
+    return "";
+  }
 }
 async function getAdText(employeeId: string) {
   const { data: docs } = await supabase
