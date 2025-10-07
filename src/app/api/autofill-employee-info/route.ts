@@ -40,6 +40,12 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   try {
+    // Check if mammoth is available
+    if (typeof mammoth === 'undefined') {
+      console.warn('⚠️ Mammoth library not available, skipping DOCX processing');
+      return '';
+    }
+    
     const result = await mammoth.extractRawText({ buffer });
     if (result.value && result.value.trim().length > 20) {
       console.log('✅ Extracted text directly from DOCX.');
@@ -134,39 +140,52 @@ export async function GET(req: NextRequest) {
     const sections: string[] = [];
 
     for (const doc of sortedDocs) {
-      if (!doc.url) continue;
+      try {
+        if (!doc.url) {
+          console.warn('⚠️ Document has no URL:', doc.id);
+          continue;
+        }
 
-      const path = extractStoragePath(doc.url);
-      if (!path) {
-        console.warn('⚠️ Skipped file with bad URL:', doc.url);
-        continue;
+        const path = extractStoragePath(doc.url);
+        if (!path) {
+          console.warn('⚠️ Skipped file with bad URL:', doc.url);
+          continue;
+        }
+
+        const { data: file, error: downloadError } = await supabase.storage
+          .from('documents')
+          .download(path);
+
+        if (!file || downloadError) {
+          console.warn('⚠️ Kon bestand niet downloaden:', path, downloadError?.message);
+          continue;
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        console.log('📦 Downloaded file buffer size:', buffer.length);
+
+        const text = await extractTextFromDocument(buffer, doc.name || '');
+        if (!text?.trim()) {
+          console.warn('⚠️ No text extracted from document:', doc.name);
+          continue;
+        }
+
+        const withHeaders = addSectionHeaders(text.trim());
+        const docType = doc.type || 'UNKNOWN';
+        sections.push(`== ${docType.toUpperCase()} ==\n${withHeaders}`);
+        console.log('✅ Successfully processed document:', doc.name, 'Type:', docType);
+      } catch (docError) {
+        console.error('❌ Error processing document:', doc.name, docError);
+        continue; // Continue with next document
       }
-
-      const { data: file, error: downloadError } = await supabase.storage
-        .from('documents')
-        .download(path);
-
-      if (!file || downloadError) {
-        console.warn('⚠️ Kon bestand niet downloaden:', path);
-        continue;
-      }
-
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      console.log('📦 Downloaded file buffer size:', buffer.length);
-
-      const text = await extractTextFromDocument(buffer, doc.name || '');
-      if (!text?.trim()) continue;
-
-      const withHeaders = addSectionHeaders(text.trim());
-      const docType = doc.type || 'UNKNOWN';
-      sections.push(`== ${docType.toUpperCase()} ==\n${withHeaders}`);
     }
 
     if (!sections.length) {
+      // If no documents could be processed, return a helpful message
       return createSuccessResponse(
         { details: {} },
-        'No readable content in uploaded documents'
+        'No readable content found in uploaded documents. Please ensure documents are in PDF or DOCX format and contain sufficient text.'
       );
     }
 
@@ -233,14 +252,16 @@ REGEL: Bij conflicterende informatie tussen documenten, geef ALTIJD voorrang aan
 
     let result;
     try {
+      console.log('🤖 Starting OpenAI processing with', chunks.length, 'chunks');
       result = await openaiService.generateContent(
         systemPrompt,
         chunks.join('\n\n'),
         toolSchema,
         { temperature: 0, maxTokens: 4000 }
       );
+      console.log('✅ OpenAI processing completed successfully');
     } catch (openaiError) {
-      console.error('OpenAI generation failed:', openaiError);
+      console.error('❌ OpenAI generation failed:', openaiError);
       return createSuccessResponse(
         { details: {} },
         'AI processing failed. Please try again or contact support.'
@@ -248,6 +269,7 @@ REGEL: Bij conflicterende informatie tussen documenten, geef ALTIJD voorrang aan
     }
 
     if (!result) {
+      console.warn('⚠️ OpenAI returned empty result');
       return createSuccessResponse(
         { details: {} },
         'Failed to generate content from documents'
