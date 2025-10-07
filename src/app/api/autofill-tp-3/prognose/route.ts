@@ -89,8 +89,8 @@ ${(FML || AD).slice(0, 22000)}
         name: "build_prognose",
         description: "Bouw prognose in 1–2 alinea's",
         parameters: {
-          type: "object",
-          properties: { prognose_bedrijfsarts: { type: "string" } },
+          type: "object" as const,
+          properties: { prognose_bedrijfsarts: { type: "string" as const } },
           required: ["prognose_bedrijfsarts"]
         }
       }
