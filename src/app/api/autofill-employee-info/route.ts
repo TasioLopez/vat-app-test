@@ -112,7 +112,8 @@ export async function GET(req: NextRequest) {
       if (!text?.trim()) continue;
 
       const withHeaders = addSectionHeaders(text.trim());
-      sections.push(`== ${doc.type.toUpperCase()} ==\n${withHeaders}`);
+      const docType = doc.type || 'UNKNOWN';
+      sections.push(`== ${docType.toUpperCase()} ==\n${withHeaders}`);
     }
 
     if (!sections.length) {
