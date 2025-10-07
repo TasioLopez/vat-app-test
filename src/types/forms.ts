@@ -48,7 +48,7 @@ export const signupSchema = z.object({
 });
 
 export const documentUploadSchema = z.object({
-  file: z.instanceof(File, 'Bestand is verplicht'),
+  file: z.instanceof(File, { message: 'Bestand is verplicht' }),
   employee_id: z.string().uuid('Ongeldig werknemer ID'),
   type: z.string().min(1, 'Documenttype is verplicht'),
   name: z.string().min(1, 'Bestandsnaam is verplicht'),
