@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import pdf from 'pdf-parse';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -23,19 +24,18 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Real PDF text extraction using pdf-parse
+// Real PDF text extraction using pdf-parse with static import
 async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
   try {
-    // Try to import pdf-parse
-    const pdf = await import('pdf-parse');
-    const data = await pdf.default(buffer);
+    // Use statically imported pdf-parse
+    const data = await pdf(buffer);
     const text = data.text || '';
     console.log('📄 PDF extraction successful, text length:', text.length);
     console.log('📄 First 500 characters:', text.substring(0, 500));
     return text;
-  } catch (error) {
-    console.error('PDF extraction failed:', error);
-    // Return empty string to force proper error handling
+  } catch (error: any) {
+    console.error('PDF extraction failed:', error.message);
+    console.error('Error stack:', error.stack);
     return '';
   }
 }
@@ -68,9 +68,11 @@ BELANGRIJK: Je MOET alle velden invullen met EXACTE informatie uit de documenten
 
 Zoek specifiek naar deze informatie in de documenten:
 - Naam werknemer, Gespreksdatum, Leeftijd werknemer, Geslacht werknemer
-- Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:"
-- Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:"
-- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen"
+- Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:" (bijv. "Huiskamerbegeleider")
+- Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
+- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24")
+- Leeftijd werknemer - zoek naar "Leeftijd werknemer:" (bijv. "56")
+- Geslacht werknemer - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
 - Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO
 - Rijbewijs (drivers_license) - true/false
