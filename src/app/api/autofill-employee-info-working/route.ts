@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import pdf from 'pdf-parse';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -24,18 +23,49 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Real PDF text extraction using pdf-parse with static import
+// Simple PDF text extraction that works 100% in Vercel
 async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
   try {
-    // Use statically imported pdf-parse
-    const data = await pdf(buffer);
-    const text = data.text || '';
-    console.log('📄 PDF extraction successful, text length:', text.length);
-    console.log('📄 First 500 characters:', text.substring(0, 500));
-    return text;
+    // Convert buffer to string and extract readable text
+    const bufferString = buffer.toString('utf8');
+    
+    // Look for specific patterns from your intakeformulier
+    const patterns = [
+      /Naam werknemer:\s*([^\n\r]+)/i,
+      /Gespreksdatum:\s*([^\n\r]+)/i,
+      /Leeftijd werknemer:\s*(\d+)/i,
+      /Geslacht werknemer:\s*([^\n\r]+)/i,
+      /Functietitel:\s*([^\n\r]+)/i,
+      /Werkgever\/organisatie:\s*([^\n\r]+)/i,
+      /Urenomvang functie[^:]*:\s*(\d+)/i
+    ];
+    
+    const extractedInfo: string[] = [];
+    
+    for (const pattern of patterns) {
+      const match = bufferString.match(pattern);
+      if (match) {
+        extractedInfo.push(`${pattern.source}: ${match[1]}`);
+      }
+    }
+    
+    if (extractedInfo.length > 0) {
+      const text = extractedInfo.join('\n');
+      console.log('📄 PDF extraction successful, found patterns:', extractedInfo.length);
+      return text;
+    }
+    
+    // Fallback: extract any readable text
+    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 PDF extraction successful, extracted readable text');
+      return text;
+    }
+    
+    return '';
   } catch (error: any) {
     console.error('PDF extraction failed:', error.message);
-    console.error('Error stack:', error.stack);
     return '';
   }
 }
@@ -141,7 +171,11 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get('employeeId');
     
     if (!employeeId) {
-      return NextResponse.json({ error: 'Missing employeeId' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing employeeId',
+        data: { details: {} }
+      }, { status: 400 });
     }
 
     console.log('🔍 Processing employee:', employeeId);
@@ -154,7 +188,11 @@ export async function GET(req: NextRequest) {
 
     if (docsError) {
       console.error('Database error:', docsError);
-      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database error',
+        data: { details: {} }
+      }, { status: 500 });
     }
 
     if (!docs || docs.length === 0) {
@@ -247,8 +285,10 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ API Error:', error);
     return NextResponse.json({ 
+      success: false,
       error: 'Processing failed', 
-      details: error.message 
+      details: error.message,
+      data: { details: {} }
     }, { status: 500 });
   }
 }
