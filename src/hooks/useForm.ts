@@ -6,7 +6,7 @@ import { useToastHelpers } from '@/components/ui/Toast';
 
 interface UseFormOptions<T> {
   initialValues: T;
-  validationSchema?: z.ZodSchema<T>;
+  validationSchema?: z.ZodObject<any> | z.ZodSchema<T>;
   onSubmit: (data: T) => Promise<void> | void;
   validateOnChange?: boolean;
   validateOnBlur?: boolean;
@@ -48,16 +48,28 @@ export function useForm<T extends Record<string, any>>({
     if (!validationSchema) return true;
 
     try {
-      const fieldSchema = validationSchema.shape?.[field as string];
-      if (fieldSchema) {
-        fieldSchema.parse(values[field]);
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[field];
-          return newErrors;
-        });
-        return true;
+      // Check if it's a ZodObject with shape property
+      if ('shape' in validationSchema && validationSchema.shape) {
+        const fieldSchema = validationSchema.shape[field as string];
+        if (fieldSchema) {
+          fieldSchema.parse(values[field]);
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[field];
+            return newErrors;
+          });
+          return true;
+        }
       }
+      
+      // Fallback: validate the entire object and extract field error
+      validationSchema.parse(values);
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+      return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldError = error.errors.find(e => e.path[0] === field);
