@@ -3,7 +3,7 @@ import { handleAPIError, createSuccessResponse, validateRequiredFields, validate
 import { OpenAIService } from '@/lib/openai-service';
 import { SupabaseService } from '@/lib/supabase-service';
 import pdf from 'pdf-parse';
-import mammoth from 'mammoth';
+// import mammoth from 'mammoth'; // Temporarily disabled
 import type { ChatCompletionMessageParam } from 'openai/resources';
 
 function splitIntoChunks(text: string, maxLen = 4000): string[] {
@@ -40,20 +40,8 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   try {
-    // Check if mammoth is available
-    if (typeof mammoth === 'undefined') {
-      console.warn('⚠️ Mammoth library not available, skipping DOCX processing');
-      return '';
-    }
-    
-    const result = await mammoth.extractRawText({ buffer });
-    if (result.value && result.value.trim().length > 20) {
-      console.log('✅ Extracted text directly from DOCX.');
-      return result.value;
-    } else {
-      console.warn('⚠️ Extracted text was too short.');
-      return '';
-    }
+    console.warn('⚠️ DOCX processing temporarily disabled');
+    return '';
   } catch (err) {
     console.error('❌ DOCX text extraction failed:', err);
     return '';
