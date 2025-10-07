@@ -6,18 +6,13 @@ import TPPrintableClient from "@/components/tp/TPPrintableClient";
 
 export const dynamic = "force-dynamic";
 
-// Support Next 14 (object) and Next 15 (Promise) searchParams
-type SP = { employeeId?: string; u?: string };
-function isPromise<T>(v: unknown): v is Promise<T> {
-  return !!v && typeof (v as any).then === "function";
-}
+// Next.js 15 searchParams type
+type SearchParams = { employeeId?: string; u?: string };
 
-export default async function Page(props: { searchParams: SP | Promise<SP> }) {
-  const sp = isPromise<SP>(props.searchParams)
-    ? await props.searchParams
-    : props.searchParams;
-
-  const employeeId = sp.employeeId;
+export default async function Page(props: { searchParams: Promise<SearchParams> }) {
+  const searchParams = await props.searchParams;
+  const employeeId = searchParams.employeeId;
+  
   if (!employeeId) throw new Error("Employee ID is required");
 
   // SSR Supabase session (Next 15+: cookies() can be awaited)
@@ -39,7 +34,7 @@ export default async function Page(props: { searchParams: SP | Promise<SP> }) {
   } = await supabase.auth.getUser();
 
   // Fallback to ?u=<userId> if SSR auth/user is unavailable
-  const preferredConsultantUserId = user?.id ?? sp.u ?? undefined;
+  const preferredConsultantUserId = user?.id ?? searchParams.u ?? undefined;
 
   const data = await loadTPData(employeeId, { preferredConsultantUserId });
 
