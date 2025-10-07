@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       },
       'Mock employee information generated successfully'
     );
-  } catch (error) {
+  } catch (error: any) {
     return handleAPIError(error);
   }
 }

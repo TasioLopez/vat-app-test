@@ -31,7 +31,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     const pdfParse = await import('pdf-parse');
     const data = await pdfParse.default(buffer);
     return data.text || '';
-  } catch (error) {
+  } catch (error: any) {
     console.error('PDF extraction failed:', error);
     
     // Fallback: Try to extract basic text patterns
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
         } else {
           console.warn('⚠️ No text extracted from:', doc.name);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing document:', doc.name, error);
         continue;
       }

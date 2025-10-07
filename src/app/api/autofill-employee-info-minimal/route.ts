@@ -32,7 +32,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
     const data = await pdf(buffer);
     return data.text || '';
-  } catch (error) {
+  } catch (error: any) {
     console.error('PDF extraction failed:', error);
     return '';
   }
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
           processedCount++;
           console.log('✅ Extracted text from:', doc.name, 'Length:', text.length);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing document:', doc.name, error);
         continue;
       }

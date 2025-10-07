@@ -112,7 +112,7 @@ ${(FML || AD).slice(0, 22000)}
       { prognose_bedrijfsarts: text },
       "Prognose successfully generated"
     );
-  } catch (error) {
+  } catch (error: any) {
     return handleAPIError(error);
   }
 }

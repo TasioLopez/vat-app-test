@@ -70,7 +70,7 @@ async function launchBrowser() {
       executablePath,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-  } catch (error) {
+  } catch (error: any) {
     throw new Error(`Failed to launch browser: ${error}`);
   }
 }

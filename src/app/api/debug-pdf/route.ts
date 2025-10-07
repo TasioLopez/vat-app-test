@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
         const buffer = Buffer.from(arrayBuffer);
 
         // Try different extraction methods
-        const extractionResults = {
+        const extractionResults: any = {
           name: doc.name,
           type: doc.type,
           fileSize: buffer.length,
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
             textPreview: data.text?.substring(0, 500) || '',
             fullText: data.text || ''
           };
-        } catch (error) {
+        } catch (error: any) {
           extractionResults.methods.pdfParse = {
             success: false,
             error: error.message
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
             textPreview: textMatches?.join(' ').substring(0, 500) || '',
             fullText: textMatches?.join(' ') || ''
           };
-        } catch (error) {
+        } catch (error: any) {
           extractionResults.methods.rawBuffer = {
             success: false,
             error: error.message
@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
             textPreview: textMatches?.join(' ').substring(0, 500) || '',
             fullText: textMatches?.join(' ') || ''
           };
-        } catch (error) {
+        } catch (error: any) {
           extractionResults.methods.binaryBuffer = {
             success: false,
             error: error.message
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
 
         results.push(extractionResults);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing document:', doc.name, error);
         results.push({
           name: doc.name,
