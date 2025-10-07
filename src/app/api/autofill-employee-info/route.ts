@@ -178,12 +178,21 @@ Zorg dat elk veld gebaseerd is op expliciete informatie uit het document.
       }
     };
 
-    const result = await openaiService.generateContent(
-      systemPrompt,
-      chunks.join('\n\n'),
-      toolSchema,
-      { temperature: 0 }
-    );
+    let result;
+    try {
+      result = await openaiService.generateContent(
+        systemPrompt,
+        chunks.join('\n\n'),
+        toolSchema,
+        { temperature: 0, maxTokens: 4000 }
+      );
+    } catch (openaiError) {
+      console.error('OpenAI generation failed:', openaiError);
+      return createSuccessResponse(
+        { details: {} },
+        'AI processing failed. Please try again or contact support.'
+      );
+    }
 
     if (!result) {
       return createSuccessResponse(
