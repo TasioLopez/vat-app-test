@@ -132,6 +132,20 @@ export default function NewEmployeePage() {
             return;
         }
 
+        // Assign the employee to the user who created it
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { error: assignmentError } = await supabase.from('employee_users').insert([
+                { user_id: user.id, employee_id: newEmployeeId },
+            ]);
+
+            if (assignmentError) {
+                setError('Employee created, but failed to assign to user: ' + assignmentError.message);
+                setLoading(false);
+                return;
+            }
+        }
+
         router.push('/dashboard/employees');
     };
 
