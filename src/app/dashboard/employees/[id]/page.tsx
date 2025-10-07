@@ -246,13 +246,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 throw new Error(json.error || `HTTP ${res.status}: ${res.statusText}`);
             }
 
-            if (json.details && Object.keys(json.details).length > 0) {
-                const fields = Object.keys(json.details);
+            // Handle both response formats
+            const details = json.details || json.data?.details;
+            if (details && Object.keys(details).length > 0) {
+                const fields = Object.keys(details);
 
                 // Create a new updated version of the employeeDetails object
                 const updatedDetails: EmployeeDetails = {
                     ...(employeeDetails || {}),
-                    ...json.details,
+                    ...details,
                     employee_id: employeeId,
                     autofilled_fields: fields,
                 };
