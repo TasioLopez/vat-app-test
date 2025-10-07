@@ -31,11 +31,12 @@ async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
     const data = await pdf.default(buffer);
     const text = data.text || '';
     console.log('📄 PDF extraction successful, text length:', text.length);
+    console.log('📄 First 500 characters:', text.substring(0, 500));
     return text;
   } catch (error) {
     console.error('PDF extraction failed:', error);
-    // Fallback: return a structured placeholder that AI can work with
-    return 'INTAKEFORMULIER: Werknemer gegevens - Functie: Productiemedewerker, Werkervaring: 5 jaar ervaring in productie, Opleiding: MBO, Rijbewijs: Ja, Vervoer: Auto, Computer: Ja, Contracturen: 40 uur per week, Andere werkgevers: Geen andere werkgevers vermeld. AD RAPPORT: Aanvullende informatie over werknemer - Taalvaardigheid Nederlands: Goed, Computervaardigheden: Gemiddeld niveau.';
+    // Return empty string to force proper error handling
+    return '';
   }
 }
 
@@ -55,7 +56,7 @@ async function processWithAI(text: string): Promise<any> {
           {
             role: 'system',
             content: `Je bent een assistent gespecialiseerd in het analyseren van Nederlandse werknemersdocumenten.
-Gebruik alleen informatie uit de documenten zelf.
+Gebruik ALLEEN informatie uit de documenten zelf - geen aannames maken.
 
 BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 1. INTAKEFORMULIER (hoogste prioriteit - gebruik deze informatie bij conflicten)
@@ -63,17 +64,18 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 3. FML/IZP (derde prioriteit)
 4. OVERIG (laagste prioriteit)
 
-BELANGRIJK: Je MOET alle velden invullen. Als informatie niet expliciet in de documenten staat, gebruik dan "Niet vermeld" of een redelijke inschatting.
+BELANGRIJK: Je MOET alle velden invullen met EXACTE informatie uit de documenten.
 
-Haal de volgende gegevens uit de documenten:
-- Beroep of functie van de werknemer (current_job) - VERPLICHT
+Zoek specifiek naar deze informatie in de documenten:
+- Naam werknemer, Gespreksdatum, Leeftijd werknemer, Geslacht werknemer
+- Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:"
+- Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:"
+- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen"
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
 - Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO
 - Rijbewijs (drivers_license) - true/false
 - Vervoer beschikbaar (has_transport) - true/false
 - Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
-- Contracturen (contract_hours) - aantal uren per week
-- Andere werkgevers (other_employers) - VERPLICHT, vermeld alle andere werkgevers of "Geen andere werkgevers"
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
 - Heeft de werknemer een computer thuis? (has_computer) - true/false
 
@@ -215,10 +217,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (documentTexts.length === 0) {
+      console.error('❌ No documents could be processed - PDF extraction failed');
       return NextResponse.json({ 
-        success: true, 
+        success: false, 
         data: { details: {} },
-        message: 'No readable content found in documents'
+        message: 'Failed to extract text from PDF documents. Please ensure documents are valid PDFs.'
       });
     }
 
