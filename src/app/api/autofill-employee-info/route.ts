@@ -3,6 +3,7 @@ import { handleAPIError, createSuccessResponse, validateRequiredFields, validate
 import { OpenAIService } from '@/lib/openai-service';
 import { SupabaseService } from '@/lib/supabase-service';
 import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
 import type { ChatCompletionMessageParam } from 'openai/resources';
 
 function splitIntoChunks(text: string, maxLen = 4000): string[] {
@@ -33,6 +34,35 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     }
   } catch (err) {
     console.error('❌ PDF text extraction failed:', err);
+    return '';
+  }
+}
+
+async function extractTextFromDocx(buffer: Buffer): Promise<string> {
+  try {
+    const result = await mammoth.extractRawText({ buffer });
+    if (result.value && result.value.trim().length > 20) {
+      console.log('✅ Extracted text directly from DOCX.');
+      return result.value;
+    } else {
+      console.warn('⚠️ Extracted text was too short.');
+      return '';
+    }
+  } catch (err) {
+    console.error('❌ DOCX text extraction failed:', err);
+    return '';
+  }
+}
+
+async function extractTextFromDocument(buffer: Buffer, fileName: string): Promise<string> {
+  const lowerFileName = fileName.toLowerCase();
+  
+  if (lowerFileName.endsWith('.pdf')) {
+    return await extractTextFromPdf(buffer);
+  } else if (lowerFileName.endsWith('.docx') || lowerFileName.endsWith('.doc')) {
+    return await extractTextFromDocx(buffer);
+  } else {
+    console.warn('⚠️ Unsupported file type:', fileName);
     return '';
   }
 }
@@ -84,9 +114,26 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Define document priority order
+    const docPriority = {
+      'intakeformulier': 1,
+      'ad rapport': 2,
+      'fml/izp': 3,
+      'overig': 4
+    };
+
+    // Sort documents by priority
+    const sortedDocs = docs.sort((a, b) => {
+      const aType = (a.type || '').toLowerCase();
+      const bType = (b.type || '').toLowerCase();
+      const aPriority = docPriority[aType as keyof typeof docPriority] || 999;
+      const bPriority = docPriority[bType as keyof typeof docPriority] || 999;
+      return aPriority - bPriority;
+    });
+
     const sections: string[] = [];
 
-    for (const doc of docs) {
+    for (const doc of sortedDocs) {
       if (!doc.url) continue;
 
       const path = extractStoragePath(doc.url);
@@ -108,7 +155,7 @@ export async function GET(req: NextRequest) {
       const buffer = Buffer.from(arrayBuffer);
       console.log('📦 Downloaded file buffer size:', buffer.length);
 
-      const text = await extractTextFromPdf(buffer);
+      const text = await extractTextFromDocument(buffer, doc.name || '');
       if (!text?.trim()) continue;
 
       const withHeaders = addSectionHeaders(text.trim());
@@ -127,10 +174,16 @@ export async function GET(req: NextRequest) {
     const chunks = splitIntoChunks(combined);
 
     const systemPrompt = `
-Je bent een assistent gespecialiseerd in het analyseren van Nederlandse AD-rapportages.
-Gebruik alleen tekst uit de rapporten zelf — nooit aannames maken.
+Je bent een assistent gespecialiseerd in het analyseren van Nederlandse werknemersdocumenten.
+Gebruik alleen tekst uit de documenten zelf — nooit aannames maken.
 
-➡️ Haal alleen de volgende gegevens uit het rapport:
+BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
+1. INTAKEFORMULIER (hoogste prioriteit - gebruik deze informatie als er conflicten zijn)
+2. AD RAPPORT (tweede prioriteit)
+3. FML/IZP (derde prioriteit)
+4. OVERIG (laagste prioriteit)
+
+➡️ Haal alleen de volgende gegevens uit de documenten:
 - Beroep of functie van de werknemer
 - Relevante werkervaring
 - Opleidingsniveau (Kies slechts één van de volgende: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO)
@@ -142,7 +195,7 @@ Gebruik alleen tekst uit de rapporten zelf — nooit aannames maken.
 - Taalvaardigheid Nederlands (spreken/schrijven/lezen)
 - Heeft de werknemer een computer thuis?
 
-Zorg dat elk veld gebaseerd is op expliciete informatie uit het document.
+REGEL: Bij conflicterende informatie tussen documenten, geef ALTIJD voorrang aan informatie uit het INTAKEFORMULIER.
 `.trim();
 
     const messages: ChatCompletionMessageParam[] = [
