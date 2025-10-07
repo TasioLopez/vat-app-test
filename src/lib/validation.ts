@@ -20,35 +20,37 @@ export const commonValidators = {
 };
 
 // Employee validation schemas
+const employeeBasicSchema = z.object({
+  first_name: commonValidators.required('Voornaam is verplicht')
+    .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
+  last_name: commonValidators.required('Achternaam is verplicht')
+    .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
+  email: commonValidators.email,
+  client_id: commonValidators.uuid,
+});
+
+const employeeDetailsSchema = z.object({
+  current_job: z.string().optional(),
+  work_experience: z.string().optional(),
+  education_level: z.string().optional(),
+  computer_skills: z.string().optional(),
+  drivers_license: z.boolean().optional(),
+  has_transport: z.boolean().optional(),
+  contract_hours: z.number()
+    .min(0, 'Contracturen mogen niet negatief zijn')
+    .max(40, 'Contracturen mogen niet meer dan 40 zijn')
+    .optional(),
+  dutch_speaking: z.string().optional(),
+  dutch_writing: z.string().optional(),
+  dutch_reading: z.string().optional(),
+});
+
 export const employeeValidation = {
-  basic: z.object({
-    first_name: commonValidators.required('Voornaam is verplicht')
-      .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
-    last_name: commonValidators.required('Achternaam is verplicht')
-      .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
-    email: commonValidators.email,
-    client_id: commonValidators.uuid,
-  }),
-
-  details: z.object({
-    current_job: z.string().optional(),
-    work_experience: z.string().optional(),
-    education_level: z.string().optional(),
-    computer_skills: z.string().optional(),
-    drivers_license: z.boolean().optional(),
-    has_transport: z.boolean().optional(),
-    contract_hours: z.number()
-      .min(0, 'Contracturen mogen niet negatief zijn')
-      .max(40, 'Contracturen mogen niet meer dan 40 zijn')
-      .optional(),
-    dutch_speaking: z.string().optional(),
-    dutch_writing: z.string().optional(),
-    dutch_reading: z.string().optional(),
-  }),
-
+  basic: employeeBasicSchema,
+  details: employeeDetailsSchema,
   complete: z.object({
-    ...employeeValidation.basic.shape,
-    ...employeeValidation.details.shape,
+    ...employeeBasicSchema.shape,
+    ...employeeDetailsSchema.shape,
   }),
 };
 
@@ -59,20 +61,22 @@ export const clientValidation = z.object({
 });
 
 // User validation
-export const userValidation = {
-  basic: z.object({
-    email: commonValidators.email,
-    first_name: commonValidators.required('Voornaam is verplicht')
-      .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
-    last_name: commonValidators.required('Achternaam is verplicht')
-      .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
-    role: z.enum(['admin', 'standard'], {
-      errorMap: () => ({ message: 'Rol moet admin of standard zijn' })
-    }),
+const userBasicSchema = z.object({
+  email: commonValidators.email,
+  first_name: commonValidators.required('Voornaam is verplicht')
+    .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
+  last_name: commonValidators.required('Achternaam is verplicht')
+    .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
+  role: z.enum(['admin', 'standard'], {
+    errorMap: () => ({ message: 'Rol moet admin of standard zijn' })
   }),
+});
+
+export const userValidation = {
+  basic: userBasicSchema,
 
   withPassword: z.object({
-    ...userValidation.basic.shape,
+    ...userBasicSchema.shape,
     password: commonValidators.minLength(8, 'Wachtwoord moet minimaal 8 karakters zijn'),
     confirmPassword: z.string(),
   }).refine((data) => data.password === data.confirmPassword, {
