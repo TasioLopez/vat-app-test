@@ -136,7 +136,11 @@ export default function NewEmployeePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const { error: assignmentError } = await supabase.from('employee_users').insert([
-                { user_id: user.id, employee_id: newEmployeeId },
+                { 
+                    user_id: user.id, 
+                    employee_id: newEmployeeId,
+                    assigned_at: new Date().toISOString()
+                },
             ]);
 
             if (assignmentError) {
