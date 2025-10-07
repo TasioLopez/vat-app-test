@@ -39,10 +39,12 @@ type Client = {
 };
 
 type Document = {
+    employee_id: string | null;
     id: string;
-    type: string;
-    file_path: string;
-    created_at: string;
+    name: string | null;
+    type: string | null;
+    uploaded_at: string | null;
+    url: string;
 };
 
 const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'overig'];
