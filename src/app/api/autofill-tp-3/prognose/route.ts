@@ -12,13 +12,15 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 async function readPdfFromStorage(path: string) {
-  const { data: file } = await supabase.storage.from("documents").download(path);
+  const supabaseService = SupabaseService.getInstance();
+  const { data: file } = await supabaseService.supabase.storage.from("documents").download(path);
   if (!file) return "";
   const buf = Buffer.from(await file.arrayBuffer());
   try { const p = await pdf(buf); return (p.text || "").trim(); } catch { return ""; }
 }
 async function getDocTextByTypes(employeeId: string, candidates: string[]) {
-  const { data: docs } = await supabase
+  const supabaseService = SupabaseService.getInstance();
+  const { data: docs } = await supabaseService.supabase
     .from("documents")
     .select("type,url,uploaded_at")
     .eq("employee_id", employeeId)
