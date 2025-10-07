@@ -321,7 +321,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
     });
   };
 
-  if (loading) return <p className="px-4 py-4">Loading…</p>;
+  if (loading) return <p className="px-4 py-4">Laden…</p>;
 
   return (
     <DndContext
@@ -336,7 +336,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg">Beschikbare activiteiten</h2>
             <div className="text-[11px] text-gray-500">
-              {saving ? "Saving…" : lastSavedAt ? "Saved" : "—"}
+              {saving ? "Opslaan…" : lastSavedAt ? "Opgeslagen" : "—"}
             </div>
           </div>
           <Droppable id="unassigned">
@@ -354,7 +354,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
             <h2 className="font-semibold text-lg">Fase Builder</h2>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={handleSaveNow} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Opslaan…" : "Opslaan"}
               </Button>
               <Button size="sm" onClick={addFase}>➕ Voeg Fase toe</Button>
             </div>

@@ -12,17 +12,13 @@ const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
 };
 
-
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
 const blockTitle = "font-bold bg-gray-100 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
-
-
-
-// --- Static “agreement” text (from TP template) ---
+// --- Static "agreement" text (from TP template) ---
 const AGREEMENT_INTRO =
     "Door het trajectplan te ondertekenen, gaat u met onderstaande akkoord;";
 
@@ -49,134 +45,67 @@ type PreviewItem = {
     measureKey?: string | number;
 };
 
-const TP_ACTIVITIES_INTRO =
-    "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten kunnen worden ingezet om het doel van betaald werk te realiseren.";
+const B = (key: string, title: string, text: string, measureKey?: string | number): PreviewItem => ({
+    key, title, text, variant: "block", measureKey
+});
 
-// tiny helpers that guarantee the literal union type (no widening to string)
-const B = (key: string, title: string, text: string, measureKey?: string | number): PreviewItem =>
-    ({ key, title, text, variant: "block", ...(measureKey ? { measureKey } : {}) });
+const S = (key: string, text: string): PreviewItem => ({
+    key, text, variant: "subtle"
+});
 
-const S = (key: string, text: string, measureKey?: string | number): PreviewItem =>
-    ({ key, text, variant: "subtle", ...(measureKey ? { measureKey } : {}) });
+const C = (key: string, node: React.ReactNode, measureKey?: string | number): PreviewItem => ({
+    key, node, variant: "custom", measureKey
+});
 
-const C = (key: string, node: React.ReactNode, measureKey?: string | number): PreviewItem =>
-    ({ key, node, variant: "custom", ...(measureKey ? { measureKey } : {}) });
+const TP_ACTIVITIES_INTRO = "Op basis van de intake en de beschikbare documenten zijn de volgende activiteiten geselecteerd voor dit traject:";
 
-
-function ActivitiesPreview({ activities }: { activities: TPActivity[] }) {
-    return (
-        <div>
-            <div className={blockTitle}>Trajectdoel en in te zetten activiteiten</div>
-            <div className={paperText}>
-                <p className="mb-3">
-                    Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten kunnen worden ingezet om het doel van betaald werk te realiseren.
-                </p>
-
-                {activities.map((a) => (
-                    <div key={a.id} className="mb-4">
-                        <div className="font-semibold mb-1">{a.title}</div>
-                        <div className="whitespace-pre-wrap leading-relaxed">{a.body}</div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-// --- Small presentational blocks used in the preview ---
 function AgreementBlock() {
     return (
         <div>
             <div className={blockTitle}>Akkoordverklaring</div>
             <div className={paperText}>
-                <p className="mb-2">{AGREEMENT_INTRO}</p>
-                <ul className="list-disc pl-5 space-y-1">
-                    {AGREEMENT_POINTS.map((t, i) => (
-                        <li key={i}>{t}</li>
+                <p className="mb-3">{AGREEMENT_INTRO}</p>
+                <ol className="list-decimal list-inside space-y-2 mb-4">
+                    {AGREEMENT_POINTS.map((point, i) => (
+                        <li key={i} className="text-xs leading-relaxed">{point}</li>
                     ))}
-                </ul>
-                <p className="mt-3">{AGREEMENT_FOOTER}</p>
+                </ol>
+                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER}</p>
             </div>
         </div>
     );
 }
 
-function SignatureBlock({
-    employeeName,
-    advisorName,
-    employerContact,
-}: {
+function SignatureBlock({ employeeName, advisorName, employerContact }: {
     employeeName: string;
     advisorName: string;
     employerContact: string;
 }) {
-    const row = "grid grid-cols-3 gap-6 mt-3";
-    const cell = "border rounded p-3";
-    const line = "border-b border-black inline-block min-w-[140px]";
-    const label = "text-xs text-gray-600";
-
     return (
         <div>
             <div className={blockTitle}>Ondertekening</div>
-            <div className={`${paperText} ${row}`}>
-                {/* Werknemer */}
-                <div className={cell}>
-                    <div className="font-semibold mb-2">Werknemer</div>
-                    <div className="mb-1">
-                        <span className={label}>Naam: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div className="mb-1">
-                        <span className={label}>Datum: </span>
-                        <span className={line}></span>
+            <div className={paperText}>
+                <div className="grid grid-cols-3 gap-8 text-xs">
+                    <div>
+                        <div className="font-semibold mb-8">Werknemer</div>
+                        <div className="border-b border-gray-400 mb-2">{employeeName}</div>
+                        <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div>
-                        <span className={label}>Handtekening: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div className="text-xs mt-2 italic">{employeeName}</div>
-                </div>
-
-                {/* Loopbaanadviseur */}
-                <div className={cell}>
-                    <div className="font-semibold mb-2">Loopbaanadviseur</div>
-                    <div className="mb-1">
-                        <span className={label}>Naam: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div className="mb-1">
-                        <span className={label}>Datum: </span>
-                        <span className={line}></span>
+                        <div className="font-semibold mb-8">Loopbaanadviseur</div>
+                        <div className="border-b border-gray-400 mb-2">{advisorName}</div>
+                        <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div>
-                        <span className={label}>Handtekening: </span>
-                        <span className={line}></span>
+                        <div className="font-semibold mb-8">Opdrachtgever</div>
+                        <div className="border-b border-gray-400 mb-2">{employerContact}</div>
+                        <div className="text-gray-600">Handtekening</div>
                     </div>
-                    <div className="text-xs mt-2 italic">{advisorName}</div>
-                </div>
-
-                {/* Opdrachtgever */}
-                <div className={cell}>
-                    <div className="font-semibold mb-2">Opdrachtgever</div>
-                    <div className="mb-1">
-                        <span className={label}>Naam: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div className="mb-1">
-                        <span className={label}>Datum: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div>
-                        <span className={label}>Handtekening: </span>
-                        <span className={line}></span>
-                    </div>
-                    <div className="text-xs mt-2 italic">{employerContact}</div>
                 </div>
             </div>
         </div>
     );
 }
-
 
 export default function Section3({ employeeId }: { employeeId: string }) {
     const { tpData, updateField } = useTP();
@@ -188,225 +117,104 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
     console.log("activities length:", activities.length, activities.map(a => a.id));
 
-
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-    const toggleActivity = (id: string) =>
-        setSelectedActivities(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
 
-    const selectedForPreview = activities.filter(a => selectedActivities.includes(a.id));
+    const selectedForPreview = activities.filter(a => a && selectedActivities.includes(a.id));
 
+    const toggleActivity = async (id: string) => {
+        const newSelectedActivities = selectedActivities.includes(id) 
+            ? selectedActivities.filter(x => x !== id)
+            : [...selectedActivities, id];
+        
+        console.log("🔄 Toggling activity:", id);
+        console.log("📊 Current selected:", selectedActivities);
+        console.log("📊 New selected:", newSelectedActivities);
+        
+        setSelectedActivities(newSelectedActivities);
+        
+        // Auto-save the changes with retry logic
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                const metaPayload = {
+                    employee_id: employeeId,
+                    tp3_activities: newSelectedActivities
+                };
 
-    // bootstrap previously saved values (and ensure static blocks are present)
-    useEffect(() => {
-        (async () => {
-            setLoading(true);
-            const { data: meta } = await supabase
-                .from("tp_meta")
-                .select(`
-        inleiding,
-        inleiding_sub,
-        has_ad_report,
-        sociale_achtergrond,
-        visie_werknemer,
-        visie_loopbaanadviseur,
-        prognose_bedrijfsarts,
-        persoonlijk_profiel,
-        praktische_belemmeringen,
-        zoekprofiel,
-        advies_ad_passende_arbeid,
-        pow_meter,
-        visie_plaatsbaarheid,
-        tp3_activities
-      `)
-                .eq("employee_id", employeeId)
-                .maybeSingle();               // optional: avoids throw when no row
+                const { data: existing, error: findErr } = await supabase
+                    .from("tp_meta")
+                    .select("id")
+                    .eq("employee_id", employeeId)
+                    .maybeSingle();
 
-            if (meta) {
-                [
-                    "inleiding", "inleiding_sub", "sociale_achtergrond", "visie_werknemer",
-                    "visie_loopbaanadviseur", "prognose_bedrijfsarts", "persoonlijk_profiel",
-                    "praktische_belemmeringen", "zoekprofiel", "advies_ad_passende_arbeid",
-                    "pow_meter", "visie_plaatsbaarheid"
-                ].forEach((k) => {
-                    // @ts-ignore
-                    if (meta[k] !== undefined && meta[k] !== null) updateField(k, meta[k]);
-                });
+                if (findErr) throw new Error(`tp_meta (find): ${findErr.message}`);
 
-                if (typeof meta.has_ad_report === "boolean") {
-                    updateField("has_ad_report", meta.has_ad_report);
+                let metaRes;
+                if (existing?.id) {
+                    metaRes = await supabase
+                        .from("tp_meta")
+                        .update(metaPayload)
+                        .eq("id", existing.id)
+                        .select()
+                        .single();
+                } else {
+                    metaRes = await supabase
+                        .from("tp_meta")
+                        .insert(metaPayload)
+                        .select()
+                        .single();
                 }
 
-                // ✅ safely read the JSONB array
-                const arr = safeParse<string[]>((meta as any).tp3_activities, []);
-                setSelectedActivities(Array.isArray(arr) ? arr : []);
+                if (metaRes.error) throw new Error(`tp_meta (save): ${metaRes.error.message}`);
+                console.log("✅ Auto-saved activities:", newSelectedActivities);
+                break; // Success, exit retry loop
+            } catch (err) {
+                console.error(`❌ Failed to auto-save activities (${4-retries} retries left):`, err);
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
+                }
             }
+        }
+    };
 
-            if (!tpData.wettelijke_kaders) updateField("wettelijke_kaders", WETTELIJKE_KADERS);
-            if (!meta?.visie_loopbaanadviseur && !tpData.visie_loopbaanadviseur) {
-                updateField("visie_loopbaanadviseur", VISIE_LOOPBAANADVISEUR_BASIS);
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from("tp_meta")
+                    .select("*")
+                    .eq("employee_id", employeeId)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    // Load saved activities
+                    const savedActivities = safeParse(data.tp3_activities, []);
+                    console.log("📥 Loaded activities from DB:", savedActivities);
+                    setSelectedActivities(savedActivities);
+                } else {
+                    console.log("📥 No data found in DB, using empty array");
+                }
+            } catch (err) {
+                console.error("Failed to load TP meta:", err);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
-        })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        };
+
+        loadData();
     }, [employeeId]);
-
-
-    // ---- Per-section generators ----
-    const genInleiding = async () => {
-        setBusy((x) => ({ ...x, inleiding: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/inleiding?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details) {
-                updateField("inleiding", data.details.inleiding);
-                updateField("inleiding_sub", data.details.inleiding_sub);
-                updateField("has_ad_report", data.details.has_ad_report);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Inleiding failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, inleiding: false }));
-        }
-    };
-
-    // Intake → Sociale achtergrond + Visie werknemer (already wired)
-    const genSocialeVisie = async () => {
-        setBusy((x) => ({ ...x, socialeVisie: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/sociale-visie?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details) {
-                updateField("sociale_achtergrond", data.details.sociale_achtergrond);
-                updateField("visie_werknemer", data.details.visie_werknemer);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Sociale/Visie failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, socialeVisie: false }));
-        }
-    };
-
-    // NEW: FML→AD → Prognose van de bedrijfsarts
-    const genPrognose = async () => {
-        setBusy((x) => ({ ...x, prognose: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/prognose?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details?.prognose_bedrijfsarts) {
-                updateField("prognose_bedrijfsarts", data.details.prognose_bedrijfsarts);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Prognose BA failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, prognose: false }));
-        }
-    };
-
-    // NEW: Examples-style → Persoonlijk profiel + Zoekprofiel
-    const genProfielZoekprofiel = async () => {
-        setBusy((x) => ({ ...x, profielZoek: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/profiel-zoekprofiel?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details) {
-                if (data.details.persoonlijk_profiel) updateField("persoonlijk_profiel", data.details.persoonlijk_profiel);
-                if (data.details.zoekprofiel) updateField("zoekprofiel", data.details.zoekprofiel);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Profiel/Zoekprofiel failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, profielZoek: false }));
-        }
-    };
-
-    // NEW: Intake → Praktische belemmeringen
-    const genBelemmeringen = async () => {
-        setBusy((x) => ({ ...x, belemmeringen: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/belemmeringen?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details?.praktische_belemmeringen) {
-                updateField("praktische_belemmeringen", data.details.praktische_belemmeringen);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Belemmeringen failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, belemmeringen: false }));
-        }
-    };
-
-    // NEW: AD → advies passende arbeid (quote/summary)
-    const genAdAdvies = async () => {
-        setBusy((x) => ({ ...x, adAdvies: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/ad-advies?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details?.advies_ad_passende_arbeid) {
-                updateField("advies_ad_passende_arbeid", data.details.advies_ad_passende_arbeid);
-            }
-        } catch (e) {
-            console.error("❌ Extract AD-advies failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, adAdvies: false }));
-        }
-    };
-
-    // NEW: Uses zoekprofiel → 3–5 functies + korte motivatie
-    const genPlaatsbaarheid = async () => {
-        setBusy((x) => ({ ...x, plaatsbaarheid: true }));
-        try {
-            const res = await fetch(`/api/autofill-tp-3/plaatsbaarheid?employeeId=${employeeId}`);
-            const data = await res.json();
-            if (data?.details?.visie_plaatsbaarheid) {
-                updateField("visie_plaatsbaarheid", data.details.visie_plaatsbaarheid);
-            }
-        } catch (e) {
-            console.error("❌ Autofill Plaatsbaarheid failed:", e);
-        } finally {
-            setBusy((x) => ({ ...x, plaatsbaarheid: false }));
-        }
-    };
 
     const saveAll = async () => {
         setSaving(true);
         try {
-            const base = {
-                employee_id: employeeId,
-                inleiding: tpData.inleiding || null,
-                inleiding_sub: tpData.inleiding_sub || null,
-                wettelijke_kaders: tpData.wettelijke_kaders || null,
-                sociale_achtergrond: tpData.sociale_achtergrond || null,
-                visie_werknemer: tpData.visie_werknemer || null,
-                visie_loopbaanadviseur: tpData.visie_loopbaanadviseur || null,
-                prognose_bedrijfsarts: tpData.prognose_bedrijfsarts || null,
-                persoonlijk_profiel: tpData.persoonlijk_profiel || null,
-                praktische_belemmeringen: tpData.praktische_belemmeringen || null,
-                zoekprofiel: tpData.zoekprofiel || null,
-                advies_ad_passende_arbeid: tpData.advies_ad_passende_arbeid || null,
-                pow_meter: tpData.pow_meter || null,
-                visie_plaatsbaarheid: tpData.visie_plaatsbaarheid || null,
-            };
-
-            // 1) employee_details (assumes employee_id IS unique here)
-            const empRes = await supabase
-                .from("employee_details")
-                .upsert(base, { onConflict: "employee_id" })
-                .select()
-                .maybeSingle();
-
-            if (empRes.error) {
-                throw new Error(`employee_details: ${empRes.error.message}`);
-            }
-
-            // 2) tp_meta — do a "manual upsert" so we DON'T need a unique index on employee_id
             const metaPayload = {
-                ...base,
-                has_ad_report: !!tpData.has_ad_report,
-                // if tp3_activities column is JSONB or text[], this array is fine
-                tp3_activities: selectedActivities ?? [],
+                employee_id: employeeId,
+                tp3_activities: selectedActivities
             };
 
-            // find existing row by employee_id
             const { data: existing, error: findErr } = await supabase
                 .from("tp_meta")
                 .select("id")
@@ -431,11 +239,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     .single();
             }
 
-            if (metaRes.error) {
-                throw new Error(`tp_meta (save): ${metaRes.error.message}`);
-            }
+            if (metaRes.error) throw new Error(`tp_meta (save): ${metaRes.error.message}`);
+
         } catch (err) {
-            // show the real message instead of {}
             const msg = err instanceof Error ? err.message : JSON.stringify(err);
             console.error("Save failed:", err);
             alert(msg);
@@ -444,6 +250,116 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
+    const genInleiding = async () => {
+        if (busy.inleiding) return;
+        setBusy(prev => ({ ...prev, inleiding: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/inleiding?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) updateField("inleiding", json.content);
+        } catch (err) {
+            console.error("❌ Autofill failed for inleiding:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, inleiding: false }));
+        }
+    };
+
+    const genSocialeVisie = async () => {
+        if (busy.socialeVisie) return;
+        setBusy(prev => ({ ...prev, socialeVisie: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/sociale-visie?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) {
+                updateField("sociale_achtergrond", json.content.sociale_achtergrond || "");
+                updateField("visie_werknemer", json.content.visie_werknemer || "");
+            }
+        } catch (err) {
+            console.error("❌ Autofill failed for sociale-visie:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, socialeVisie: false }));
+        }
+    };
+
+    const genPrognose = async () => {
+        if (busy.prognose) return;
+        setBusy(prev => ({ ...prev, prognose: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/prognose?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) updateField("prognose_bedrijfsarts", json.content);
+        } catch (err) {
+            console.error("❌ Autofill failed for prognose:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, prognose: false }));
+        }
+    };
+
+    const genProfielZoekprofiel = async () => {
+        if (busy.profielZoek) return;
+        setBusy(prev => ({ ...prev, profielZoek: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/profiel-zoekprofiel?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) {
+                updateField("persoonlijk_profiel", json.content.persoonlijk_profiel || "");
+                updateField("zoekprofiel", json.content.zoekprofiel || "");
+            }
+        } catch (err) {
+            console.error("❌ Autofill failed for profiel-zoekprofiel:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, profielZoek: false }));
+        }
+    };
+
+    const genBelemmeringen = async () => {
+        if (busy.belemmeringen) return;
+        setBusy(prev => ({ ...prev, belemmeringen: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/belemmeringen?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) updateField("praktische_belemmeringen", json.content);
+        } catch (err) {
+            console.error("❌ Autofill failed for belemmeringen:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, belemmeringen: false }));
+        }
+    };
+
+    const genAdAdvies = async () => {
+        if (busy.adAdvies) return;
+        setBusy(prev => ({ ...prev, adAdvies: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/ad-advies?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) updateField("advies_ad_passende_arbeid", json.content);
+        } catch (err) {
+            console.error("❌ Autofill failed for ad-advies:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, adAdvies: false }));
+        }
+    };
+
+    const genPlaatsbaarheid = async () => {
+        if (busy.plaatsbaarheid) return;
+        setBusy(prev => ({ ...prev, plaatsbaarheid: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/plaatsbaarheid?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.content) updateField("visie_plaatsbaarheid", json.content);
+        } catch (err) {
+            console.error("❌ Autofill failed for plaatsbaarheid:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, plaatsbaarheid: false }));
+        }
+    };
 
     // force re-measure when activities/signature content changes
     const activitiesMeasureKey = selectedActivities.join("|");
@@ -470,7 +386,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         ...(selectedForPreview.length
             ? [
                 B("tp-acts-intro", "Trajectdoel en in te zetten activiteiten", TP_ACTIVITIES_INTRO, activitiesMeasureKey),
-                ...selectedForPreview.map(a => B(`act-${a.id}`, a.title, a.body, a.id)),
+                ...selectedForPreview.filter(a => a).map(a => B(`act-${a.id}`, a.title, a.body, a.id)),
             ]
             : []),
 
@@ -491,8 +407,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             />,
             signatureMeasureKey
         ),
-    ];
-
+    ].filter(section => section); // Final safety check to remove any undefined sections
 
     if (loading) return <p>Laden...</p>;
 
@@ -503,7 +418,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Inleiding */}
                 <SectionHeader
                     title="Inleiding"
-                    actionLabel={busy.inleiding ? "Autofilling..." : "Autofill — Inleiding"}
+                    actionLabel={busy.inleiding ? "Automatisch invullen..." : "Automatisch invullen — Inleiding"}
                     onAction={genInleiding}
                     disabled={!!busy.inleiding}
                 />
@@ -522,7 +437,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Sociale + Visie werknemer */}
                 <SectionHeader
                     title="Sociale achtergrond & Visie werknemer"
-                    actionLabel={busy.socialeVisie ? "Autofilling..." : "Autofill — Sociale + Visie"}
+                    actionLabel={busy.socialeVisie ? "Automatisch invullen..." : "Automatisch invullen — Sociale + Visie"}
                     onAction={genSocialeVisie}
                     disabled={!!busy.socialeVisie}
                 />
@@ -551,7 +466,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Prognose van de bedrijfsarts */}
                 <SectionHeader
                     title="Prognose van de bedrijfsarts"
-                    actionLabel={busy.prognose ? "Autofilling..." : "Autofill — Prognose (FML → AD)"}
+                    actionLabel={busy.prognose ? "Automatisch invullen..." : "Automatisch invullen — Prognose (FML → AD)"}
                     onAction={genPrognose}
                     disabled={!!busy.prognose}
                 />
@@ -564,7 +479,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Persoonlijk profiel + Zoekprofiel */}
                 <SectionHeader
                     title="Persoonlijk profiel & Zoekprofiel"
-                    actionLabel={busy.profielZoek ? "Autofilling..." : "Autofill — Profiel + Zoekprofiel"}
+                    actionLabel={busy.profielZoek ? "Automatisch invullen..." : "Automatisch invullen — Profiel + Zoekprofiel"}
                     onAction={genProfielZoekprofiel}
                     disabled={!!busy.profielZoek}
                 />
@@ -584,7 +499,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Praktische belemmeringen (Intake) */}
                 <SectionHeader
                     title="Praktische belemmeringen (uit Intake)"
-                    actionLabel={busy.belemmeringen ? "Autofilling..." : "Autofill — Belemmeringen"}
+                    actionLabel={busy.belemmeringen ? "Automatisch invullen..." : "Automatisch invullen — Belemmeringen"}
                     onAction={genBelemmeringen}
                     disabled={!!busy.belemmeringen}
                 />
@@ -597,7 +512,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* AD: advies passende arbeid */}
                 <SectionHeader
                     title="AD-advies: passende arbeid (extract)"
-                    actionLabel={busy.adAdvies ? "Extracting..." : "Extract — AD-advies"}
+                    actionLabel={busy.adAdvies ? "Extraheren..." : "Extraheren — AD-advies"}
                     onAction={genAdAdvies}
                     disabled={!!busy.adAdvies}
                 />
@@ -619,7 +534,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 {/* Visie op plaatsbaarheid */}
                 <SectionHeader
                     title="Visie op plaatsbaarheid"
-                    actionLabel={busy.plaatsbaarheid ? "Autofilling..." : "Autofill — Plaatsbaarheid (gebaseerd op zoekprofiel)"}
+                    actionLabel={busy.plaatsbaarheid ? "Automatisch invullen..." : "Automatisch invullen — Plaatsbaarheid (gebaseerd op zoekprofiel)"}
                     onAction={genPlaatsbaarheid}
                     disabled={!!busy.plaatsbaarheid}
                 />
@@ -640,7 +555,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                         Vink de activiteiten aan die je in het trajectplan wilt opnemen.
                     </p>
                     <div className="space-y-2">
-                        {activities.map((a) => {
+                        {activities.filter(a => a).map((a) => {
                             const checked = selectedActivities.includes(a.id);
                             return (
                                 <label key={a.id} className="flex items-start gap-2 p-2 border rounded hover:bg-gray-50">
@@ -658,14 +573,13 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </div>
                 </div>
 
-
                 <div className="flex gap-3 pt-2">
                     <button
                         onClick={saveAll}
                         disabled={saving}
                         className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                     >
-                        {saving ? "Saving..." : "Save"}
+                        {saving ? "Opslaan..." : "Opslaan"}
                     </button>
                 </div>
             </div>
@@ -674,11 +588,8 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             <div className="w-[50%] flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden max-h-[75vh]">
                 <div className="transform scale-[0.65] origin-top">
                     <PaginatedPreview sections={sectionsArr} />
-
-
                 </div>
             </div>
-
         </div>
     );
 }
@@ -710,7 +621,6 @@ function SectionHeader({
     );
 }
 
-
 function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }) {
     const PAGE_W = 794;
     const PAGE_H = 1123;
@@ -727,7 +637,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
         <div style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} className="invisible">
             <div className={page} style={{ width: PAGE_W, height: PAGE_H, padding: PAD }}>
                 <PageHeader ref={headerRef} />
-                {sections.map((s, i) => (
+                {sections.filter(s => s).map((s, i) => (
                     <div key={`m-${s.key}`} ref={el => { blockRefs.current[i] = el; }} className="mb-3">
                         {s.variant === "subtle" && s.text ? (
                             <div className={subtle}>{s.text}</div>
@@ -783,6 +693,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                     <PageHeader />
                     {idxs.map(i => {
                         const s = sections[i];
+                        if (!s) return null; // Safety check for undefined sections
                         return (
                             <div key={s.key} className="mb-3">
                                 {s.variant === "subtle" && s.text ? (
@@ -803,8 +714,6 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
         </>
     );
 }
-
-
 
 // header used in measurement & real pages (same structure)
 const PageHeader = React.forwardRef<HTMLDivElement>((_props, ref) => (

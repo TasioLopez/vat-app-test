@@ -56,21 +56,8 @@ async function launchBrowser() {
     });
   }
 
-  // Dev: prefer full puppeteer (bundled Chromium → zero config)
+  // Dev: use system Chrome directly
   try {
-    const puppeteer = await import("puppeteer");
-    const execPath =
-      typeof (puppeteer as any).executablePath === "function"
-        ? (puppeteer as any).executablePath()
-        : undefined;
-
-    return puppeteer.launch({
-      headless: true,
-      executablePath: execPath,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-  } catch {
-    // Fallback: puppeteer-core + auto-found system Chrome (no env)
     const puppeteerCore = await import("puppeteer-core");
     const executablePath = resolveLocalChrome();
     if (!executablePath) {
@@ -83,6 +70,8 @@ async function launchBrowser() {
       executablePath,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+  } catch (error) {
+    throw new Error(`Failed to launch browser: ${error}`);
   }
 }
 

@@ -356,14 +356,14 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
             disabled={saving}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Opslaan...' : 'Opslaan'}
           </button>
           <button
             onClick={handleAutofill}
             disabled={autofillLoading}
             className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
           >
-            {autofillLoading ? 'Autofilling...' : 'Autofill with AI'}
+            {autofillLoading ? 'Automatisch invullen...' : 'Automatisch invullen met AI'}
           </button>
         </div>
 

@@ -3,11 +3,16 @@
 
 import "@/styles/globals.css";
 import { ReactNode } from "react";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   );
 }

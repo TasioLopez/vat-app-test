@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
     if (!employeeId) {
-      return new Response(JSON.stringify({ error: 'Missing employeeId' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Ontbrekende employeeId' }), { status: 400 });
     }
 
     const { data: docs, error } = await supabase
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         .download(path);
 
       if (!file || downloadError) {
-        console.warn('⚠️ Could not download file:', path);
+        console.warn('⚠️ Kon bestand niet downloaden:', path);
         continue;
       }
 
@@ -134,7 +134,7 @@ Gebruik alleen tekst uit de rapporten zelf — nooit aannames maken.
 - Opleidingsniveau (Kies slechts één van de volgende: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO)
 - Rijbewijs (ja/nee)
 - Vervoer beschikbaar (auto/fiets)
-- Computervaardigheden (Kies slechts één van de volgende: 1 - None, 2 - Basic (email, browsing), 3 - Intermediate (Word, Excel), 4 - Advanced (multiple programs), 5 - Expert (IT-related skills))
+- Computervaardigheden (Kies slechts één van de volgende: 1 - Geen, 2 - Basis (e-mail, browsen), 3 - Gemiddeld (Word, Excel), 4 - Gevorderd (meerdere programma's), 5 - Expert (IT-gerelateerde vaardigheden))
 - Contracturen
 - Andere werkgevers indien vermeld
 - Taalvaardigheid Nederlands (spreken/schrijven/lezen)
@@ -194,9 +194,9 @@ Zorg dat elk veld gebaseerd is op expliciete informatie uit het document.
         { headers: { 'Content-Type': 'application/json' } }
       );
     } catch (err) {
-      console.error('❌ Could not parse assistant output:', err);
+      console.error('❌ Kon assistent output niet verwerken:', err);
       return new Response(
-        JSON.stringify({ error: 'Invalid assistant output' }),
+        JSON.stringify({ error: 'Ongeldige assistent output' }),
         { status: 500 }
       );
     }

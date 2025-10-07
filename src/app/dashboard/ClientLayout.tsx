@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Sidebar from '@/components/ui/Sidebar';
+import { ResponsiveLayout } from '@/components/layout/ResponsiveLayout';
 
 export default function ClientLayout({
   children,
@@ -13,15 +14,16 @@ export default function ClientLayout({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex">
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} role={role} />
-      <main
-        className={`transition-all duration-300 min-h-screen bg-gray-50 p-6 w-full ${
-          collapsed ? 'ml-16' : 'ml-64'
-        }`}
-      >
-        {children}
-      </main>
-    </div>
+    <ResponsiveLayout
+      sidebar={
+        <Sidebar 
+          collapsed={collapsed} 
+          setCollapsed={setCollapsed} 
+          role={role} 
+        />
+      }
+    >
+      {children}
+    </ResponsiveLayout>
   );
 }

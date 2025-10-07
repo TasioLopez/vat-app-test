@@ -26,7 +26,7 @@ export default function LoginPage() {
     } = await supabase.auth.signInWithPassword({ email, password });
 
     if (loginError || !authData.session?.user) {
-      alert("Invalid credentials.");
+      alert("Ongeldige inloggegevens.");
       return;
     }
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
       .maybeSingle();
 
     if (fetchError) {
-      alert("Something went wrong during verification.");
+      alert("Er ging iets mis tijdens de verificatie.");
       await supabase.auth.signOut();
       return;
     }
@@ -87,19 +87,19 @@ export default function LoginPage() {
           onSubmit={handleLogin}
           className="w-full max-w-xs bg-white p-6 rounded-lg shadow-md space-y-4"
         >
-          <h2 className="text-xl font-medium text-center">Login</h2>
+          <h2 className="text-xl font-medium text-center">Inloggen</h2>
 
           <input
             className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             type="email"
-            placeholder="Email"
+            placeholder="E-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
             className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             type="password"
-            placeholder="Password"
+            placeholder="Wachtwoord"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -107,7 +107,7 @@ export default function LoginPage() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition duration-200"
           >
-            Sign In
+            Inloggen
           </button>
         </form>
       </div>

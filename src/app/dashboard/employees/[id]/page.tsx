@@ -1,162 +1,237 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
+import { useState, useEffect, use } from 'react';
+import { createBrowserClient } from '@/lib/supabase/client';
+import { Map, Compass } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
-import { Compass, Map } from 'lucide-react';
 
-const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'extra'] as const;
-
-const DOC_LABELS: Record<DocType, string> = {
-    intakeformulier: 'Intakeformulier',
-    ad_rapportage: 'AD Rapportage',
-    fml_izp: 'FML / IZP',
-    extra: 'Extra Document',
+type Employee = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    client_id: string;
 };
 
-type DocType = (typeof DOC_TYPES)[number];
+type EmployeeDetails = {
+    employee_id: string;
+    gender?: string;
+    phone?: string;
+    date_of_birth?: string;
+    current_job?: string;
+    work_experience?: string;
+    education_level?: string;
+    drivers_license?: boolean;
+    has_transport?: boolean;
+    dutch_speaking?: boolean;
+    dutch_writing?: boolean;
+    dutch_reading?: boolean;
+    has_computer?: boolean;
+    computer_skills?: string;
+    contract_hours?: number;
+    other_employers?: string;
+    autofilled_fields?: string[];
+};
 
-type Employee = Database['public']['Tables']['employees']['Row'];
-type EmployeeDetails = Database['public']['Tables']['employee_details']['Row'];
-type Document = Database['public']['Tables']['documents']['Row'];
-type Client = Database['public']['Tables']['clients']['Row'];
+type Client = {
+    id: string;
+    name: string;
+};
 
-export default function EmployeeDetailPage() {
-    const { id } = useParams();
-    const employeeId = id as string;
+type Document = {
+    id: string;
+    type: string;
+    file_path: string;
+    created_at: string;
+};
+
+const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'overig'];
+const DOC_LABELS: Record<string, string> = {
+    intakeformulier: 'Intakeformulier',
+    ad_rapportage: 'AD Rapport',
+    fml_izp: 'FML/IZP',
+    overig: 'Overig'
+};
+
+export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id: employeeId } = use(params);
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [clientName, setClientName] = useState<string>('');
+    const [userRole, setUserRole] = useState<string>('');
+    const [updating, setUpdating] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
     const [autofilledFields, setAutofilledFields] = useState<Set<string>>(new Set());
     const [documents, setDocuments] = useState<Document[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [clientName, setClientName] = useState<string | null>(null);
-    const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
-    const [updating, setUpdating] = useState(false);
-    const [activeDocType, setActiveDocType] = useState<DocType | null>(null);
-    const [aiLoading, setAiLoading] = useState(false);
+    const [activeDocType, setActiveDocType] = useState<string | null>(null);
 
     useEffect(() => {
-        if (employeeId) {
-            fetchEmployee();
-            fetchEmployeeDetails();
-            fetchDocuments();
-            fetchUserRoleAndClients();
-        }
+        fetchEmployee();
+        fetchEmployeeDetails();
+        fetchClients();
+        fetchUserRole();
+        fetchDocuments();
     }, [employeeId]);
 
-    const fetchUserRoleAndClients = async () => {
-        const { data: authUser } = await supabase.auth.getUser();
-        const userId = authUser?.user?.id;
-        if (!userId) return;
-
-        const { data: user } = await supabase.from('users').select('role').eq('id', userId).single();
-        if (user?.role === 'admin') {
-            setUserRole('admin');
-            const { data: allClients } = await supabase.from('clients').select('*');
-            if (allClients) setClients(allClients);
-        } else {
-            setUserRole('user');
-        }
-    };
-
     const fetchEmployee = async () => {
-        const { data } = await supabase.from('employees').select('*').eq('id', employeeId).single();
-        setEmployee(data);
-        if (data?.client_id) fetchClient(data.client_id);
-    };
+        const { data, error } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('id', employeeId)
+            .single();
 
-    const fetchClient = async (clientId: string) => {
-        const { data } = await supabase.from('clients').select('name').eq('id', clientId).single();
-        if (data) setClientName(data.name);
+        if (error) {
+            console.error('Error fetching employee:', error);
+            return;
+        }
+
+        setEmployee(data);
+        if (data.client_id) {
+            fetchClient(data.client_id);
+        }
     };
 
     const fetchEmployeeDetails = async () => {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('employee_details')
             .select('*')
             .eq('employee_id', employeeId)
             .single();
 
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error fetching employee details:', error);
+            return;
+        }
+
         if (data) {
             setEmployeeDetails(data);
-            setAutofilledFields(new Set(data.autofilled_fields || []));
+            if (data.autofilled_fields) {
+                setAutofilledFields(new Set(data.autofilled_fields));
+            }
+        }
+    };
+
+    const fetchClients = async () => {
+        const { data, error } = await supabase
+            .from('clients')
+            .select('*');
+
+        if (error) {
+            console.error('Error fetching clients:', error);
+            return;
+        }
+
+        setClients(data || []);
+    };
+
+    const fetchClient = async (clientId: string) => {
+        const { data, error } = await supabase
+            .from('clients')
+            .select('name')
+            .eq('id', clientId)
+            .single();
+
+        if (error) {
+            console.error('Error fetching client:', error);
+            return;
+        }
+
+        setClientName(data?.name || '');
+    };
+
+    const fetchUserRole = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data, error } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching user role:', error);
+                return;
+            }
+
+            setUserRole(data?.role || '');
         }
     };
 
     const fetchDocuments = async () => {
         try {
-            const res = await fetch('/api/documents/get', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ employee_id: employeeId }),
-            });
+            const { data, error } = await supabase
+                .from('documents')
+                .select('*')
+                .eq('employee_id', employeeId);
 
-            const json = await res.json();
-            if (res.ok) setDocuments(json.documents || []);
-            else console.error('Failed to fetch documents:', json.error);
+            if (error) {
+                console.error('Fout bij ophalen documenten:', error);
+                return;
+            }
+
+            setDocuments(data || []);
         } catch (err) {
-            console.error('Error fetching documents:', err);
+            console.error('Fout bij ophalen documenten:', err);
         }
     };
 
     const handleDetailChange = (field: keyof EmployeeDetails, value: any) => {
-        if (!employeeDetails) return;
-        setEmployeeDetails({ ...employeeDetails, [field]: value });
-        setAutofilledFields(prev => {
-            const next = new Set(prev);
-            next.delete(field);
-            return next;
-        });
+        setEmployeeDetails(prev => ({
+            ...prev,
+            [field]: value,
+            employee_id: employeeId
+        }));
+    };
+
+    const saveEmployeeInfo = async () => {
+        if (!employee) return;
+
+        setUpdating(true);
+        try {
+            const { error } = await supabase
+                .from('employees')
+                .update(employee)
+                .eq('id', employeeId);
+
+            if (error) {
+                console.error('Error updating employee:', error);
+                return;
+            }
+
+            alert('Werknemer informatie opgeslagen!');
+        } catch (err) {
+            console.error('Error saving employee info:', err);
+        } finally {
+            setUpdating(false);
+        }
     };
 
     const saveDetails = async () => {
         if (!employeeDetails) return;
+
         setUpdating(true);
+        try {
+            const { error } = await supabase
+                .from('employee_details')
+                .upsert([employeeDetails], { onConflict: 'employee_id' });
 
-        const { error } = await supabase
-            .from('employee_details')
-            .upsert([{ ...employeeDetails, employee_id: employeeId, autofilled_fields: [] }], {
-                onConflict: 'employee_id',
-            });
+            if (error) {
+                console.error('Error saving details:', error);
+                return;
+            }
 
-        if (!error) await fetchEmployeeDetails();
-        setUpdating(false);
-    };
-
-    const saveEmployeeInfo = async () => {
-        if (!employee || !employeeDetails) return;
-        setUpdating(true);
-
-        const { error: employeeError } = await supabase
-            .from('employees')
-            .update({
-                first_name: employee.first_name,
-                last_name: employee.last_name,
-                email: employee.email,
-                client_id: employee.client_id,
-            })
-            .eq('id', employee.id);
-
-        const { error: detailsError } = await supabase
-            .from('employee_details')
-            .upsert([{
-                employee_id: employeeId,
-                gender: employeeDetails.gender,
-                phone: employeeDetails.phone,
-                date_of_birth: employeeDetails.date_of_birth,
-            }], {
-                onConflict: 'employee_id',
-            });
-
-        if (!employeeError && !detailsError) {
-            await fetchEmployee();
-            await fetchEmployeeDetails();
+            alert('Profiel opgeslagen!');
+        } catch (err) {
+            console.error('Error saving details:', err);
+        } finally {
+            setUpdating(false);
         }
-
-        setUpdating(false);
     };
 
     const autofillWithAI = async () => {
@@ -186,19 +261,18 @@ export default function EmployeeDetailPage() {
                     .upsert([updatedDetails], { onConflict: 'employee_id' });
             }
         } catch (err) {
-            console.error('Autofill failed:', err);
+            console.error('Autofill mislukt:', err);
         } finally {
             setAiLoading(false);
         }
     };
-
 
     const fieldClass = (field: keyof EmployeeDetails) =>
         `w-full border border-gray-500/30 p-2 rounded ${autofilledFields.has(field) ? 'border-yellow-500' : ''}`;
 
     return (
         <div className="p-4 space-y-6">
-            <h1 className="text-xl font-bold">Employee Details</h1>
+            <h1 className="text-xl font-bold">Werknemer Details</h1>
 
             {employee && (
                 <div className="flex flex-col lg:flex-row gap-4">
@@ -206,12 +280,12 @@ export default function EmployeeDetailPage() {
                         <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
                         <div className="flex justify-between">
                             <div className="flex-col space-y-2 w-3/5 pr-2">
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="First Name" value={employee.first_name || ''} onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })} />
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Last Name" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Email" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
+                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Voornaam" value={employee.first_name || ''} onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })} />
+                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
+                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
                                 {userRole === 'admin' ? (
                                     <select className="w-full border border-gray-500/30 p-2 rounded" value={employee.client_id || ''} onChange={(e) => { setEmployee({ ...employee, client_id: e.target.value }); fetchClient(e.target.value); }}>
-                                        <option value="">Select Employer</option>
+                                        <option value="">Selecteer werkgever</option>
                                         {clients.map((client) => (
                                             <option key={client.id} value={client.id}>{client.name}</option>
                                         ))}
@@ -230,12 +304,12 @@ export default function EmployeeDetailPage() {
 
                             <div className="flex flex-col gap-2 w-2/5">
                                 <select className={fieldClass('gender')} value={employeeDetails?.gender || ''} onChange={e => handleDetailChange('gender', e.target.value)} >
-                                    <option value="">Geslacht selecteeren</option>
+                                    <option value="">Geslacht selecteren</option>
                                     <option value="Male">Man</option>
                                     <option value="Female">Vrouw</option>
                                     <option value="Other">Anders</option>
                                 </select>
-                                <input className={fieldClass('phone')} placeholder="Phone" value={employeeDetails?.phone || ''} onChange={e => handleDetailChange('phone', e.target.value)} />
+                                <input className={fieldClass('phone')} placeholder="Telefoon" value={employeeDetails?.phone || ''} onChange={e => handleDetailChange('phone', e.target.value)} />
                                 <input className={fieldClass('date_of_birth')} type="date" value={employeeDetails?.date_of_birth || ''} onChange={e => handleDetailChange('date_of_birth', e.target.value)} />
                             </div>
                         </div>

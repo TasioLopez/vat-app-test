@@ -102,7 +102,7 @@ export default function TPDocsTable({ rows }: Props) {
                     onClick={() => onOpen(r)}
                     className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
                   >
-                    Open
+                    Openen
                   </button>
                   {r.storagePath && (
                     <Link
@@ -186,14 +186,14 @@ export default function TPDocsTable({ rows }: Props) {
                     rel="noreferrer"
                     className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
                   >
-                    Open in new tab
+                    Openen in nieuw tabblad
                   </a>
                 )}
                 <button
                   onClick={onClose}
                   className="inline-flex items-center rounded-md bg-gray-900 text-white px-3 py-1 text-xs hover:bg-black"
                 >
-                  Close
+                  Sluiten
                 </button>
               </div>
             </div>

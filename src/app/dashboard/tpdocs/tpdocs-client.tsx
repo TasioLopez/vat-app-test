@@ -58,10 +58,10 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
         body: JSON.stringify({ path: r.url }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to sign URL");
+      if (!res.ok) throw new Error(data?.error || "Fout bij ondertekenen URL");
       setPreviewUrl(data.url as string);
     } catch (e: any) {
-      setErr(e?.message || "Could not load preview");
+      setErr(e?.message || "Kon voorbeeld niet laden");
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
         body: JSON.stringify({ path: active.url, docId: active.id }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Delete failed");
+      if (!res.ok) throw new Error(data?.error || "Verwijderen mislukt");
 
       // update UI
       setList((prev) => prev.filter((r) => r.id !== active.id));
@@ -136,7 +136,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
                     onClick={() => openPreview(r)}
                     className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
                   >
-                    Open
+                    Openen
                   </button>
                 </td>
               </tr>
@@ -144,7 +144,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
             {!list.length && (
               <tr>
                 <td className="px-4 py-6 text-sm text-gray-500" colSpan={5}>
-                  No TP documents found.
+                  Geen TP documenten gevonden.
                 </td>
               </tr>
             )}
@@ -168,7 +168,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
             </div>
 
             <div className="h-[78vh] w-full bg-gray-50">
-              {!active?.url && <div className="p-6 text-sm text-red-600">No file path on this row.</div>}
+              {!active?.url && <div className="p-6 text-sm text-red-600">Geen bestandspad op deze rij.</div>}
               {active?.url && loading && (
                 <div className="flex h-full items-center justify-center text-sm text-gray-500">
                   Loading preview…
@@ -196,7 +196,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
                   rel="noreferrer"
                   className="rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
                 >
-                  Open in new tab
+                  Openen in nieuw tabblad
                 </a>
               )}
               <button
@@ -204,10 +204,10 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
                 disabled={!active?.url || deleting}
                 className="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
               >
-                Delete
+                Verwijderen
               </button>
               <button onClick={closeModal} className="rounded-md bg-gray-900 px-3 py-1 text-xs text-white hover:bg-black">
-                Close
+                Sluiten
               </button>
             </div>
           </div>

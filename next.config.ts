@@ -1,10 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
-    ignoreDuringBuilds: true,   // <- this stops the ESLint step in `next build`
+    ignoreDuringBuilds: false,   // Enable ESLint checks during build
   },
   typescript: {
-    ignoreBuildErrors: true,    // <- this prevents TS errors from failing CI
+    ignoreBuildErrors: false,    // Enable TypeScript checks during build
+  },
+  experimental: {
+    optimizePackageImports: ['@supabase/supabase-js', 'lucide-react', 'react-icons'],
+  },
+  images: {
+    domains: ['localhost'],
   },
 };
 

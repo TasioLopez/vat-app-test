@@ -1,14 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
+import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID, ValidationError } from "@/lib/api-utils";
+import { OpenAIService } from "@/lib/openai-service";
+import { SupabaseService } from "@/lib/supabase-service";
 import pdf from "pdf-parse";
-import type { ChatCompletionMessageParam } from "openai/resources";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
@@ -45,24 +39,33 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
-    if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    
+    // Validate input
+    validateRequiredFields({ employeeId }, ['employeeId']);
+    validateUUID(employeeId!, 'Employee ID');
+
+    const supabaseService = SupabaseService.getInstance();
+    const openaiService = OpenAIService.getInstance();
 
     // Prefer FML/IZP/LAB over AD
-    const FML = await getDocTextByTypes(employeeId, [
+    const FML = await getDocTextByTypes(employeeId!, [
       "fml", "functiemogelijkhedenlijst",
       "izp", "inzetbaarheidsprofiel",
       "lab", "lijst arbeidsmogelijkheden", "arbeidsmogelijkheden en beperkingen"
     ]);
-    const AD  = await getDocTextByTypes(employeeId, [
+    const AD = await getDocTextByTypes(employeeId!, [
       "ad_rapport","ad-rapport","adrapport","ad_rapportage","ad-rapportage","arbeidsdeskund"
     ]);
     const source = FML ? "fml" : (AD ? "ad" : "");
 
     if (!FML && !AD) {
-      return NextResponse.json({ error: "Geen FML/IZP/LAB of AD-rapport gevonden" }, { status: 200 });
+      return createSuccessResponse(
+        { prognose_bedrijfsarts: "" },
+        "Geen FML/IZP/LAB of AD-rapport gevonden"
+      );
     }
 
-    const system = `
+    const systemPrompt = `
 Je bent een NL re-integratie-rapportage assistent.
 Maak de sectie "Prognose van de bedrijfsarts" in 1–2 korte alinea's, AVG-proof (geen diagnoses).
 - Gebruik ALLEEN tekst uit de bron.
@@ -71,17 +74,12 @@ Maak de sectie "Prognose van de bedrijfsarts" in 1–2 korte alinea's, AVG-proof
 Lever uitsluiten via function-call: { prognose_bedrijfsarts: string }.
 `.trim();
 
-    const user = `
+    const userPrompt = `
 BRON (${source.toUpperCase()}):
 ${(FML || AD).slice(0, 22000)}
 `.trim();
 
-    const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: system },
-      { role: "user", content: user }
-    ];
-
-    const tool = {
+    const toolSchema = {
       type: "function" as const,
       function: {
         name: "build_prognose",
@@ -94,28 +92,23 @@ ${(FML || AD).slice(0, 22000)}
       }
     };
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.1,
-      messages,
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: "build_prognose" } }
-    });
-
-    const call = completion.choices[0]?.message?.tool_calls?.[0];
-    const args = call?.function?.arguments || "{}";
-    const parsed = JSON.parse(args);
-    const text = (parsed?.prognose_bedrijfsarts || "").trim();
-
-    // persist
-    await supabase.from("tp_meta").upsert(
-      { employee_id: employeeId, prognose_bedrijfsarts: text } as any,
-      { onConflict: "employee_id" }
+    const result = await openaiService.generateContent(
+      systemPrompt,
+      userPrompt,
+      toolSchema,
+      { temperature: 0.1 }
     );
 
-    return NextResponse.json({ details: { prognose_bedrijfsarts: text }, autofilled_fields: ["prognose_bedrijfsarts"] });
-  } catch (e: any) {
-    console.error("❌ prognose error", e);
-    return NextResponse.json({ error: "Server error", details: e?.message }, { status: 500 });
+    const text = (result?.prognose_bedrijfsarts || "").trim();
+
+    // Persist to database
+    await supabaseService.upsertTPMeta(employeeId!, { prognose_bedrijfsarts: text });
+
+    return createSuccessResponse(
+      { prognose_bedrijfsarts: text },
+      "Prognose successfully generated"
+    );
+  } catch (error) {
+    return handleAPIError(error);
   }
 }

@@ -156,7 +156,9 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             const toStringArray = (v: unknown): string[] =>
                 Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 
-            setSelectedIds(!error ? toStringArray((data as any)?.tp3_activities) : []);
+            const loadedIds = !error ? toStringArray((data as any)?.tp3_activities) : [];
+            console.log("🔍 Review page loaded activities:", loadedIds);
+            setSelectedIds(loadedIds);
         })();
     }, [employeeId]);
 
