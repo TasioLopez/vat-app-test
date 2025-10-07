@@ -129,7 +129,7 @@ Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.`
     }
     
     throw new Error('No valid response from AI');
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI processing failed:', error);
     throw error;
   }
@@ -212,7 +212,7 @@ export async function GET(req: NextRequest) {
         } else {
           console.warn('⚠️ No text extracted from:', doc.name);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing document:', doc.name, error);
         continue;
       }

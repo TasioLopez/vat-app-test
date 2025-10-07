@@ -34,7 +34,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       console.log('✅ PDF-parse successful, text length:', data.text.length);
       return data.text;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('⚠️ PDF-parse failed:', error.message);
   }
 
@@ -47,7 +47,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       console.log('✅ Raw buffer extraction successful, text length:', extractedText.length);
       return extractedText;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('⚠️ Raw buffer extraction failed:', error.message);
   }
 
@@ -60,7 +60,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       console.log('✅ Binary extraction successful, text length:', extractedText.length);
       return extractedText;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('⚠️ Binary extraction failed:', error.message);
   }
 
@@ -92,7 +92,7 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       console.log('✅ Pattern extraction successful, found patterns:', extractedInfo.length);
       return extractedText;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log('⚠️ Pattern extraction failed:', error.message);
   }
 
@@ -179,7 +179,7 @@ export async function GET(req: NextRequest) {
         } else {
           console.warn('⚠️ No text extracted from:', doc.name);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing document:', doc.name, error);
         continue;
       }
