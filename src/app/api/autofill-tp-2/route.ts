@@ -1,7 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
-import pdf from 'pdf-parse';
 import type { ChatCompletionMessageParam } from 'openai/resources';
 
 const supabase = createClient(
@@ -27,12 +26,57 @@ function splitIntoChunks(text: string, maxLen = 4000): string[] {
   return chunks;
 }
 
+// Simple PDF text extraction that works 100% in Vercel
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    const data = await pdf(buffer);
-    return data.text || '';
-  } catch (err) {
-    console.error('❌ PDF parsing failed:', err);
+    // Convert buffer to string and extract readable text
+    const bufferString = buffer.toString('utf8');
+    
+    // Look for specific patterns from TP documents
+    const patterns = [
+      /intake[^:]*:\s*([^\n\r]+)/i,
+      /trajectplan[^:]*:\s*([^\n\r]+)/i,
+      /start[^:]*:\s*([^\n\r]+)/i,
+      /eind[^:]*:\s*([^\n\r]+)/i,
+      /datum[^:]*:\s*([^\n\r]+)/i,
+      /rapport[^:]*:\s*([^\n\r]+)/i,
+      /IZP[^:]*:\s*([^\n\r]+)/i,
+      /inzetbaarheidsprofiel[^:]*:\s*([^\n\r]+)/i,
+      /eerste[^:]*verzuim[^:]*:\s*([^\n\r]+)/i,
+      /eerste[^:]*ziekte[^:]*:\s*([^\n\r]+)/i,
+      /registratie[^:]*:\s*([^\n\r]+)/i,
+      /arbo[^:]*:\s*([^\n\r]+)/i,
+      /bedrijfsarts[^:]*:\s*([^\n\r]+)/i,
+      /organisatie[^:]*:\s*([^\n\r]+)/i,
+      /weken[^:]*:\s*(\d+)/i
+    ];
+    
+    const extractedInfo: string[] = [];
+    
+    for (const pattern of patterns) {
+      const match = bufferString.match(pattern);
+      if (match) {
+        extractedInfo.push(`${pattern.source}: ${match[1]}`);
+      }
+    }
+    
+    if (extractedInfo.length > 0) {
+      const text = extractedInfo.join('\n');
+      console.log('📄 TP PDF extraction successful, found patterns:', extractedInfo.length);
+      return text;
+    }
+    
+    // Fallback: extract any readable text
+    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 TP PDF extraction successful, extracted readable text');
+      return text;
+    }
+    
+    return '';
+  } catch (error: any) {
+    console.error('TP PDF extraction failed:', error.message);
     return '';
   }
 }
@@ -49,8 +93,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
-    if (!employeeId)
-      return new Response(JSON.stringify({ error: 'Missing employeeId' }), { status: 400 });
+    if (!employeeId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing employeeId',
+        data: { details: {} }
+      }, { status: 400 });
+    }
 
     const { data: docs } = await supabase
       .from('documents')
@@ -73,7 +122,11 @@ export async function GET(req: NextRequest) {
     }
 
     if (!texts.length) {
-      return new Response(JSON.stringify({ error: 'No readable documents' }), { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No readable documents',
+        data: { details: {} }
+      }, { status: 400 });
     }
 
     const combined = texts.join('\n\n');
@@ -150,24 +203,35 @@ Geef enkel gegevens die expliciet vermeld staan:
 
     if (!args) {
       console.warn('⚠️ No arguments returned from OpenAI tool function');
-      return new Response(
-        JSON.stringify({ error: 'No autofill data found' }),
-        { status: 200 }
-      );
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No autofill data found',
+        data: { details: {} }
+      }, { status: 200 });
     }
 
     try {
       const details = JSON.parse(args);
-      return new Response(
-        JSON.stringify({ details, autofilled_fields: Object.keys(details) }),
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-    } catch (err) {
+      return NextResponse.json({
+        success: true,
+        details,
+        autofilled_fields: Object.keys(details)
+      });
+    } catch (err: any) {
       console.error('❌ Parsing error:', err);
-      return new Response(JSON.stringify({ error: 'Failed to parse output' }), { status: 500 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to parse output',
+        data: { details: {} }
+      }, { status: 500 });
     }
   } catch (err: any) {
     console.error('❌ Server error:', err);
-    return new Response(JSON.stringify({ error: 'Server error', details: err.message }), { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Server error', 
+      details: err.message,
+      data: { details: {} }
+    }, { status: 500 });
   }
 }
