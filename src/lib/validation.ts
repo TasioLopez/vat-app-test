@@ -108,7 +108,7 @@ export const authValidation = {
 
 // Document validation
 export const documentValidation = z.object({
-  file: z.instanceof(File, 'Bestand is verplicht')
+  file: z.instanceof(File, { message: 'Bestand is verplicht' })
     .refine((file) => file.size <= 10 * 1024 * 1024, 'Bestand mag maximaal 10MB zijn')
     .refine(
       (file) => ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type),
