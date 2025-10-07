@@ -239,7 +239,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const autofillWithAI = async () => {
         setAiLoading(true);
         try {
-            const res = await fetch(`/api/autofill-employee-info?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-employee-info-minimal?employeeId=${employeeId}`);
             const json = await res.json();
 
             if (!res.ok) {
