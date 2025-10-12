@@ -181,6 +181,7 @@ Geef een JSON object terug met de gevonden velden.`;
 
     const content = response.choices[0]?.message?.content;
     if (content) {
+      console.log('🔍 Raw AI response content:', content);
       const extractedData = JSON.parse(content);
       console.log('✅ Modern AI extracted:', extractedData);
       
@@ -344,6 +345,7 @@ Geef een JSON object terug met de gevonden velden uit alle documenten.`;
 
     const content = response.choices[0]?.message?.content;
     if (content) {
+      console.log('🔍 Raw combined AI response content:', content);
       const extractedData = JSON.parse(content);
       console.log('✅ Modern combined processing extracted:', extractedData);
       
@@ -1050,19 +1052,26 @@ export async function GET(req: NextRequest) {
       
       const text = await extractTextFromPdf(buffer);
       
-      // CRITICAL LOGGING: Track text extraction for each document
-      if (text?.length > 20) {
-        console.log(`✅ EXTRACTED TEXT from ${doc.type} (ID: ${doc.id}): ${text.length} characters`);
-        console.log(`📄 FIRST 300 chars of ${doc.type}:`, text.substring(0, 300));
-        console.log(`📄 CONTAINS KEYWORDS? Intake: ${text.toLowerCase().includes('intake')}, AD: ${text.toLowerCase().includes('ad')}, Datum: ${text.toLowerCase().includes('datum')}`);
-        // Add document type label for context
-        texts.push(`--- DOCUMENT TYPE: ${doc.type || 'Unknown'} | ID: ${doc.id} ---\n${text.trim()}`);
-      } else {
-        console.error(`❌ NO TEXT EXTRACTED from ${doc.type} (ID: ${doc.id}) - text length: ${text?.length || 0}`);
-        if (text && text.length <= 20) {
-          console.error(`📄 SHORT TEXT FOUND: "${text}"`);
-        }
-      }
+          // CRITICAL LOGGING: Track text extraction for each document
+          if (text?.length > 20) {
+            console.log(`✅ EXTRACTED TEXT from ${doc.type} (ID: ${doc.id}): ${text.length} characters`);
+            console.log(`📄 FIRST 500 chars of ${doc.type}:`, text.substring(0, 500));
+            console.log(`📄 CONTAINS KEYWORDS? Intake: ${text.toLowerCase().includes('intake')}, AD: ${text.toLowerCase().includes('ad')}, Datum: ${text.toLowerCase().includes('datum')}`);
+            console.log(`📄 LOOKING FOR SPECIFIC DATES:`);
+            console.log(`   - Datum ziekmelding: ${text.toLowerCase().includes('datum ziekmelding')}`);
+            console.log(`   - Aanmeld: ${text.toLowerCase().includes('aanmeld')}`);
+            console.log(`   - Gespreksdatum: ${text.toLowerCase().includes('gespreksdatum')}`);
+            console.log(`   - Datum rapport: ${text.toLowerCase().includes('datum rapport')}`);
+            console.log(`   - R. Hupsel: ${text.toLowerCase().includes('r. hupsel')}`);
+            console.log(`   - Arbodienst: ${text.toLowerCase().includes('arbodienst')}`);
+            // Add document type label for context
+            texts.push(`--- DOCUMENT TYPE: ${doc.type || 'Unknown'} | ID: ${doc.id} ---\n${text.trim()}`);
+          } else {
+            console.error(`❌ NO TEXT EXTRACTED from ${doc.type} (ID: ${doc.id}) - text length: ${text?.length || 0}`);
+            if (text && text.length <= 20) {
+              console.error(`📄 SHORT TEXT FOUND: "${text}"`);
+            }
+          }
     }
 
     if (!texts.length) {
