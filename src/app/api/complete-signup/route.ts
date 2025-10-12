@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Signup failed: ${signUpError.message}` }, { status: 400 });
     } else {
       // New user created successfully
-      authUserId = authUser?.user?.id;
+      authUserId = authUser?.user?.id || null;
       if (!authUserId) {
         console.log("No auth user ID returned:", { authUser, signUpError });
         return NextResponse.json({ error: "User signup failed - no user ID returned." }, { status: 400 });
