@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     if (docs && docs.length > 0) {
       try {
         const doc = docs[0];
-        console.log('📥 Testing download for:', doc.filename);
+        console.log('📥 Testing download for:', doc.type, 'ID:', doc.id);
         
         // Extract storage path
         const url = doc.url;
