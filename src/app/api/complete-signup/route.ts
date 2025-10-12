@@ -49,60 +49,35 @@ export async function POST(req: NextRequest) {
       // User already exists, we need to update their password
       console.log("User already exists, need to update password...");
       
-      // Get the user ID from our database first
-      const { data: dbUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
+      // Get the user from Supabase Auth by email using admin API
+      const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
       
-      if (dbUser?.id) {
-        const userId = dbUser.id;
-        authUserId = userId;
-        console.log("Found existing user ID in database:", userId);
+      if (listError) {
+        console.log("Error listing users:", listError);
+        return NextResponse.json({ error: "Failed to find user in auth system." }, { status: 400 });
+      }
+      
+      // Find the user by email
+      const existingAuthUser = authUsers.users.find(u => u.email === email);
+      
+      if (existingAuthUser) {
+        authUserId = existingAuthUser.id;
+        console.log("Found existing user in Supabase Auth:", authUserId);
         
-        try {
-          // Update the user's password using admin API
-          const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(userId, {
-            password: password,
-          });
-          
-          if (updatePasswordError) {
-            console.log("Password update error:", updatePasswordError);
-            
-            // If user not found in Supabase Auth, create them
-            if (updatePasswordError.message.includes("User not found")) {
-              console.log("User not found in Supabase Auth, creating new user...");
-              const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
-                email: email,
-                password: password,
-                email_confirm: true, // Auto-confirm since they're completing signup
-              });
-              
-              if (createError) {
-                console.log("Failed to create user in Supabase Auth:", createError);
-                return NextResponse.json({ error: `Failed to create user: ${createError.message}` }, { status: 400 });
-              }
-              
-              authUserId = newAuthUser.user?.id || null;
-              if (!authUserId) {
-                return NextResponse.json({ error: "Failed to get user ID after creation." }, { status: 400 });
-              }
-              
-              console.log("Created new user in Supabase Auth:", authUserId);
-            } else {
-              return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
-            }
-          } else {
-            console.log("Password updated successfully for existing user");
-          }
-        } catch (error) {
-          console.log("Error during password update:", error);
-          return NextResponse.json({ error: "Error during password update." }, { status: 400 });
+        // Update the user's password using admin API
+        const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(authUserId, {
+          password: password,
+        });
+        
+        if (updatePasswordError) {
+          console.log("Password update error:", updatePasswordError);
+          return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
         }
+        
+        console.log("Password updated successfully for existing user");
       } else {
-        console.log("No user ID found in database, this shouldn't happen");
-        return NextResponse.json({ error: "User exists but no ID found in database." }, { status: 400 });
+        console.log("User not found in Supabase Auth, this shouldn't happen");
+        return NextResponse.json({ error: "User exists but not found in auth system." }, { status: 400 });
       }
     } else if (signUpError) {
       console.log("Signup error:", signUpError);
