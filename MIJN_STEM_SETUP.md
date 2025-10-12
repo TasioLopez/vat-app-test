@@ -1,95 +1,155 @@
-# Mijn Stem Database Setup
+# MijnStem Feature Setup Guide
 
-The "Mijn Stem" feature requires a database table to store document metadata and analysis results. Follow these steps to set up the required table in your Supabase database.
+This guide will help you set up the MijnStem feature which requires database tables and storage buckets to be configured in Supabase.
 
-## Setup Instructions
+## Prerequisites
 
-### Option 1: Using Supabase Dashboard (Recommended)
+- Access to your Supabase project dashboard
+- Admin permissions to run SQL commands
 
-1. **Open Supabase Dashboard**
-   - Go to your Supabase project dashboard
-   - Navigate to the "SQL Editor" tab
+## Setup Steps
 
-2. **Run the Migration Script**
-   - Copy the contents of `create_mijn_stem_table.sql`
-   - Paste it into the SQL Editor
-   - Click "Run" to execute the script
+### Step 1: Create Storage Bucket (Automatic)
 
-3. **Verify Table Creation**
-   - Go to "Table Editor" tab
-   - You should see the `mijn_stem_documents` table
-
-### Option 2: Using Supabase CLI (Advanced)
-
-If you have Supabase CLI installed:
-
-```bash
-# Initialize Supabase in your project (if not already done)
-supabase init
-
-# Link to your remote project
-supabase link --project-ref YOUR_PROJECT_REF
-
-# Create a new migration
-supabase migration new create_mijn_stem_documents_table
-
-# Copy the SQL content to the generated migration file
-# Then push to your database
-supabase db push
+The storage bucket can be created automatically by visiting:
+```
+https://your-app-url.com/api/mijn-stem/setup
 ```
 
-## Table Structure
+Or run this in your browser console while on your app:
+```javascript
+fetch('/api/mijn-stem/setup', { method: 'POST' })
+  .then(r => r.json())
+  .then(console.log);
+```
 
-The `mijn_stem_documents` table includes:
+### Step 2: Create Database Table (Manual)
 
-- **id**: Unique identifier (UUID)
-- **user_id**: Reference to auth.users (with cascade delete)
-- **filename**: Original filename
-- **storage_path**: Path in Supabase Storage
-- **file_size**: File size in bytes
-- **file_type**: MIME type of the file
-- **status**: Processing status (uploaded, processing, analyzed, error)
-- **writing_style**: JSONB field storing AI analysis results
-- **error_message**: Error details if analysis fails
-- **analyzed_at**: Timestamp when analysis completed
-- **created_at/updated_at**: Automatic timestamps
+1. Go to your Supabase Dashboard
+2. Navigate to **SQL Editor**
+3. Click **New Query**
+4. Copy and paste the SQL script from `supabase/migrations/create_mijn_stem_table.sql`
+5. Click **Run** or press `Ctrl+Enter`
 
-## Security Features
+**Or copy this SQL directly:**
 
-- **Row Level Security (RLS)** enabled
-- **Policy**: Users can only access their own documents
-- **Indexes** for optimal query performance
-- **Automatic timestamp updates**
+```sql
+-- Create the mijn_stem_documents table
+CREATE TABLE IF NOT EXISTS mijn_stem_documents (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  file_size BIGINT NOT NULL,
+  file_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'uploaded' CHECK (status IN ('uploaded', 'processing', 'analyzed', 'error')),
+  writing_style JSONB,
+  error_message TEXT,
+  analyzed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## Storage Setup
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_mijn_stem_documents_user_id ON mijn_stem_documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_mijn_stem_documents_status ON mijn_stem_documents(status);
+CREATE INDEX IF NOT EXISTS idx_mijn_stem_documents_created_at ON mijn_stem_documents(created_at DESC);
 
-Make sure your Supabase Storage bucket `documents` exists and has the correct permissions:
+-- Enable Row Level Security
+ALTER TABLE mijn_stem_documents ENABLE ROW LEVEL SECURITY;
 
-1. Go to Storage in your Supabase dashboard
-2. Create bucket `documents` if it doesn't exist
-3. Set up appropriate storage policies
+-- Create RLS policy to allow users to manage their own documents
+DROP POLICY IF EXISTS "Users can manage their own documents" ON mijn_stem_documents;
+CREATE POLICY "Users can manage their own documents" ON mijn_stem_documents
+  FOR ALL USING (auth.uid() = user_id);
 
-## Testing
+-- Create a function to automatically update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-After setup, test the feature by:
+-- Create trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS update_mijn_stem_documents_updated_at ON mijn_stem_documents;
+CREATE TRIGGER update_mijn_stem_documents_updated_at
+    BEFORE UPDATE ON mijn_stem_documents
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
 
-1. Going to Settings → Mijn Stem
-2. Uploading a PDF or TXT file
-3. Verifying the document appears in the list
-4. Checking that analysis completes successfully
+### Step 3: Verify Setup
+
+After running the SQL script, verify everything is set up correctly:
+
+1. Go to your Supabase Dashboard
+2. Navigate to **Table Editor**
+3. You should see a new table called `mijn_stem_documents`
+4. Navigate to **Storage**
+5. You should see a bucket called `documents`
+
+### Step 4: Test Upload
+
+1. Go to your app's Settings page
+2. Click on the "Mijn Stem" tab
+3. Try uploading a PDF or TXT file
+4. You should see the file appear in the uploaded documents list
 
 ## Troubleshooting
 
-If you encounter issues:
+### "Database table not found" error
 
-1. **"Table doesn't exist"**: Run the SQL migration script
-2. **"Permission denied"**: Check RLS policies and user permissions
-3. **"Storage error"**: Verify storage bucket exists and is accessible
-4. **"Analysis fails"**: Check OpenAI API key configuration
+- Make sure you ran the SQL script in Step 2
+- Check the Supabase dashboard to verify the table exists
+- Check the Supabase logs for any SQL execution errors
+
+### "Storage bucket not found" error
+
+- Run the setup endpoint: `/api/mijn-stem/setup` (POST request)
+- Or manually create a bucket named `documents` in Supabase Storage with these settings:
+  - Name: `documents`
+  - Public: No (private)
+  - Allowed MIME types: `application/pdf`, `text/plain`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+  - File size limit: 10MB (10485760 bytes)
+
+### "Permission denied" errors
+
+- Ensure Row Level Security (RLS) policies are set up correctly
+- Check that the user is authenticated before trying to upload
+
+### Upload works but analysis fails
+
+- Check OpenAI API key is set in environment variables: `OPENAI_API_KEY`
+- Verify the API endpoint `/api/mijn-stem/analyze` is accessible
+- Check application logs for OpenAI API errors
+
+## Architecture
+
+The MijnStem feature consists of:
+
+1. **Database Table**: `mijn_stem_documents` - stores document metadata and writing style analysis
+2. **Storage Bucket**: `documents` - stores the actual uploaded files
+3. **API Endpoints**:
+   - `/api/mijn-stem/setup` - Setup infrastructure (POST/GET)
+   - `/api/mijn-stem/upload` - Upload documents (POST), List documents (GET)
+   - `/api/mijn-stem/analyze` - Analyze document writing style (POST)
+   - `/api/mijn-stem/delete` - Delete documents (DELETE)
+   - `/api/mijn-stem/style` - Get user's master writing style (GET)
+   - `/api/mijn-stem/rewrite` - Rewrite text in user's style (POST)
+
+## Security
+
+- All documents are private and only accessible by the user who uploaded them
+- Row Level Security (RLS) ensures users can only access their own documents
+- Files are stored with user-specific paths: `mijn-stem/{userId}/{timestamp}-{filename}`
+- Service role key is used server-side for admin operations
 
 ## Support
 
-If you need help with the setup, check:
-- Supabase documentation for RLS and Storage
-- OpenAI API documentation for analysis features
-- Project logs for detailed error messages
+If you continue to experience issues:
+1. Check the Vercel deployment logs
+2. Check the Supabase logs (Dashboard > Logs)
+3. Enable verbose logging in the upload component
+4. Contact support with error details

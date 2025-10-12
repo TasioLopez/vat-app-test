@@ -155,7 +155,7 @@ export default function MijnStem() {
                         analyzeDocument(data.document.id);
                         successCount++;
                     } else {
-                        console.error('Upload failed:', data.error);
+                        console.error('Upload failed:', data.error, data);
                         errorCount++;
                         
                         // Show specific message for database setup requirement
@@ -163,7 +163,9 @@ export default function MijnStem() {
                             setSetupRequired(true);
                             showMessage('error', 'Database setup vereist. Klik op "Setup uitvoeren" om de benodigde tabellen aan te maken.');
                         } else {
-                            showMessage('error', `Upload mislukt: ${data.error}`);
+                            const errorMsg = data.details || data.error || 'Onbekende fout';
+                            showMessage('error', `Upload mislukt: ${errorMsg}`);
+                            console.error('Full error details:', data);
                         }
                     }
                 } catch (fileError) {
