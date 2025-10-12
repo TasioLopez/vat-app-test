@@ -87,10 +87,12 @@ export default function LoginPage() {
       }
 
       // Determine the correct redirect URL based on environment
-      const isProduction = process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost';
-      const redirectUrl = isProduction 
-        ? 'https://vat-app-test.vercel.app/reset-password'
-        : `${window.location.origin}/reset-password`;
+      // Use environment variable if available, otherwise detect based on hostname
+      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL 
+        ? `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`
+        : window.location.hostname === 'localhost' 
+          ? `${window.location.origin}/reset-password`
+          : 'https://vat-app-test.vercel.app/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
