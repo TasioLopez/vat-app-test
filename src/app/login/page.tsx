@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 import Logo from "@/assets/images/valentinez-logo.png";
+import { validateForm, authValidation, type ForgotPasswordFormData } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,12 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +72,45 @@ export default function LoginPage() {
     router.push("/dashboard");
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetMessage(null);
+
+    try {
+      // Validate email
+      const validation = validateForm(authValidation.forgotPassword, { email: resetEmail });
+      if (!validation.success) {
+        const firstError = Object.values(validation.errors || {})[0];
+        setResetMessage({ type: 'error', text: firstError || 'Ongeldig e-mailadres' });
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setResetMessage({ 
+        type: 'success', 
+        text: 'Een wachtwoord reset link is verzonden naar je e-mailadres. Controleer je inbox en klik op de link om je wachtwoord te resetten.' 
+      });
+      setResetEmail("");
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setResetMessage(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error sending reset email:", error);
+      setResetMessage({ type: 'error', text: 'Er is een fout opgetreden bij het verzenden van de reset link.' });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="flex flex-col items-center space-y-4">
@@ -109,8 +155,68 @@ export default function LoginPage() {
           >
             Inloggen
           </button>
+          
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="w-full text-blue-600 hover:text-blue-700 text-sm py-2 transition duration-200"
+          >
+            Wachtwoord vergeten?
+          </button>
         </form>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Wachtwoord Resetten</h3>
+            
+            {resetMessage && (
+              <div className={`mb-4 p-3 rounded ${resetMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {resetMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mailadres
+                </label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Voer je e-mailadres in"
+                  required
+                />
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetMessage(null);
+                    setResetEmail("");
+                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded transition duration-200"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition duration-200 disabled:opacity-50"
+                  disabled={resetLoading}
+                >
+                  {resetLoading ? 'Verzenden...' : 'Reset Link Verzenden'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -85,6 +85,43 @@ export const userValidation = {
   }),
 };
 
+// Strong password validation
+export const passwordValidation = {
+  strong: z.string()
+    .min(8, 'Wachtwoord moet minimaal 8 karakters bevatten')
+    .regex(/[A-Z]/, 'Wachtwoord moet minimaal één hoofdletter bevatten')
+    .regex(/[a-z]/, 'Wachtwoord moet minimaal één kleine letter bevatten')
+    .regex(/[0-9]/, 'Wachtwoord moet minimaal één cijfer bevatten')
+    .regex(/[^A-Za-z0-9]/, 'Wachtwoord moet minimaal één speciaal teken bevatten'),
+  
+  changePassword: z.object({
+    currentPassword: z.string().min(1, 'Huidig wachtwoord is verplicht'),
+    newPassword: z.string()
+      .min(8, 'Wachtwoord moet minimaal 8 karakters bevatten')
+      .regex(/[A-Z]/, 'Wachtwoord moet minimaal één hoofdletter bevatten')
+      .regex(/[a-z]/, 'Wachtwoord moet minimaal één kleine letter bevatten')
+      .regex(/[0-9]/, 'Wachtwoord moet minimaal één cijfer bevatten')
+      .regex(/[^A-Za-z0-9]/, 'Wachtwoord moet minimaal één speciaal teken bevatten'),
+    confirmPassword: z.string()
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Wachtwoorden komen niet overeen",
+    path: ["confirmPassword"],
+  }),
+
+  resetPassword: z.object({
+    newPassword: z.string()
+      .min(8, 'Wachtwoord moet minimaal 8 karakters bevatten')
+      .regex(/[A-Z]/, 'Wachtwoord moet minimaal één hoofdletter bevatten')
+      .regex(/[a-z]/, 'Wachtwoord moet minimaal één kleine letter bevatten')
+      .regex(/[0-9]/, 'Wachtwoord moet minimaal één cijfer bevatten')
+      .regex(/[^A-Za-z0-9]/, 'Wachtwoord moet minimaal één speciaal teken bevatten'),
+    confirmPassword: z.string()
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Wachtwoorden komen niet overeen",
+    path: ["confirmPassword"],
+  })
+};
+
 // Authentication validation
 export const authValidation = {
   login: z.object({
@@ -94,7 +131,7 @@ export const authValidation = {
 
   signup: z.object({
     email: commonValidators.email,
-    password: commonValidators.minLength(8, 'Wachtwoord moet minimaal 8 karakters zijn'),
+    password: passwordValidation.strong,
     confirmPassword: z.string(),
     first_name: commonValidators.required('Voornaam is verplicht')
       .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
@@ -103,6 +140,10 @@ export const authValidation = {
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Wachtwoorden komen niet overeen",
     path: ["confirmPassword"],
+  }),
+
+  forgotPassword: z.object({
+    email: commonValidators.email,
   }),
 };
 
@@ -215,5 +256,8 @@ export type UserFormData = z.infer<typeof userValidation.basic>;
 export type UserWithPasswordFormData = z.infer<typeof userValidation.withPassword>;
 export type LoginFormData = z.infer<typeof authValidation.login>;
 export type SignupFormData = z.infer<typeof authValidation.signup>;
+export type ForgotPasswordFormData = z.infer<typeof authValidation.forgotPassword>;
+export type ChangePasswordFormData = z.infer<typeof passwordValidation.changePassword>;
+export type ResetPasswordFormData = z.infer<typeof passwordValidation.resetPassword>;
 export type DocumentFormData = z.infer<typeof documentValidation>;
 export type SearchFormData = z.infer<typeof searchValidation>;
