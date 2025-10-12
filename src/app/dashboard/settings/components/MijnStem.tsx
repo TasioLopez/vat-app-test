@@ -22,6 +22,8 @@ export default function MijnStem() {
     const [userId, setUserId] = useState<string | null>(null);
     const [masterStyle, setMasterStyle] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
+    const [message, setMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null);
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,48 +70,83 @@ export default function MijnStem() {
         }
     };
 
+    const showMessage = (type: 'success' | 'error' | 'info', text: string) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 5000);
+    };
+
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0 || !userId) return;
 
         setIsUploading(true);
+        showMessage('info', `${files.length} bestand(en) worden geüpload...`);
         
         try {
+            let successCount = 0;
+            let errorCount = 0;
+
             for (const file of Array.from(files)) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('userId', userId);
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('userId', userId);
 
-                const response = await fetch('/api/mijn-stem/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
+                    // Set upload progress
+                    setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Add to local state immediately
-                    const newDoc: Document = {
-                        id: data.document.id,
-                        filename: data.document.filename,
-                        file_size: data.document.file_size,
-                        file_type: data.document.file_type,
-                        status: 'uploaded',
-                        created_at: data.document.created_at
-                    };
+                    const response = await fetch('/api/mijn-stem/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const data = await response.json();
                     
-                    setDocuments(prev => [newDoc, ...prev]);
-                    
-                    // Start analysis
-                    analyzeDocument(data.document.id);
-                } else {
-                    console.error('Upload failed:', data.error);
+                    if (data.success) {
+                        // Add to local state immediately
+                        const newDoc: Document = {
+                            id: data.document.id,
+                            filename: data.document.filename,
+                            file_size: data.document.file_size,
+                            file_type: data.document.file_type,
+                            status: 'uploaded',
+                            created_at: data.document.created_at
+                        };
+                        
+                        setDocuments(prev => [newDoc, ...prev]);
+                        setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+                        
+                        // Start analysis
+                        analyzeDocument(data.document.id);
+                        successCount++;
+                    } else {
+                        console.error('Upload failed:', data.error);
+                        errorCount++;
+                        showMessage('error', `Upload mislukt: ${data.error}`);
+                    }
+                } catch (fileError) {
+                    console.error('File upload error:', fileError);
+                    errorCount++;
+                    showMessage('error', `Upload mislukt voor ${file.name}`);
                 }
             }
+
+            // Show summary message
+            if (successCount > 0) {
+                showMessage('success', `${successCount} bestand(en) succesvol geüpload en worden geanalyseerd!`);
+            }
+            if (errorCount > 0) {
+                showMessage('error', `${errorCount} bestand(en) konden niet worden geüpload.`);
+            }
+
         } catch (error) {
             console.error('Upload error:', error);
+            showMessage('error', 'Er is een fout opgetreden tijdens het uploaden.');
         } finally {
             setIsUploading(false);
+            setUploadProgress({});
+            // Clear file input
+            event.target.value = '';
         }
     };
 
@@ -138,6 +175,7 @@ export default function MijnStem() {
                 // Update document status and refresh list
                 await fetchDocuments(userId!);
                 await fetchMasterStyle(userId!);
+                showMessage('success', 'Document geanalyseerd! Schrijfstijl is bijgewerkt.');
             } else {
                 // Update status to error
                 setDocuments(prev => 
@@ -147,6 +185,7 @@ export default function MijnStem() {
                             : doc
                     )
                 );
+                showMessage('error', `Analyse mislukt: ${data.error}`);
             }
         } catch (error) {
             console.error('Analysis error:', error);
@@ -157,11 +196,16 @@ export default function MijnStem() {
                         : doc
                 )
             );
+            showMessage('error', 'Er is een fout opgetreden tijdens de analyse.');
         }
     };
 
-    const removeFile = async (documentId: string) => {
+    const removeFile = async (documentId: string, filename: string) => {
         if (!userId) return;
+
+        if (!confirm(`Weet u zeker dat u "${filename}" wilt verwijderen?`)) {
+            return;
+        }
 
         try {
             const response = await fetch(`/api/mijn-stem/delete?documentId=${documentId}&userId=${userId}`, {
@@ -173,11 +217,14 @@ export default function MijnStem() {
             if (data.success) {
                 setDocuments(prev => prev.filter(doc => doc.id !== documentId));
                 await fetchMasterStyle(userId);
+                showMessage('success', `"${filename}" succesvol verwijderd.`);
             } else {
                 console.error('Delete failed:', data.error);
+                showMessage('error', `Verwijderen mislukt: ${data.error}`);
             }
         } catch (error) {
             console.error('Delete error:', error);
+            showMessage('error', 'Er is een fout opgetreden tijdens het verwijderen.');
         }
     };
 
@@ -234,6 +281,19 @@ export default function MijnStem() {
                 </p>
             </div>
 
+            {/* Message Feedback */}
+            {message && (
+                <div className={`mb-6 p-4 rounded-lg ${
+                    message.type === 'success' 
+                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        : message.type === 'error'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : 'bg-blue-50 text-blue-800 border border-blue-200'
+                }`}>
+                    {message.text}
+                </div>
+            )}
+
             {/* Master Style Summary */}
             {masterStyle && (
                 <div className="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg">
@@ -264,10 +324,16 @@ export default function MijnStem() {
 
             {/* Upload Section */}
             <div className="mb-8">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-                    <FaUpload className="mx-auto text-gray-400 text-4xl mb-4" />
+                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    isUploading 
+                        ? 'border-blue-400 bg-blue-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                }`}>
+                    <FaUpload className={`mx-auto text-4xl mb-4 ${
+                        isUploading ? 'text-blue-500' : 'text-gray-400'
+                    }`} />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Upload uw TP documenten
+                        {isUploading ? 'Uploaden...' : 'Upload uw TP documenten'}
                     </h3>
                     <p className="text-gray-600 mb-4">
                         Ondersteunde formaten: PDF, TXT (DOC/DOCX binnenkort beschikbaar)
@@ -275,7 +341,28 @@ export default function MijnStem() {
                     <p className="text-sm text-gray-500 mb-4">
                         Upload eerdere TP rapporten die u heeft geschreven om uw schrijfstijl te leren.
                     </p>
-                    <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                    
+                    {/* Upload Progress */}
+                    {Object.keys(uploadProgress).length > 0 && (
+                        <div className="mb-4 space-y-2">
+                            {Object.entries(uploadProgress).map(([filename, progress]) => (
+                                <div key={filename} className="text-sm">
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-gray-600 truncate">{filename}</span>
+                                        <span className="text-gray-500">{progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <FaUpload className="mr-2" />
                         {isUploading ? 'Uploaden...' : 'Bestanden selecteren'}
                         <input
@@ -291,9 +378,20 @@ export default function MijnStem() {
             </div>
 
             {/* Uploaded Files List */}
-            {documents.length > 0 && (
-                <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Geüploade documenten</h3>
+            <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Geüploade documenten ({documents.length})
+                </h3>
+                
+                {documents.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
+                        <FaFileAlt className="mx-auto text-gray-300 text-4xl mb-3" />
+                        <p className="text-gray-500 mb-2">Nog geen documenten geüpload</p>
+                        <p className="text-sm text-gray-400">
+                            Upload uw eerste TP documenten om uw schrijfstijl te leren
+                        </p>
+                    </div>
+                ) : (
                     <div className="space-y-3">
                         {documents.map((doc) => (
                             <div
@@ -317,7 +415,7 @@ export default function MijnStem() {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => removeFile(doc.id)}
+                                    onClick={() => removeFile(doc.id, doc.filename)}
                                     className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                                     title="Verwijder bestand"
                                 >
@@ -326,8 +424,8 @@ export default function MijnStem() {
                             </div>
                         ))}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Analysis Summary */}
             {documents.filter(d => d.status === 'analyzed').length > 0 && (
