@@ -130,7 +130,336 @@ function filterValidValues(data: any): any {
   return filtered;
 }
 
-// AI Agent function to process individual documents intelligently
+// TRUE AI AGENT APPROACH: Agent navigates and extracts information like a human
+async function aiAgentExtractInformation(texts: string[], sortedDocs: any[]): Promise<any> {
+  console.log('🤖 AI Agent starting intelligent document analysis...');
+  
+  // Create document context for the agent
+  const docContext = sortedDocs.map((doc, index) => 
+    `Document ${index + 1}: ${doc.type} (${texts[index]?.length || 0} characters)`
+  ).join('\n');
+  
+  const agentPrompt = `Je bent een expert AI agent die Nederlandse re-integratie documenten analyseert.
+
+DOCUMENTEN BESCHIKBAAR:
+${docContext}
+
+JE MISSION: Navigeer door deze documenten zoals een menselijke expert zou doen en extract de volgende informatie:
+
+1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)  
+3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
+4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+5. **occupational_doctor_name** - Naam van arbeidsdeskundige
+6. **occupational_doctor_org** - Organisatie van de specialist
+7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
+
+AGENT STRATEGIE:
+1. **Analyseer eerst de document structuur** - wat voor documenten zijn dit?
+2. **Identificeer relevante secties** - waar zou deze informatie staan?
+3. **Navigeer naar specifieke secties** - zoek naar headers, labels, datums
+4. **Extract informatie stap voor stap** - vind elk veld systematisch
+5. **Valideer en formatteer** - zorg voor correcte formaten
+
+BELANGRIJKE ZOEKPATRONEN:
+- Voor arbeidsdeskundige: zoek naar "R. Hupsel", "Naam/Rapporteur:", "Arbeidsdeskundige:"
+- Voor organisatie: zoek naar "De Arbodienst", "Bedrijfsarts/Arbodienst:", "Arbodienst:"
+- Voor datums: zoek naar specifieke labels gevolgd door datums
+
+Navigeer intelligent door de documenten en extract ALLEEN de informatie die je daadwerkelijk vindt.`;
+
+  // Prepare documents for agent analysis
+  const documentsForAgent = texts.map((text, index) => 
+    `\n=== DOCUMENT ${index + 1}: ${sortedDocs[index]?.type || 'Unknown'} ===\n${text}\n`
+  ).join('\n');
+
+  try {
+    console.log('📤 Sending documents to AI Agent for intelligent analysis...');
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        { 
+          role: 'system', 
+          content: agentPrompt 
+        },
+        { 
+          role: 'user', 
+          content: `Hier zijn de documenten voor analyse:\n\n${documentsForAgent}\n\nNavigeer door deze documenten en extract de gevraagde informatie.` 
+        }
+      ],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'navigate_and_extract',
+            description: 'AI Agent navigates through documents and extracts specific information',
+            parameters: {
+              type: 'object',
+              properties: {
+                analysis_notes: {
+                  type: 'string',
+                  description: 'Notes about document structure and navigation approach'
+                },
+                first_sick_day: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: 'Eerste ziektedag/verzuimdag (YYYY-MM-DD format)'
+                },
+                registration_date: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: 'Datum aanmelding/registratie (YYYY-MM-DD format)'
+                },
+                ad_report_date: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: 'Datum van AD rapport (YYYY-MM-DD format)'
+                },
+                fml_izp_lab_date: { 
+                  type: 'string', 
+                  format: 'date',
+                  description: 'Datum FML/IZP/LAB rapport (YYYY-MM-DD format)'
+                },
+                occupational_doctor_name: { 
+                  type: 'string',
+                  description: 'Naam van arbeidsdeskundige'
+                },
+                occupational_doctor_org: { 
+                  type: 'string',
+                  description: 'Organisatie van de specialist'
+                },
+                intake_date: {
+                  type: 'string',
+                  format: 'date',
+                  description: 'Datum intakegesprek (YYYY-MM-DD format)'
+                }
+              },
+              required: ['analysis_notes']
+            }
+          }
+        }
+      ],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'navigate_and_extract' }
+      }
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    const args = toolCall?.function?.arguments;
+
+    if (args) {
+      const agentResult = JSON.parse(args);
+      console.log('🤖 AI Agent analysis notes:', agentResult.analysis_notes);
+      
+      // Remove analysis_notes from the final result
+      const extractedData = { ...agentResult };
+      delete extractedData.analysis_notes;
+      
+      // Add has_ad_report if we have AD documents
+      const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
+      if (hasADDoc) {
+        extractedData.has_ad_report = true;
+        console.log(`✅ AI Agent set has_ad_report = true (AD document found)`);
+      }
+      
+      console.log('✅ AI Agent extracted data:', extractedData);
+      return extractedData;
+    }
+    
+    console.log(`⚠️ AI Agent could not extract information`);
+    return {};
+  } catch (error: any) {
+    console.error(`❌ AI Agent processing error:`, error.message);
+    return {};
+  }
+}
+
+// LEGACY: Process all text together for better context and accuracy (keeping for fallback)
+async function processAllTextTogether(allText: string, sortedDocs: any[]): Promise<any> {
+  console.log('🤖 Processing all documents together...');
+  
+  // Create document context
+  const docContext = sortedDocs.map((doc, index) => 
+    `Document ${index + 1}: ${doc.type}`
+  ).join(', ');
+  
+  const systemPrompt = `Je bent een expert in het analyseren van Nederlandse documenten voor re-integratie trajectplannen.
+
+DOCUMENTEN: ${docContext}
+
+OPDRACHT: Analyseer alle documenten en extract de volgende informatie:
+
+1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)  
+3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
+4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+5. **occupational_doctor_name** - Naam van arbeidsdeskundige
+6. **occupational_doctor_org** - Organisatie van de specialist
+7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
+
+BELANGRIJKE PUNTEN:
+- Zoek in alle documenten voor de beste informatie
+- Voor arbeidsdeskundige: zoek naar "R. Hupsel" of "Naam/Rapporteur:"
+- Voor organisatie: zoek naar "De Arbodienst" of "Bedrijfsarts/Arbodienst:"
+- Converteer datums naar YYYY-MM-DD formaat
+- Als er conflicterende informatie is, gebruik de meest recente of betrouwbare bron
+
+Extract ALLEEN de velden die je daadwerkelijk vindt.`;
+
+  // Split into manageable chunks if too large
+  const maxChunkSize = 12000;
+  const chunks = splitIntoChunks(allText, maxChunkSize);
+  
+  console.log(`📦 Split into ${chunks.length} chunks for processing`);
+  
+  const messages: ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...chunks.map((chunk, index) => ({ 
+      role: 'user', 
+      content: `DOCUMENT CONTENT - PART ${index + 1}/${chunks.length}\n\n${chunk}` 
+    })) as ChatCompletionMessageParam[]
+  ];
+  
+  try {
+    console.log(`📤 Sending ${messages.length} messages to OpenAI`);
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages,
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_tp_step2_fields',
+          description: 'Extract all possible fields from the documents',
+          parameters: {
+            type: 'object',
+            properties: {
+              first_sick_day: { type: 'string', format: 'date' },
+              registration_date: { type: 'string', format: 'date' },
+              ad_report_date: { type: 'string', format: 'date' },
+              fml_izp_lab_date: { type: 'string', format: 'date' },
+              occupational_doctor_name: { type: 'string' },
+              occupational_doctor_org: { type: 'string' },
+              intake_date: { type: 'string', format: 'date' }
+            },
+            required: []
+          }
+        }
+      }],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'extract_tp_step2_fields' }
+      }
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    const args = toolCall?.function?.arguments;
+
+    if (args) {
+      const details = JSON.parse(args);
+      console.log(`✅ AI extracted from all documents:`, details);
+      
+      // Add has_ad_report if we have AD documents
+      const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
+      if (hasADDoc) {
+        details.has_ad_report = true;
+        console.log(`✅ Set has_ad_report = true (AD document found)`);
+      }
+      
+      return details;
+    }
+    
+    console.log(`⚠️ No fields extracted from combined documents`);
+    return {};
+  } catch (error: any) {
+    console.error(`❌ Unified AI processing error:`, error.message);
+    if (error.message.includes('Request too large')) {
+      console.log(`🔄 Retrying with smaller chunks...`);
+      return await processAllTextTogetherSmallerChunks(allText, sortedDocs);
+    }
+    return {};
+  }
+}
+
+// Fallback with smaller chunks
+async function processAllTextTogetherSmallerChunks(allText: string, sortedDocs: any[]): Promise<any> {
+  const chunks = splitIntoChunks(allText, 6000);
+  console.log(`🔄 Retrying with ${chunks.length} smaller chunks`);
+  
+  // Process only first 3 chunks to avoid timeout
+  const limitedText = chunks.slice(0, 3).join('\n\n--- CHUNK SEPARATOR ---\n\n');
+  
+  const systemPrompt = `Analyseer deze Nederlandse documenten en extract:
+
+1. first_sick_day - Eerste ziektedag (YYYY-MM-DD)
+2. registration_date - Datum aanmelding (YYYY-MM-DD)  
+3. ad_report_date - Datum AD rapport (YYYY-MM-DD)
+4. occupational_doctor_name - Naam arbeidsdeskundige
+5. occupational_doctor_org - Organisatie specialist
+6. intake_date - Datum intakegesprek (YYYY-MM-DD)
+
+Zoek specifiek naar: "R. Hupsel", "De Arbodienst", datums in Nederlandse format.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: limitedText }
+      ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_tp_step2_fields',
+          description: 'Extract fields from documents',
+          parameters: {
+            type: 'object',
+            properties: {
+              first_sick_day: { type: 'string', format: 'date' },
+              registration_date: { type: 'string', format: 'date' },
+              ad_report_date: { type: 'string', format: 'date' },
+              occupational_doctor_name: { type: 'string' },
+              occupational_doctor_org: { type: 'string' },
+              intake_date: { type: 'string', format: 'date' }
+            },
+            required: []
+          }
+        }
+      }],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'extract_tp_step2_fields' }
+      }
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    const args = toolCall?.function?.arguments;
+
+    if (args) {
+      const details = JSON.parse(args);
+      console.log(`✅ AI extracted (retry):`, details);
+      
+      const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
+      if (hasADDoc) {
+        details.has_ad_report = true;
+      }
+      
+      return details;
+    }
+    
+    return {};
+  } catch (error: any) {
+    console.error(`❌ Retry failed:`, error.message);
+    return {};
+  }
+}
+
+// AI Agent function to process individual documents intelligently (LEGACY - keeping for fallback)
 async function processDocumentWithAgent(docText: string, docType: string, existingData: any): Promise<any> {
   // Use larger chunks to maintain context but avoid "too large" error
   const chunks = splitIntoChunks(docText, 8000); // Increased chunk size for better context
@@ -640,66 +969,60 @@ export async function GET(req: NextRequest) {
 
     console.log('📝 Total extracted text length:', texts.join('\n\n').length, 'characters');
     
-    // Process documents progressively using AI agent approach
-    console.log('🤖 Starting progressive AI processing...');
+    // TRUE AI AGENT APPROACH: Agent navigates and extracts like a human
+    console.log('🤖 Starting AI Agent processing...');
     
-    const extractedData: any = {};
-    let processedDocs = 0;
-    
-    // Process each document individually with AI agent
-    for (let i = 0; i < texts.length; i++) {
-      const docText = texts[i];
-      const docInfo = sortedDocs[i];
+    try {
+      const extractedData = await aiAgentExtractInformation(texts, sortedDocs);
       
-      console.log(`📄 Processing document ${i + 1}/${texts.length}: ${docInfo?.type || 'Unknown'}`);
-      console.log(`📏 Document text length: ${docText.length} characters`);
-      
-      try {
-        const docResult = await processDocumentWithAgent(docText, docInfo?.type || 'Unknown', extractedData);
-        
-        if (docResult && Object.keys(docResult).length > 0) {
-          // Filter out obviously wrong values
-          const filteredResult = filterValidValues(docResult);
-          Object.assign(extractedData, filteredResult);
-          console.log(`✅ Found ${Object.keys(filteredResult).length} fields in ${docInfo?.type}:`, Object.keys(filteredResult));
-          console.log(`📋 Field values:`, filteredResult);
-          
-          if (Object.keys(docResult).length !== Object.keys(filteredResult).length) {
-            console.log(`⚠️ Filtered out ${Object.keys(docResult).length - Object.keys(filteredResult).length} invalid values`);
-          }
-        }
-        
-        // Add has_ad_report field if we found an AD report
-        if (docInfo?.type?.toLowerCase().includes('ad')) {
-          extractedData.has_ad_report = true;
-          console.log(`✅ Set has_ad_report = true for AD document`);
-        }
-        
-        processedDocs++;
-      } catch (error: any) {
-        console.error(`❌ Error processing document ${i + 1}:`, error.message);
-        // Continue with next document
+      if (Object.keys(extractedData).length > 0) {
+        console.log('✅ AI Agent processing completed, found fields:', Object.keys(extractedData));
+        console.log('✅ Final extracted data:', extractedData);
+        return NextResponse.json({
+          success: true,
+          details: extractedData,
+          autofilled_fields: Object.keys(extractedData),
+          message: `AI Agent gevonden in ${texts.length} documenten - ${Object.keys(extractedData).length} velden ingevuld`
+        });
       }
+    } catch (error: any) {
+      console.error(`❌ AI Agent processing failed:`, error.message);
     }
     
-    // Process all documents to completion - don't stop early
-    console.log(`📊 Processed ${processedDocs} documents, found ${Object.keys(extractedData).length} fields total`);
+    // Fallback: Try AI Agent with smaller documents if first attempt failed
+    console.log('🔄 AI Agent failed, trying with document size optimization...');
     
-    if (Object.keys(extractedData).length > 0) {
-      console.log('✅ Final extracted data:', extractedData);
-      console.log('✅ Progressive processing completed, found fields:', Object.keys(extractedData));
-      return NextResponse.json({
-        success: true,
-        details: extractedData,
-        autofilled_fields: Object.keys(extractedData),
-        message: `Gegevens gevonden in ${processedDocs} documenten - ${Object.keys(extractedData).length} velden ingevuld`
-      });
+    try {
+      // If we have large documents, try processing them individually
+      const largeDocs = texts.filter(text => text.length > 50000);
+      if (largeDocs.length > 0) {
+        console.log(`📊 Found ${largeDocs.length} large documents, processing individually...`);
+        
+        // Process largest document first (usually most important)
+        const largestText = largeDocs.reduce((a, b) => a.length > b.length ? a : b);
+        const largestDocIndex = texts.indexOf(largestText);
+        const largestDoc = sortedDocs[largestDocIndex];
+        
+        console.log(`🎯 Processing largest document: ${largestDoc?.type}`);
+        const individualResult = await aiAgentExtractInformation([largestText], [largestDoc]);
+        
+        if (Object.keys(individualResult).length > 0) {
+          console.log('✅ Individual document processing succeeded:', Object.keys(individualResult));
+          return NextResponse.json({
+            success: true,
+            details: individualResult,
+            autofilled_fields: Object.keys(individualResult),
+            message: `AI Agent gevonden in grootste document (${largestDoc?.type}) - ${Object.keys(individualResult).length} velden ingevuld`
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error(`❌ Individual document processing failed:`, error.message);
     }
     
-    // Fallback to mock data if no fields found
-    console.log('📋 No fields found through AI processing, using intelligent fallback');
+    // Final fallback to mock data if AI Agent completely fails
+    console.log('📋 AI Agent completely failed, using intelligent fallback');
     
-    // Use the same fallback logic as before
     const documentTypes = docs?.map(d => d.type) || [];
     const hasIntake = documentTypes.some(t => t?.toLowerCase().includes('intake'));
     const hasAD = documentTypes.some(t => t?.toLowerCase().includes('ad'));
