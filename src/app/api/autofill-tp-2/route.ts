@@ -41,40 +41,41 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     console.log('⚠️ pdf-parse returned minimal text, trying fallback');
   } catch (error: any) {
     console.error('⚠️ pdf-parse failed, trying fallback:', error.message);
+  }
+  
+  // Fallback: basic text extraction
+  try {
+    const bufferString = buffer.toString('latin1');
     
-    // Fallback: basic text extraction
-    try {
-      const bufferString = buffer.toString('latin1');
+    // Extract text between common PDF text markers
+    const textMatches = bufferString.match(/\(([^\)]{3,})\)/g);
+    if (textMatches) {
+      const extractedText = textMatches
+        .map(match => match.slice(1, -1))
+        .join(' ')
+        .replace(/\\[rn]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       
-      // Extract text between common PDF text markers
-      const textMatches = bufferString.match(/\(([^\)]{3,})\)/g);
-      if (textMatches) {
-        const extractedText = textMatches
-          .map(match => match.slice(1, -1))
-          .join(' ')
-          .replace(/\\[rn]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        if (extractedText.length > 50) {
-          console.log('📄 Fallback PDF extraction successful, extracted', extractedText.length, 'characters');
-          return extractedText;
-        }
+      if (extractedText.length > 50) {
+        console.log('📄 Fallback PDF extraction successful, extracted', extractedText.length, 'characters');
+        return extractedText;
       }
-      
-      // Last resort: look for readable ASCII text
-      const readableText = bufferString.match(/[A-Za-z][A-Za-z0-9\s\-\.\,\:\;\(\)]{15,}/g);
-      if (readableText && readableText.length > 0) {
-        const text = readableText.join(' ');
-        console.log('📄 Basic text extraction found', text.length, 'characters');
-        return text;
-      }
-    } catch (fallbackError: any) {
-      console.error('❌ All PDF extraction methods failed:', fallbackError.message);
     }
     
-    return '';
+    // Last resort: look for readable ASCII text
+    const readableText = bufferString.match(/[A-Za-z][A-Za-z0-9\s\-\.\,\:\;\(\)]{15,}/g);
+    if (readableText && readableText.length > 0) {
+      const text = readableText.join(' ');
+      console.log('📄 Basic text extraction found', text.length, 'characters');
+      return text;
+    }
+  } catch (fallbackError: any) {
+    console.error('❌ All PDF extraction methods failed:', fallbackError.message);
   }
+  
+  // Always return a string, even if empty
+  return '';
 }
 
 function extractStoragePath(url: string): string | null {
