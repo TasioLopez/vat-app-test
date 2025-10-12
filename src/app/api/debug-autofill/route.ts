@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     // Test 2: Check documents
     const { data: docs, error: docsError } = await supabase
       .from('documents')
-      .select('id, type, filename, url, created_at')
+      .select('id, type, url, created_at')
       .eq('employee_id', employeeId);
 
     if (docsError) {
@@ -94,12 +94,12 @@ export async function GET(req: NextRequest) {
           if (downloadError) {
             downloadTest = { success: false, error: downloadError.message };
           } else {
-            const buffer = Buffer.from(await file.arrayBuffer());
-            downloadTest = { 
-              success: true, 
-              size: buffer.length,
-              filename: doc.filename 
-            };
+          const buffer = Buffer.from(await file.arrayBuffer());
+          downloadTest = { 
+            success: true, 
+            size: buffer.length,
+            type: doc.type 
+          };
           }
         } else {
           downloadTest = { success: false, error: 'Could not extract storage path' };

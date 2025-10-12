@@ -33,12 +33,14 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     const pdfParse = await import('pdf-parse');
     const data = await pdfParse.default(buffer);
     
-    if (data.text && data.text.length > 50) {
+    // Check if data exists and has text property
+    if (data && typeof data === 'object' && data.text && typeof data.text === 'string' && data.text.length > 50) {
       console.log('📄 PDF extraction successful using pdf-parse, extracted', data.text.length, 'characters');
       return data.text;
     }
     
-    console.log('⚠️ pdf-parse returned minimal text, trying fallback');
+    console.log('⚠️ pdf-parse returned invalid data or minimal text, trying fallback');
+    console.log('📋 pdf-parse data type:', typeof data, 'text type:', typeof data?.text, 'text length:', data?.text?.length);
   } catch (error: any) {
     console.error('⚠️ pdf-parse failed, trying fallback:', error.message);
   }
@@ -187,7 +189,7 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      console.log('📥 Downloading document:', doc.type, '-', doc.filename || doc.id);
+      console.log('📥 Downloading document:', doc.type, '-', doc.id);
       const { data: file, error: downloadError } = await supabase.storage.from('documents').download(path);
       
       if (downloadError || !file) {
@@ -196,16 +198,16 @@ export async function GET(req: NextRequest) {
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      console.log('🔍 Extracting text from:', doc.filename || doc.id, '(', buffer.length, 'bytes)');
+      console.log('🔍 Extracting text from:', doc.id, '(', buffer.length, 'bytes)');
       
       const text = await extractTextFromPdf(buffer);
       
       if (text?.length > 20) {
-        console.log('✅ Extracted', text.length, 'characters from:', doc.filename || doc.id);
+        console.log('✅ Extracted', text.length, 'characters from:', doc.id);
         // Add document type label for context
-        texts.push(`--- DOCUMENT TYPE: ${doc.type || 'Unknown'} | FILENAME: ${doc.filename || 'Unknown'} ---\n${text.trim()}`);
+        texts.push(`--- DOCUMENT TYPE: ${doc.type || 'Unknown'} | ID: ${doc.id} ---\n${text.trim()}`);
       } else {
-        console.log('⚠️ No usable text extracted from:', doc.filename || doc.id);
+        console.log('⚠️ No usable text extracted from:', doc.id);
       }
     }
 
