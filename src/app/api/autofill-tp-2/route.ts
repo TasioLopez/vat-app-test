@@ -146,6 +146,10 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
               occupational_doctor_org: { 
                 type: 'string',
                 description: 'Organisatie bedrijfsarts/Arbodienst'
+              },
+              has_ad_report: {
+                type: 'boolean',
+                description: 'Of er een AD rapport aanwezig is (true/false)'
               }
             },
             required: []
@@ -175,35 +179,78 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
 
 // Create focused prompts based on document type
 function createFocusedPrompt(docType: string, existingData: any): string {
-  const missingFields = Object.keys(existingData).length === 0 ? 'alle' : 'ontbrekende';
-  
   let focus = '';
+  let searchTerms = '';
+  
   switch (docType.toLowerCase()) {
     case 'intakeformulier':
     case 'intake':
-      focus = `Dit is een INTAKEFORMULIER. Focus op:
-- Eerste ziektedag/verzuimdag (meestal aan het begin)
-- Registratiedatum (wanneer werknemer zich heeft aangemeld)
-- Persoonlijke gegevens sectie`;
+      focus = `Dit is een INTAKEFORMULIER voor re-integratie traject. 
+
+ZOEK SPECIFIEK NAAR:
+1. **Datum intakegesprek**: Zoek naar "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:", "Gespreksdatum:", datum van het intakegesprek
+2. **Eerste ziektedag**: Zoek naar "Eerste ziektedag:", "Eerste verzuimdag:", "Datum eerste ziekmelding:", "1e ziektedag:", "Datum ziekmelding:"
+3. **Registratiedatum**: Zoek naar "Registratiedatum:", "Datum registratie:", "Aanmelddatum:", "Datum aanmelding UWV:", "Datum aanmelding:"
+4. **Persoonlijke gegevens sectie**: Naam, geboortedatum, contactgegevens
+
+TYPISCHE STRUCTUUR: Intakeformulieren hebben meestal een kop met datum, persoonlijke gegevens, en ziektedatum sectie.`;
+      
+      searchTerms = `
+SPECIFIEKE ZOEKTERMEN voor INTAKEFORMULIER:
+- "Datum intakegesprek", "Datum gesprek", "Intakedatum", "Gespreksdatum"
+- "Eerste ziektedag", "Eerste verzuimdag", "Datum ziekmelding", "1e ziektedag"
+- "Registratiedatum", "Aanmelddatum", "Datum aanmelding", "Datum registratie"
+- "Intakegesprek", "Gesprek", "Intake"
+- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
       break;
+      
     case 'ad rapport':
     case 'ad-rapport':
     case 'ad_rapportage':
-      focus = `Dit is een AD RAPPORT (Arbeidsdeskundig rapport). Focus op:
-- Datum van het rapport (meestal in de header)
-- Naam van de arbeidsdeskundige/bedrijfsarts
-- Organisatie van de arbeidsdeskundige
-- Datum eerste ziektedag (als vermeld)`;
+      focus = `Dit is een AD RAPPORT (Arbeidsdeskundig rapport) voor re-integratie.
+
+ZOEK SPECIFIEK NAAR:
+1. **Datum AD rapportage**: Zoek in header/footer naar "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:", datum van het rapport
+2. **Arbeidsdeskundige**: Zoek naar "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:", naam van de specialist
+3. **Bedrijfsarts bedrijf**: Zoek naar "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:", naam van de arbodienst
+4. **Eerste ziektedag**: Als vermeld in het rapport
+
+TYPISCHE STRUCTUUR: AD rapporten hebben een duidelijke header met datum, naam van de arbeidsdeskundige en organisatie.`;
+      
+      searchTerms = `
+SPECIFIEKE ZOEKTERMEN voor AD RAPPORT:
+- "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:"
+- "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:"
+- "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:"
+- "Arbeidsdeskundig rapport", "AD rapport", "Arbeidsdeskundige rapportage"
+- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
       break;
+      
     case 'fml':
     case 'izp':
     case 'lab':
-      focus = `Dit is een FML/IZP/LAB rapport. Focus op:
-- Datum van het rapport
-- Eventuele ziektedagen of registratiedatums`;
+      focus = `Dit is een FML/IZP/LAB rapport.
+
+ZOEK SPECIFIEK NAAR:
+1. **Datum FML/IZP/LAB**: Zoek naar "Datum:", "Rapportdatum:", "Datum rapport:", datum van het rapport
+2. **Eventuele ziektedagen**: Als vermeld in het rapport
+
+TYPISCHE STRUCTUUR: FML/IZP rapporten hebben een duidelijke datum in de header.`;
+      
+      searchTerms = `
+SPECIFIEKE ZOEKTERMEN voor FML/IZP/LAB:
+- "Datum:", "Rapportdatum:", "Datum rapport:", "Datum FML:", "Datum IZP:", "Datum LAB:"
+- "FML rapport", "IZP rapport", "LAB rapport", "Inzetbaarheidsprofiel"
+- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
       break;
+      
     default:
       focus = `Dit is een document. Zoek naar relevante datums en namen.`;
+      searchTerms = `
+ALGEMENE ZOEKTERMEN:
+- "Datum:", "Rapportdatum:", "Datum rapport:"
+- "Arbeidsdeskundige:", "Bedrijfsarts:", "Arbodienst:"
+- "Eerste ziektedag:", "Registratiedatum:", "Intakedatum:"`;
   }
   
   return `
@@ -213,21 +260,26 @@ DOCUMENT TYPE: ${docType.toUpperCase()}
 ${focus}
 
 ⚠️ BELANGRIJK: Extract ALLEEN de volgende velden als ze expliciet in dit document staan:
-- first_sick_day (Eerste ziektedag/verzuimdag)
-- registration_date (Registratiedatum/Aanmelddatum)  
-- ad_report_date (Datum AD Rapport)
-- fml_izp_lab_date (Datum FML/IZP/LAB)
-- occupational_doctor_name (Naam bedrijfsarts)
-- occupational_doctor_org (Organisatie bedrijfsarts)
+- first_sick_day (Eerste ziektedag/verzuimdag) - zoek naar eerste ziektedag
+- registration_date (Registratiedatum/Aanmelddatum) - zoek naar registratiedatum  
+- ad_report_date (Datum AD Rapport) - zoek naar datum van AD rapport
+- fml_izp_lab_date (Datum FML/IZP/LAB) - zoek naar datum van FML/IZP/LAB rapport
+- occupational_doctor_name (Naam bedrijfsarts/arbeidsdeskundige) - zoek naar naam specialist
+- occupational_doctor_org (Organisatie bedrijfsarts/arbodienst) - zoek naar organisatie
 
-ALGEMENE ZOEKTERMEN:
-- "eerste ziektedag", "eerste verzuimdag", "datum ziekmelding"
-- "registratiedatum", "aanmelddatum", "datum aanmelding"
-- "datum rapport", "rapportdatum", "datum AD"
-- "bedrijfsarts", "arbeidsdeskundige", "arbo-arts"
-- "arbodienst", "arbo-organisatie"
+${searchTerms}
 
-DATUM FORMAAT: Gebruik altijd YYYY-MM-DD (bijv. "2024-03-15").
+DATUM CONVERSIE REGELS:
+- Als je een datum vindt in dd-mm-yyyy formaat, converteer naar YYYY-MM-DD
+- Als je een datum vindt in dd/mm/yyyy formaat, converteer naar YYYY-MM-DD  
+- Als je een datum vindt in dd-mm-yy formaat, converteer naar YYYY-MM-DD (assume 20xx)
+- Voorbeelden: "15-03-2024" → "2024-03-15", "15/03/2024" → "2024-03-15", "15-03-24" → "2024-03-15"
+
+BELANGRIJKE TIPS:
+- Kijk naar de header/footer van het document voor datums
+- Zoek naar labels zoals "Datum:", "Arbeidsdeskundige:", "Arbodienst:"
+- Let op verschillende schrijfwijzen van dezelfde term
+- Als een veld niet gevonden kan worden, laat het dan weg uit de output
 
 Als een veld niet gevonden kan worden, laat het dan weg uit de output.
 `.trim();
@@ -418,6 +470,11 @@ export async function GET(req: NextRequest) {
           Object.assign(extractedData, docResult);
           console.log(`✅ Found ${Object.keys(docResult).length} fields in ${docInfo?.type}:`, Object.keys(docResult));
           
+          // Add has_ad_report field if we found an AD report
+          if (docInfo?.type?.toLowerCase().includes('ad')) {
+            extractedData.has_ad_report = true;
+          }
+          
           // Check if we have enough information - stop early if we found key fields
           const keyFields = ['first_sick_day', 'registration_date', 'ad_report_date'];
           const foundKeyFields = keyFields.filter(field => extractedData[field]);
@@ -464,6 +521,7 @@ export async function GET(req: NextRequest) {
       mockData.ad_report_date = '2024-02-01';
       mockData.occupational_doctor_name = 'Dr. Test Arts';
       mockData.occupational_doctor_org = 'Test Arbodienst';
+      mockData.has_ad_report = true;
     }
     
     if (Object.keys(mockData).length > 0) {
@@ -476,10 +534,10 @@ export async function GET(req: NextRequest) {
       });
     }
     
-    return NextResponse.json({ 
-      success: false, 
+      return NextResponse.json({ 
+        success: false, 
       error: 'Geen relevante informatie gevonden in de documenten',
-      data: { details: {} }
+        data: { details: {} }
     }, { status: 200 });
   } catch (err: any) {
     console.error('❌ Server error:', err);
