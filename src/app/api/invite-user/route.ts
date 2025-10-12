@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: signupUrl.toString(),
       data: {
-        first_name: firstName,
-        last_name: lastName,
+        first_name: first_name,
+        last_name: last_name,
         role: role,
         signup_token: signup_token
       }
