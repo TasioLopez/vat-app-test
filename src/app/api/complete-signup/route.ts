@@ -57,11 +57,12 @@ export async function POST(req: NextRequest) {
         .single();
       
       if (dbUser?.id) {
-        authUserId = dbUser.id;
-        console.log("Found existing user ID in database:", authUserId);
+        const userId = dbUser.id;
+        authUserId = userId;
+        console.log("Found existing user ID in database:", userId);
         
         // Update the user's password using admin API
-        const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(authUserId, {
+        const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(userId, {
           password: password,
         });
         
