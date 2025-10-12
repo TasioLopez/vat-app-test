@@ -29,19 +29,26 @@ function splitIntoChunks(text: string, maxLen = 4000): string[] {
 // Enhanced PDF text extraction for TP documents
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
+    // Use pdfjs-dist for proper PDF parsing in Node.js environment
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     
-    // Initialize worker
-    const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
-    if (typeof window === 'undefined') {
+    // In Node.js/serverless environment, disable worker
+    // @ts-ignore - GlobalWorkerOptions exists but types are incomplete
+    if (pdfjs.GlobalWorkerOptions) {
       // @ts-ignore
-      const { GlobalWorkerOptions } = pdfjs;
-      GlobalWorkerOptions.workerSrc = pdfjsWorker;
+      pdfjs.GlobalWorkerOptions.workerSrc = null;
     }
 
     const uint8Array = new Uint8Array(buffer);
-    const pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
+    // @ts-ignore - getDocument types are incomplete
+    const loadingTask = pdfjs.getDocument({ 
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
+    });
     
+    const pdf = await loadingTask.promise;
     let fullText = '';
     
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
