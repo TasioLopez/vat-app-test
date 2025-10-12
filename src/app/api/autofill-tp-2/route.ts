@@ -149,34 +149,38 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 3. FML/IZP (derde prioriteit)
 4. OVERIG (laagste prioriteit)
 
-BELANGRIJK: Je MOET zoeken naar ALLE volgende velden in de documenten:
+BELANGRIJK: Je MOET zoeken naar ALLE volgende velden in de documenten. Wees EXTRA AGGRESSIEF in het zoeken!
 
 1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-   - Zoek naar: "Eerste ziektedag:", "Verzuimdatum:", "Ziekte start:", "Ziekte begin:"
+   - Zoek naar: "Eerste ziektedag:", "Verzuimdatum:", "Ziekte start:", "Ziekte begin:", "Eerste dag:", "Start ziekte:", "Ziekte sinds:", "Verzuim sinds:"
+   - Ook zoek naar: "15-01-2024", "15 januari 2024", "15/01/2024" (elke datum die lijkt op eerste ziektedag)
    - Voorbeeld: "15-01-2024" → "2024-01-15"
 
 2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)
-   - Zoek naar: "Datum aanmelding:", "Registratiedatum:", "Aanmelddatum:", "Datum registratie:"
+   - Zoek naar: "Datum aanmelding:", "Registratiedatum:", "Aanmelddatum:", "Datum registratie:", "Aanmelding:", "Registratie:", "Aangemeld op:"
+   - Ook zoek naar: "20-01-2024", "20 januari 2024", "20/01/2024" (elke datum die lijkt op aanmelding)
    - Voorbeeld: "20-01-2024" → "2024-01-20"
 
 3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
-   - Zoek naar: "Datum AD rapport:", "Rapportdatum:", "Datum rapport:", "AD datum:"
+   - Zoek naar: "Datum AD rapport:", "Rapportdatum:", "Datum rapport:", "AD datum:", "Rapport datum:", "AD rapport:", "Arbeidsdeskundig rapport datum:"
    - Voorbeeld: "01-02-2024" → "2024-02-01"
 
 4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
-   - Zoek naar: "Datum FML:", "Datum IZP:", "Datum LAB:", "FML datum:", "IZP datum:"
+   - Zoek naar: "Datum FML:", "Datum IZP:", "Datum LAB:", "FML datum:", "IZP datum:", "LAB datum:", "FML rapport:", "IZP rapport:"
    - Voorbeeld: "10-03-2024" → "2024-03-10"
 
 5. **occupational_doctor_name** - Naam van arbeidsdeskundige
-   - Zoek naar: "R. Hupsel", "Naam/Rapporteur:", "Arbeidsdeskundige:", "Bedrijfsarts:", "Naam specialist:"
+   - Zoek naar: "R. Hupsel", "Naam/Rapporteur:", "Arbeidsdeskundige:", "Bedrijfsarts:", "Naam specialist:", "Rapporteur:", "Naam:", "Dr.", "Drs."
+   - Ook zoek naar: "Hupsel", "Jansen", "Peters" (alle mogelijke namen)
    - Voorbeeld: "R. Hupsel" of "Dr. Jansen"
 
 6. **occupational_doctor_org** - Organisatie van de specialist
-   - Zoek naar: "De Arbodienst", "Arbodienst", "Bedrijfsarts/Arbodienst:", "Organisatie:", "Arbo organisatie:"
+   - Zoek naar: "De Arbodienst", "Arbodienst", "Bedrijfsarts/Arbodienst:", "Organisatie:", "Arbo organisatie:", "ArboNed", "Arbo Unie", "BGD", "Arbo"
    - Voorbeeld: "De Arbodienst" of "ArboNed"
 
 7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
-   - Zoek naar: "Datum intakegesprek:", "Gespreksdatum:", "Intakedatum:", "Datum gesprek:"
+   - Zoek naar: "Datum intakegesprek:", "Gespreksdatum:", "Intakedatum:", "Datum gesprek:", "Intake datum:", "Gesprek datum:", "Datum intake:"
+   - Ook zoek naar: "10-01-2024", "10 januari 2024", "10/01/2024" (elke datum die lijkt op intake)
    - Voorbeeld: "10-01-2024" → "2024-01-10"
 
 DATUM CONVERSIE REGELS:
@@ -952,12 +956,18 @@ export async function GET(req: NextRequest) {
       
       const text = await extractTextFromPdf(buffer);
       
+      // CRITICAL LOGGING: Track text extraction for each document
       if (text?.length > 20) {
-        console.log('✅ Extracted', text.length, 'characters from:', doc.id);
+        console.log(`✅ EXTRACTED TEXT from ${doc.type} (ID: ${doc.id}): ${text.length} characters`);
+        console.log(`📄 FIRST 300 chars of ${doc.type}:`, text.substring(0, 300));
+        console.log(`📄 CONTAINS KEYWORDS? Intake: ${text.toLowerCase().includes('intake')}, AD: ${text.toLowerCase().includes('ad')}, Datum: ${text.toLowerCase().includes('datum')}`);
         // Add document type label for context
         texts.push(`--- DOCUMENT TYPE: ${doc.type || 'Unknown'} | ID: ${doc.id} ---\n${text.trim()}`);
       } else {
-        console.log('⚠️ No usable text extracted from:', doc.id);
+        console.error(`❌ NO TEXT EXTRACTED from ${doc.type} (ID: ${doc.id}) - text length: ${text?.length || 0}`);
+        if (text && text.length <= 20) {
+          console.error(`📄 SHORT TEXT FOUND: "${text}"`);
+        }
       }
     }
 
@@ -1036,10 +1046,15 @@ export async function GET(req: NextRequest) {
         const doc = sortedDocs[i];
         
         console.log(`🎯 Processing document ${i + 1}/${texts.length}: ${doc?.type}`);
+        console.log(`📄 Text length for ${doc?.type}: ${text.length} characters`);
+        console.log(`📄 First 200 chars of ${doc?.type}:`, text.substring(0, 200));
+        
         const individualResult = await modernDocumentProcessor([text], [doc]);
+        console.log(`🤖 AI RESULT for ${doc?.type}:`, individualResult);
         
         if (Object.keys(individualResult).length > 0) {
           console.log(`✅ Found ${Object.keys(individualResult).length} fields in ${doc?.type}:`, Object.keys(individualResult));
+          console.log(`📊 Fields and values from ${doc?.type}:`, individualResult);
           
           // Merge results, giving priority to higher priority documents (intake > ad > fml/izp)
           Object.entries(individualResult).forEach(([key, value]) => {
@@ -1048,12 +1063,15 @@ export async function GET(req: NextRequest) {
               if (allResults[key] !== '') {
                 totalFieldsFound++;
               }
+              console.log(`🔄 Merged ${key}: "${value}" from ${doc?.type}`);
+            } else {
+              console.log(`⏭️ Skipped ${key} from ${doc?.type} (already exists)`);
             }
           });
           
           processedDocs.push(doc?.type || 'unknown');
         } else {
-          console.log(`⚠️ No fields found in ${doc?.type}`);
+          console.log(`⚠️ No fields found in ${doc?.type} - AI returned empty result`);
         }
       }
       
