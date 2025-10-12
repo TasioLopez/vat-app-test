@@ -276,15 +276,28 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       const res = await fetch(`/api/autofill-tp-2?employeeId=${employeeId}`);
       const data = await res.json();
 
-      if (data?.details) {
-        Object.entries(data.details).forEach(([key, value]) => updateField(key, value));
+      if (!res.ok || !data.success) {
+        const errorMsg = data.error || 'Autofill mislukt';
+        alert(`⚠️ ${errorMsg}`);
+        console.error('Autofill error:', data);
+        return;
       }
 
-      if (data?.autofilled_fields?.length) {
-        setAutofilledFields(data.autofilled_fields);
+      if (data?.details && Object.keys(data.details).length > 0) {
+        Object.entries(data.details).forEach(([key, value]) => updateField(key, value));
+        
+        const fieldNames = data.autofilled_fields || Object.keys(data.details);
+        setAutofilledFields(fieldNames);
+        
+        const fieldCount = fieldNames.length;
+        const message = data.message || `${fieldCount} velden ingevuld`;
+        alert(`✅ ${message}\n\nIngevulde velden: ${fieldNames.join(', ')}`);
+      } else {
+        alert('⚠️ Geen informatie gevonden in de documenten om in te vullen.');
       }
     } catch (err) {
       console.error('❌ Autofill failed:', err);
+      alert('❌ Er ging iets mis bij het autofill proces. Controleer de console voor details.');
     } finally {
       setAutofillLoading(false);
     }
