@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
       await supabase.from('mijn_stem_documents').select('id').limit(1);
     } catch (tableError: any) {
       console.error('Database table check failed:', tableError);
-      if (tableError.message.includes('does not exist')) {
+      const errorMessage = tableError?.message || tableError?.toString() || 'Unknown database error';
+      
+      if (errorMessage.includes('does not exist')) {
         return NextResponse.json({ 
           error: 'Database table not found. Please run the database setup first.',
           setupRequired: true,
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       return NextResponse.json({ 
-        error: 'Database error: ' + tableError.message 
+        error: 'Database error: ' + errorMessage 
       }, { status: 500 });
     }
 
@@ -57,9 +59,10 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
+      const errorMessage = uploadError?.message || uploadError?.toString() || 'Unknown storage error';
       
       // Check if bucket doesn't exist
-      if (uploadError.message.includes('Bucket not found')) {
+      if (errorMessage.includes('Bucket not found')) {
         return NextResponse.json({ 
           error: 'Storage bucket not found. Please run the database setup first.',
           setupRequired: true,
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
       }
       
       return NextResponse.json({ 
-        error: 'Failed to upload file: ' + uploadError.message 
+        error: 'Failed to upload file: ' + errorMessage 
       }, { status: 500 });
     }
 
@@ -91,8 +94,10 @@ export async function POST(req: NextRequest) {
       // Clean up uploaded file if database insert fails
       await supabase.storage.from('documents').remove([uploadData.path]);
       
+      const errorMessage = insertError?.message || insertError?.toString() || 'Unknown database error';
+      
       // Check if it's a table doesn't exist error
-      if (insertError.message.includes('relation "mijn_stem_documents" does not exist')) {
+      if (errorMessage.includes('relation "mijn_stem_documents" does not exist')) {
         return NextResponse.json({ 
           error: 'Database table not found. Please run the database setup script first. Check MIJN_STEM_SETUP.md for instructions.',
           setupRequired: true 
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
       }
       
       return NextResponse.json({ 
-        error: 'Failed to save file metadata: ' + insertError.message 
+        error: 'Failed to save file metadata: ' + errorMessage 
       }, { status: 500 });
     }
 
