@@ -86,13 +86,14 @@ export default function LoginPage() {
         return;
       }
 
-      // Determine the correct redirect URL based on environment
-      // Use environment variable if available, otherwise detect based on hostname
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL 
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`
-        : window.location.hostname === 'localhost' 
-          ? `${window.location.origin}/reset-password`
-          : 'https://vat-app-test.vercel.app/reset-password';
+      // Determine the correct redirect URL based on current hostname
+      const currentHostname = window.location.hostname;
+      const redirectUrl = currentHostname === 'localhost' || currentHostname === '127.0.0.1'
+        ? `${window.location.origin}/reset-password`
+        : 'https://vat-app-test.vercel.app/reset-password';
+      
+      console.log('Current hostname:', currentHostname);
+      console.log('Redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
