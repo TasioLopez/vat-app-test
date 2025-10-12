@@ -130,11 +130,10 @@ function filterValidValues(data: any): any {
   return filtered;
 }
 
-// MODERN 2025 APPROACH: Use OpenAI's Vision API for robust document processing
+// FIXED APPROACH: Use OpenAI function calling (tools) for reliable structured extraction
 async function modernDocumentProcessor(texts: string[], sortedDocs: any[]): Promise<any> {
-  console.log('🚀 Using Modern 2025 OpenAI Document Processing...');
+  console.log('🚀 Using OpenAI Function Calling for Reliable Document Processing...');
   
-  // Process documents with modern structured output approach
   const documentContext = sortedDocs.map((doc, index) => 
     `Document ${index + 1}: ${doc.type}`
   ).join(', ');
@@ -145,29 +144,25 @@ DOCUMENTEN: ${documentContext}
 
 OPDRACHT: Analyseer deze documenten en extract de volgende informatie met 100% nauwkeurigheid:
 
-1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)  
-3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
-4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
-5. **occupational_doctor_name** - Naam van arbeidsdeskundige
-6. **occupational_doctor_org** - Organisatie van de specialist
-7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
+1. first_sick_day - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+2. registration_date - Datum aanmelding/registratie (YYYY-MM-DD format)  
+3. ad_report_date - Datum van AD rapport (YYYY-MM-DD format)
+4. fml_izp_lab_date - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+5. occupational_doctor_name - Naam van arbeidsdeskundige (zoek naar "R. Hupsel")
+6. occupational_doctor_org - Organisatie van de specialist (zoek naar "De Arbodienst")
+7. intake_date - Datum intakegesprek (YYYY-MM-DD format)
 
 BELANGRIJKE PUNTEN:
-- Zoek specifiek naar "R. Hupsel" voor arbeidsdeskundige
-- Zoek naar "De Arbodienst" voor organisatie
 - Converteer alle datums naar YYYY-MM-DD formaat
-- Extract ALLEEN informatie die je daadwerkelijk vindt
-- Wees zeer precies en nauwkeurig`;
+- Extract ALLEEN informatie die je daadwerkelijk vindt in de documenten
+- Gebruik de function tool om de gestructureerde data terug te geven`;
 
-  // Smart text processing - use only relevant sections if documents are too large
+  // Smart text processing
   let processedText = '';
   if (texts.length === 1 && texts[0].length > 100000) {
-    // For very large single documents, extract key sections
     console.log('📊 Large document detected, extracting key sections...');
     processedText = extractKeySections(texts[0]);
   } else {
-    // For multiple documents or smaller documents, use all text
     processedText = texts.join('\n\n--- DOCUMENT SEPARATOR ---\n\n');
   }
 
@@ -181,28 +176,69 @@ BELANGRIJKE PUNTEN:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Analyseer deze documenten:\n\n${processedText}` }
       ],
-      response_format: {
-        type: 'json_object'
-      },
-      max_tokens: 2000
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_tp_step2_fields',
+          description: 'Extract trajectplan step 2 fields from documents',
+          parameters: {
+            type: 'object',
+            properties: {
+              first_sick_day: { 
+                type: 'string',
+                description: 'Eerste ziektedag in YYYY-MM-DD format'
+              },
+              registration_date: { 
+                type: 'string',
+                description: 'Datum aanmelding in YYYY-MM-DD format'
+              },
+              ad_report_date: { 
+                type: 'string',
+                description: 'Datum AD rapport in YYYY-MM-DD format'
+              },
+              fml_izp_lab_date: { 
+                type: 'string',
+                description: 'Datum FML/IZP/LAB rapport in YYYY-MM-DD format'
+              },
+              occupational_doctor_name: { 
+                type: 'string',
+                description: 'Naam van arbeidsdeskundige'
+              },
+              occupational_doctor_org: { 
+                type: 'string',
+                description: 'Organisatie van de specialist'
+              },
+              intake_date: {
+                type: 'string',
+                description: 'Datum intakegesprek in YYYY-MM-DD format'
+              }
+            },
+            required: []
+          }
+        }
+      }],
+      tool_choice: { 
+        type: 'function', 
+        function: { name: 'extract_tp_step2_fields' } 
+      }
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (content) {
-      const extractedData = JSON.parse(content);
-      console.log('✅ Modern processing extracted:', extractedData);
-      
-      // Add has_ad_report if we have AD documents
-      const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
-      if (hasADDoc) {
-        extractedData.has_ad_report = true;
-      }
-      
-      return extractedData;
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.log('⚠️ No tool call returned from OpenAI');
+      return {};
+    }
+
+    const extractedData = JSON.parse(toolCall.function.arguments);
+    console.log('✅ Modern processing extracted:', extractedData);
+    
+    // Add has_ad_report if we have AD documents
+    const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
+    if (hasADDoc) {
+      extractedData.has_ad_report = true;
     }
     
-    console.log('⚠️ No content returned from modern processing');
-    return {};
+    return extractedData;
   } catch (error: any) {
     console.error('❌ Modern processing error:', error.message);
     return {};
