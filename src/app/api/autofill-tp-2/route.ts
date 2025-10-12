@@ -139,23 +139,54 @@ async function modernDocumentProcessor(texts: string[], sortedDocs: any[]): Prom
   ).join(', ');
 
   const systemPrompt = `Je bent een expert in het analyseren van Nederlandse re-integratie documenten.
+Gebruik ALLEEN informatie uit de documenten zelf - geen aannames maken.
 
 DOCUMENTEN: ${documentContext}
 
-OPDRACHT: Analyseer deze documenten en extract de volgende informatie met 100% nauwkeurigheid:
+BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
+1. INTAKEFORMULIER (hoogste prioriteit - gebruik deze informatie bij conflicten)
+2. AD RAPPORT (tweede prioriteit)
+3. FML/IZP (derde prioriteit)
+4. OVERIG (laagste prioriteit)
 
-1. first_sick_day - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-2. registration_date - Datum aanmelding/registratie (YYYY-MM-DD format)  
-3. ad_report_date - Datum van AD rapport (YYYY-MM-DD format)
-4. fml_izp_lab_date - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
-5. occupational_doctor_name - Naam van arbeidsdeskundige (zoek naar "R. Hupsel")
-6. occupational_doctor_org - Organisatie van de specialist (zoek naar "De Arbodienst")
-7. intake_date - Datum intakegesprek (YYYY-MM-DD format)
+BELANGRIJK: Je MOET zoeken naar ALLE volgende velden in de documenten:
 
-BELANGRIJKE PUNTEN:
-- Converteer alle datums naar YYYY-MM-DD formaat
-- Extract ALLEEN informatie die je daadwerkelijk vindt in de documenten
-- Gebruik de function tool om de gestructureerde data terug te geven`;
+1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+   - Zoek naar: "Eerste ziektedag:", "Verzuimdatum:", "Ziekte start:", "Ziekte begin:"
+   - Voorbeeld: "15-01-2024" → "2024-01-15"
+
+2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)
+   - Zoek naar: "Datum aanmelding:", "Registratiedatum:", "Aanmelddatum:", "Datum registratie:"
+   - Voorbeeld: "20-01-2024" → "2024-01-20"
+
+3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
+   - Zoek naar: "Datum AD rapport:", "Rapportdatum:", "Datum rapport:", "AD datum:"
+   - Voorbeeld: "01-02-2024" → "2024-02-01"
+
+4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+   - Zoek naar: "Datum FML:", "Datum IZP:", "Datum LAB:", "FML datum:", "IZP datum:"
+   - Voorbeeld: "10-03-2024" → "2024-03-10"
+
+5. **occupational_doctor_name** - Naam van arbeidsdeskundige
+   - Zoek naar: "R. Hupsel", "Naam/Rapporteur:", "Arbeidsdeskundige:", "Bedrijfsarts:", "Naam specialist:"
+   - Voorbeeld: "R. Hupsel" of "Dr. Jansen"
+
+6. **occupational_doctor_org** - Organisatie van de specialist
+   - Zoek naar: "De Arbodienst", "Arbodienst", "Bedrijfsarts/Arbodienst:", "Organisatie:", "Arbo organisatie:"
+   - Voorbeeld: "De Arbodienst" of "ArboNed"
+
+7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
+   - Zoek naar: "Datum intakegesprek:", "Gespreksdatum:", "Intakedatum:", "Datum gesprek:"
+   - Voorbeeld: "10-01-2024" → "2024-01-10"
+
+DATUM CONVERSIE REGELS:
+- dd-mm-yyyy → YYYY-MM-DD (bijv. "15-03-2024" → "2024-03-15")
+- dd/mm/yyyy → YYYY-MM-DD (bijv. "15/03/2024" → "2024-03-15")
+- dd-mm-yy → YYYY-MM-DD (bijv. "15-03-24" → "2024-03-15")
+- Nederlandse tekst → YYYY-MM-DD (bijv. "12 juni 2025" → "2025-06-12")
+
+Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
+Extract ALLEEN informatie die je daadwerkelijk vindt in de documenten.`;
 
   // Smart text processing
   let processedText = '';
