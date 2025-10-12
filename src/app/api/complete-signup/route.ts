@@ -61,17 +61,45 @@ export async function POST(req: NextRequest) {
         authUserId = userId;
         console.log("Found existing user ID in database:", userId);
         
-        // Update the user's password using admin API
-        const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(userId, {
-          password: password,
-        });
-        
-        if (updatePasswordError) {
-          console.log("Password update error:", updatePasswordError);
-          return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
+        try {
+          // Update the user's password using admin API
+          const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(userId, {
+            password: password,
+          });
+          
+          if (updatePasswordError) {
+            console.log("Password update error:", updatePasswordError);
+            
+            // If user not found in Supabase Auth, create them
+            if (updatePasswordError.message.includes("User not found")) {
+              console.log("User not found in Supabase Auth, creating new user...");
+              const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+                email: email,
+                password: password,
+                email_confirm: true, // Auto-confirm since they're completing signup
+              });
+              
+              if (createError) {
+                console.log("Failed to create user in Supabase Auth:", createError);
+                return NextResponse.json({ error: `Failed to create user: ${createError.message}` }, { status: 400 });
+              }
+              
+              authUserId = newAuthUser.user?.id || null;
+              if (!authUserId) {
+                return NextResponse.json({ error: "Failed to get user ID after creation." }, { status: 400 });
+              }
+              
+              console.log("Created new user in Supabase Auth:", authUserId);
+            } else {
+              return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
+            }
+          } else {
+            console.log("Password updated successfully for existing user");
+          }
+        } catch (error) {
+          console.log("Error during password update:", error);
+          return NextResponse.json({ error: "Error during password update." }, { status: 400 });
         }
-        
-        console.log("Password updated successfully for existing user");
       } else {
         console.log("No user ID found in database, this shouldn't happen");
         return NextResponse.json({ error: "User exists but no ID found in database." }, { status: 400 });
