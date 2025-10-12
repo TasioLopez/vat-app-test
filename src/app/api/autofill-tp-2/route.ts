@@ -197,10 +197,10 @@ TYPISCHE STRUCTUUR: Intakeformulieren hebben meestal een kop met datum, persoonl
       
       searchTerms = `
 SPECIFIEKE ZOEKTERMEN voor INTAKEFORMULIER:
-- "Datum intakegesprek", "Datum gesprek", "Intakedatum", "Gespreksdatum"
-- "Eerste ziektedag", "Eerste verzuimdag", "Datum ziekmelding", "1e ziektedag"
-- "Registratiedatum", "Aanmelddatum", "Datum aanmelding", "Datum registratie"
-- "Intakegesprek", "Gesprek", "Intake"
+- "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:", "Gespreksdatum:", "Datum intake:"
+- "Eerste ziektedag:", "Eerste verzuimdag:", "Datum ziekmelding:", "1e ziektedag:", "Datum eerste ziektedag:"
+- "Registratiedatum:", "Aanmelddatum:", "Datum aanmelding:", "Datum registratie:", "Datum aanmelding UWV:"
+- "Intakegesprek", "Gesprek", "Intake", "Persoonlijke gegevens", "Gegevens werknemer"
 - Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
       break;
       
@@ -219,9 +219,10 @@ TYPISCHE STRUCTUUR: AD rapporten hebben een duidelijke header met datum, naam va
       
       searchTerms = `
 SPECIFIEKE ZOEKTERMEN voor AD RAPPORT:
-- "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:"
-- "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:"
-- "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:"
+- "Datum rapportage:", "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:"
+- "Naam/Rapporteur:", "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:"
+- "Bedrijfsarts/Arbodienst:", "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:"
+- "Eerste verzuimdag:", "Eerste ziektedag:", "Datum eerste verzuim:", "Datum verzuim:"
 - "Arbeidsdeskundig rapport", "AD rapport", "Arbeidsdeskundige rapportage"
 - Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
       break;
