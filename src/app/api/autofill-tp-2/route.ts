@@ -88,6 +88,48 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
+// Filter out obviously wrong values that AI might extract
+function filterValidValues(data: any): any {
+  const filtered: any = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (!value) continue;
+    
+    const stringValue = String(value).toLowerCase();
+    
+    // Filter out wrong occupational_doctor_name values
+    if (key === 'occupational_doctor_name') {
+      // Should contain "hupsel" or be a proper name, not "arend-jan" or similar
+      if (stringValue.includes('hupsel') || 
+          stringValue.includes('arbeidsdeskundige') ||
+          stringValue.includes('register') ||
+          (stringValue.length > 3 && !stringValue.includes('arend') && !stringValue.includes('writer'))) {
+        filtered[key] = value;
+      } else {
+        console.log(`❌ Filtered out invalid occupational_doctor_name: "${value}"`);
+      }
+    }
+    // Filter out wrong occupational_doctor_org values  
+    else if (key === 'occupational_doctor_org') {
+      // Should contain "arbodienst" or be a proper organization, not "convertapi" or similar
+      if (stringValue.includes('arbodienst') || 
+          stringValue.includes('arbo') ||
+          stringValue.includes('bedrijfsarts') ||
+          (stringValue.length > 5 && !stringValue.includes('convert') && !stringValue.includes('api'))) {
+        filtered[key] = value;
+      } else {
+        console.log(`❌ Filtered out invalid occupational_doctor_org: "${value}"`);
+      }
+    }
+    // Keep all other fields
+    else {
+      filtered[key] = value;
+    }
+  }
+  
+  return filtered;
+}
+
 // AI Agent function to process individual documents intelligently
 async function processDocumentWithAgent(docText: string, docType: string, existingData: any): Promise<any> {
   // Use larger chunks to maintain context but avoid "too large" error
@@ -171,6 +213,15 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
     if (args) {
       const details = JSON.parse(args);
       console.log(`✅ AI extracted from ${docType}:`, details);
+      
+      // Debug specific problematic fields
+      if (details.occupational_doctor_name) {
+        console.log(`🔍 occupational_doctor_name extracted: "${details.occupational_doctor_name}"`);
+      }
+      if (details.occupational_doctor_org) {
+        console.log(`🔍 occupational_doctor_org extracted: "${details.occupational_doctor_org}"`);
+      }
+      
       return details;
     }
     
@@ -255,7 +306,7 @@ function createDirectPrompt(docType: string): string {
 
 DOCUMENT TYPE: ${docType.toUpperCase()}
 
-OPDRACHT: Zoek in dit document naar de volgende informatie en extract ALLEEN deze velden:
+⚠️ BELANGRIJK: Zoek SPECIFIEK naar deze informatie in de juiste secties:
 
 1. **first_sick_day** - Eerste ziektedag/verzuimdag (converteer naar YYYY-MM-DD)
 2. **registration_date** - Datum aanmelding/registratie (converteer naar YYYY-MM-DD)  
@@ -265,14 +316,28 @@ OPDRACHT: Zoek in dit document naar de volgende informatie en extract ALLEEN dez
 6. **occupational_doctor_org** - Organisatie van de specialist
 7. **intake_date** - Datum intakegesprek/gesprek (converteer naar YYYY-MM-DD)
 
-BELANGRIJKE ZOEKTERMEN:
-- "Eerste ziektedag", "Eerste verzuimdag", "Datum ziekmelding"
-- "Datum aanmelding", "Aanmelddatum", "Registratiedatum"  
-- "Datum rapportage", "Datum rapport", "Datum AD"
-- "Datum FML", "Datum IZP", "Datum LAB"
-- "Arbeidsdeskundige", "Bedrijfsarts", "Naam/Rapporteur"
-- "Arbodienst", "Arbo-organisatie", "Bedrijfsarts/Arbodienst"
-- "Gespreksdatum", "Intakedatum", "Datum gesprek"
+🔍 SPECIFIEKE ZOEKINSTRUCTIES:
+
+**Voor occupational_doctor_name zoek naar:**
+- "Naam/Rapporteur:" gevolgd door naam
+- "Arbeidsdeskundige:" gevolgd door naam  
+- "Door:" gevolgd door naam
+- "Register-arbeidsdeskundige" (deze titel komt vaak na de naam)
+
+**Voor occupational_doctor_org zoek naar:**
+- "Bedrijfsarts/Arbodienst:" gevolgd door organisatie
+- "Arbodienst:" gevolgd door organisatie
+- "Arbo-organisatie:" gevolgd door organisatie
+- "De Arbodienst" (veelvoorkomende naam)
+
+**VOORBEELDEN VAN CORRECTE WAARDEN:**
+- occupational_doctor_name: "R. Hupsel" of "De heer R. Hupsel/ Register-arbeidsdeskundige"
+- occupational_doctor_org: "De Arbodienst" of "T. Wijlhuizen / De Arbodienst"
+
+❌ NIET EXTRACTEN:
+- Namen van loopbaanadviseurs (zoals "Arend-Jan")
+- Bedrijfsnamen die geen arbodienst zijn (zoals "ConvertAPI")
+- Algemene bedrijfsinformatie
 
 DATUM CONVERSIES:
 - "26 april 2024" → "2024-04-26"
@@ -280,7 +345,7 @@ DATUM CONVERSIES:
 - "17-6-2025" → "2025-06-17"
 - "15-03-2024" → "2024-03-15"
 
-Extract ALLEEN de velden die je daadwerkelijk vindt. Als een veld niet gevonden wordt, laat het weg.`;
+Extract ALLEEN de velden die je daadwerkelijk vindt in de JUISTE secties. Als een veld niet gevonden wordt, laat het weg.`;
 }
 
 // Create focused prompts based on document type
@@ -593,9 +658,15 @@ export async function GET(req: NextRequest) {
         const docResult = await processDocumentWithAgent(docText, docInfo?.type || 'Unknown', extractedData);
         
         if (docResult && Object.keys(docResult).length > 0) {
-          Object.assign(extractedData, docResult);
-          console.log(`✅ Found ${Object.keys(docResult).length} fields in ${docInfo?.type}:`, Object.keys(docResult));
-          console.log(`📋 Field values:`, docResult);
+          // Filter out obviously wrong values
+          const filteredResult = filterValidValues(docResult);
+          Object.assign(extractedData, filteredResult);
+          console.log(`✅ Found ${Object.keys(filteredResult).length} fields in ${docInfo?.type}:`, Object.keys(filteredResult));
+          console.log(`📋 Field values:`, filteredResult);
+          
+          if (Object.keys(docResult).length !== Object.keys(filteredResult).length) {
+            console.log(`⚠️ Filtered out ${Object.keys(docResult).length - Object.keys(filteredResult).length} invalid values`);
+          }
         }
         
         // Add has_ad_report field if we found an AD report
