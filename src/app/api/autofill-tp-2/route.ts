@@ -43,8 +43,7 @@ Voorbeelden:
 
 Return ONLY a JSON object with the fields you find.`,
       model: "gpt-4o",
-      tools: [{ type: "file_search" }],
-      response_format: { type: "json_object" }
+      tools: [{ type: "file_search" }]
     });
 
     console.log('✅ Created assistant:', assistant.id);
@@ -80,7 +79,7 @@ Return ONLY a JSON object with the fields you find.`,
       messages: [{
         role: "user",
         content: "Analyseer deze documenten en extract de trajectplan velden.",
-        attachments: fileIds.map(id => ({ file_id: id, tools: [{ type: "file_search" }] }))
+        attachments: fileIds.map(id => ({ file_id: id }))
       }]
     });
 
@@ -105,7 +104,7 @@ Return ONLY a JSON object with the fields you find.`,
         // Cleanup
         await openai.beta.assistants.delete(assistant.id);
         for (const fileId of fileIds) {
-          await openai.files.del(fileId);
+          await openai.files.delete(fileId);
         }
         console.log('✅ Cleaned up assistant and files');
         
