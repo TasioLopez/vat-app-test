@@ -61,7 +61,18 @@ export async function POST(req: NextRequest) {
       console.error('Database error:', insertError);
       // Clean up uploaded file if database insert fails
       await supabase.storage.from('documents').remove([uploadData.path]);
-      return NextResponse.json({ error: 'Failed to save file metadata' }, { status: 500 });
+      
+      // Check if it's a table doesn't exist error
+      if (insertError.message.includes('relation "mijn_stem_documents" does not exist')) {
+        return NextResponse.json({ 
+          error: 'Database table not found. Please run the database setup script first. Check MIJN_STEM_SETUP.md for instructions.',
+          setupRequired: true 
+        }, { status: 500 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to save file metadata: ' + insertError.message 
+      }, { status: 500 });
     }
 
     return NextResponse.json({

@@ -122,7 +122,13 @@ export default function MijnStem() {
                     } else {
                         console.error('Upload failed:', data.error);
                         errorCount++;
-                        showMessage('error', `Upload mislukt: ${data.error}`);
+                        
+                        // Show specific message for database setup requirement
+                        if (data.setupRequired) {
+                            showMessage('error', 'Database setup vereist. Neem contact op met de beheerder om de database tabel aan te maken.');
+                        } else {
+                            showMessage('error', `Upload mislukt: ${data.error}`);
+                        }
                     }
                 } catch (fileError) {
                     console.error('File upload error:', fileError);
