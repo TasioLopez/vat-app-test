@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import type { ChatCompletionMessageParam } from "openai/resources";
 import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static"; // make sure this export exists
+import { MijnStemService } from "@/lib/mijn-stem-service";
 
 // ---- INIT ----
 const supabase = createClient(

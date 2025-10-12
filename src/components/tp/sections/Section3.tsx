@@ -112,6 +112,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState<{ [k: string]: boolean }>({});
+    const [rewriting, setRewriting] = useState<{ [k: string]: boolean }>({});
 
     // ✅ no need to keep this in state; it's static
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
@@ -120,6 +121,50 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
     const selectedForPreview = activities.filter(a => a && selectedActivities.includes(a.id));
+
+    // Rewrite function for applying user's writing style
+    const rewriteInMyStyle = async (fieldName: string, originalText: string) => {
+        try {
+            setRewriting(prev => ({ ...prev, [fieldName]: true }));
+
+            // Get current user ID
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            
+            if (authError || !user) {
+                alert('Gebruiker niet gevonden. Probeer opnieuw in te loggen.');
+                return;
+            }
+
+            const rewriteResponse = await fetch('/api/mijn-stem/rewrite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: user.id,
+                    originalText: originalText,
+                    sectionType: fieldName
+                }),
+            });
+
+            const rewriteData = await rewriteResponse.json();
+
+            if (rewriteData.success) {
+                updateField(fieldName, rewriteData.rewrittenText);
+                // Optional: Show success message
+                console.log('Text rewritten in your style successfully');
+            } else if (rewriteData.hasStyle === false) {
+                alert('Geen schrijfstijl gevonden. Upload eerst enkele documenten in de Instellingen > Mijn Stem sectie.');
+            } else {
+                alert('Fout bij herschrijven: ' + (rewriteData.error || 'Onbekende fout'));
+            }
+        } catch (error) {
+            console.error('Rewrite error:', error);
+            alert('Fout bij herschrijven van tekst. Probeer het opnieuw.');
+        } finally {
+            setRewriting(prev => ({ ...prev, [fieldName]: false }));
+        }
+    };
 
     const toggleActivity = async (id: string) => {
         const newSelectedActivities = selectedActivities.includes(id) 
@@ -421,6 +466,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.inleiding ? "Automatisch invullen..." : "Automatisch invullen — Inleiding"}
                     onAction={genInleiding}
                     disabled={!!busy.inleiding}
+                    onRewrite={() => rewriteInMyStyle('inleiding', tpData.inleiding || '')}
+                    rewriteDisabled={!!rewriting.inleiding}
+                    currentText={tpData.inleiding}
                 />
                 <textarea
                     className="w-full h-[200px] border rounded text-sm p-2"
@@ -440,6 +488,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.socialeVisie ? "Automatisch invullen..." : "Automatisch invullen — Sociale + Visie"}
                     onAction={genSocialeVisie}
                     disabled={!!busy.socialeVisie}
+                    onRewrite={() => rewriteInMyStyle('sociale_achtergrond', tpData.sociale_achtergrond || '')}
+                    rewriteDisabled={!!rewriting.sociale_achtergrond}
+                    currentText={tpData.sociale_achtergrond}
                 />
                 <label className="block text-sm font-semibold mb-1">Sociale achtergrond & maatschappelijke context</label>
                 <textarea
@@ -469,6 +520,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.prognose ? "Automatisch invullen..." : "Automatisch invullen — Prognose (FML → AD)"}
                     onAction={genPrognose}
                     disabled={!!busy.prognose}
+                    onRewrite={() => rewriteInMyStyle('prognose_bedrijfsarts', tpData.prognose_bedrijfsarts || '')}
+                    rewriteDisabled={!!rewriting.prognose_bedrijfsarts}
+                    currentText={tpData.prognose_bedrijfsarts}
                 />
                 <textarea
                     className="w-full h-[110px] border rounded p-2 text-sm"
@@ -482,6 +536,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.profielZoek ? "Automatisch invullen..." : "Automatisch invullen — Profiel + Zoekprofiel"}
                     onAction={genProfielZoekprofiel}
                     disabled={!!busy.profielZoek}
+                    onRewrite={() => rewriteInMyStyle('persoonlijk_profiel', tpData.persoonlijk_profiel || '')}
+                    rewriteDisabled={!!rewriting.persoonlijk_profiel}
+                    currentText={tpData.persoonlijk_profiel}
                 />
                 <label className="block text-sm font-semibold mb-1">Persoonlijk profiel</label>
                 <textarea
@@ -502,6 +559,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.belemmeringen ? "Automatisch invullen..." : "Automatisch invullen — Belemmeringen"}
                     onAction={genBelemmeringen}
                     disabled={!!busy.belemmeringen}
+                    onRewrite={() => rewriteInMyStyle('praktische_belemmeringen', tpData.praktische_belemmeringen || '')}
+                    rewriteDisabled={!!rewriting.praktische_belemmeringen}
+                    currentText={tpData.praktische_belemmeringen}
                 />
                 <textarea
                     className="w-full h-[100px] border rounded p-2 text-sm"
@@ -515,6 +575,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.adAdvies ? "Extraheren..." : "Extraheren — AD-advies"}
                     onAction={genAdAdvies}
                     disabled={!!busy.adAdvies}
+                    onRewrite={() => rewriteInMyStyle('advies_ad_passende_arbeid', tpData.advies_ad_passende_arbeid || '')}
+                    rewriteDisabled={!!rewriting.advies_ad_passende_arbeid}
+                    currentText={tpData.advies_ad_passende_arbeid}
                 />
                 <textarea
                     className="w-full h-[90px] border rounded p-2 text-sm"
@@ -537,6 +600,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     actionLabel={busy.plaatsbaarheid ? "Automatisch invullen..." : "Automatisch invullen — Plaatsbaarheid (gebaseerd op zoekprofiel)"}
                     onAction={genPlaatsbaarheid}
                     disabled={!!busy.plaatsbaarheid}
+                    onRewrite={() => rewriteInMyStyle('visie_plaatsbaarheid', tpData.visie_plaatsbaarheid || '')}
+                    rewriteDisabled={!!rewriting.visie_plaatsbaarheid}
+                    currentText={tpData.visie_plaatsbaarheid}
                 />
                 <textarea
                     className="w-full h-[120px] border rounded p-2 text-sm"
@@ -601,22 +667,44 @@ function SectionHeader({
     actionLabel,
     onAction,
     disabled,
+    onRewrite,
+    rewriteDisabled,
+    fieldName,
+    currentText,
 }: {
     title: string;
     actionLabel: string;
     onAction: () => void;
     disabled?: boolean;
+    onRewrite?: () => void;
+    rewriteDisabled?: boolean;
+    fieldName?: string;
+    currentText?: string;
 }) {
+    const canRewrite = onRewrite && currentText && currentText.trim().length > 0;
+    
     return (
         <div className="flex items-center justify-between mt-6 mb-1">
             <label className="block text-sm font-semibold">{title}</label>
-            <button
-                onClick={onAction}
-                disabled={disabled}
-                className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 text-sm disabled:opacity-60"
-            >
-                {actionLabel}
-            </button>
+            <div className="flex gap-2">
+                <button
+                    onClick={onAction}
+                    disabled={disabled}
+                    className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 text-sm disabled:opacity-60"
+                >
+                    {actionLabel}
+                </button>
+                {canRewrite && (
+                    <button
+                        onClick={onRewrite}
+                        disabled={rewriteDisabled}
+                        className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 text-sm disabled:opacity-60"
+                        title="Herschrijf in mijn stijl"
+                    >
+                        {rewriteDisabled ? "Herschrijf..." : "Mijn Stijl"}
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
