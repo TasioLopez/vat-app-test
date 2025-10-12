@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
     // Check storage bucket
     try {
       const { data: buckets } = await supabase.storage.listBuckets();
-      checks.storageBucketExists = buckets.some(bucket => bucket.name === 'documents');
+      checks.storageBucketExists = buckets?.some(bucket => bucket.name === 'documents') || false;
     } catch (error) {
       console.log('Bucket check failed:', error);
     }
