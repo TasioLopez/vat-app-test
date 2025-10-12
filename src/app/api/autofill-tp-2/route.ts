@@ -142,18 +142,26 @@ DOCUMENT TYPE: ${doc?.type}
 OPDRACHT: Analyseer dit document grondig en extract de volgende informatie. Je MOET een JSON object teruggeven met alle gevonden velden.
 
 VERPLICHTE VELDEN (extract ALLEEN als je ze vindt):
-- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format)  
-- ad_report_date: Datum van AD rapport (YYYY-MM-DD format)
-- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format) - ZOEK naar de eerste dag dat iemand ziek was
+- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format) - ZOEK naar wanneer iemand zich aanmeldde voor trajectplan
+- ad_report_date: Datum van AD rapport (YYYY-MM-DD format) - ZOEK naar datum van arbeidsdeskundig rapport
+- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format) - ZOEK naar datum van FML/IZP/LAB onderzoek
 - occupational_doctor_name: Naam van arbeidsdeskundige/bedrijfsarts
 - occupational_doctor_org: Organisatie van de specialist
-- intake_date: Datum intakegesprek (YYYY-MM-DD format)
+- intake_date: Datum intakegesprek (YYYY-MM-DD format) - ZOEK naar datum van intake gesprek
 
-BELANGRIJKE ZOEKPATRONEN:
-- Voor datums: zoek naar "15-01-2024", "15 januari 2024", "eerste ziektedag", "aanmelding", "intake"
+BELANGRIJKE ZOEKPATRONEN - WEES SPECIFIEK PER VELD:
+
+**first_sick_day**: Zoek naar "eerste ziektedag", "verzuimdatum", "ziekte start", "ziekte begin" - dit is meestal de OUDSTE datum
+**registration_date**: Zoek naar "aanmelding", "registratie", "aangemeld op" - dit is meestal tussen eerste ziektedag en nu
+**ad_report_date**: Zoek naar "AD rapport", "arbeidsdeskundig rapport", "rapportdatum" - dit is meestal een recente datum
+**intake_date**: Zoek naar "intakegesprek", "gespreksdatum", "intakedatum" - dit is meestal tussen aanmelding en nu
+**fml_izp_lab_date**: Zoek naar "FML", "IZP", "LAB", "onderzoek datum" - dit kan verschillende datums hebben
+
 - Voor namen: zoek naar "R. Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
 - Voor organisaties: zoek naar "De Arbodienst", "Arbodienst", "ArboNed", "BGD"
+
+WAARSCHUWING: Verschillende velden hebben verschillende datums! Eerste ziektedag is meestal de oudste, aanmelding is later, rapporten zijn meestal recenter.
 
 Geef een JSON object terug met ALLEEN de velden die je daadwerkelijk vindt.`;
 
@@ -284,18 +292,26 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 OPDRACHT: Analyseer ALLE documenten en extract de volgende informatie. Je MOET een JSON object teruggeven met alle gevonden velden.
 
 VERPLICHTE VELDEN (extract ALLEEN als je ze vindt):
-- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format)  
-- ad_report_date: Datum van AD rapport (YYYY-MM-DD format)
-- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format) - ZOEK naar de eerste dag dat iemand ziek was
+- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format) - ZOEK naar wanneer iemand zich aanmeldde voor trajectplan
+- ad_report_date: Datum van AD rapport (YYYY-MM-DD format) - ZOEK naar datum van arbeidsdeskundig rapport
+- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format) - ZOEK naar datum van FML/IZP/LAB onderzoek
 - occupational_doctor_name: Naam van arbeidsdeskundige/bedrijfsarts
 - occupational_doctor_org: Organisatie van de specialist
-- intake_date: Datum intakegesprek (YYYY-MM-DD format)
+- intake_date: Datum intakegesprek (YYYY-MM-DD format) - ZOEK naar datum van intake gesprek
 
-BELANGRIJKE ZOEKPATRONEN:
-- Voor datums: zoek naar "15-01-2024", "15 januari 2024", "eerste ziektedag", "aanmelding", "intake"
+BELANGRIJKE ZOEKPATRONEN - WEES SPECIFIEK PER VELD:
+
+**first_sick_day**: Zoek naar "eerste ziektedag", "verzuimdatum", "ziekte start", "ziekte begin" - dit is meestal de OUDSTE datum
+**registration_date**: Zoek naar "aanmelding", "registratie", "aangemeld op" - dit is meestal tussen eerste ziektedag en nu
+**ad_report_date**: Zoek naar "AD rapport", "arbeidsdeskundig rapport", "rapportdatum" - dit is meestal een recente datum
+**intake_date**: Zoek naar "intakegesprek", "gespreksdatum", "intakedatum" - dit is meestal tussen aanmelding en nu
+**fml_izp_lab_date**: Zoek naar "FML", "IZP", "LAB", "onderzoek datum" - dit kan verschillende datums hebben
+
 - Voor namen: zoek naar "R. Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
 - Voor organisaties: zoek naar "De Arbodienst", "Arbodienst", "ArboNed", "BGD"
+
+WAARSCHUWING: Verschillende velden hebben verschillende datums! Eerste ziektedag is meestal de oudste, aanmelding is later, rapporten zijn meestal recenter.
 
 Geef een JSON object terug met ALLEEN de velden die je daadwerkelijk vindt in de documenten.`;
 
