@@ -29,47 +29,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired invite token." }, { status: 400 });
     }
 
-    // 2. Check if user already exists in Supabase Auth (from invite)
-    console.log("Checking if user exists in Supabase Auth...");
-    
-    // Try to get the user by email using admin API
-    const { data: existingAuthUser, error: getUserError } = await supabase.auth.admin.getUserByEmail(email);
+    // 2. Try to create Supabase Auth user or handle existing user
+    console.log("Attempting to create/update Supabase Auth user...");
     
     let authUserId: string | null = null;
     
-    if (existingAuthUser?.user && !getUserError) {
-      console.log("User exists in Supabase Auth, updating password...");
-      authUserId = existingAuthUser.user.id;
+    // First, try to create the user
+    const { data: authUser, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    console.log("Auth signup result:", { 
+      authUser: authUser ? { id: authUser.user?.id, email: authUser.user?.email, confirmed: authUser.user?.email_confirmed_at } : null,
+      signUpError: signUpError ? { message: signUpError.message, code: signUpError.name } : null
+    });
+
+    if (signUpError && signUpError.message.includes("User already registered")) {
+      // User already exists, we need to update their password
+      console.log("User already exists, need to update password...");
       
-      // Update the user's password using admin API
-      const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(authUserId, {
-        password: password,
-      });
+      // Get the user ID from our database first
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", email)
+        .single();
       
-      if (updatePasswordError) {
-        console.log("Password update error:", updatePasswordError);
-        return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
+      if (dbUser?.id) {
+        authUserId = dbUser.id;
+        console.log("Found existing user ID in database:", authUserId);
+        
+        // Update the user's password using admin API
+        const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(authUserId, {
+          password: password,
+        });
+        
+        if (updatePasswordError) {
+          console.log("Password update error:", updatePasswordError);
+          return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
+        }
+        
+        console.log("Password updated successfully for existing user");
+      } else {
+        console.log("No user ID found in database, this shouldn't happen");
+        return NextResponse.json({ error: "User exists but no ID found in database." }, { status: 400 });
       }
-      
-      console.log("Password updated successfully for existing user");
+    } else if (signUpError) {
+      console.log("Signup error:", signUpError);
+      return NextResponse.json({ error: `Signup failed: ${signUpError.message}` }, { status: 400 });
     } else {
-      // User doesn't exist, create new one
-      console.log("User doesn't exist, creating new Supabase Auth user...");
-      const { data: authUser, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      console.log("Auth signup result:", { 
-        authUser: authUser ? { id: authUser.user?.id, email: authUser.user?.email, confirmed: authUser.user?.email_confirmed_at } : null,
-        signUpError: signUpError ? { message: signUpError.message, code: signUpError.name } : null
-      });
-
-      if (signUpError) {
-        console.log("Signup error:", signUpError);
-        return NextResponse.json({ error: `Signup failed: ${signUpError.message}` }, { status: 400 });
-      }
-
+      // New user created successfully
       authUserId = authUser?.user?.id;
       if (!authUserId) {
         console.log("No auth user ID returned:", { authUser, signUpError });
