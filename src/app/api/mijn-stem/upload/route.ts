@@ -29,6 +29,23 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if table exists
+    try {
+      await supabase.from('mijn_stem_documents').select('id').limit(1);
+    } catch (tableError: any) {
+      console.error('Database table check failed:', tableError);
+      if (tableError.message.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'Database table not found. Please run the database setup first.',
+          setupRequired: true,
+          setupUrl: `${req.nextUrl.origin}/api/mijn-stem/setup`
+        }, { status: 500 });
+      }
+      return NextResponse.json({ 
+        error: 'Database error: ' + tableError.message 
+      }, { status: 500 });
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
     const fileName = `mijn-stem/${userId}/${timestamp}-${file.name}`;
@@ -39,8 +56,20 @@ export async function POST(req: NextRequest) {
       .upload(fileName, file);
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+      console.error('Storage upload error:', uploadError);
+      
+      // Check if bucket doesn't exist
+      if (uploadError.message.includes('Bucket not found')) {
+        return NextResponse.json({ 
+          error: 'Storage bucket not found. Please run the database setup first.',
+          setupRequired: true,
+          setupUrl: `${req.nextUrl.origin}/api/mijn-stem/setup`
+        }, { status: 500 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to upload file: ' + uploadError.message 
+      }, { status: 500 });
     }
 
     // Save file metadata to database
