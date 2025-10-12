@@ -30,7 +30,6 @@
     "mammoth": "^1.11.0",
     "mime-types": "^3.0.1",
     "next": "15.4.1",
-    "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
     "openai": "^5.10.2",
     "pdf-parse": "^1.1.1",
