@@ -29,41 +29,18 @@ function splitIntoChunks(text: string, maxLen = 4000): string[] {
 // Enhanced PDF text extraction for TP documents
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    // Use pdfjs-dist for proper PDF parsing in Node.js environment
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    // Try pdf-parse first as it's more reliable in serverless
+    const pdfParse = await import('pdf-parse');
+    const data = await pdfParse.default(buffer);
     
-    // In Node.js/serverless environment, disable worker
-    // @ts-ignore - GlobalWorkerOptions exists but types are incomplete
-    if (pdfjs.GlobalWorkerOptions) {
-      // @ts-ignore
-      pdfjs.GlobalWorkerOptions.workerSrc = null;
-    }
-
-    const uint8Array = new Uint8Array(buffer);
-    // @ts-ignore - getDocument types are incomplete
-    const loadingTask = pdfjs.getDocument({ 
-      data: uint8Array,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true
-    });
-    
-    const pdf = await loadingTask.promise;
-    let fullText = '';
-    
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      fullText += pageText + '\n';
+    if (data.text && data.text.length > 50) {
+      console.log('📄 PDF extraction successful using pdf-parse, extracted', data.text.length, 'characters');
+      return data.text;
     }
     
-    console.log('📄 TP PDF extraction successful, extracted', fullText.length, 'characters from', pdf.numPages, 'pages');
-    return fullText;
+    console.log('⚠️ pdf-parse returned minimal text, trying fallback');
   } catch (error: any) {
-    console.error('⚠️ pdfjs extraction failed, trying fallback:', error.message);
+    console.error('⚠️ pdf-parse failed, trying fallback:', error.message);
     
     // Fallback: basic text extraction
     try {
@@ -112,12 +89,30 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
+    
+    // Add test mode for debugging
+    const testMode = searchParams.get('test') === 'true';
+    
     if (!employeeId) {
       return NextResponse.json({ 
         success: false, 
         error: 'Missing employeeId',
         data: { details: {} }
       }, { status: 400 });
+    }
+
+    if (testMode) {
+      console.log('🧪 Test mode enabled for employee:', employeeId);
+      return NextResponse.json({
+        success: true,
+        details: {
+          first_sick_day: '2024-01-15',
+          registration_date: '2024-01-20',
+          ad_report_date: '2024-02-01'
+        },
+        autofilled_fields: ['first_sick_day', 'registration_date', 'ad_report_date'],
+        message: 'Test data returned (3 velden)'
+      });
     }
 
     const { data: docs } = await supabase
@@ -352,9 +347,10 @@ Je bent een assistent die Nederlandse documenten (Intakeformulier, AD Rapport, F
     }
   } catch (err: any) {
     console.error('❌ Server error:', err);
+    console.error('❌ Stack trace:', err.stack);
     return NextResponse.json({ 
       success: false, 
-      error: 'Server error', 
+      error: 'Server error bij autofill', 
       details: err.message,
       data: { details: {} }
     }, { status: 500 });
