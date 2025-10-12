@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     // Test 2: Check documents
     const { data: docs, error: docsError } = await supabase
       .from('documents')
-      .select('id, type, url, created_at')
+      .select('id, type, url, uploaded_at')
       .eq('employee_id', employeeId);
 
     if (docsError) {
