@@ -29,9 +29,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate unique filename
+    // Generate filename following existing pattern: {userId}/{type}-{safeName}
     const timestamp = Date.now();
-    const fileName = `mijn-stem/${userId}/${timestamp}-${file.name}`;
+    const safeName = file.name.replace(/\s+/g, '-');
+    const fileName = `${userId}/mijn-stem-${timestamp}-${safeName}`;
 
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
