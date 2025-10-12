@@ -44,7 +44,26 @@ export default function MijnStem() {
         };
 
         fetchUser();
+        // Check setup status on load
+        checkSetupStatus();
     }, [supabase]);
+
+    const checkSetupStatus = async () => {
+        try {
+            const response = await fetch('/api/mijn-stem/test');
+            const data = await response.json();
+            
+            if (data.success && data.tests) {
+                const { tableExists, bucketExists } = data.tests;
+                if (!tableExists || !bucketExists) {
+                    setSetupRequired(true);
+                    console.log('Setup required:', data.summary);
+                }
+            }
+        } catch (error) {
+            console.error('Setup check failed:', error);
+        }
+    };
 
     const fetchDocuments = async (userId: string) => {
         try {
@@ -130,12 +149,17 @@ export default function MijnStem() {
                     // Set upload progress
                     setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
+                    console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
+
                     const response = await fetch('/api/mijn-stem/upload', {
                         method: 'POST',
                         body: formData,
                     });
 
+                    console.log('Upload response status:', response.status);
+
                     const data = await response.json();
+                    console.log('Upload response data:', data);
                     
                     if (data.success) {
                         // Add to local state immediately
@@ -180,7 +204,13 @@ export default function MijnStem() {
                 showMessage('success', `${successCount} bestand(en) succesvol geüpload en worden geanalyseerd!`);
             }
             if (errorCount > 0) {
-                showMessage('error', `${errorCount} bestand(en) konden niet worden geüpload.`);
+                // Don't overwrite specific error messages with generic summary
+                if (errorCount === 1) {
+                    // Keep the specific error message already shown
+                    console.log('Upload failed for 1 file, keeping specific error message');
+                } else {
+                    showMessage('error', `${errorCount} bestand(en) konden niet worden geüpload.`);
+                }
             }
 
         } catch (error) {
@@ -345,13 +375,31 @@ export default function MijnStem() {
                     <p className="text-orange-800 mb-4">
                         De MijnStem functie heeft database setup nodig om te werken. Klik op de knop hieronder om de benodigde tabellen en storage bucket aan te maken.
                     </p>
-                    <button
-                        onClick={runSetup}
-                        disabled={setupInProgress}
-                        className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {setupInProgress ? 'Setup wordt uitgevoerd...' : 'Setup Uitvoeren'}
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={runSetup}
+                            disabled={setupInProgress}
+                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {setupInProgress ? 'Setup wordt uitgevoerd...' : 'Setup Uitvoeren'}
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const response = await fetch('/api/mijn-stem/test');
+                                    const data = await response.json();
+                                    console.log('Test results:', data);
+                                    alert('Test results logged to console. Check browser developer tools (F12) > Console tab.');
+                                } catch (error) {
+                                    console.error('Test failed:', error);
+                                    alert('Test failed. Check console for details.');
+                                }
+                            }}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Test Setup
+                        </button>
+                    </div>
                 </div>
             )}
 
