@@ -1022,30 +1022,54 @@ export async function GET(req: NextRequest) {
       console.error(`❌ Modern processing failed:`, error.message);
     }
     
-    // Fallback: Try modern processing with individual documents if first attempt failed
-    console.log('🔄 Modern processing failed, trying individual document processing...');
+    // Fallback: Try comprehensive multi-document processing
+    console.log('🔄 Modern processing failed, trying comprehensive multi-document analysis...');
     
     try {
-      // Process documents individually to avoid size issues
+      // Process ALL documents individually and combine results for comprehensive extraction
+      const allResults: any = {};
+      let totalFieldsFound = 0;
+      const processedDocs: string[] = [];
+      
       for (let i = 0; i < texts.length; i++) {
         const text = texts[i];
         const doc = sortedDocs[i];
         
-        console.log(`🎯 Processing individual document: ${doc?.type}`);
+        console.log(`🎯 Processing document ${i + 1}/${texts.length}: ${doc?.type}`);
         const individualResult = await modernDocumentProcessor([text], [doc]);
         
         if (Object.keys(individualResult).length > 0) {
-          console.log('✅ Individual document processing succeeded:', Object.keys(individualResult));
-          return NextResponse.json({
-            success: true,
-            details: individualResult,
-            autofilled_fields: Object.keys(individualResult),
-            message: `Modern AI gevonden in document (${doc?.type}) - ${Object.keys(individualResult).length} velden ingevuld`
+          console.log(`✅ Found ${Object.keys(individualResult).length} fields in ${doc?.type}:`, Object.keys(individualResult));
+          
+          // Merge results, giving priority to higher priority documents (intake > ad > fml/izp)
+          Object.entries(individualResult).forEach(([key, value]) => {
+            if (!allResults[key] || allResults[key] === '' || value !== '') {
+              allResults[key] = value;
+              if (allResults[key] !== '') {
+                totalFieldsFound++;
+              }
+            }
           });
+          
+          processedDocs.push(doc?.type || 'unknown');
+        } else {
+          console.log(`⚠️ No fields found in ${doc?.type}`);
         }
       }
+      
+      if (Object.keys(allResults).length > 0) {
+        console.log('✅ Comprehensive multi-document analysis completed:', Object.keys(allResults));
+        console.log(`📊 Total fields found: ${totalFieldsFound} across ${processedDocs.length} documents`);
+        
+        return NextResponse.json({
+          success: true,
+          details: allResults,
+          autofilled_fields: Object.keys(allResults),
+          message: `Modern AI gevonden in ${processedDocs.length} documenten (${processedDocs.join(', ')}) - ${totalFieldsFound} velden ingevuld`
+        });
+      }
     } catch (error: any) {
-      console.error(`❌ Individual document processing failed:`, error.message);
+      console.error(`❌ Comprehensive multi-document processing failed:`, error.message);
     }
     
     // Final fallback to mock data if Modern processing completely fails
