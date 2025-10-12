@@ -79,7 +79,7 @@ Return ONLY a JSON object with the fields you find.`,
       messages: [{
         role: "user",
         content: "Analyseer deze documenten en extract de trajectplan velden.",
-        attachments: fileIds.map(id => ({ file_id: id }))
+        attachments: fileIds.map(id => ({ file_id: id, tools: [{ type: "file_search" }] }))
       }]
     });
 
