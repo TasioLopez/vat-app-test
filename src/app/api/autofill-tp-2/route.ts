@@ -98,7 +98,23 @@ Return ONLY a JSON object with the fields you find.`,
       const response = messages.data[0].content[0];
       if (response.type === 'text') {
         console.log('📄 Raw assistant response:', response.text.value);
-        const extractedData = JSON.parse(response.text.value);
+        
+        // Clean the response by removing markdown formatting
+        let cleanedResponse = response.text.value;
+        
+        // Remove ```json and ``` markers
+        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
+        // Remove any text before the first { and after the last }
+        const firstBrace = cleanedResponse.indexOf('{');
+        const lastBrace = cleanedResponse.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+        }
+        
+        console.log('🧹 Cleaned response:', cleanedResponse);
+        
+        const extractedData = JSON.parse(cleanedResponse);
         console.log('✅ Parsed extracted data:', extractedData);
         
         // Cleanup
