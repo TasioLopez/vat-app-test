@@ -29,43 +29,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired invite token." }, { status: 400 });
     }
 
-    // 2. Try to create Supabase Auth user or get existing one
-    console.log("Attempting to create Supabase Auth user...");
-    const { data: authUser, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    console.log("Auth signup result:", { 
-      authUser: authUser ? { id: authUser.user?.id, email: authUser.user?.email, confirmed: authUser.user?.email_confirmed_at } : null,
-      signUpError: signUpError ? { message: signUpError.message, code: signUpError.name } : null
-    });
-
-    let authUserId = authUser?.user?.id;
-
-    // Handle case where user already exists
-    if (signUpError && signUpError.message.includes("User already registered")) {
-      console.log("User already exists, attempting to sign in...");
-      const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
+    // 2. Check if user already exists in Supabase Auth (from invite)
+    console.log("Checking if user exists in Supabase Auth...");
+    
+    // Try to get the user by email using admin API
+    const { data: existingAuthUser, error: getUserError } = await supabase.auth.admin.getUserByEmail(email);
+    
+    let authUserId: string | null = null;
+    
+    if (existingAuthUser?.user && !getUserError) {
+      console.log("User exists in Supabase Auth, updating password...");
+      authUserId = existingAuthUser.user.id;
+      
+      // Update the user's password using admin API
+      const { data: updateUserData, error: updatePasswordError } = await supabase.auth.admin.updateUserById(authUserId, {
+        password: password,
+      });
+      
+      if (updatePasswordError) {
+        console.log("Password update error:", updatePasswordError);
+        return NextResponse.json({ error: `Failed to update password: ${updatePasswordError.message}` }, { status: 400 });
+      }
+      
+      console.log("Password updated successfully for existing user");
+    } else {
+      // User doesn't exist, create new one
+      console.log("User doesn't exist, creating new Supabase Auth user...");
+      const { data: authUser, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
-      
-      if (signInError) {
-        console.log("Sign in error for existing user:", signInError);
-        return NextResponse.json({ error: `User exists but password is incorrect: ${signInError.message}` }, { status: 400 });
+
+      console.log("Auth signup result:", { 
+        authUser: authUser ? { id: authUser.user?.id, email: authUser.user?.email, confirmed: authUser.user?.email_confirmed_at } : null,
+        signUpError: signUpError ? { message: signUpError.message, code: signUpError.name } : null
+      });
+
+      if (signUpError) {
+        console.log("Signup error:", signUpError);
+        return NextResponse.json({ error: `Signup failed: ${signUpError.message}` }, { status: 400 });
+      }
+
+      authUserId = authUser?.user?.id;
+      if (!authUserId) {
+        console.log("No auth user ID returned:", { authUser, signUpError });
+        return NextResponse.json({ error: "User signup failed - no user ID returned." }, { status: 400 });
       }
       
-      authUserId = existingUser.user?.id;
-      console.log("Found existing user:", authUserId);
-    } else if (signUpError) {
-      console.log("Signup error:", signUpError);
-      return NextResponse.json({ error: `Signup failed: ${signUpError.message}` }, { status: 400 });
-    }
-
-    if (!authUserId) {
-      console.log("No auth user ID returned:", { authUser, signUpError });
-      return NextResponse.json({ error: "User signup failed - no user ID returned." }, { status: 400 });
+      console.log("New auth user created successfully:", authUserId);
     }
 
     console.log("Auth user created successfully:", authUserId);
