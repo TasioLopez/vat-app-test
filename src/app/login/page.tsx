@@ -93,7 +93,9 @@ export default function LoginPage() {
         : 'https://vat-app-test.vercel.app/reset-password';
       
       console.log('Current hostname:', currentHostname);
+      console.log('Current origin:', window.location.origin);
       console.log('Redirect URL:', redirectUrl);
+      console.log('Environment:', process.env.NODE_ENV);
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
