@@ -130,6 +130,103 @@ function filterValidValues(data: any): any {
   return filtered;
 }
 
+// AGGRESSIVE PROCESSING: More thorough extraction for individual documents
+async function processDocumentAggressively(text: string, doc: any): Promise<any> {
+  console.log(`🔥 AGGRESSIVE PROCESSING for ${doc?.type}...`);
+  
+  const aggressivePrompt = `Je bent een EXPERT in het analyseren van Nederlandse documenten. Je MOET alle informatie vinden!
+
+DOCUMENT TYPE: ${doc?.type}
+
+MISSION: Analyseer dit document EXTREEM GRONDIG en vind ALLE mogelijke informatie:
+
+VERPLICHT: Zoek naar ALLE volgende velden en vind ze ook al lijken ze onbelangrijk:
+
+1. **first_sick_day** - EERSTE ZIEKTEDAG (YYYY-MM-DD)
+   - Zoek naar: elke datum die eerste ziektedag kan zijn
+   - Patronen: "15-01-2024", "15 januari 2024", "eerste ziektedag", "ziekte start", "verzuim sinds"
+
+2. **registration_date** - DATUM AANMELDING (YYYY-MM-DD)  
+   - Zoek naar: elke datum die aanmelding kan zijn
+   - Patronen: "20-01-2024", "20 januari 2024", "aanmelding", "registratie", "aangemeld"
+
+3. **ad_report_date** - DATUM AD RAPPORT (YYYY-MM-DD)
+   - Zoek naar: elke datum van rapporten
+   - Patronen: "01-02-2024", "1 februari 2024", "rapport datum", "AD datum"
+
+4. **fml_izp_lab_date** - DATUM FML/IZP/LAB (YYYY-MM-DD)
+   - Zoek naar: elke datum van FML/IZP/LAB rapporten
+   - Patronen: "10-03-2024", "FML datum", "IZP datum", "LAB datum"
+
+5. **occupational_doctor_name** - NAAM ARBEIDSDESKUNDIGE
+   - Zoek naar: elke naam die specialist kan zijn
+   - Patronen: "R. Hupsel", "Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
+
+6. **occupational_doctor_org** - ORGANISATIE SPECIALIST
+   - Zoek naar: elke organisatie naam
+   - Patronen: "De Arbodienst", "Arbodienst", "ArboNed", "Arbo Unie", "BGD"
+
+7. **intake_date** - DATUM INTAKEGESPREK (YYYY-MM-DD)
+   - Zoek naar: elke datum die intake kan zijn
+   - Patronen: "10-01-2024", "10 januari 2024", "intake datum", "gesprek datum"
+
+BELANGRIJK: 
+- Vind ALLE velden die mogelijk zijn, ook al lijken ze onzeker
+- Converteer alle datums naar YYYY-MM-DD
+- Wees NIET conservatief - extract alles wat je vindt
+- Als je een datum ziet, probeer te bepalen wat het is
+- Als je een naam ziet, probeer te bepalen of het een specialist is`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        { role: 'system', content: aggressivePrompt },
+        { role: 'user', content: `Analyseer dit document EXTREEM GRONDIG:\n\n${text}` }
+      ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_all_possible_fields',
+          description: 'Extract ALL possible fields from document',
+          parameters: {
+            type: 'object',
+            properties: {
+              first_sick_day: { type: 'string', description: 'Eerste ziektedag in YYYY-MM-DD format' },
+              registration_date: { type: 'string', description: 'Datum aanmelding in YYYY-MM-DD format' },
+              ad_report_date: { type: 'string', description: 'Datum AD rapport in YYYY-MM-DD format' },
+              fml_izp_lab_date: { type: 'string', description: 'Datum FML/IZP/LAB in YYYY-MM-DD format' },
+              occupational_doctor_name: { type: 'string', description: 'Naam van arbeidsdeskundige' },
+              occupational_doctor_org: { type: 'string', description: 'Organisatie van specialist' },
+              intake_date: { type: 'string', description: 'Datum intakegesprek in YYYY-MM-DD format' }
+            },
+            required: []
+          }
+        }
+      }],
+      tool_choice: { 
+        type: 'function', 
+        function: { name: 'extract_all_possible_fields' } 
+      }
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.log('⚠️ No tool call returned from aggressive processing');
+      return {};
+    }
+
+    const extractedData = JSON.parse(toolCall.function.arguments);
+    console.log('✅ Aggressive processing extracted:', extractedData);
+    
+    return extractedData;
+  } catch (error: any) {
+    console.error('❌ Aggressive processing error:', error.message);
+    return {};
+  }
+}
+
 // FIXED APPROACH: Use OpenAI function calling (tools) for reliable structured extraction
 async function modernDocumentProcessor(texts: string[], sortedDocs: any[]): Promise<any> {
   console.log('🚀 Using OpenAI Function Calling for Reliable Document Processing...');
@@ -1012,24 +1109,36 @@ export async function GET(req: NextRequest) {
 
     console.log('📝 Total extracted text length:', texts.join('\n\n').length, 'characters');
     
-    // MODERN 2025 APPROACH: Use OpenAI's latest capabilities
-    console.log('🚀 Starting Modern 2025 Document Processing...');
+    // ROBUST APPROACH: Try combined processing with smart fallback
+    console.log('🚀 Starting Robust Document Processing...');
     
     try {
-      const extractedData = await modernDocumentProcessor(texts, sortedDocs);
+      // Check if combined text is too large (>100k chars) - if so, skip combined approach
+      const totalTextLength = texts.join('\n\n--- DOCUMENT SEPARATOR ---\n\n').length;
+      console.log(`📊 Total text length: ${totalTextLength} characters`);
       
-      if (Object.keys(extractedData).length > 0) {
-        console.log('✅ Modern processing completed, found fields:', Object.keys(extractedData));
-        console.log('✅ Final extracted data:', extractedData);
-        return NextResponse.json({
-          success: true,
-          details: extractedData,
-          autofilled_fields: Object.keys(extractedData),
-          message: `Modern AI gevonden in ${texts.length} documenten - ${Object.keys(extractedData).length} velden ingevuld`
-        });
+      if (totalTextLength < 100000) {
+        console.log('📄 Text size manageable, trying combined processing...');
+        const extractedData = await modernDocumentProcessor(texts, sortedDocs);
+        
+        if (Object.keys(extractedData).length > 0) {
+          console.log('✅ Combined processing completed, found fields:', Object.keys(extractedData));
+          console.log('✅ Final extracted data:', extractedData);
+          return NextResponse.json({
+            success: true,
+            details: extractedData,
+            autofilled_fields: Object.keys(extractedData),
+            message: `Modern AI gevonden in ${texts.length} documenten - ${Object.keys(extractedData).length} velden ingevuld`
+          });
+        } else {
+          console.log('⚠️ Combined processing found no fields, falling back to individual processing...');
+        }
+      } else {
+        console.log('📄 Text too large, skipping combined processing, going straight to individual processing...');
       }
     } catch (error: any) {
-      console.error(`❌ Modern processing failed:`, error.message);
+      console.error(`❌ Combined processing failed:`, error.message);
+      console.log('🔄 Falling back to individual processing...');
     }
     
     // Fallback: Try comprehensive multi-document processing
@@ -1049,7 +1158,8 @@ export async function GET(req: NextRequest) {
         console.log(`📄 Text length for ${doc?.type}: ${text.length} characters`);
         console.log(`📄 First 200 chars of ${doc?.type}:`, text.substring(0, 200));
         
-        const individualResult = await modernDocumentProcessor([text], [doc]);
+        // Use more aggressive processing for individual documents
+        const individualResult = await processDocumentAggressively(text, doc);
         console.log(`🤖 AI RESULT for ${doc?.type}:`, individualResult);
         
         if (Object.keys(individualResult).length > 0) {
