@@ -271,13 +271,19 @@ DOCUMENT TYPE: ${docType.toUpperCase()}
 ${focus}
 
 ⚠️ BELANGRIJK: Extract ALLEEN de volgende velden als ze expliciet in dit document staan:
-- first_sick_day (Eerste ziektedag/verzuimdag) - zoek naar eerste ziektedag
-- registration_date (Registratiedatum/Aanmelddatum) - zoek naar registratiedatum  
-- ad_report_date (Datum AD Rapport) - zoek naar datum van AD rapport
+- first_sick_day (Eerste ziektedag/verzuimdag) - zoek naar eerste ziektedag voor trajectplan
+- registration_date (Registratiedatum/Aanmelddatum) - zoek naar registratiedatum voor trajectplan  
+- ad_report_date (Datum AD Rapport) - zoek naar datum van AD rapport voor trajectplan
 - fml_izp_lab_date (Datum FML/IZP/LAB) - zoek naar datum van FML/IZP/LAB rapport
-- occupational_doctor_name (Naam bedrijfsarts/arbeidsdeskundige) - zoek naar naam specialist
-- occupational_doctor_org (Organisatie bedrijfsarts/arbodienst) - zoek naar organisatie
-- intake_date (Datum intakegesprek) - zoek naar gespreksdatum/intakedatum
+- occupational_doctor_name (Naam bedrijfsarts/arbeidsdeskundige) - zoek naar naam specialist voor trajectplan
+- occupational_doctor_org (Organisatie bedrijfsarts/arbodienst) - zoek naar organisatie voor trajectplan
+- intake_date (Datum intakegesprek) - zoek naar gespreksdatum/intakedatum voor trajectplan
+
+❌ NIET EXTRACTEN (deze worden automatisch berekend):
+- tp_creation_date (wordt in stap 1 ingevoerd)
+- tp_start_date (wordt automatisch berekend)
+- tp_end_date (wordt automatisch berekend)  
+- tp_lead_time (wordt automatisch berekend)
 
 ${searchTerms}
 
@@ -285,7 +291,14 @@ DATUM CONVERSIE REGELS:
 - Als je een datum vindt in dd-mm-yyyy formaat, converteer naar YYYY-MM-DD
 - Als je een datum vindt in dd/mm/yyyy formaat, converteer naar YYYY-MM-DD  
 - Als je een datum vindt in dd-mm-yy formaat, converteer naar YYYY-MM-DD (assume 20xx)
-- Voorbeelden: "15-03-2024" → "2024-03-15", "15/03/2024" → "2024-03-15", "15-03-24" → "2024-03-15"
+- Als je een datum vindt in Nederlandse tekst formaat, converteer naar YYYY-MM-DD
+- Voorbeelden: 
+  * "15-03-2024" → "2024-03-15"
+  * "15/03/2024" → "2024-03-15" 
+  * "15-03-24" → "2024-03-15"
+  * "12 juni 2025" → "2025-06-12"
+  * "26 april 2024" → "2024-04-26"
+  * "17 juni 2025" → "2025-06-17"
 
 BELANGRIJKE TIPS:
 - Kijk naar de header/footer van het document voor datums
