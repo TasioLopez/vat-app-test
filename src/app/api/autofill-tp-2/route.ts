@@ -147,6 +147,11 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
                 type: 'string',
                 description: 'Organisatie bedrijfsarts/Arbodienst'
               },
+              intake_date: {
+                type: 'string',
+                format: 'date',
+                description: 'Datum intakegesprek/Gespreksdatum (YYYY-MM-DD format)'
+              },
               has_ad_report: {
                 type: 'boolean',
                 description: 'Of er een AD rapport aanwezig is (true/false)'
@@ -188,20 +193,25 @@ function createFocusedPrompt(docType: string, existingData: any): string {
       focus = `Dit is een INTAKEFORMULIER voor re-integratie traject. 
 
 ZOEK SPECIFIEK NAAR:
-1. **Datum intakegesprek**: Zoek naar "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:", "Gespreksdatum:", datum van het intakegesprek
-2. **Eerste ziektedag**: Zoek naar "Eerste ziektedag:", "Eerste verzuimdag:", "Datum eerste ziekmelding:", "1e ziektedag:", "Datum ziekmelding:"
-3. **Registratiedatum**: Zoek naar "Registratiedatum:", "Datum registratie:", "Aanmelddatum:", "Datum aanmelding UWV:", "Datum aanmelding:"
-4. **Persoonlijke gegevens sectie**: Naam, geboortedatum, contactgegevens
+1. **Datum intakegesprek**: Zoek naar "Gespreksdatum:", "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:"
+2. **Eerste ziektedag**: Zoek naar "Datum ziekmelding:", "Eerste ziektedag:", "Eerste verzuimdag:", "Datum eerste ziekmelding:"
+3. **Registratiedatum**: Zoek naar "Aanmeld:", "Registratiedatum:", "Datum registratie:", "Aanmelddatum:", "Datum aanmelding:"
+4. **AD rapport datum**: Zoek naar "Datum AD:", "Datum AD rapport:", "AD rapport datum:"
+5. **FML/IZP datum**: Zoek naar "Datum FML:", "Datum IZP:", "FML datum:", "IZP datum:"
+6. **Arbeidsdeskundige**: Zoek naar "Naam arbeidsdeskundige:", "Arbeidsdeskundige:", "Rapporteur:"
 
-TYPISCHE STRUCTUUR: Intakeformulieren hebben meestal een kop met datum, persoonlijke gegevens, en ziektedatum sectie.`;
+TYPISCHE STRUCTUUR: Intakeformulieren hebben een header met key informatie (Aanmeld, Datum AD, Datum FML), gevolgd door gespreksinformatie en medische situatie.`;
       
       searchTerms = `
 SPECIFIEKE ZOEKTERMEN voor INTAKEFORMULIER:
-- "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:", "Gespreksdatum:", "Datum intake:"
-- "Eerste ziektedag:", "Eerste verzuimdag:", "Datum ziekmelding:", "1e ziektedag:", "Datum eerste ziektedag:"
-- "Registratiedatum:", "Aanmelddatum:", "Datum aanmelding:", "Datum registratie:", "Datum aanmelding UWV:"
-- "Intakegesprek", "Gesprek", "Intake", "Persoonlijke gegevens", "Gegevens werknemer"
-- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
+- "Gespreksdatum:", "Datum intakegesprek:", "Datum gesprek:", "Intakedatum:", "Gesprek datum:"
+- "Datum ziekmelding:", "Eerste ziektedag:", "Eerste verzuimdag:", "Datum eerste ziekmelding:", "Ziekmelding datum:"
+- "Aanmeld:", "Registratiedatum:", "Datum registratie:", "Aanmelddatum:", "Datum aanmelding:", "Aanmeld datum:"
+- "Datum AD:", "Datum AD rapport:", "AD rapport datum:", "AD datum:", "Arbeidsdeskundig rapport datum:"
+- "Datum FML:", "Datum IZP:", "FML datum:", "IZP datum:", "FML rapport datum:", "IZP rapport datum:"
+- "Naam arbeidsdeskundige:", "Arbeidsdeskundige:", "Rapporteur:", "Arbeidsdeskundige naam:"
+- "Gespreksinformatie", "Medische situatie", "Persoonlijke gegevens"
+- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy, dd-m-yyyy`;
       break;
       
     case 'ad rapport':
@@ -210,21 +220,21 @@ SPECIFIEKE ZOEKTERMEN voor INTAKEFORMULIER:
       focus = `Dit is een AD RAPPORT (Arbeidsdeskundig rapport) voor re-integratie.
 
 ZOEK SPECIFIEK NAAR:
-1. **Datum AD rapportage**: Zoek in header/footer naar "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:", datum van het rapport
-2. **Arbeidsdeskundige**: Zoek naar "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:", naam van de specialist
-3. **Bedrijfsarts bedrijf**: Zoek naar "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:", naam van de arbodienst
-4. **Eerste ziektedag**: Als vermeld in het rapport
+1. **Datum AD rapportage**: Zoek in header/footer naar "Datum rapportage:", "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:"
+2. **Arbeidsdeskundige**: Zoek naar "Naam/Rapporteur:", "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:"
+3. **Bedrijfsarts bedrijf**: Zoek naar "Bedrijfsarts/Arbodienst:", "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:"
+4. **Eerste ziektedag**: Zoek naar "Eerste verzuimdag:", "Eerste ziektedag:", "Datum eerste verzuim:", "Datum verzuim:"
 
-TYPISCHE STRUCTUUR: AD rapporten hebben een duidelijke header met datum, naam van de arbeidsdeskundige en organisatie.`;
+TYPISCHE STRUCTUUR: AD rapporten hebben een duidelijke header met datum, naam van de arbeidsdeskundige en organisatie. Kijk naar de "Gegevens Opdrachtnemer" sectie voor rapporteur info.`;
       
       searchTerms = `
 SPECIFIEKE ZOEKTERMEN voor AD RAPPORT:
-- "Datum rapportage:", "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:"
-- "Naam/Rapporteur:", "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:"
-- "Bedrijfsarts/Arbodienst:", "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:"
-- "Eerste verzuimdag:", "Eerste ziektedag:", "Datum eerste verzuim:", "Datum verzuim:"
-- "Arbeidsdeskundig rapport", "AD rapport", "Arbeidsdeskundige rapportage"
-- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy`;
+- "Datum rapportage:", "Datum:", "Rapportdatum:", "Datum rapport:", "Datum AD rapport:", "Rapport datum:"
+- "Naam/Rapporteur:", "Arbeidsdeskundige:", "Naam arbeidsdeskundige:", "Door:", "Ondertekend door:", "Rapporteur naam:"
+- "Bedrijfsarts/Arbodienst:", "Arbodienst:", "Arbo-organisatie:", "Bedrijfsarts organisatie:", "Organisatie:", "Arbo organisatie:"
+- "Eerste verzuimdag:", "Eerste ziektedag:", "Datum eerste verzuim:", "Datum verzuim:", "Verzuimdag:", "Ziektedag:"
+- "Gegevens Opdrachtnemer", "Gegevens bedrijfsarts", "Arbeidsdeskundig rapport", "AD rapport", "Arbeidsdeskundige rapportage"
+- Datums in formaten: dd-mm-yyyy, dd/mm/yyyy, dd-mm-yy, dd/mm/yy, dd-m-yyyy`;
       break;
       
     case 'fml':
@@ -267,6 +277,7 @@ ${focus}
 - fml_izp_lab_date (Datum FML/IZP/LAB) - zoek naar datum van FML/IZP/LAB rapport
 - occupational_doctor_name (Naam bedrijfsarts/arbeidsdeskundige) - zoek naar naam specialist
 - occupational_doctor_org (Organisatie bedrijfsarts/arbodienst) - zoek naar organisatie
+- intake_date (Datum intakegesprek) - zoek naar gespreksdatum/intakedatum
 
 ${searchTerms}
 
