@@ -103,7 +103,7 @@ Return ONLY a JSON object with the fields you find.`,
         console.log('✅ Parsed extracted data:', extractedData);
         
         // Cleanup
-        await openai.beta.assistants.del(assistant.id);
+        await openai.beta.assistants.delete(assistant.id);
         for (const fileId of fileIds) {
           await openai.files.del(fileId);
         }
