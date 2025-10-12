@@ -90,23 +90,25 @@ function extractStoragePath(url: string): string | null {
 
 // AI Agent function to process individual documents intelligently
 async function processDocumentWithAgent(docText: string, docType: string, existingData: any): Promise<any> {
-  // Create smaller, focused chunks for the specific document type
-  const chunks = splitIntoChunks(docText, 3000); // Smaller chunks to avoid "too large" error
+  // Use larger chunks to maintain context but avoid "too large" error
+  const chunks = splitIntoChunks(docText, 8000); // Increased chunk size for better context
   
   console.log(`🤖 Processing ${docType} with ${chunks.length} chunks`);
   
-  // Create a focused prompt based on document type and what we already know
-  const systemPrompt = createFocusedPrompt(docType, existingData);
+  // Create a more direct and specific prompt
+  const systemPrompt = createDirectPrompt(docType);
   
   const messages: ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
-    ...chunks.map((chunk) => ({ 
+    ...chunks.map((chunk, index) => ({ 
       role: 'user', 
-      content: `DOCUMENT TYPE: ${docType}\n\n${chunk}` 
+      content: `DOCUMENT TYPE: ${docType} - PART ${index + 1}/${chunks.length}\n\n${chunk}` 
     })) as ChatCompletionMessageParam[]
   ];
   
   try {
+    console.log(`📤 Sending ${messages.length} messages to OpenAI for ${docType}`);
+    
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
@@ -115,7 +117,7 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
         type: 'function',
         function: {
           name: 'extract_tp_step2_fields',
-          description: 'Extract ONLY Step 2 TP document fields (NOT auto-calculated fields)',
+          description: 'Extract ALL possible fields from this document',
           parameters: {
             type: 'object',
             properties: {
@@ -151,10 +153,6 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
                 type: 'string',
                 format: 'date',
                 description: 'Datum intakegesprek/Gespreksdatum (YYYY-MM-DD format)'
-              },
-              has_ad_report: {
-                type: 'boolean',
-                description: 'Of er een AD rapport aanwezig is (true/false)'
               }
             },
             required: []
@@ -172,14 +170,117 @@ async function processDocumentWithAgent(docText: string, docType: string, existi
 
     if (args) {
       const details = JSON.parse(args);
+      console.log(`✅ AI extracted from ${docType}:`, details);
+      return details;
+    }
+    
+    console.log(`⚠️ No fields extracted from ${docType}`);
+    return {};
+  } catch (error: any) {
+    console.error(`❌ AI processing error for ${docType}:`, error.message);
+    if (error.message.includes('Request too large')) {
+      console.log(`🔄 Retrying ${docType} with smaller chunks...`);
+      return await processDocumentWithAgentSmallerChunks(docText, docType);
+    }
+    return {};
+  }
+}
+
+// Fallback function with smaller chunks if "too large" error occurs
+async function processDocumentWithAgentSmallerChunks(docText: string, docType: string): Promise<any> {
+  const chunks = splitIntoChunks(docText, 4000); // Even smaller chunks
+  
+  console.log(`🔄 Retrying ${docType} with ${chunks.length} smaller chunks`);
+  
+  const systemPrompt = createDirectPrompt(docType);
+  
+  const messages: ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...chunks.slice(0, 2).map((chunk, index) => ({ // Only process first 2 chunks to avoid timeout
+      role: 'user', 
+      content: `DOCUMENT TYPE: ${docType} - PART ${index + 1}\n\n${chunk}` 
+    })) as ChatCompletionMessageParam[]
+  ];
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages,
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'extract_tp_step2_fields',
+          description: 'Extract ALL possible fields from this document',
+          parameters: {
+            type: 'object',
+            properties: {
+              first_sick_day: { type: 'string', format: 'date' },
+              registration_date: { type: 'string', format: 'date' },
+              ad_report_date: { type: 'string', format: 'date' },
+              fml_izp_lab_date: { type: 'string', format: 'date' },
+              occupational_doctor_name: { type: 'string' },
+              occupational_doctor_org: { type: 'string' },
+              intake_date: { type: 'string', format: 'date' }
+            },
+            required: []
+          }
+        }
+      }],
+      tool_choice: {
+        type: 'function',
+        function: { name: 'extract_tp_step2_fields' }
+      }
+    });
+
+    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+    const args = toolCall?.function?.arguments;
+
+    if (args) {
+      const details = JSON.parse(args);
+      console.log(`✅ AI extracted from ${docType} (retry):`, details);
       return details;
     }
     
     return {};
   } catch (error: any) {
-    console.error(`❌ AI processing error for ${docType}:`, error.message);
+    console.error(`❌ AI processing retry failed for ${docType}:`, error.message);
     return {};
   }
+}
+
+// Create direct, simple prompt for better AI performance
+function createDirectPrompt(docType: string): string {
+  return `Je bent een expert in het analyseren van Nederlandse documenten voor re-integratie trajectplannen.
+
+DOCUMENT TYPE: ${docType.toUpperCase()}
+
+OPDRACHT: Zoek in dit document naar de volgende informatie en extract ALLEEN deze velden:
+
+1. **first_sick_day** - Eerste ziektedag/verzuimdag (converteer naar YYYY-MM-DD)
+2. **registration_date** - Datum aanmelding/registratie (converteer naar YYYY-MM-DD)  
+3. **ad_report_date** - Datum van AD rapport (converteer naar YYYY-MM-DD)
+4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (converteer naar YYYY-MM-DD)
+5. **occupational_doctor_name** - Naam van arbeidsdeskundige/bedrijfsarts
+6. **occupational_doctor_org** - Organisatie van de specialist
+7. **intake_date** - Datum intakegesprek/gesprek (converteer naar YYYY-MM-DD)
+
+BELANGRIJKE ZOEKTERMEN:
+- "Eerste ziektedag", "Eerste verzuimdag", "Datum ziekmelding"
+- "Datum aanmelding", "Aanmelddatum", "Registratiedatum"  
+- "Datum rapportage", "Datum rapport", "Datum AD"
+- "Datum FML", "Datum IZP", "Datum LAB"
+- "Arbeidsdeskundige", "Bedrijfsarts", "Naam/Rapporteur"
+- "Arbodienst", "Arbo-organisatie", "Bedrijfsarts/Arbodienst"
+- "Gespreksdatum", "Intakedatum", "Datum gesprek"
+
+DATUM CONVERSIES:
+- "26 april 2024" → "2024-04-26"
+- "12 juni 2025" → "2025-06-12"  
+- "17-6-2025" → "2025-06-17"
+- "15-03-2024" → "2024-03-15"
+
+Extract ALLEEN de velden die je daadwerkelijk vindt. Als een veld niet gevonden wordt, laat het weg.`;
 }
 
 // Create focused prompts based on document type
@@ -494,20 +595,13 @@ export async function GET(req: NextRequest) {
         if (docResult && Object.keys(docResult).length > 0) {
           Object.assign(extractedData, docResult);
           console.log(`✅ Found ${Object.keys(docResult).length} fields in ${docInfo?.type}:`, Object.keys(docResult));
-          
-          // Add has_ad_report field if we found an AD report
-          if (docInfo?.type?.toLowerCase().includes('ad')) {
-            extractedData.has_ad_report = true;
-          }
-          
-          // Check if we have enough information - stop early if we found key fields
-          const keyFields = ['first_sick_day', 'registration_date', 'ad_report_date'];
-          const foundKeyFields = keyFields.filter(field => extractedData[field]);
-          
-          if (foundKeyFields.length >= 2) {
-            console.log(`🎯 Found enough key fields (${foundKeyFields.join(', ')}), stopping early`);
-            break;
-          }
+          console.log(`📋 Field values:`, docResult);
+        }
+        
+        // Add has_ad_report field if we found an AD report
+        if (docInfo?.type?.toLowerCase().includes('ad')) {
+          extractedData.has_ad_report = true;
+          console.log(`✅ Set has_ad_report = true for AD document`);
         }
         
         processedDocs++;
@@ -517,13 +611,17 @@ export async function GET(req: NextRequest) {
       }
     }
     
+    // Process all documents to completion - don't stop early
+    console.log(`📊 Processed ${processedDocs} documents, found ${Object.keys(extractedData).length} fields total`);
+    
     if (Object.keys(extractedData).length > 0) {
+      console.log('✅ Final extracted data:', extractedData);
       console.log('✅ Progressive processing completed, found fields:', Object.keys(extractedData));
       return NextResponse.json({
         success: true,
         details: extractedData,
         autofilled_fields: Object.keys(extractedData),
-        message: `Gegevens gevonden in ${processedDocs} documenten`
+        message: `Gegevens gevonden in ${processedDocs} documenten - ${Object.keys(extractedData).length} velden ingevuld`
       });
     }
     

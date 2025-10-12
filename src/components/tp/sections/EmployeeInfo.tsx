@@ -60,6 +60,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   const [saving, setSaving] = useState(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
   const [autofilledFields, setAutofilledFields] = useState<string[]>([]);
+  const [autofillMessage, setAutofillMessage] = useState<{type: 'success' | 'warning' | 'error', title: string, content: string} | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
 
@@ -278,26 +279,45 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
 
       if (!res.ok || !data.success) {
         const errorMsg = data.error || 'Autofill mislukt';
-        alert(`⚠️ ${errorMsg}`);
+        setAutofillMessage({
+          type: 'error',
+          title: '❌ Autofill Mislukt',
+          content: errorMsg
+        });
         console.error('Autofill error:', data);
         return;
       }
 
-      if (data?.details && Object.keys(data.details).length > 0) {
-        Object.entries(data.details).forEach(([key, value]) => updateField(key, value));
-        
-        const fieldNames = data.autofilled_fields || Object.keys(data.details);
-        setAutofilledFields(fieldNames);
-        
-        const fieldCount = fieldNames.length;
-        const message = data.message || `${fieldCount} velden ingevuld`;
-        alert(`✅ ${message}\n\nIngevulde velden: ${fieldNames.join(', ')}`);
-      } else {
-        alert('⚠️ Geen informatie gevonden in de documenten om in te vullen.');
-      }
+        if (data?.details && Object.keys(data.details).length > 0) {
+          Object.entries(data.details).forEach(([key, value]) => updateField(key, value));
+          
+          const fieldNames = data.autofilled_fields || Object.keys(data.details);
+          setAutofilledFields(fieldNames);
+          
+          const fieldCount = fieldNames.length;
+          const message = data.message || `${fieldCount} velden ingevuld`;
+          
+          // Show success notification
+          setAutofillMessage({
+            type: 'success',
+            title: '✅ Autofill Succesvol',
+            content: `${message}\n\nIngevulde velden: ${fieldNames.join(', ')}`
+          });
+        } else {
+          // Show warning notification
+          setAutofillMessage({
+            type: 'warning', 
+            title: '⚠️ Geen Gegevens Gevonden',
+            content: 'Geen informatie gevonden in de documenten om in te vullen.'
+          });
+        }
     } catch (err) {
       console.error('❌ Autofill failed:', err);
-      alert('❌ Er ging iets mis bij het autofill proces. Controleer de console voor details.');
+      setAutofillMessage({
+        type: 'error',
+        title: '❌ Systeem Fout',
+        content: 'Er ging iets mis bij het autofill proces. Controleer de console voor details.'
+      });
     } finally {
       setAutofillLoading(false);
     }
@@ -316,7 +336,30 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   ];
 
   return (
-    <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
+    <>
+      {/* Notification */}
+      {autofillMessage && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg ${
+          autofillMessage.type === 'success' ? 'bg-green-100 border border-green-300 text-green-800' :
+          autofillMessage.type === 'warning' ? 'bg-yellow-100 border border-yellow-300 text-yellow-800' :
+          'bg-red-100 border border-red-300 text-red-800'
+        }`}>
+          <div className="flex justify-between items-start">
+            <div>
+              <h4 className="font-semibold">{autofillMessage.title}</h4>
+              <p className="text-sm mt-1 whitespace-pre-line">{autofillMessage.content}</p>
+            </div>
+            <button
+              onClick={() => setAutofillMessage(null)}
+              className="ml-4 text-lg font-bold hover:opacity-70"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {Object.entries({
           phone: 'Telefoon',
@@ -520,7 +563,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
         </div>
 
       </div>
-    </div >
+    </div>
+    </>
   );
 }
 
