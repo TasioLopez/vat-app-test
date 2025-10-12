@@ -130,149 +130,148 @@ function filterValidValues(data: any): any {
   return filtered;
 }
 
-// SIMPLE BUT EFFECTIVE: Use basic regex + AI for guaranteed results
+// MODERN 2025 AI APPROACH: Use advanced structured extraction with multiple strategies
 async function processDocumentAggressively(text: string, doc: any): Promise<any> {
-  console.log(`🔥 SIMPLE PROCESSING for ${doc?.type}...`);
+  console.log(`🚀 MODERN 2025 AI PROCESSING for ${doc?.type}...`);
   
-  const result: any = {};
-  
-  // SIMPLE REGEX EXTRACTION FIRST
-  console.log(`📄 Extracting dates from ${doc?.type}...`);
-  
-  // Extract all dates in various formats
-  const datePatterns = [
-    /(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/g,  // dd-mm-yyyy or dd/mm/yyyy
-    /(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+(\d{4})/gi  // dd month yyyy
-  ];
-  
-  const dates: string[] = [];
-  datePatterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      let dateStr = '';
-      if (match[2] && isNaN(parseInt(match[2]))) {
-        // Dutch month name
-        const monthMap: {[key: string]: string} = {
-          'januari': '01', 'februari': '02', 'maart': '03', 'april': '04',
-          'mei': '05', 'juni': '06', 'juli': '07', 'augustus': '08',
-          'september': '09', 'oktober': '10', 'november': '11', 'december': '12'
-        };
-        const day = match[1].padStart(2, '0');
-        const month = monthMap[match[2].toLowerCase()];
-        const year = match[3];
-        dateStr = `${year}-${month}-${day}`;
-      } else {
-        // Numeric date
-        const day = match[1].padStart(2, '0');
-        const month = match[2].padStart(2, '0');
-        const year = match[3];
-        dateStr = `${year}-${month}-${day}`;
-      }
-      dates.push(dateStr);
-    }
-  });
-  
-  console.log(`📅 Found dates:`, dates);
-  
-  // Extract names (Dr., R., etc.)
-  const namePattern = /(Dr\.?\s+[A-Z][a-z]+|Drs\.?\s+[A-Z][a-z]+|R\.\s+[A-Z][a-z]+|[A-Z][a-z]+\s+[A-Z][a-z]+)/g;
-  const names = text.match(namePattern) || [];
-  console.log(`👤 Found names:`, names);
-  
-  // Extract organizations
-  const orgPattern = /(De\s+Arbodienst|Arbodienst|ArboNed|Arbo\s+Unie|BGD|Arbo)/gi;
-  const orgs = text.match(orgPattern) || [];
-  console.log(`🏢 Found organizations:`, orgs);
-  
-  // SIMPLE AI PROCESSING WITH EXTRACTED DATA
-  const simplePrompt = `Analyseer dit document en de al gevonden data:
+  // STRATEGY 1: Use structured output with JSON mode for maximum reliability
+  const structuredPrompt = `Je bent een expert AI die Nederlandse documenten analyseert voor re-integratie trajectplannen.
 
-Gevonden datums: ${dates.join(', ')}
-Gevonden namen: ${names.join(', ')}
-Gevonden organisaties: ${orgs.join(', ')}
-Document type: ${doc?.type}
+DOCUMENT TYPE: ${doc?.type}
 
-Vul de volgende velden in op basis van wat je vindt:
+OPDRACHT: Analyseer dit document grondig en extract de volgende informatie. Je MOET een JSON object teruggeven met alle gevonden velden.
 
-1. first_sick_day - Eerste ziektedag (YYYY-MM-DD)
-2. registration_date - Datum aanmelding (YYYY-MM-DD)
-3. ad_report_date - Datum AD rapport (YYYY-MM-DD)
-4. fml_izp_lab_date - Datum FML/IZP/LAB (YYYY-MM-DD)
-5. occupational_doctor_name - Naam arbeidsdeskundige
-6. occupational_doctor_org - Organisatie specialist
-7. intake_date - Datum intakegesprek (YYYY-MM-DD)
+VERPLICHTE VELDEN (extract ALLEEN als je ze vindt):
+- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format)  
+- ad_report_date: Datum van AD rapport (YYYY-MM-DD format)
+- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+- occupational_doctor_name: Naam van arbeidsdeskundige/bedrijfsarts
+- occupational_doctor_org: Organisatie van de specialist
+- intake_date: Datum intakegesprek (YYYY-MM-DD format)
 
-Gebruik de gevonden data en document context om de juiste velden in te vullen.`;
+BELANGRIJKE ZOEKPATRONEN:
+- Voor datums: zoek naar "15-01-2024", "15 januari 2024", "eerste ziektedag", "aanmelding", "intake"
+- Voor namen: zoek naar "R. Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
+- Voor organisaties: zoek naar "De Arbodienst", "Arbodienst", "ArboNed", "BGD"
+
+Geef een JSON object terug met ALLEEN de velden die je daadwerkelijk vindt.`;
 
   try {
+    // Use JSON mode for guaranteed structured output
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
       messages: [
-        { role: 'system', content: simplePrompt },
-        { role: 'user', content: `Document:\n\n${text.substring(0, 5000)}` }
+        { role: 'system', content: structuredPrompt },
+        { role: 'user', content: `Analyseer dit document:\n\n${text.substring(0, 8000)}` }
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      const extractedData = JSON.parse(content);
+      console.log('✅ Modern AI extracted:', extractedData);
+      
+      // Validate and clean the data
+      const cleanedData: any = {};
+      Object.entries(extractedData).forEach(([key, value]) => {
+        if (value && typeof value === 'string' && value.trim().length > 0) {
+          cleanedData[key] = value.trim();
+        }
+      });
+      
+      if (Object.keys(cleanedData).length > 0) {
+        console.log('✅ Cleaned extracted data:', cleanedData);
+        return cleanedData;
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Modern AI processing error:', error.message);
+  }
+  
+  // STRATEGY 2: Fallback to function calling if JSON mode fails
+  console.log('🔄 Falling back to function calling...');
+  
+  try {
+    const functionPrompt = `Analyseer dit document en extract alle relevante informatie voor een trajectplan.
+
+Document type: ${doc?.type}
+
+Zoek naar:
+1. Eerste ziektedag (first_sick_day)
+2. Datum aanmelding (registration_date)  
+3. Datum AD rapport (ad_report_date)
+4. Datum FML/IZP/LAB (fml_izp_lab_date)
+5. Naam arbeidsdeskundige (occupational_doctor_name)
+6. Organisatie specialist (occupational_doctor_org)
+7. Datum intakegesprek (intake_date)
+
+Gebruik de function tool om de gevonden informatie terug te geven.`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        { role: 'system', content: functionPrompt },
+        { role: 'user', content: `Document:\n\n${text.substring(0, 8000)}` }
       ],
       tools: [{
         type: 'function',
         function: {
-          name: 'extract_fields',
-          description: 'Extract fields from document',
+          name: 'extract_trajectplan_fields',
+          description: 'Extract all relevant fields for trajectplan',
           parameters: {
             type: 'object',
             properties: {
-              first_sick_day: { type: 'string' },
-              registration_date: { type: 'string' },
-              ad_report_date: { type: 'string' },
-              fml_izp_lab_date: { type: 'string' },
-              occupational_doctor_name: { type: 'string' },
-              occupational_doctor_org: { type: 'string' },
-              intake_date: { type: 'string' }
+              first_sick_day: { type: 'string', description: 'Eerste ziektedag in YYYY-MM-DD format' },
+              registration_date: { type: 'string', description: 'Datum aanmelding in YYYY-MM-DD format' },
+              ad_report_date: { type: 'string', description: 'Datum AD rapport in YYYY-MM-DD format' },
+              fml_izp_lab_date: { type: 'string', description: 'Datum FML/IZP/LAB in YYYY-MM-DD format' },
+              occupational_doctor_name: { type: 'string', description: 'Naam van arbeidsdeskundige' },
+              occupational_doctor_org: { type: 'string', description: 'Organisatie van specialist' },
+              intake_date: { type: 'string', description: 'Datum intakegesprek in YYYY-MM-DD format' }
             },
             required: []
           }
         }
       }],
-      tool_choice: { type: 'function', function: { name: 'extract_fields' } }
+      tool_choice: { type: 'function', function: { name: 'extract_trajectplan_fields' } }
     });
 
     const toolCall = response.choices[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       const extractedData = JSON.parse(toolCall.function.arguments);
-      console.log('✅ Simple processing extracted:', extractedData);
-      return extractedData;
+      console.log('✅ Function calling extracted:', extractedData);
+      
+      // Clean the data
+      const cleanedData: any = {};
+      Object.entries(extractedData).forEach(([key, value]) => {
+        if (value && typeof value === 'string' && value.trim().length > 0) {
+          cleanedData[key] = value.trim();
+        }
+      });
+      
+      return cleanedData;
     }
   } catch (error: any) {
-    console.error('❌ Simple processing error:', error.message);
+    console.error('❌ Function calling error:', error.message);
   }
   
-  // FALLBACK: Use regex results directly
-  console.log('🔄 Using regex fallback results...');
-  if (dates.length > 0) {
-    result.first_sick_day = dates[0];
-    if (dates.length > 1) result.registration_date = dates[1];
-    if (dates.length > 2) result.ad_report_date = dates[2];
-  }
-  if (names.length > 0) {
-    result.occupational_doctor_name = names[0];
-  }
-  if (orgs.length > 0) {
-    result.occupational_doctor_org = orgs[0];
-  }
-  
-  console.log('✅ Regex fallback result:', result);
-  return result;
+  console.log('⚠️ All AI strategies failed, returning empty result');
+  return {};
 }
 
-// FIXED APPROACH: Use OpenAI function calling (tools) for reliable structured extraction
+// MODERN 2025 COMBINED PROCESSING: Use JSON mode for multi-document analysis
 async function modernDocumentProcessor(texts: string[], sortedDocs: any[]): Promise<any> {
-  console.log('🚀 Using OpenAI Function Calling for Reliable Document Processing...');
+  console.log('🚀 MODERN 2025 COMBINED PROCESSING...');
   
   const documentContext = sortedDocs.map((doc, index) => 
     `Document ${index + 1}: ${doc.type}`
   ).join(', ');
 
-  const systemPrompt = `Je bent een expert in het analyseren van Nederlandse re-integratie documenten.
-Gebruik ALLEEN informatie uit de documenten zelf - geen aannames maken.
+  const systemPrompt = `Je bent een expert AI die Nederlandse re-integratie documenten analyseert voor trajectplannen.
 
 DOCUMENTEN: ${documentContext}
 
@@ -282,48 +281,23 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 3. FML/IZP (derde prioriteit)
 4. OVERIG (laagste prioriteit)
 
-BELANGRIJK: Je MOET zoeken naar ALLE volgende velden in de documenten. Wees EXTRA AGGRESSIEF in het zoeken!
+OPDRACHT: Analyseer ALLE documenten en extract de volgende informatie. Je MOET een JSON object teruggeven met alle gevonden velden.
 
-1. **first_sick_day** - Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
-   - Zoek naar: "Eerste ziektedag:", "Verzuimdatum:", "Ziekte start:", "Ziekte begin:", "Eerste dag:", "Start ziekte:", "Ziekte sinds:", "Verzuim sinds:"
-   - Ook zoek naar: "15-01-2024", "15 januari 2024", "15/01/2024" (elke datum die lijkt op eerste ziektedag)
-   - Voorbeeld: "15-01-2024" → "2024-01-15"
+VERPLICHTE VELDEN (extract ALLEEN als je ze vindt):
+- first_sick_day: Eerste ziektedag/verzuimdag (YYYY-MM-DD format)
+- registration_date: Datum aanmelding/registratie (YYYY-MM-DD format)  
+- ad_report_date: Datum van AD rapport (YYYY-MM-DD format)
+- fml_izp_lab_date: Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
+- occupational_doctor_name: Naam van arbeidsdeskundige/bedrijfsarts
+- occupational_doctor_org: Organisatie van de specialist
+- intake_date: Datum intakegesprek (YYYY-MM-DD format)
 
-2. **registration_date** - Datum aanmelding/registratie (YYYY-MM-DD format)
-   - Zoek naar: "Datum aanmelding:", "Registratiedatum:", "Aanmelddatum:", "Datum registratie:", "Aanmelding:", "Registratie:", "Aangemeld op:"
-   - Ook zoek naar: "20-01-2024", "20 januari 2024", "20/01/2024" (elke datum die lijkt op aanmelding)
-   - Voorbeeld: "20-01-2024" → "2024-01-20"
+BELANGRIJKE ZOEKPATRONEN:
+- Voor datums: zoek naar "15-01-2024", "15 januari 2024", "eerste ziektedag", "aanmelding", "intake"
+- Voor namen: zoek naar "R. Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
+- Voor organisaties: zoek naar "De Arbodienst", "Arbodienst", "ArboNed", "BGD"
 
-3. **ad_report_date** - Datum van AD rapport (YYYY-MM-DD format)
-   - Zoek naar: "Datum AD rapport:", "Rapportdatum:", "Datum rapport:", "AD datum:", "Rapport datum:", "AD rapport:", "Arbeidsdeskundig rapport datum:"
-   - Voorbeeld: "01-02-2024" → "2024-02-01"
-
-4. **fml_izp_lab_date** - Datum FML/IZP/LAB rapport (YYYY-MM-DD format)
-   - Zoek naar: "Datum FML:", "Datum IZP:", "Datum LAB:", "FML datum:", "IZP datum:", "LAB datum:", "FML rapport:", "IZP rapport:"
-   - Voorbeeld: "10-03-2024" → "2024-03-10"
-
-5. **occupational_doctor_name** - Naam van arbeidsdeskundige
-   - Zoek naar: "R. Hupsel", "Naam/Rapporteur:", "Arbeidsdeskundige:", "Bedrijfsarts:", "Naam specialist:", "Rapporteur:", "Naam:", "Dr.", "Drs."
-   - Ook zoek naar: "Hupsel", "Jansen", "Peters" (alle mogelijke namen)
-   - Voorbeeld: "R. Hupsel" of "Dr. Jansen"
-
-6. **occupational_doctor_org** - Organisatie van de specialist
-   - Zoek naar: "De Arbodienst", "Arbodienst", "Bedrijfsarts/Arbodienst:", "Organisatie:", "Arbo organisatie:", "ArboNed", "Arbo Unie", "BGD", "Arbo"
-   - Voorbeeld: "De Arbodienst" of "ArboNed"
-
-7. **intake_date** - Datum intakegesprek (YYYY-MM-DD format)
-   - Zoek naar: "Datum intakegesprek:", "Gespreksdatum:", "Intakedatum:", "Datum gesprek:", "Intake datum:", "Gesprek datum:", "Datum intake:"
-   - Ook zoek naar: "10-01-2024", "10 januari 2024", "10/01/2024" (elke datum die lijkt op intake)
-   - Voorbeeld: "10-01-2024" → "2024-01-10"
-
-DATUM CONVERSIE REGELS:
-- dd-mm-yyyy → YYYY-MM-DD (bijv. "15-03-2024" → "2024-03-15")
-- dd/mm/yyyy → YYYY-MM-DD (bijv. "15/03/2024" → "2024-03-15")
-- dd-mm-yy → YYYY-MM-DD (bijv. "15-03-24" → "2024-03-15")
-- Nederlandse tekst → YYYY-MM-DD (bijv. "12 juni 2025" → "2025-06-12")
-
-Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
-Extract ALLEEN informatie die je daadwerkelijk vindt in de documenten.`;
+Geef een JSON object terug met ALLEEN de velden die je daadwerkelijk vindt in de documenten.`;
 
   // Smart text processing
   let processedText = '';
@@ -337,80 +311,47 @@ Extract ALLEEN informatie die je daadwerkelijk vindt in de documenten.`;
   console.log(`📄 Processing ${processedText.length} characters from ${texts.length} documents`);
 
   try {
+    // Use JSON mode for guaranteed structured output
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Analyseer deze documenten:\n\n${processedText}` }
+        { role: 'user', content: `Analyseer deze documenten:\n\n${processedText.substring(0, 8000)}` }
       ],
-      tools: [{
-        type: 'function',
-        function: {
-          name: 'extract_tp_step2_fields',
-          description: 'Extract trajectplan step 2 fields from documents',
-          parameters: {
-            type: 'object',
-            properties: {
-              first_sick_day: { 
-                type: 'string',
-                description: 'Eerste ziektedag in YYYY-MM-DD format'
-              },
-              registration_date: { 
-                type: 'string',
-                description: 'Datum aanmelding in YYYY-MM-DD format'
-              },
-              ad_report_date: { 
-                type: 'string',
-                description: 'Datum AD rapport in YYYY-MM-DD format'
-              },
-              fml_izp_lab_date: { 
-                type: 'string',
-                description: 'Datum FML/IZP/LAB rapport in YYYY-MM-DD format'
-              },
-              occupational_doctor_name: { 
-                type: 'string',
-                description: 'Naam van arbeidsdeskundige'
-              },
-              occupational_doctor_org: { 
-                type: 'string',
-                description: 'Organisatie van de specialist'
-              },
-              intake_date: {
-                type: 'string',
-                description: 'Datum intakegesprek in YYYY-MM-DD format'
-              }
-            },
-            required: []
-          }
-        }
-      }],
-      tool_choice: { 
-        type: 'function', 
-        function: { name: 'extract_tp_step2_fields' } 
-      }
+      response_format: { type: 'json_object' }
     });
 
-    const toolCall = response.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      console.log('⚠️ No tool call returned from OpenAI');
-      return {};
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      const extractedData = JSON.parse(content);
+      console.log('✅ Modern combined processing extracted:', extractedData);
+      
+      // Validate and clean the data
+      const cleanedData: any = {};
+      Object.entries(extractedData).forEach(([key, value]) => {
+        if (value && typeof value === 'string' && value.trim().length > 0) {
+          cleanedData[key] = value.trim();
+        }
+      });
+      
+      // Add has_ad_report if we have AD documents
+      const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
+      if (hasADDoc) {
+        cleanedData.has_ad_report = true;
+      }
+      
+      if (Object.keys(cleanedData).length > 0) {
+        console.log('✅ Cleaned combined data:', cleanedData);
+        return cleanedData;
+      }
     }
-
-    const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log('✅ Modern processing extracted:', extractedData);
-    
-    // Add has_ad_report if we have AD documents
-    const hasADDoc = sortedDocs.some(doc => doc.type?.toLowerCase().includes('ad'));
-    if (hasADDoc) {
-      extractedData.has_ad_report = true;
-    }
-    
-    return extractedData;
   } catch (error: any) {
-    console.error('❌ Modern processing error:', error.message);
-    return {};
+    console.error('❌ Modern combined processing error:', error.message);
   }
+  
+  console.log('⚠️ Combined processing failed, will fall back to individual processing');
+  return {};
 }
 
 // Extract key sections from large documents to avoid token limits
