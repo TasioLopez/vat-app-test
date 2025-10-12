@@ -87,6 +87,8 @@ function extractStoragePath(url: string): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  console.log('🚀 Starting autofill-tp-2 request');
+  
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get('employeeId');
@@ -94,7 +96,10 @@ export async function GET(req: NextRequest) {
     // Add test mode for debugging
     const testMode = searchParams.get('test') === 'true';
     
+    console.log('📋 Request params:', { employeeId, testMode });
+    
     if (!employeeId) {
+      console.log('❌ Missing employeeId');
       return NextResponse.json({ 
         success: false, 
         error: 'Missing employeeId',
@@ -116,10 +121,23 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const { data: docs } = await supabase
+    console.log('🔍 Starting document processing for employee:', employeeId);
+
+    console.log('🔍 Querying documents from database...');
+    const { data: docs, error: docsError } = await supabase
       .from('documents')
       .select('*')
       .eq('employee_id', employeeId);
+
+    if (docsError) {
+      console.error('❌ Database error fetching documents:', docsError);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database fout bij ophalen documenten',
+        details: docsError.message,
+        data: { details: {} }
+      }, { status: 500 });
+    }
 
     if (!docs || docs.length === 0) {
       console.log('⚠️ No documents found for employee:', employeeId);
@@ -131,6 +149,7 @@ export async function GET(req: NextRequest) {
     }
 
     console.log('📄 Found', docs.length, 'documents for employee:', employeeId);
+    console.log('📋 Document types:', docs.map(d => d.type));
 
     // Prioritize document types: Intakeformulier > AD Rapport > FML/IZP > Others
     const docPriority: Record<string, number> = {
@@ -204,6 +223,8 @@ export async function GET(req: NextRequest) {
     const chunks = splitIntoChunks(combined, 6000); // Larger chunks for better context
     console.log('📦 Split into', chunks.length, 'chunks for AI processing');
 
+    console.log('🤖 Starting AI processing...');
+
     const systemPrompt = `
 Je bent een assistent die Nederlandse documenten (Intakeformulier, AD Rapport, FML/IZP rapport) analyseert voor het invullen van een trajectplan STAP 2.
 
@@ -250,6 +271,10 @@ Je bent een assistent die Nederlandse documenten (Intakeformulier, AD Rapport, F
       ...chunks.map((chunk) => ({ role: 'user', content: chunk })) as ChatCompletionMessageParam[]
     ];
 
+    console.log('🤖 Calling OpenAI API...');
+    console.log('📝 System prompt length:', systemPrompt.length);
+    console.log('📝 Messages count:', messages.length);
+    
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
@@ -302,6 +327,8 @@ Je bent een assistent die Nederlandse documenten (Intakeformulier, AD Rapport, F
         function: { name: 'extract_tp_step2_fields' }
       }
     });
+
+    console.log('✅ OpenAI API call completed');
 
     const toolCall = response.choices[0]?.message?.tool_calls?.[0];
     const args = toolCall?.function?.arguments;
