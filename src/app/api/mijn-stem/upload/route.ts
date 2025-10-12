@@ -40,9 +40,74 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
+      const errorStr = JSON.stringify(uploadError);
+      
+      // Check if it's a bucket not found error and try to auto-initialize
+      if (errorStr.includes('Bucket not found') || errorStr.includes('not found')) {
+        console.log('Attempting to auto-initialize storage bucket...');
+        try {
+          const initResponse = await fetch(`${req.nextUrl.origin}/api/mijn-stem/init`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const initData = await initResponse.json();
+          
+          if (initData.success) {
+            console.log('Storage bucket initialized successfully, retrying upload...');
+            // Retry the storage upload
+            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
+              .from('documents')
+              .upload(fileName, file);
+
+            if (retryUploadError) {
+              return NextResponse.json({ 
+                error: 'Failed to upload file to storage after initialization: ' + JSON.stringify(retryUploadError)
+              }, { status: 500 });
+            }
+
+            // Continue with database insert using retry upload data
+            const { data: insertData, error: insertError } = await supabase
+              .from('mijn_stem_documents')
+              .insert({
+                user_id: userId,
+                filename: file.name,
+                storage_path: retryUploadData.path,
+                file_size: file.size,
+                file_type: file.type,
+                status: 'uploaded'
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              await supabase.storage.from('documents').remove([retryUploadData.path]);
+              return NextResponse.json({ 
+                error: 'Failed to save file metadata after storage initialization: ' + JSON.stringify(insertError)
+              }, { status: 500 });
+            }
+
+            return NextResponse.json({
+              success: true,
+              document: insertData,
+              message: 'File uploaded successfully (storage auto-initialized)'
+            });
+          } else {
+            return NextResponse.json({ 
+              error: 'Auto-initialization failed: ' + initData.error,
+              manualSetupRequired: initData.manualSetupRequired,
+              sqlScript: initData.sqlScript
+            }, { status: 500 });
+          }
+        } catch (initError) {
+          console.error('Auto-initialization failed:', initError);
+          return NextResponse.json({ 
+            error: 'Failed to upload file to storage: ' + errorStr
+          }, { status: 500 });
+        }
+      }
+      
       return NextResponse.json({ 
-        error: 'Failed to upload file to storage: ' + JSON.stringify(uploadError),
-        setupRequired: true
+        error: 'Failed to upload file to storage: ' + errorStr
       }, { status: 500 });
     }
 
@@ -65,9 +130,61 @@ export async function POST(req: NextRequest) {
       // Clean up uploaded file if database insert fails
       await supabase.storage.from('documents').remove([uploadData.path]);
       
+      // Check if it's a table doesn't exist error and try to auto-initialize
+      const errorStr = JSON.stringify(insertError);
+      if (errorStr.includes('does not exist') || errorStr.includes('relation')) {
+        console.log('Attempting to auto-initialize infrastructure...');
+        try {
+          const initResponse = await fetch(`${req.nextUrl.origin}/api/mijn-stem/init`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const initData = await initResponse.json();
+          
+          if (initData.success) {
+            console.log('Infrastructure initialized successfully, retrying upload...');
+            // Retry the database insert
+            const { data: retryData, error: retryError } = await supabase
+              .from('mijn_stem_documents')
+              .insert({
+                user_id: userId,
+                filename: file.name,
+                storage_path: uploadData.path,
+                file_size: file.size,
+                file_type: file.type,
+                status: 'uploaded'
+              })
+              .select()
+              .single();
+
+            if (retryError) {
+              return NextResponse.json({ 
+                error: 'Failed to save file metadata after initialization: ' + JSON.stringify(retryError)
+              }, { status: 500 });
+            }
+
+            return NextResponse.json({
+              success: true,
+              document: retryData,
+              message: 'File uploaded successfully (infrastructure auto-initialized)'
+            });
+          } else {
+            return NextResponse.json({ 
+              error: 'Auto-initialization failed: ' + initData.error,
+              manualSetupRequired: initData.manualSetupRequired,
+              sqlScript: initData.sqlScript
+            }, { status: 500 });
+          }
+        } catch (initError) {
+          console.error('Auto-initialization failed:', initError);
+          return NextResponse.json({ 
+            error: 'Failed to save file metadata: ' + errorStr
+          }, { status: 500 });
+        }
+      }
+      
       return NextResponse.json({ 
-        error: 'Failed to save file metadata: ' + JSON.stringify(insertError),
-        setupRequired: true
+        error: 'Failed to save file metadata: ' + errorStr
       }, { status: 500 });
     }
 

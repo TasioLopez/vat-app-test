@@ -24,8 +24,6 @@ export default function MijnStem() {
     const [loading, setLoading] = useState(true);
     const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
     const [message, setMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null);
-    const [setupRequired, setSetupRequired] = useState(false);
-    const [setupInProgress, setSetupInProgress] = useState(false);
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,26 +42,7 @@ export default function MijnStem() {
         };
 
         fetchUser();
-        // Check setup status on load
-        checkSetupStatus();
     }, [supabase]);
-
-    const checkSetupStatus = async () => {
-        try {
-            const response = await fetch('/api/mijn-stem/test');
-            const data = await response.json();
-            
-            if (data.success && data.tests) {
-                const { tableExists, bucketExists } = data.tests;
-                if (!tableExists || !bucketExists) {
-                    setSetupRequired(true);
-                    console.log('Setup required:', data.summary);
-                }
-            }
-        } catch (error) {
-            console.error('Setup check failed:', error);
-        }
-    };
 
     const fetchDocuments = async (userId: string) => {
         try {
@@ -96,38 +75,6 @@ export default function MijnStem() {
         setTimeout(() => setMessage(null), 5000);
     };
 
-    const runSetup = async () => {
-        setSetupInProgress(true);
-        try {
-            const response = await fetch('/api/mijn-stem/setup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                if (data.setup.manualSetupRequired) {
-                    showMessage('info', 'Storage bucket created! Please run the SQL script in your Supabase dashboard to complete setup.');
-                    // Copy SQL to clipboard if possible
-                    if (navigator.clipboard) {
-                        navigator.clipboard.writeText(data.nextSteps.sqlScript);
-                        showMessage('info', 'SQL script copied to clipboard! Paste it in Supabase SQL Editor.');
-                    }
-                } else {
-                    showMessage('success', 'Setup completed successfully! You can now upload documents.');
-                    setSetupRequired(false);
-                }
-            } else {
-                showMessage('error', 'Setup failed: ' + data.error);
-            }
-        } catch (error) {
-            console.error('Setup error:', error);
-            showMessage('error', 'Setup failed. Please try again.');
-        } finally {
-            setSetupInProgress(false);
-        }
-    };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -182,15 +129,9 @@ export default function MijnStem() {
                         console.error('Upload failed:', data.error, data);
                         errorCount++;
                         
-                        // Show specific message for database setup requirement
-                        if (data.setupRequired) {
-                            setSetupRequired(true);
-                            showMessage('error', 'Database setup vereist. Klik op "Setup uitvoeren" om de benodigde tabellen aan te maken.');
-                        } else {
-                            const errorMsg = data.details || data.error || 'Onbekende fout';
-                            showMessage('error', `Upload mislukt: ${errorMsg}`);
-                            console.error('Full error details:', data);
-                        }
+                        const errorMsg = data.details || data.error || 'Onbekende fout';
+                        showMessage('error', `Upload mislukt: ${errorMsg}`);
+                        console.error('Full error details:', data);
                     }
                 } catch (fileError) {
                     console.error('File upload error:', fileError);
@@ -368,40 +309,6 @@ export default function MijnStem() {
                 </div>
             )}
 
-            {/* Setup Required Message */}
-            {setupRequired && (
-                <div className="mb-6 p-6 bg-orange-50 border border-orange-200 rounded-lg">
-                    <h3 className="text-lg font-medium text-orange-900 mb-2">Setup Vereist</h3>
-                    <p className="text-orange-800 mb-4">
-                        De MijnStem functie heeft database setup nodig om te werken. Klik op de knop hieronder om de benodigde tabellen en storage bucket aan te maken.
-                    </p>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={runSetup}
-                            disabled={setupInProgress}
-                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {setupInProgress ? 'Setup wordt uitgevoerd...' : 'Setup Uitvoeren'}
-                        </button>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const response = await fetch('/api/mijn-stem/test');
-                                    const data = await response.json();
-                                    console.log('Test results:', data);
-                                    alert('Test results logged to console. Check browser developer tools (F12) > Console tab.');
-                                } catch (error) {
-                                    console.error('Test failed:', error);
-                                    alert('Test failed. Check console for details.');
-                                }
-                            }}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            Test Setup
-                        </button>
-                    </div>
-                </div>
-            )}
 
             {/* Master Style Summary */}
             {masterStyle && (
@@ -434,30 +341,21 @@ export default function MijnStem() {
             {/* Upload Section */}
             <div className="mb-8">
                 <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    setupRequired
-                        ? 'border-gray-200 bg-gray-50'
-                        : isUploading 
+                    isUploading 
                         ? 'border-blue-400 bg-blue-50' 
                         : 'border-gray-300 hover:border-gray-400'
                 }`}>
                     <FaUpload className={`mx-auto text-4xl mb-4 ${
-                        setupRequired 
-                            ? 'text-gray-300' 
-                            : isUploading ? 'text-blue-500' : 'text-gray-400'
+                        isUploading ? 'text-blue-500' : 'text-gray-400'
                     }`} />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {setupRequired 
-                            ? 'Setup vereist' 
-                            : isUploading ? 'Uploaden...' : 'Upload uw TP documenten'}
+                        {isUploading ? 'Uploaden...' : 'Upload uw TP documenten'}
                     </h3>
                     <p className="text-gray-600 mb-4">
                         Ondersteunde formaten: PDF, TXT (DOC/DOCX binnenkort beschikbaar)
                     </p>
                     <p className="text-sm text-gray-500 mb-4">
-                        {setupRequired 
-                            ? 'Voer eerst de setup uit om documenten te kunnen uploaden.'
-                            : 'Upload eerdere TP rapporten die u heeft geschreven om uw schrijfstijl te leren.'
-                        }
+                        Upload eerdere TP rapporten die u heeft geschreven om uw schrijfstijl te leren.
                     </p>
                     
                     {/* Upload Progress */}
@@ -480,22 +378,16 @@ export default function MijnStem() {
                         </div>
                     )}
                     
-                    <label className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
-                        setupRequired
-                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                    }`}>
+                    <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <FaUpload className="mr-2" />
-                        {setupRequired 
-                            ? 'Setup vereist' 
-                            : isUploading ? 'Uploaden...' : 'Bestanden selecteren'}
+                        {isUploading ? 'Uploaden...' : 'Bestanden selecteren'}
                         <input
                             type="file"
                             multiple
                             accept=".pdf,.txt"
                             onChange={handleFileUpload}
                             className="hidden"
-                            disabled={isUploading || setupRequired}
+                            disabled={isUploading}
                         />
                     </label>
                 </div>
