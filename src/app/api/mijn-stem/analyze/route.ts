@@ -117,10 +117,15 @@ Geef een gedetailleerde analyse terug in dit JSON formaat:
 }
 `;
 
-    const response = await openaiService.createChatCompletion([
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ]);
+    const response = await openaiService.generateText(
+      systemPrompt,
+      userPrompt,
+      {
+        temperature: 0.3,
+        maxTokens: 3000,
+        model: 'gpt-4o'
+      }
+    );
 
     let writingStyle;
     try {

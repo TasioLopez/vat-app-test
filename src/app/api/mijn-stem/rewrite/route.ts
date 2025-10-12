@@ -61,10 +61,15 @@ ${originalText}
 Geef alleen de herschreven tekst terug, zonder uitleg of commentaar.
 `.trim();
 
-    const response = await openaiService.createChatCompletion([
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ]);
+    const response = await openaiService.generateText(
+      systemPrompt,
+      userPrompt,
+      {
+        temperature: 0.2,
+        maxTokens: 2000,
+        model: 'gpt-4o'
+      }
+    );
 
     return NextResponse.json({
       success: true,
