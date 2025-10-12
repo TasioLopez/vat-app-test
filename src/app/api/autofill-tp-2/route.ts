@@ -130,101 +130,137 @@ function filterValidValues(data: any): any {
   return filtered;
 }
 
-// AGGRESSIVE PROCESSING: More thorough extraction for individual documents
+// SIMPLE BUT EFFECTIVE: Use basic regex + AI for guaranteed results
 async function processDocumentAggressively(text: string, doc: any): Promise<any> {
-  console.log(`🔥 AGGRESSIVE PROCESSING for ${doc?.type}...`);
+  console.log(`🔥 SIMPLE PROCESSING for ${doc?.type}...`);
   
-  const aggressivePrompt = `Je bent een EXPERT in het analyseren van Nederlandse documenten. Je MOET alle informatie vinden!
+  const result: any = {};
+  
+  // SIMPLE REGEX EXTRACTION FIRST
+  console.log(`📄 Extracting dates from ${doc?.type}...`);
+  
+  // Extract all dates in various formats
+  const datePatterns = [
+    /(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/g,  // dd-mm-yyyy or dd/mm/yyyy
+    /(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+(\d{4})/gi  // dd month yyyy
+  ];
+  
+  const dates: string[] = [];
+  datePatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      let dateStr = '';
+      if (match[2] && isNaN(parseInt(match[2]))) {
+        // Dutch month name
+        const monthMap: {[key: string]: string} = {
+          'januari': '01', 'februari': '02', 'maart': '03', 'april': '04',
+          'mei': '05', 'juni': '06', 'juli': '07', 'augustus': '08',
+          'september': '09', 'oktober': '10', 'november': '11', 'december': '12'
+        };
+        const day = match[1].padStart(2, '0');
+        const month = monthMap[match[2].toLowerCase()];
+        const year = match[3];
+        dateStr = `${year}-${month}-${day}`;
+      } else {
+        // Numeric date
+        const day = match[1].padStart(2, '0');
+        const month = match[2].padStart(2, '0');
+        const year = match[3];
+        dateStr = `${year}-${month}-${day}`;
+      }
+      dates.push(dateStr);
+    }
+  });
+  
+  console.log(`📅 Found dates:`, dates);
+  
+  // Extract names (Dr., R., etc.)
+  const namePattern = /(Dr\.?\s+[A-Z][a-z]+|Drs\.?\s+[A-Z][a-z]+|R\.\s+[A-Z][a-z]+|[A-Z][a-z]+\s+[A-Z][a-z]+)/g;
+  const names = text.match(namePattern) || [];
+  console.log(`👤 Found names:`, names);
+  
+  // Extract organizations
+  const orgPattern = /(De\s+Arbodienst|Arbodienst|ArboNed|Arbo\s+Unie|BGD|Arbo)/gi;
+  const orgs = text.match(orgPattern) || [];
+  console.log(`🏢 Found organizations:`, orgs);
+  
+  // SIMPLE AI PROCESSING WITH EXTRACTED DATA
+  const simplePrompt = `Analyseer dit document en de al gevonden data:
 
-DOCUMENT TYPE: ${doc?.type}
+Gevonden datums: ${dates.join(', ')}
+Gevonden namen: ${names.join(', ')}
+Gevonden organisaties: ${orgs.join(', ')}
+Document type: ${doc?.type}
 
-MISSION: Analyseer dit document EXTREEM GRONDIG en vind ALLE mogelijke informatie:
+Vul de volgende velden in op basis van wat je vindt:
 
-VERPLICHT: Zoek naar ALLE volgende velden en vind ze ook al lijken ze onbelangrijk:
+1. first_sick_day - Eerste ziektedag (YYYY-MM-DD)
+2. registration_date - Datum aanmelding (YYYY-MM-DD)
+3. ad_report_date - Datum AD rapport (YYYY-MM-DD)
+4. fml_izp_lab_date - Datum FML/IZP/LAB (YYYY-MM-DD)
+5. occupational_doctor_name - Naam arbeidsdeskundige
+6. occupational_doctor_org - Organisatie specialist
+7. intake_date - Datum intakegesprek (YYYY-MM-DD)
 
-1. **first_sick_day** - EERSTE ZIEKTEDAG (YYYY-MM-DD)
-   - Zoek naar: elke datum die eerste ziektedag kan zijn
-   - Patronen: "15-01-2024", "15 januari 2024", "eerste ziektedag", "ziekte start", "verzuim sinds"
-
-2. **registration_date** - DATUM AANMELDING (YYYY-MM-DD)  
-   - Zoek naar: elke datum die aanmelding kan zijn
-   - Patronen: "20-01-2024", "20 januari 2024", "aanmelding", "registratie", "aangemeld"
-
-3. **ad_report_date** - DATUM AD RAPPORT (YYYY-MM-DD)
-   - Zoek naar: elke datum van rapporten
-   - Patronen: "01-02-2024", "1 februari 2024", "rapport datum", "AD datum"
-
-4. **fml_izp_lab_date** - DATUM FML/IZP/LAB (YYYY-MM-DD)
-   - Zoek naar: elke datum van FML/IZP/LAB rapporten
-   - Patronen: "10-03-2024", "FML datum", "IZP datum", "LAB datum"
-
-5. **occupational_doctor_name** - NAAM ARBEIDSDESKUNDIGE
-   - Zoek naar: elke naam die specialist kan zijn
-   - Patronen: "R. Hupsel", "Hupsel", "Dr.", "Drs.", "Naam:", "Rapporteur:"
-
-6. **occupational_doctor_org** - ORGANISATIE SPECIALIST
-   - Zoek naar: elke organisatie naam
-   - Patronen: "De Arbodienst", "Arbodienst", "ArboNed", "Arbo Unie", "BGD"
-
-7. **intake_date** - DATUM INTAKEGESPREK (YYYY-MM-DD)
-   - Zoek naar: elke datum die intake kan zijn
-   - Patronen: "10-01-2024", "10 januari 2024", "intake datum", "gesprek datum"
-
-BELANGRIJK: 
-- Vind ALLE velden die mogelijk zijn, ook al lijken ze onzeker
-- Converteer alle datums naar YYYY-MM-DD
-- Wees NIET conservatief - extract alles wat je vindt
-- Als je een datum ziet, probeer te bepalen wat het is
-- Als je een naam ziet, probeer te bepalen of het een specialist is`;
+Gebruik de gevonden data en document context om de juiste velden in te vullen.`;
 
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
       messages: [
-        { role: 'system', content: aggressivePrompt },
-        { role: 'user', content: `Analyseer dit document EXTREEM GRONDIG:\n\n${text}` }
+        { role: 'system', content: simplePrompt },
+        { role: 'user', content: `Document:\n\n${text.substring(0, 5000)}` }
       ],
       tools: [{
         type: 'function',
         function: {
-          name: 'extract_all_possible_fields',
-          description: 'Extract ALL possible fields from document',
+          name: 'extract_fields',
+          description: 'Extract fields from document',
           parameters: {
             type: 'object',
             properties: {
-              first_sick_day: { type: 'string', description: 'Eerste ziektedag in YYYY-MM-DD format' },
-              registration_date: { type: 'string', description: 'Datum aanmelding in YYYY-MM-DD format' },
-              ad_report_date: { type: 'string', description: 'Datum AD rapport in YYYY-MM-DD format' },
-              fml_izp_lab_date: { type: 'string', description: 'Datum FML/IZP/LAB in YYYY-MM-DD format' },
-              occupational_doctor_name: { type: 'string', description: 'Naam van arbeidsdeskundige' },
-              occupational_doctor_org: { type: 'string', description: 'Organisatie van specialist' },
-              intake_date: { type: 'string', description: 'Datum intakegesprek in YYYY-MM-DD format' }
+              first_sick_day: { type: 'string' },
+              registration_date: { type: 'string' },
+              ad_report_date: { type: 'string' },
+              fml_izp_lab_date: { type: 'string' },
+              occupational_doctor_name: { type: 'string' },
+              occupational_doctor_org: { type: 'string' },
+              intake_date: { type: 'string' }
             },
             required: []
           }
         }
       }],
-      tool_choice: { 
-        type: 'function', 
-        function: { name: 'extract_all_possible_fields' } 
-      }
+      tool_choice: { type: 'function', function: { name: 'extract_fields' } }
     });
 
     const toolCall = response.choices[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      console.log('⚠️ No tool call returned from aggressive processing');
-      return {};
+    if (toolCall?.function?.arguments) {
+      const extractedData = JSON.parse(toolCall.function.arguments);
+      console.log('✅ Simple processing extracted:', extractedData);
+      return extractedData;
     }
-
-    const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log('✅ Aggressive processing extracted:', extractedData);
-    
-    return extractedData;
   } catch (error: any) {
-    console.error('❌ Aggressive processing error:', error.message);
-    return {};
+    console.error('❌ Simple processing error:', error.message);
   }
+  
+  // FALLBACK: Use regex results directly
+  console.log('🔄 Using regex fallback results...');
+  if (dates.length > 0) {
+    result.first_sick_day = dates[0];
+    if (dates.length > 1) result.registration_date = dates[1];
+    if (dates.length > 2) result.ad_report_date = dates[2];
+  }
+  if (names.length > 0) {
+    result.occupational_doctor_name = names[0];
+  }
+  if (orgs.length > 0) {
+    result.occupational_doctor_org = orgs[0];
+  }
+  
+  console.log('✅ Regex fallback result:', result);
+  return result;
 }
 
 // FIXED APPROACH: Use OpenAI function calling (tools) for reliable structured extraction
