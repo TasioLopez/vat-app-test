@@ -43,91 +43,118 @@ const ACTIVITIES = [
   "Begeleiding WIA",
 ] as const;
 
+// Helper function to add months to a date
+const addMonths = (date: Date, months: number): Date => {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+};
+
+// Helper function to format date as YYYY-MM-DD
+const formatISODate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
 // Template definitions based on the PDF example
-const TEMPLATES = {
-  "3-fases": {
-    name: "3 Fases",
-    fases: [
-      {
-        title: "Oriëntatie",
-        periode: { from: "2025-03-31", to: "2025-07-31" },
-        activiteiten: [
-          "Verwerking verlies en acceptatie",
-          "Empowerment", 
-          "Kwaliteiten en vaardigheden onderzoeken",
-          "Beroeps-en arbeidsmarkt oriëntatie",
-          "Scholingsmogelijkheden onderzoeken",
-          "Sollicitatietools (brief en cv)",
-          "Voortgangsrapportage en evaluatie"
-        ]
-      },
-      {
-        title: "Activering",
-        periode: { from: "2025-07-31", to: "2025-10-31" },
-        activiteiten: [
-          "Sollicitatievaardigheden vervolg (gesprek)",
-          "Webinar",
-          "Solliciteren via social media en/of netwerken",
-          "Netwerken",
-          "Vacatures zoeken en beoordeling",
-          "Wekelijks solliciteren",
-          "Voortgangsrapportage en evaluatie"
-        ]
-      },
-      {
-        title: "Betaald werk",
-        periode: { from: "2025-10-31", to: "2026-04-25" },
-        activiteiten: [
-          "Wekelijks solliciteren",
-          "Sollicitatiegesprek voorbereiden en presenteren",
-          "Jobhunten",
-          "Detacheren onderzoeken",
-          "Activering / werkervaring",
-          "Webinar (gericht op eventuele WIA-aanvraag)",
-          "Voortgangsrapportage en eindevaluatie",
-          "Begeleiding WIA"
-        ]
-      }
-    ]
-  },
-  "2-fases": {
-    name: "2 Fases",
-    fases: [
-      {
-        title: "Oriëntatie en Activering",
-        periode: { from: "2025-03-31", to: "2025-10-31" },
-        activiteiten: [
-          "Verwerking verlies en acceptatie",
-          "Empowerment",
-          "Kwaliteiten en vaardigheden onderzoeken", 
-          "Beroeps-en arbeidsmarkt oriëntatie",
-          "Scholingsmogelijkheden onderzoeken",
-          "Sollicitatietools (brief en cv)",
-          "Sollicitatievaardigheden vervolg (gesprek)",
-          "Webinar",
-          "Solliciteren via social media en/of netwerken",
-          "Netwerken",
-          "Vacatures zoeken en beoordeling",
-          "Wekelijks solliciteren",
-          "Voortgangsrapportage en evaluatie"
-        ]
-      },
-      {
-        title: "Betaald werk",
-        periode: { from: "2025-10-31", to: "2026-04-25" },
-        activiteiten: [
-          "Sollicitatiegesprek voorbereiden en presenteren",
-          "Jobhunten",
-          "Detacheren onderzoeken",
-          "Activering / werkervaring",
-          "Webinar (gericht op eventuele WIA-aanvraag)",
-          "Voortgangsrapportage en eindevaluatie",
-          "Begeleiding WIA"
-        ]
-      }
-    ]
-  }
-} as const;
+const createTemplates = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // For 3-fases: each phase is 3 months, except the last one gets the remainder
+  const phase1End = addMonths(start, 3);
+  const phase2Start = phase1End;
+  const phase2End = addMonths(phase2Start, 3);
+  const phase3Start = phase2End;
+  
+  // For 2-fases: first phase is 3 months, second phase gets the remainder
+  const phase1End2Fases = addMonths(start, 3);
+  const phase2Start2Fases = phase1End2Fases;
+  
+  return {
+    "3-fases": {
+      name: "3 Fases",
+      fases: [
+        {
+          title: "Oriëntatie",
+          periode: { from: formatISODate(start), to: formatISODate(phase1End) },
+          activiteiten: [
+            "Verwerking verlies en acceptatie",
+            "Empowerment", 
+            "Kwaliteiten en vaardigheden onderzoeken",
+            "Beroeps-en arbeidsmarkt oriëntatie",
+            "Scholingsmogelijkheden onderzoeken",
+            "Sollicitatietools (brief en cv)",
+            "Voortgangsrapportage en evaluatie"
+          ]
+        },
+        {
+          title: "Activering",
+          periode: { from: formatISODate(phase2Start), to: formatISODate(phase2End) },
+          activiteiten: [
+            "Sollicitatievaardigheden vervolg (gesprek)",
+            "Webinar",
+            "Solliciteren via social media en/of netwerken",
+            "Netwerken",
+            "Vacatures zoeken en beoordeling",
+            "Wekelijks solliciteren",
+            "Voortgangsrapportage en evaluatie"
+          ]
+        },
+        {
+          title: "Betaald werk",
+          periode: { from: formatISODate(phase3Start), to: formatISODate(end) },
+          activiteiten: [
+            "Wekelijks solliciteren",
+            "Sollicitatiegesprek voorbereiden en presenteren",
+            "Jobhunten",
+            "Detacheren onderzoeken",
+            "Activering / werkervaring",
+            "Webinar (gericht op eventuele WIA-aanvraag)",
+            "Voortgangsrapportage en eindevaluatie",
+            "Begeleiding WIA"
+          ]
+        }
+      ]
+    },
+    "2-fases": {
+      name: "2 Fases",
+      fases: [
+        {
+          title: "Oriëntatie en Activering",
+          periode: { from: formatISODate(start), to: formatISODate(phase1End2Fases) },
+          activiteiten: [
+            "Verwerking verlies en acceptatie",
+            "Empowerment",
+            "Kwaliteiten en vaardigheden onderzoeken", 
+            "Beroeps-en arbeidsmarkt oriëntatie",
+            "Scholingsmogelijkheden onderzoeken",
+            "Sollicitatietools (brief en cv)",
+            "Sollicitatievaardigheden vervolg (gesprek)",
+            "Webinar",
+            "Solliciteren via social media en/of netwerken",
+            "Netwerken",
+            "Vacatures zoeken en beoordeling",
+            "Wekelijks solliciteren",
+            "Voortgangsrapportage en evaluatie"
+          ]
+        },
+        {
+          title: "Betaald werk",
+          periode: { from: formatISODate(phase2Start2Fases), to: formatISODate(end) },
+          activiteiten: [
+            "Sollicitatiegesprek voorbereiden en presenteren",
+            "Jobhunten",
+            "Detacheren onderzoeken",
+            "Activering / werkervaring",
+            "Webinar (gericht op eventuele WIA-aanvraag)",
+            "Voortgangsrapportage en eindevaluatie",
+            "Begeleiding WIA"
+          ]
+        }
+      ]
+    }
+  } as const;
+};
 
 type Aktiviteit = { name: string; status: (typeof STATUS_OPTIONS)[number] };
 type Periode = { from: string; to: string };
@@ -243,7 +270,7 @@ function useFitScale(ref: React.RefObject<HTMLElement>, baseWidth: number, baseH
 const PREVIEW_ZOOM = 0.65; // 65% of the fit size
 
 export default function Bijlage({ employeeId }: { employeeId: string }) {
-  const { updateField } = useTP();
+  const { updateField, tpData } = useTP();
 
   // --- local state
   const [fases, setFases] = useState<Fase[]>([
@@ -270,8 +297,18 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
   };
 
   // Apply template function
-  const applyTemplate = (templateKey: keyof typeof TEMPLATES) => {
-    const template = TEMPLATES[templateKey];
+  const applyTemplate = (templateKey: "3-fases" | "2-fases") => {
+    // Get start and end dates from TP data
+    const startDate = tpData?.tp_start_date || tpData?.intake_date;
+    const endDate = tpData?.tp_end_date;
+    
+    if (!startDate || !endDate) {
+      console.warn("Cannot apply template: missing start or end date");
+      return;
+    }
+    
+    const templates = createTemplates(startDate, endDate);
+    const template = templates[templateKey];
     const newFases: Fase[] = template.fases.map((faseTemplate) => ({
       title: faseTemplate.title,
       periode: { ...faseTemplate.periode },
@@ -309,24 +346,34 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         updateField("bijlage_fases", fs);
         setHasUserChanges(fs.length > 0);
       } else {
-        // No data exists, apply 3-fases template by default
-        applyTemplate("3-fases");
-        setUnassigned(computeUnassigned(ACTIVITIES, TEMPLATES["3-fases"].fases.map(f => ({ 
-          title: f.title, 
-          periode: f.periode, 
-          activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
-        }))));
-        updateField("bijlage_fases", TEMPLATES["3-fases"].fases.map(f => ({ 
-          title: f.title, 
-          periode: f.periode, 
-          activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
-        })));
-        setHasUserChanges(false); // This is the default template, not user changes
+        // No data exists, apply 3-fases template by default if we have dates
+        const startDate = tpData?.tp_start_date || tpData?.intake_date;
+        const endDate = tpData?.tp_end_date;
+        
+        if (startDate && endDate) {
+          const templates = createTemplates(startDate, endDate);
+          const defaultTemplate = templates["3-fases"];
+          const newFases = defaultTemplate.fases.map(f => ({ 
+            title: f.title, 
+            periode: f.periode, 
+            activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
+          }));
+          
+          setFases(newFases);
+          setUnassigned(computeUnassigned(ACTIVITIES, newFases));
+          updateField("bijlage_fases", newFases);
+          setHasUserChanges(false); // This is the default template, not user changes
+        } else {
+          // No dates available, use empty default
+          setUnassigned(computeUnassigned(ACTIVITIES, fases));
+          updateField("bijlage_fases", fases);
+          setHasUserChanges(false);
+        }
       }
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId]);
+  }, [employeeId, tpData?.tp_start_date, tpData?.intake_date, tpData?.tp_end_date]);
 
   // --- persist (debounced)
   const persist = async (payload: Fase[]) => {
@@ -490,6 +537,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                 variant={!hasUserChanges ? "default" : "outline"}
                 onClick={() => applyTemplate("3-fases")}
                 className="text-xs"
+                disabled={!tpData?.tp_start_date && !tpData?.intake_date || !tpData?.tp_end_date}
               >
                 3 Fases
               </Button>
@@ -498,6 +546,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                 variant="outline"
                 onClick={() => applyTemplate("2-fases")}
                 className="text-xs"
+                disabled={!tpData?.tp_start_date && !tpData?.intake_date || !tpData?.tp_end_date}
               >
                 2 Fases
               </Button>
@@ -505,6 +554,11 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
             {!hasUserChanges && (
               <p className="text-xs text-gray-600 mt-2">
                 Standaard template geladen. Klik op een template om te wijzigen.
+              </p>
+            )}
+            {(!tpData?.tp_start_date && !tpData?.intake_date || !tpData?.tp_end_date) && (
+              <p className="text-xs text-orange-600 mt-2">
+                ⚠️ Templates vereisen intake datum en traject eind datum. Vul deze eerst in bij "Gegevens werknemer".
               </p>
             )}
           </div>
