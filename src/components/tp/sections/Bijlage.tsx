@@ -353,29 +353,10 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         updateField("bijlage_fases", fs);
         setHasUserChanges(fs.length > 0);
       } else {
-        // No data exists, apply 3-fases template by default if we have dates
-        const startDate = tpData?.tp_start_date || tpData?.intake_date;
-        const endDate = tpData?.tp_end_date;
-        
-        if (startDate && endDate) {
-          const templates = createTemplates(startDate, endDate);
-          const defaultTemplate = templates["3-fases"];
-          const newFases = defaultTemplate.fases.map(f => ({ 
-            title: f.title, 
-            periode: f.periode, 
-            activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
-          }));
-          
-          setFases(newFases);
-          setUnassigned(computeUnassigned(ACTIVITIES, newFases));
-          updateField("bijlage_fases", newFases);
-          setHasUserChanges(false); // This is the default template, not user changes
-        } else {
-          // No dates available, use empty default
-          setUnassigned(computeUnassigned(ACTIVITIES, fases));
-          updateField("bijlage_fases", fases);
-          setHasUserChanges(false);
-        }
+        // No data exists, start with empty default
+        setUnassigned(computeUnassigned(ACTIVITIES, fases));
+        updateField("bijlage_fases", fases);
+        setHasUserChanges(false);
       }
       setLoading(false);
     })();
@@ -563,9 +544,14 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                 2 Fases
               </Button>
             </div>
-            {!hasUserChanges && (
+            {!hasUserChanges && fases.length === 1 && fases[0].title === "" && (
               <p className="text-xs text-gray-600 mt-2">
-                Standaard template geladen. Klik op een template om te wijzigen.
+                Geen fasen ingesteld. Klik op een template om te beginnen.
+              </p>
+            )}
+            {!hasUserChanges && !(fases.length === 1 && fases[0].title === "") && (
+              <p className="text-xs text-gray-600 mt-2">
+                Template toegepast. Klik op een template om te wijzigen.
               </p>
             )}
             {(!tpData?.tp_start_date && !tpData?.intake_date || !tpData?.tp_end_date) && (
