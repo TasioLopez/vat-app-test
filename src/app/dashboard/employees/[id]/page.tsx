@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { Map, Compass } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
+import { useToastHelpers } from '@/components/ui/Toast';
 
 type Employee = {
     id: string;
@@ -57,6 +58,7 @@ const DOC_LABELS: Record<string, string> = {
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: employeeId } = use(params);
+    const { showSuccess, showError } = useToastHelpers();
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -203,12 +205,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             if (error) {
                 console.error('Error updating employee:', error);
+                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
                 return;
             }
 
-            alert('Werknemer informatie opgeslagen!');
+            showSuccess('Werknemer informatie opgeslagen!');
         } catch (err) {
             console.error('Error saving employee info:', err);
+            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van de werknemer informatie.');
         } finally {
             setUpdating(false);
         }
@@ -225,12 +229,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             if (error) {
                 console.error('Error saving details:', error);
+                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van het profiel.');
                 return;
             }
 
-            alert('Profiel opgeslagen!');
+            showSuccess('Profiel opgeslagen!');
         } catch (err) {
             console.error('Error saving details:', err);
+            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van het profiel.');
         } finally {
             setUpdating(false);
         }
@@ -268,14 +274,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     .from('employee_details')
                     .upsert([updatedDetails], { onConflict: 'employee_id' });
 
-                alert('AI autofill succesvol uitgevoerd!');
+                showSuccess('AI autofill succesvol uitgevoerd!');
             } else {
-                alert('Geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
+                showError('Geen documenten gevonden', 'Er zijn geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
             }
         } catch (err) {
             console.error('Autofill mislukt:', err);
             const errorMessage = err instanceof Error ? err.message : 'Onbekende fout opgetreden';
-            alert(`Autofill mislukt: ${errorMessage}`);
+            showError('Autofill mislukt', errorMessage);
         } finally {
             setAiLoading(false);
         }

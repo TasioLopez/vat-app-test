@@ -8,6 +8,7 @@ import type { Database } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Eye } from 'lucide-react';
+import { useToastHelpers } from '@/components/ui/Toast';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
@@ -20,6 +21,7 @@ export default function EmployeesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const { showSuccess, showError } = useToastHelpers();
   const router = useRouter();
 
   useEffect(() => {
@@ -96,13 +98,14 @@ export default function EmployeesPage() {
         setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
         setShowDeleteModal(false);
         setSelectedEmployeeId(null);
+        showSuccess('Werknemer succesvol verwijderd!');
       } else {
         console.error('Error deleting employee:', error);
-        alert('Failed to delete employee. Please try again.');
+        showError('Fout bij verwijderen', 'Er is een fout opgetreden bij het verwijderen van de werknemer. Probeer het opnieuw.');
       }
     } catch (error) {
       console.error('Unexpected error during deletion:', error);
-      alert('An unexpected error occurred. Please try again.');
+      showError('Onverwachte fout', 'Er is een onverwachte fout opgetreden. Probeer het opnieuw.');
     }
   };
 
