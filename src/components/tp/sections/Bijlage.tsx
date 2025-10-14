@@ -43,6 +43,92 @@ const ACTIVITIES = [
   "Begeleiding WIA",
 ] as const;
 
+// Template definitions based on the PDF example
+const TEMPLATES = {
+  "3-fases": {
+    name: "3 Fases",
+    fases: [
+      {
+        title: "Oriëntatie",
+        periode: { from: "2025-03-31", to: "2025-07-31" },
+        activiteiten: [
+          "Verwerking verlies en acceptatie",
+          "Empowerment", 
+          "Kwaliteiten en vaardigheden onderzoeken",
+          "Beroeps-en arbeidsmarkt oriëntatie",
+          "Scholingsmogelijkheden onderzoeken",
+          "Sollicitatietools (brief en cv)",
+          "Voortgangsrapportage en evaluatie"
+        ]
+      },
+      {
+        title: "Activering",
+        periode: { from: "2025-07-31", to: "2025-10-31" },
+        activiteiten: [
+          "Sollicitatievaardigheden vervolg (gesprek)",
+          "Webinar",
+          "Solliciteren via social media en/of netwerken",
+          "Netwerken",
+          "Vacatures zoeken en beoordeling",
+          "Wekelijks solliciteren",
+          "Voortgangsrapportage en evaluatie"
+        ]
+      },
+      {
+        title: "Betaald werk",
+        periode: { from: "2025-10-31", to: "2026-04-25" },
+        activiteiten: [
+          "Wekelijks solliciteren",
+          "Sollicitatiegesprek voorbereiden en presenteren",
+          "Jobhunten",
+          "Detacheren onderzoeken",
+          "Activering / werkervaring",
+          "Webinar (gericht op eventuele WIA-aanvraag)",
+          "Voortgangsrapportage en eindevaluatie",
+          "Begeleiding WIA"
+        ]
+      }
+    ]
+  },
+  "2-fases": {
+    name: "2 Fases",
+    fases: [
+      {
+        title: "Oriëntatie en Activering",
+        periode: { from: "2025-03-31", to: "2025-10-31" },
+        activiteiten: [
+          "Verwerking verlies en acceptatie",
+          "Empowerment",
+          "Kwaliteiten en vaardigheden onderzoeken", 
+          "Beroeps-en arbeidsmarkt oriëntatie",
+          "Scholingsmogelijkheden onderzoeken",
+          "Sollicitatietools (brief en cv)",
+          "Sollicitatievaardigheden vervolg (gesprek)",
+          "Webinar",
+          "Solliciteren via social media en/of netwerken",
+          "Netwerken",
+          "Vacatures zoeken en beoordeling",
+          "Wekelijks solliciteren",
+          "Voortgangsrapportage en evaluatie"
+        ]
+      },
+      {
+        title: "Betaald werk",
+        periode: { from: "2025-10-31", to: "2026-04-25" },
+        activiteiten: [
+          "Sollicitatiegesprek voorbereiden en presenteren",
+          "Jobhunten",
+          "Detacheren onderzoeken",
+          "Activering / werkervaring",
+          "Webinar (gericht op eventuele WIA-aanvraag)",
+          "Voortgangsrapportage en eindevaluatie",
+          "Begeleiding WIA"
+        ]
+      }
+    ]
+  }
+} as const;
+
 type Aktiviteit = { name: string; status: (typeof STATUS_OPTIONS)[number] };
 type Periode = { from: string; to: string };
 type Fase = { title: string; periode: Periode; activiteiten: Aktiviteit[] };
@@ -165,6 +251,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
   ]);
   const [unassigned, setUnassigned] = useState<string[]>([...ACTIVITIES]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [hasUserChanges, setHasUserChanges] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -180,6 +267,22 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
   const computeUnassigned = (all: readonly string[], fs: Fase[]) => {
     const used = new Set(fs.flatMap((f) => f.activiteiten.map((a) => a.name)));
     return all.filter((a) => !used.has(a));
+  };
+
+  // Apply template function
+  const applyTemplate = (templateKey: keyof typeof TEMPLATES) => {
+    const template = TEMPLATES[templateKey];
+    const newFases: Fase[] = template.fases.map((faseTemplate) => ({
+      title: faseTemplate.title,
+      periode: { ...faseTemplate.periode },
+      activiteiten: faseTemplate.activiteiten.map((activityName) => ({
+        name: activityName,
+        status: "P" as const,
+      })),
+    }));
+    
+    setFases(newFases);
+    setHasUserChanges(true);
   };
 
   // --- initial load
@@ -204,9 +307,21 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         setFases(fs.length ? fs : [{ title: "", periode: { from: "", to: "" }, activiteiten: [] }]);
         setUnassigned(computeUnassigned(ACTIVITIES, fs));
         updateField("bijlage_fases", fs);
+        setHasUserChanges(fs.length > 0);
       } else {
-        setUnassigned(computeUnassigned(ACTIVITIES, fases));
-        updateField("bijlage_fases", fases);
+        // No data exists, apply 3-fases template by default
+        applyTemplate("3-fases");
+        setUnassigned(computeUnassigned(ACTIVITIES, TEMPLATES["3-fases"].fases.map(f => ({ 
+          title: f.title, 
+          periode: f.periode, 
+          activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
+        }))));
+        updateField("bijlage_fases", TEMPLATES["3-fases"].fases.map(f => ({ 
+          title: f.title, 
+          periode: f.periode, 
+          activiteiten: f.activiteiten.map(a => ({ name: a, status: "P" as const }))
+        })));
+        setHasUserChanges(false); // This is the default template, not user changes
       }
       setLoading(false);
     })();
@@ -247,6 +362,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
 
   const addFase = () => {
     setFases((prev) => [...prev, { title: "", periode: { from: "", to: "" }, activiteiten: [] }]);
+    setHasUserChanges(true);
   };
 
   const formatDate = (input: string) => {
@@ -262,6 +378,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
       if (activity) activity.status = status as any;
       return updated;
     });
+    setHasUserChanges(true);
   };
 
   const handleDragEnd = (event: any) => {
@@ -288,6 +405,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
           next[fromFaseIndex].activiteiten =
             next[fromFaseIndex].activiteiten.filter((a) => a.name !== activity);
         }
+        setHasUserChanges(true);
         return next;
       }
 
@@ -297,6 +415,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         const toIndex = items.findIndex((a) => a.name === over.id);
         if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return next;
         next[fromFaseIndex].activiteiten = arrayMove(items, fromIndex, toIndex);
+        setHasUserChanges(true);
         return next;
       }
 
@@ -305,6 +424,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
           ...next[toFaseIndex].activiteiten,
           { name: activity, status: "P" },
         ];
+        setHasUserChanges(true);
         return next;
       }
 
@@ -314,6 +434,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         next[fromFaseIndex].activiteiten =
           next[fromFaseIndex].activiteiten.filter((a) => a.name !== activity);
         next[toFaseIndex].activiteiten.push(moved);
+        setHasUserChanges(true);
         return next;
       }
 
@@ -360,6 +481,34 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
             </div>
           </div>
 
+          {/* Template Selection */}
+          <div className="mb-6 p-4 border rounded bg-blue-50">
+            <h3 className="font-semibold mb-3 text-sm">Templates</h3>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant={!hasUserChanges ? "default" : "outline"}
+                onClick={() => applyTemplate("3-fases")}
+                className="text-xs"
+              >
+                3 Fases
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => applyTemplate("2-fases")}
+                className="text-xs"
+              >
+                2 Fases
+              </Button>
+            </div>
+            {!hasUserChanges && (
+              <p className="text-xs text-gray-600 mt-2">
+                Standaard template geladen. Klik op een template om te wijzigen.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-6">
             {fases.map((fase, i) => (
               <div key={i} className="border p-4 rounded space-y-4 bg-gray-100/10">
@@ -368,22 +517,24 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() =>
-                      setFases((prev) => prev.filter((_, idx) => idx !== i))
-                    }
+                    onClick={() => {
+                      setFases((prev) => prev.filter((_, idx) => idx !== i));
+                      setHasUserChanges(true);
+                    }}
                   >
                     Verwijder
                   </Button>
                 </div>
                 <Input
                   value={fase.title}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFases((prev) => {
                       const next = [...prev];
                       next[i].title = e.target.value;
                       return next;
-                    })
-                  }
+                    });
+                    setHasUserChanges(true);
+                  }}
                 />
 
                 <Label>Periode</Label>
@@ -391,24 +542,26 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                   <Input
                     type="date"
                     value={fase.periode.from}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFases((prev) => {
                         const next = [...prev];
                         next[i].periode.from = e.target.value;
                         return next;
-                      })
-                    }
+                      });
+                      setHasUserChanges(true);
+                    }}
                   />
                   <Input
                     type="date"
                     value={fase.periode.to}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFases((prev) => {
                         const next = [...prev];
                         next[i].periode.to = e.target.value;
                         return next;
-                      })
-                    }
+                      });
+                      setHasUserChanges(true);
+                    }}
                   />
                 </div>
 
