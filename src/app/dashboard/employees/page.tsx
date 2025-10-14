@@ -63,11 +63,47 @@ export default function EmployeesPage() {
 
   const handleDelete = async () => {
     if (!selectedEmployeeId) return;
-    const { error } = await supabase.from('employees').delete().eq('id', selectedEmployeeId);
-    if (!error) {
-      setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
-      setShowDeleteModal(false);
-      setSelectedEmployeeId(null);
+    
+    try {
+      // Delete related records in the correct order (child tables first)
+      const relatedTables = [
+        'tp_docs',
+        'documents', 
+        'tp_meta',
+        'employee_details',
+        'employee_users'
+      ];
+      
+      // Delete from all related tables first
+      for (const table of relatedTables) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('employee_id', selectedEmployeeId);
+        
+        if (error) {
+          console.error(`Error deleting from ${table}:`, error);
+          // Continue with other tables even if one fails
+        }
+      }
+      
+      // Finally delete the employee
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', selectedEmployeeId);
+        
+      if (!error) {
+        setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
+        setShowDeleteModal(false);
+        setSelectedEmployeeId(null);
+      } else {
+        console.error('Error deleting employee:', error);
+        alert('Failed to delete employee. Please try again.');
+      }
+    } catch (error) {
+      console.error('Unexpected error during deletion:', error);
+      alert('An unexpected error occurred. Please try again.');
     }
   };
 
