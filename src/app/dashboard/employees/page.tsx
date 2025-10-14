@@ -66,26 +66,25 @@ export default function EmployeesPage() {
     
     try {
       // Delete related records in the correct order (child tables first)
-      const relatedTables = [
-        'tp_docs',
-        'documents', 
-        'tp_meta',
-        'employee_details',
-        'employee_users'
+      const deletePromises = [
+        supabase.from('tp_docs').delete().eq('employee_id', selectedEmployeeId),
+        supabase.from('documents').delete().eq('employee_id', selectedEmployeeId),
+        supabase.from('tp_meta').delete().eq('employee_id', selectedEmployeeId),
+        supabase.from('employee_details').delete().eq('employee_id', selectedEmployeeId),
+        supabase.from('employee_users').delete().eq('employee_id', selectedEmployeeId)
       ];
       
-      // Delete from all related tables first
-      for (const table of relatedTables) {
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .eq('employee_id', selectedEmployeeId);
-        
-        if (error) {
-          console.error(`Error deleting from ${table}:`, error);
-          // Continue with other tables even if one fails
+      // Execute all deletions in parallel
+      const results = await Promise.allSettled(deletePromises);
+      
+      // Check for any errors (but continue even if some fail)
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Error deleting from table ${index}:`, result.reason);
+        } else if (result.value.error) {
+          console.error(`Error deleting from table ${index}:`, result.value.error);
         }
-      }
+      });
       
       // Finally delete the employee
       const { error } = await supabase
