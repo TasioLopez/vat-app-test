@@ -55,6 +55,13 @@ const formatISODate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
+// Helper function to add one day to a date
+const addOneDay = (date: Date): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + 1);
+  return result;
+};
+
 // Template definitions based on the PDF example
 const createTemplates = (startDate: string, endDate: string) => {
   const start = new Date(startDate);
@@ -62,13 +69,13 @@ const createTemplates = (startDate: string, endDate: string) => {
   
   // For 3-fases: each phase is 3 months, except the last one gets the remainder
   const phase1End = addMonths(start, 3);
-  const phase2Start = phase1End;
+  const phase2Start = addOneDay(phase1End); // Start next day
   const phase2End = addMonths(phase2Start, 3);
-  const phase3Start = phase2End;
+  const phase3Start = addOneDay(phase2End); // Start next day
   
   // For 2-fases: first phase is 3 months, second phase gets the remainder
   const phase1End2Fases = addMonths(start, 3);
-  const phase2Start2Fases = phase1End2Fases;
+  const phase2Start2Fases = addOneDay(phase1End2Fases); // Start next day
   
   return {
     "3-fases": {
@@ -415,7 +422,12 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
   const formatDate = (input: string) => {
     if (!input) return "...";
     const [year, month, day] = input.split("-");
-    return `${day}/${month}/${year}`;
+    const monthNames = [
+      "januari", "februari", "maart", "april", "mei", "juni",
+      "juli", "augustus", "september", "oktober", "november", "december"
+    ];
+    const monthName = monthNames[parseInt(month) - 1];
+    return `${parseInt(day)} ${monthName} ${year}`;
   };
 
   const handleStatusChange = (faseIndex: number, activityName: string, status: string) => {
