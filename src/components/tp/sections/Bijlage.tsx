@@ -108,14 +108,17 @@ const createTemplates = (startDate: string, endDate: string) => {
           ]
         },
         {
-          title: "Betaald werk",
+          title: "Activering/betaalde arbeid",
           periode: { from: formatISODate(phase3Start), to: formatISODate(end) },
           activiteiten: [
+            "Sollicitatievaardigheden vervolg (gesprek)",
             "Wekelijks solliciteren",
-            "Sollicitatiegesprek voorbereiden en presenteren",
+            "Netwerken",
             "Jobhunten",
+            "Solliciteren via social media en/of netwerken",
+            "Webinar",
+            "Vacatures zoeken en beoordeling",
             "Detacheren onderzoeken",
-            "Activering / werkervaring",
             "Webinar (gericht op eventuele WIA-aanvraag)",
             "Voortgangsrapportage en eindevaluatie",
             "Begeleiding WIA"
@@ -146,13 +149,17 @@ const createTemplates = (startDate: string, endDate: string) => {
           ]
         },
         {
-          title: "Betaald werk",
+          title: "Activering/betaalde arbeid",
           periode: { from: formatISODate(phase2Start2Fases), to: formatISODate(end) },
           activiteiten: [
-            "Sollicitatiegesprek voorbereiden en presenteren",
+            "Sollicitatievaardigheden vervolg (gesprek)",
+            "Wekelijks solliciteren",
+            "Netwerken",
             "Jobhunten",
+            "Solliciteren via social media en/of netwerken",
+            "Webinar",
+            "Vacatures zoeken en beoordeling",
             "Detacheren onderzoeken",
-            "Activering / werkervaring",
             "Webinar (gericht op eventuele WIA-aanvraag)",
             "Voortgangsrapportage en eindevaluatie",
             "Begeleiding WIA"
