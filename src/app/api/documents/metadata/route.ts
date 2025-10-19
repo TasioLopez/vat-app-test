@@ -11,11 +11,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
-  const { error } = await supabaseAdmin.from('documents').insert({
+  const { error } = await supabaseAdmin.from('documents').upsert({
     employee_id,
     type,
     name,
     url,
+  }, { 
+    onConflict: 'employee_id,type',
+    ignoreDuplicates: false 
   });
 
   if (error) {

@@ -23,7 +23,7 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Simple PDF text extraction that works 100% in Vercel
+// Simple PDF text extraction
 async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
   try {
     // Convert buffer to string and extract readable text

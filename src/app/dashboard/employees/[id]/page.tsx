@@ -405,7 +405,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 <DocumentModal
                     type={activeDocType}
                     employeeId={employeeId}
-                    existingDoc={documents.find(d => d.type === activeDocType) || null}
+                    existingDoc={documents.find(d => d.type?.toLowerCase().trim() === activeDocType) || null}
                     onClose={() => setActiveDocType(null)}
                     onUploaded={fetchDocuments}
                     onDeleted={() => {

@@ -39,6 +39,25 @@ export default function DocumentModal({
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // If an existing document exists, delete it first
+        if (existingDoc) {
+            const deleteRes = await fetch('/api/documents/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: existingDoc.id,
+                    url: existingDoc.url,
+                }),
+            });
+
+            const deleteResult = await deleteRes.json();
+
+            if (!deleteRes.ok || !deleteResult.success) {
+                console.error('❌ Failed to delete existing document:', deleteResult.error);
+                return;
+            }
+        }
+
         const safeName = file.name.replace(/\s+/g, '-');
 
         const formData = new FormData();
