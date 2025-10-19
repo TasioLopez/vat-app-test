@@ -216,6 +216,7 @@ async function processDocumentsWithAssistant(
   });
 
   console.log('✅ Assistant run completed with status:', run.status);
+  console.log('🔍 Run details:', JSON.stringify(run, null, 2));
 
   // Step 5: Get response
   if (run.status === 'completed') {
@@ -256,7 +257,24 @@ async function processDocumentsWithAssistant(
     }
   }
   
-  throw new Error(`Assistant run failed: ${run.status}`);
+  // Handle different failure states
+  if (run.status === 'failed') {
+    console.error('❌ Assistant run failed:', run.last_error);
+    throw new Error(`Assistant run failed: ${run.last_error?.message || 'Unknown error'}`);
+  }
+  
+  if (run.status === 'cancelled') {
+    console.error('❌ Assistant run was cancelled');
+    throw new Error('Assistant run was cancelled');
+  }
+  
+  if (run.status === 'expired') {
+    console.error('❌ Assistant run expired');
+    throw new Error('Assistant run expired');
+  }
+  
+  console.error('❌ Assistant run ended with unexpected status:', run.status);
+  throw new Error(`Assistant run failed with status: ${run.status}`);
 }
 
 // ---- Main Route Handler ----
@@ -325,7 +343,17 @@ export async function GET(req: NextRequest) {
     const context = { employee, details, meta, client };
     
     // Process documents with assistant
-    const extracted = await processDocumentsWithAssistant(sortedDocs, context);
+    let extracted;
+    try {
+      extracted = await processDocumentsWithAssistant(sortedDocs, context);
+    } catch (error) {
+      console.error('❌ Assistant processing failed, using fallback:', error);
+      // Fallback: return basic structure
+      extracted = {
+        inleiding_main: `[Inleiding voor ${employee?.first_name || 'werknemer'} ${employee?.last_name || ''} - AI generatie mislukt, handmatig invullen vereist]`,
+        inleiding_sub: NB_DEFAULT_GEEN_AD
+      };
+    }
     
     let { inleiding_main, inleiding_sub } = extracted;
     
