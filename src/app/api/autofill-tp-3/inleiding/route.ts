@@ -27,7 +27,7 @@ function nlDate(iso?: string) {
 }
 
 // Gender-based pronoun helpers
-function getGenderPronoun(gender?: string, type: 'possessive' | 'subject' | 'informal'): string {
+function getGenderPronoun(type: 'possessive' | 'subject' | 'informal', gender?: string): string {
   const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
   switch(type) {
     case 'possessive': return isMale ? 'zijn' : 'haar';
@@ -57,9 +57,9 @@ function buildInleidingInstructions(context: any): string {
   const { employee, details, meta, client } = context;
   
   const gender = details?.gender;
-  const pronPoss = getGenderPronoun(gender, 'possessive');
-  const pronSubj = getGenderPronoun(gender, 'subject');
-  const pronInf = getGenderPronoun(gender, 'informal');
+  const pronPoss = getGenderPronoun('possessive', gender);
+  const pronSubj = getGenderPronoun('subject', gender);
+  const pronInf = getGenderPronoun('informal', gender);
   const title = getTitlePrefix(gender);
   const titleAbbrev = getTitleAbbrev(gender);
   
