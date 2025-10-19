@@ -45,7 +45,7 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 BELANGRIJK: Je MOET alle velden invullen met EXACTE informatie uit de documenten.
 
 Zoek specifiek naar deze informatie in de documenten:
-- Naam werknemer, Gespreksdatum, Leeftijd werknemer, Geslacht werknemer
+- Naam werknemer, Gespreksdatum (intake_date), Leeftijd werknemer, Geslacht werknemer
 - Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:" (bijv. "Huiskamerbegeleider")
 - Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
 - Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24" of "15.5")
@@ -59,7 +59,7 @@ Zoek specifiek naar deze informatie in de documenten:
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
 - Heeft de werknemer een computer thuis? (has_computer) - true/false
 
-BELANGRIJK: Gebruik ALLEEN de exacte veldnamen zoals hierboven tussen haakjes aangegeven (current_job, other_employers, contract_hours, gender, work_experience, education_level, drivers_license, has_transport, computer_skills, dutch_speaking, dutch_writing, dutch_reading, has_computer).
+BELANGRIJK: Gebruik ALLEEN de exacte veldnamen zoals hierboven tussen haakjes aangegeven (current_job, other_employers, contract_hours, gender, work_experience, education_level, drivers_license, has_transport, computer_skills, dutch_speaking, dutch_writing, dutch_reading, has_computer, intake_date, date_of_birth).
 
 Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
 
@@ -144,7 +144,9 @@ Return ONLY a JSON object with the fields you find.`,
           'geslacht_werknemer': 'gender',
           'geslacht': 'gender',
           'leeftijd_werknemer': 'date_of_birth',
-          'naam_werknemer': 'name'
+          'naam_werknemer': 'name',
+          'gespreksdatum': 'intake_date',
+          'intakedatum': 'intake_date'
         };
         
         const mappedData: any = {};
