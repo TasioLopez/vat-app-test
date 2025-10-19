@@ -50,7 +50,7 @@ Zoek specifiek naar deze informatie in de documenten:
 - Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
 - Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24")
 - Leeftijd werknemer - zoek naar "Leeftijd werknemer:" (bijv. "56")
-- Geslacht werknemer - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
+- Geslacht werknemer (gender) - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
 - Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
 - Rijbewijs (drivers_license) - true/false
@@ -58,6 +58,8 @@ Zoek specifiek naar deze informatie in de documenten:
 - Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
 - Heeft de werknemer een computer thuis? (has_computer) - true/false
+
+BELANGRIJK: Gebruik ALLEEN de exacte veldnamen zoals hierboven tussen haakjes aangegeven (current_job, other_employers, contract_hours, gender, work_experience, education_level, drivers_license, has_transport, computer_skills, dutch_speaking, dutch_writing, dutch_reading, has_computer).
 
 Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
 
@@ -137,6 +139,22 @@ Return ONLY a JSON object with the fields you find.`,
         const extractedData = JSON.parse(cleanedResponse);
         console.log('✅ Parsed extracted data:', extractedData);
         
+        // Map any incorrect field names to correct database column names
+        const fieldMapping: { [key: string]: string } = {
+          'geslacht_werknemer': 'gender',
+          'geslacht': 'gender',
+          'leeftijd_werknemer': 'age',
+          'naam_werknemer': 'name'
+        };
+        
+        const mappedData: any = {};
+        Object.entries(extractedData).forEach(([key, value]) => {
+          const mappedKey = fieldMapping[key] || key;
+          mappedData[mappedKey] = value;
+        });
+        
+        console.log('✅ Mapped field names:', mappedData);
+        
         // Cleanup
         await openai.beta.assistants.delete(assistant.id);
         for (const fileId of fileIds) {
@@ -144,7 +162,7 @@ Return ONLY a JSON object with the fields you find.`,
         }
         console.log('✅ Cleaned up assistant and files');
         
-        return extractedData;
+        return mappedData;
       }
     }
 
