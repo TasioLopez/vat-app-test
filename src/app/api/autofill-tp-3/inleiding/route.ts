@@ -142,6 +142,16 @@ Return ONLY a JSON object:
 `.trim();
 }
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 // ---- Assistants API Implementation ----
 async function processDocumentsWithAssistant(
   docs: any[],
@@ -228,6 +238,11 @@ async function processDocumentsWithAssistant(
       
       console.log('🧹 Cleaned response:', cleanedResponse);
       const result = JSON.parse(cleanedResponse);
+      
+      // Strip citations from the generated text
+      result.inleiding_main = stripCitations(result.inleiding_main || '');
+      result.inleiding_sub = stripCitations(result.inleiding_sub || '');
+      
       console.log('✅ Parsed result:', result);
       
       // Cleanup

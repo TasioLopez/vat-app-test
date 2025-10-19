@@ -8,6 +8,16 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (m?.[1]) return m[1];
@@ -128,7 +138,7 @@ Geen diagnoses, geen aannames. Lever via function-call: { praktische_belemmering
 
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     const parsed = JSON.parse(call?.function?.arguments || "{}");
-    const praktische_belemmeringen = (parsed?.praktische_belemmeringen || "").trim();
+    const praktische_belemmeringen = stripCitations((parsed?.praktische_belemmeringen || "").trim());
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, praktische_belemmeringen } as any,

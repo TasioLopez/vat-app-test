@@ -10,6 +10,16 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 // ---- helpers ----
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
@@ -170,8 +180,8 @@ ${INTAKE.slice(0, 22000)}
     let parsed: { sociale_achtergrond?: string; visie_werknemer?: string } | null = null;
     try { parsed = JSON.parse(args); } catch { parsed = null; }
 
-    const sociale_achtergrond = (parsed?.sociale_achtergrond || "").trim();
-    const visie_werknemer = (parsed?.visie_werknemer || "").trim();
+    const sociale_achtergrond = stripCitations((parsed?.sociale_achtergrond || "").trim());
+    const visie_werknemer = stripCitations((parsed?.visie_werknemer || "").trim());
 
     // Persist conveniently in tp_meta (optional)
     await supabase.from("tp_meta").upsert(

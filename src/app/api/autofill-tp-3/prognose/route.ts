@@ -3,6 +3,16 @@ import { handleAPIError, createSuccessResponse, validateRequiredFields, validate
 import { OpenAIService } from "@/lib/openai-service";
 import { SupabaseService } from "@/lib/supabase-service";
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (m?.[1]) return m[1];
@@ -155,7 +165,7 @@ ${(FML || AD).slice(0, 22000)}
     await supabaseService.upsertTPMeta(employeeId!, { prognose_bedrijfsarts: text });
 
     return createSuccessResponse(
-      { prognose_bedrijfsarts: text },
+      { prognose_bedrijfsarts: stripCitations(text) },
       "Prognose successfully generated"
     );
   } catch (error: any) {

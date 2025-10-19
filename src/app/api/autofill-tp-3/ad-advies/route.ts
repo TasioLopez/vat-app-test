@@ -8,6 +8,16 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (m?.[1]) return m[1];
@@ -122,7 +132,7 @@ Lever via function-call: { advies_ad_passende_arbeid: string }.
 
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     const parsed = JSON.parse(call?.function?.arguments || "{}");
-    const advies_ad_passende_arbeid = (parsed?.advies_ad_passende_arbeid || "").trim();
+    const advies_ad_passende_arbeid = stripCitations((parsed?.advies_ad_passende_arbeid || "").trim());
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, advies_ad_passende_arbeid } as any,

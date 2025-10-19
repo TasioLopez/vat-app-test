@@ -8,6 +8,16 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// ---- Citation Stripping ----
+function stripCitations(text: string): string {
+  if (!text) return text;
+  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  return text
+    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
+    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    .trim();
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -71,8 +81,8 @@ meta: ${JSON.stringify(meta || {})}
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     const parsed = JSON.parse(call?.function?.arguments || "{}");
 
-    const persoonlijk_profiel = (parsed?.persoonlijk_profiel || "").trim();
-    const zoekprofiel = (parsed?.zoekprofiel || "").trim();
+    const persoonlijk_profiel = stripCitations((parsed?.persoonlijk_profiel || "").trim());
+    const zoekprofiel = stripCitations((parsed?.zoekprofiel || "").trim());
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, persoonlijk_profiel, zoekprofiel } as any,
