@@ -113,6 +113,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState<{ [k: string]: boolean }>({});
     const [rewriting, setRewriting] = useState<{ [k: string]: boolean }>({});
+    const [autofillMessage, setAutofillMessage] = useState<{
+        type: 'success' | 'error' | 'warning';
+        title: string;
+        content: string;
+    } | null>(null);
 
     // ✅ no need to keep this in state; it's static
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
@@ -298,13 +303,45 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const genInleiding = async () => {
         if (busy.inleiding) return;
         setBusy(prev => ({ ...prev, inleiding: true }));
+        setAutofillMessage(null);
+        
         try {
             const res = await fetch(`/api/autofill-tp-3/inleiding?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) updateField("inleiding", json.content);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                // Update all fields - API returns { details: { inleiding, inleiding_sub, has_ad_report } }
+                updateField("inleiding", json.details.inleiding || "");
+                updateField("inleiding_sub", json.details.inleiding_sub || "");
+                updateField("has_ad_report", json.details.has_ad_report || false);
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Inleiding sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'inleiding, inleiding_sub'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
         } catch (err) {
             console.error("❌ Autofill failed for inleiding:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, inleiding: false }));
         }
@@ -460,6 +497,26 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
             {/* LEFT: builder controls */}
             <div className="w-[50%] space-y-6 overflow-y-auto max-h-full pr-2">
+                {/* Notification */}
+                {autofillMessage && (
+                    <div className={`mb-4 p-4 rounded-lg ${
+                        autofillMessage.type === 'success' ? 'bg-green-50 border border-green-200' :
+                        autofillMessage.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                        'bg-red-50 border border-red-200'
+                    }`}>
+                        <h4 className={`font-semibold ${
+                            autofillMessage.type === 'success' ? 'text-green-800' :
+                            autofillMessage.type === 'warning' ? 'text-yellow-800' :
+                            'text-red-800'
+                        }`}>{autofillMessage.title}</h4>
+                        <p className={`text-sm mt-1 ${
+                            autofillMessage.type === 'success' ? 'text-green-700' :
+                            autofillMessage.type === 'warning' ? 'text-yellow-700' :
+                            'text-red-700'
+                        }`}>{autofillMessage.content}</p>
+                    </div>
+                )}
+                
                 {/* Inleiding */}
                 <SectionHeader
                     title="Inleiding"
