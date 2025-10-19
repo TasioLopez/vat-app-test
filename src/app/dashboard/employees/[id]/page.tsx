@@ -242,6 +242,43 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const saveAllInfo = async () => {
+        if (!employee || !employeeDetails) return;
+
+        setUpdating(true);
+        try {
+            // Save employee basic info
+            const { error: employeeError } = await supabase
+                .from('employees')
+                .update(employee)
+                .eq('id', employeeId);
+
+            if (employeeError) {
+                console.error('Error updating employee:', employeeError);
+                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
+                return;
+            }
+
+            // Save employee details (including gender)
+            const { error: detailsError } = await supabase
+                .from('employee_details')
+                .upsert([employeeDetails], { onConflict: 'employee_id' });
+
+            if (detailsError) {
+                console.error('Error saving details:', detailsError);
+                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van het profiel.');
+                return;
+            }
+
+            showSuccess('Werknemer informatie opgeslagen!');
+        } catch (err) {
+            console.error('Error saving all info:', err);
+            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van de werknemer informatie.');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const autofillWithAI = async () => {
         setAiLoading(true);
         try {
@@ -317,7 +354,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <button onClick={() => window.location.href = `/dashboard/tp/${employeeId}`} className="flex border-2 border-indigo-600 font-semibold text-indigo-600 px-4 py-2 rounded items-center gap-2 hover:bg-indigo-600 hover:text-white hover:cursor-pointer transition"><Map className="w-4 h-4" />Trajectplan</button>
                                     <button onClick={() => window.location.href = `/dashboard/vgr/${employeeId}`} className="flex border-2 border-purple-600 font-semibold text-purple-600 px-4 py-2 rounded items-center gap-2 hover:bg-purple-600 hover:text-white hover:cursor-pointer transition"><Compass className="w-4 h-4" />VGR</button>
                                 </div>
-                                <button onClick={saveEmployeeInfo} className="mt-4 bg-blue-600 font-semibold text-white px-4 py-2 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer transition" disabled={updating}>
+                                <button onClick={saveAllInfo} className="mt-4 bg-blue-600 font-semibold text-white px-4 py-2 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer transition" disabled={updating}>
                                     {updating ? 'Opslaan...' : 'Opslaan informatie'}
                                 </button>
                             </div>
