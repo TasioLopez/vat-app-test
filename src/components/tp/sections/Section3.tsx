@@ -8,6 +8,7 @@ import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
+import { FileText } from 'lucide-react';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -532,7 +533,10 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 
                 {/* Section Cards - MOVED TO TOP */}
                 <div className="space-y-2">
-                    <h3 className="text-lg font-semibold mb-3">📝 Secties</h3>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-gray-600" />
+                        Secties
+                    </h3>
                     <div className="space-y-2">
                         <SectionCard
                             title="Inleiding"
@@ -738,50 +742,78 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 
 /* ---------- small helpers (UI) ---------- */
 
+// Helper function to format bold/italic
+function formatInlineText(text: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    let currentIdx = 0;
+    
+    // Regex to match **bold** or *italic*
+    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    let match;
+    
+    while ((match = regex.exec(text)) !== null) {
+        // Add text before match
+        if (match.index > currentIdx) {
+            parts.push(text.slice(currentIdx, match.index));
+        }
+        
+        const matched = match[0];
+        if (matched.startsWith('**') && matched.endsWith('**')) {
+            // Bold
+            parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
+        } else if (matched.startsWith('*') && matched.endsWith('*')) {
+            // Italic
+            parts.push(<em key={match.index}>{matched.slice(1, -1)}</em>);
+        }
+        
+        currentIdx = match.index + matched.length;
+    }
+    
+    // Add remaining text
+    if (currentIdx < text.length) {
+        parts.push(text.slice(currentIdx));
+    }
+    
+    return parts.length > 0 ? parts : text;
+}
+
 function renderFormattedText(text: string): React.ReactNode {
     if (!text) return text;
     
-    // Split by lines to handle lists
-    const lines = text.split('\n');
+    // Split by double newlines to get paragraphs
+    const paragraphs = text.split(/\n\n+/);
     
-    return lines.map((line, idx) => {
-        // Handle bold: **text**
-        let formatted: React.ReactNode = line;
+    return paragraphs.map((para, paraIdx) => {
+        const lines = para.trim().split('\n');
         
-        // Split by bold markers
-        const boldParts = line.split(/(\*\*[^*]+\*\*)/);
-        formatted = boldParts.map((part, i) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-                const boldText = part.slice(2, -2);
-                // Check for italic inside bold
-                const italicParts = boldText.split(/(\*[^*]+\*)/);
-                return <strong key={i}>{italicParts.map((subpart, j) => {
-                    if (subpart.startsWith('*') && subpart.endsWith('*') && subpart.length > 2) {
-                        return <em key={j}>{subpart.slice(1, -1)}</em>;
-                    }
-                    return subpart;
-                })}</strong>;
-            }
-            
-            // Handle italic: *text* (but not **)
-            const italicParts = part.split(/(\*[^*]+\*)/);
-            return italicParts.map((subpart, j) => {
-                if (subpart.startsWith('*') && subpart.endsWith('*') && !subpart.startsWith('**') && subpart.length > 2) {
-                    return <em key={`${i}-${j}`}>{subpart.slice(1, -1)}</em>;
-                }
-                return <span key={`${i}-${j}`}>{subpart}</span>;
-            });
-        });
+        // Check if this paragraph is a list
+        const isBulletList = lines.every(l => l.trim().startsWith('•'));
+        const isNumberedList = lines.every(l => /^\d+\./.test(l.trim()));
         
-        // Handle lists
-        if (line.trim().startsWith('•')) {
-            return <li key={idx} className="ml-4">{formatted}</li>;
-        }
-        if (line.trim().match(/^\d+\./)) {
-            return <li key={idx} className="ml-4 list-decimal">{formatted}</li>;
+        if (isBulletList || isNumberedList) {
+            // Render as list
+            const ListTag = isBulletList ? 'ul' : 'ol';
+            return (
+                <ListTag key={paraIdx} className="ml-4 mb-4 space-y-1">
+                    {lines.map((line, idx) => {
+                        const content = line.replace(/^[•\d+\.]\s*/, '');
+                        return <li key={idx}>{formatInlineText(content)}</li>;
+                    })}
+                </ListTag>
+            );
         }
         
-        return <div key={idx}>{formatted}</div>;
+        // Regular paragraph
+        return (
+            <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>
+                {lines.map((line, idx) => (
+                    <React.Fragment key={idx}>
+                        {idx > 0 && <br/>}
+                        {formatInlineText(line)}
+                    </React.Fragment>
+                ))}
+            </p>
+        );
     });
 }
 
