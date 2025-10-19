@@ -888,6 +888,53 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 
 /* ---------- small helpers (UI) ---------- */
 
+function renderFormattedText(text: string): React.ReactNode {
+    if (!text) return text;
+    
+    // Split by lines to handle lists
+    const lines = text.split('\n');
+    
+    return lines.map((line, idx) => {
+        // Handle bold: **text**
+        let formatted: React.ReactNode = line;
+        
+        // Split by bold markers
+        const boldParts = line.split(/(\*\*[^*]+\*\*)/);
+        formatted = boldParts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                const boldText = part.slice(2, -2);
+                // Check for italic inside bold
+                const italicParts = boldText.split(/(\*[^*]+\*)/);
+                return <strong key={i}>{italicParts.map((subpart, j) => {
+                    if (subpart.startsWith('*') && subpart.endsWith('*') && subpart.length > 2) {
+                        return <em key={j}>{subpart.slice(1, -1)}</em>;
+                    }
+                    return subpart;
+                })}</strong>;
+            }
+            
+            // Handle italic: *text* (but not **)
+            const italicParts = part.split(/(\*[^*]+\*)/);
+            return italicParts.map((subpart, j) => {
+                if (subpart.startsWith('*') && subpart.endsWith('*') && !subpart.startsWith('**') && subpart.length > 2) {
+                    return <em key={`${i}-${j}`}>{subpart.slice(1, -1)}</em>;
+                }
+                return <span key={`${i}-${j}`}>{subpart}</span>;
+            });
+        });
+        
+        // Handle lists
+        if (line.trim().startsWith('•')) {
+            return <li key={idx} className="ml-4">{formatted}</li>;
+        }
+        if (line.trim().match(/^\d+\./)) {
+            return <li key={idx} className="ml-4 list-decimal">{formatted}</li>;
+        }
+        
+        return <div key={idx}>{formatted}</div>;
+    });
+}
+
 function SectionCard({ 
     title, 
     content, 
@@ -995,7 +1042,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                         ) : s.variant === "block" && s.text ? (
                             <div>
                                 <div className={blockTitle}>{s.title}</div>
-                                <div className={paperText}>{s.text}</div>
+                                <div className={paperText}>{renderFormattedText(s.text)}</div>
                             </div>
                         ) : (
                             <div>{s.node}</div>
@@ -1048,11 +1095,11 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                         return (
                             <div key={s.key} className="mb-3">
                                 {s.variant === "subtle" && s.text ? (
-                                    <div className={subtle}>{s.text}</div>
+                                    <div className={subtle}>{renderFormattedText(s.text)}</div>
                                 ) : s.variant === "block" && s.text ? (
                                     <>
                                         <div className={blockTitle}>{s.title}</div>
-                                        <div className={paperText}>{s.text}</div>
+                                        <div className={paperText}>{renderFormattedText(s.text)}</div>
                                     </>
                                 ) : (
                                     s.node
