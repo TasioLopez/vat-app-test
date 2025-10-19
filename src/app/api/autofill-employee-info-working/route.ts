@@ -12,7 +12,7 @@ const DOCUMENT_PRIORITY = {
   'intakeformulier': 1,
   'ad rapport': 2,
   'fml/izp': 3,
-  'overig': 4
+  'extra': 4
 };
 
 function extractStoragePath(url: string): string | null {

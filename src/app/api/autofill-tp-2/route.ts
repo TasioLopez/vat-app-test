@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
       'fml': 3,
       'izp': 3,
       'lab': 3,
-      'overig': 4,
+      'extra': 4,
     };
 
     // Sort documents by priority: Intakeformulier > AD Rapport > FML/IZP

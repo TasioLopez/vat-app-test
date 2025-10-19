@@ -48,12 +48,12 @@ type Document = {
     url: string;
 };
 
-const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'overig'];
+const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'extra'];
 const DOC_LABELS: Record<string, string> = {
     intakeformulier: 'Intakeformulier',
     ad_rapportage: 'AD Rapport',
     fml_izp: 'FML/IZP',
-    overig: 'Overig'
+    extra: 'Overig'
 };
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
