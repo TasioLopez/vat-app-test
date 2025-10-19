@@ -312,7 +312,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           
           // Convert database field names to human-readable labels
           const humanReadableFields = fieldNames
-            .map(field => fieldLabels[field] || field)
+            .map((field: string) => fieldLabels[field] || field)
             .join(', ');
           
           const message = data.message || `${fieldCount} velden ingevuld`;
