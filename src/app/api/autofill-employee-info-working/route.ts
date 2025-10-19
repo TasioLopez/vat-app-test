@@ -49,7 +49,7 @@ Zoek specifiek naar deze informatie in de documenten:
 - Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:" (bijv. "Huiskamerbegeleider")
 - Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
 - Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24")
-- Leeftijd werknemer - zoek naar "Leeftijd werknemer:" (bijv. "56")
+- Leeftijd werknemer (date_of_birth) - zoek naar "Leeftijd werknemer:" en converteer naar geboortedatum (bijv. "1968-01-15")
 - Geslacht werknemer (gender) - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
 - Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
@@ -143,13 +143,20 @@ Return ONLY a JSON object with the fields you find.`,
         const fieldMapping: { [key: string]: string } = {
           'geslacht_werknemer': 'gender',
           'geslacht': 'gender',
-          'leeftijd_werknemer': 'age',
+          'leeftijd_werknemer': 'date_of_birth',
           'naam_werknemer': 'name'
         };
         
         const mappedData: any = {};
         Object.entries(extractedData).forEach(([key, value]) => {
           const mappedKey = fieldMapping[key] || key;
+          
+          // Special handling for date_of_birth - if it's a number (age), skip it
+          if (mappedKey === 'date_of_birth' && typeof value === 'number') {
+            console.log('⚠️ Skipping age number, expecting date format for date_of_birth');
+            return;
+          }
+          
           mappedData[mappedKey] = value;
         });
         
