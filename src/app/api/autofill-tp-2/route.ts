@@ -32,14 +32,16 @@ Extract ALLEEN deze velden als je ze vindt:
 2. registration_date: "Aanmeld:" (YYYY-MM-DD format)
 3. intake_date: "Gespreksdatum:" (YYYY-MM-DD format)
 4. ad_report_date: "Datum rapport:" (YYYY-MM-DD format)
-5. fml_izp_lab_date: "Datum FML:" (YYYY-MM-DD format)
-6. occupational_doctor_name: "Naam arbeidsdeskundige:"
-7. occupational_doctor_org: Organisatie (meestal "De Arbodienst")
+5. fml_izp_lab_date: "Datum FML:" or "Datum FML/IZP/LAB:" (YYYY-MM-DD format)
+6. occupational_doctor_name: "Arbeidsdeskundige:" - Extract name AND company in format "Name, Company"
+7. occupational_doctor_org: "Bedrijfsarts:" - Extract full description including supervision if present
 
 Voorbeelden:
 - "Datum ziekmelding: 26-04-2024" → first_sick_day: "2024-04-26"
 - "Aanmeld: 12-06-2025" → registration_date: "2025-06-12"
-- "Naam arbeidsdeskundige: R. Hupsel" → occupational_doctor_name: "R. Hupsel"
+- "Arbeidsdeskundige: Marc Arendsen van Buro werk wijzer" → occupational_doctor_name: "Marc Arendsen, Buro werk wijzer"
+- "Bedrijfsarts: Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas."
+- "Bedrijfsarts: Dr. Smith" → occupational_doctor_org: "Dr. Smith"
 
 Return ONLY a JSON object with the fields you find.`,
       model: "gpt-4o",

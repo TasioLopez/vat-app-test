@@ -163,18 +163,32 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   };
 
 
-  // Start = intake
+  // Calculate start date based on trajectory duration rule
   useEffect(() => {
+    const regISO = tpData?.registration_date;
     const intakeISO = tpData?.intake_date;
-    if (!intakeISO) return;
-    if (tpData.tp_start_date !== intakeISO) updateField('tp_start_date', intakeISO);
-  }, [tpData.intake_date]);
+    const endISO = tpData?.tp_end_date;
+    
+    if (!regISO || !intakeISO || !endISO) return;
+    
+    // Calculate potential duration in weeks from registration date
+    const regDate = parseDateFlexible(regISO);
+    const endDate = parseDateFlexible(endISO);
+    if (!regDate || !endDate) return;
+    
+    const durationWeeks = weekDiffCeil(regDate, endDate);
+    
+    // Rule: If duration >= 53 weeks, start = intake_date; else start = registration_date
+    const startISO = durationWeeks >= 53 ? intakeISO : regISO;
+    
+    if (tpData.tp_start_date !== startISO) updateField('tp_start_date', startISO);
+  }, [tpData.registration_date, tpData.intake_date, tpData.tp_end_date]);
 
-  // End = first_sick_day + N years
+  // End = first_sick_day + 2 years
   useEffect(() => {
     const fsdISO = tpData?.first_sick_day;
     if (!fsdISO) return;
-    const DURATION_YEARS = 2; // set to 1/2/3 as desired
+    const DURATION_YEARS = 2; // 2 years after first sick day
     const fsd = parseDateFlexible(fsdISO);
     if (!fsd) return;
     const endISO = toISODate(addYears(fsd, DURATION_YEARS));
@@ -361,6 +375,24 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
+        {/* AI Fill and Save buttons at the top */}
+        <div className="flex items-center gap-3 py-4 border-b border-gray-200">
+          <button
+            onClick={handleAutofill}
+            disabled={autofillLoading}
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 font-semibold"
+          >
+            {autofillLoading ? 'Automatisch invullen...' : 'Automatisch invullen met AI'}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            {saving ? 'Opslaan...' : 'Opslaan'}
+          </button>
+        </div>
+
         {Object.entries({
           phone: 'Telefoon',
           email: 'Email',
@@ -384,7 +416,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           ad_report_date: 'Datum AD rapportage',
           occupational_doctor_name: 'Arbeidsdeskundige',
           has_ad_report: 'Arbeidsdeskundig rapport aanwezig bij aanmelding',
-          occupational_doctor_org: 'Bedrijfsarts bedrijf',
+          occupational_doctor_org: 'Bedrijfsarts',
           fml_izp_lab_date: 'Datum FML/IZP/LAB',
           tp_lead_time: 'Doorlooptijd (in weken)',
           tp_start_date: 'Startdatum traject',
@@ -406,22 +438,6 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
             />
           );
         })}
-        <div className="flex items-center gap-3 py-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {saving ? 'Opslaan...' : 'Opslaan'}
-          </button>
-          <button
-            onClick={handleAutofill}
-            disabled={autofillLoading}
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-          >
-            {autofillLoading ? 'Automatisch invullen...' : 'Automatisch invullen met AI'}
-          </button>
-        </div>
 
       </div>
 
