@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // Document priority order
 const DOCUMENT_PRIORITY = {
@@ -23,76 +26,21 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Simple PDF text extraction
-async function extractTextFromPdfSimple(buffer: Buffer): Promise<string> {
+// NEW APPROACH: OpenAI Assistants API for document processing (same as TP-2)
+async function processDocumentsWithAssistant(docs: any[]): Promise<any> {
+  console.log('🚀 Using OpenAI Assistants API for employee document processing...');
+  
   try {
-    // Convert buffer to string and extract readable text
-    const bufferString = buffer.toString('utf8');
-    
-    // Look for specific patterns from your intakeformulier
-    const patterns = [
-      /Naam werknemer:\s*([^\n\r]+)/i,
-      /Gespreksdatum:\s*([^\n\r]+)/i,
-      /Leeftijd werknemer:\s*(\d+)/i,
-      /Geslacht werknemer:\s*([^\n\r]+)/i,
-      /Functietitel:\s*([^\n\r]+)/i,
-      /Werkgever\/organisatie:\s*([^\n\r]+)/i,
-      /Urenomvang functie[^:]*:\s*(\d+)/i
-    ];
-    
-    const extractedInfo: string[] = [];
-    
-    for (const pattern of patterns) {
-      const match = bufferString.match(pattern);
-      if (match) {
-        extractedInfo.push(`${pattern.source}: ${match[1]}`);
-      }
-    }
-    
-    if (extractedInfo.length > 0) {
-      const text = extractedInfo.join('\n');
-      console.log('📄 PDF extraction successful, found patterns:', extractedInfo.length);
-      return text;
-    }
-    
-    // Fallback: extract any readable text
-    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
-    if (readableText && readableText.length > 0) {
-      const text = readableText.join(' ');
-      console.log('📄 PDF extraction successful, extracted readable text');
-      return text;
-    }
-    
-    return '';
-  } catch (error: any) {
-    console.error('PDF extraction failed:', error.message);
-    return '';
-  }
-}
-
-// Simple AI processing using fetch to OpenAI API directly
-async function processWithAI(text: string): Promise<any> {
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        temperature: 0,
-        messages: [
-          {
-            role: 'system',
-            content: `Je bent een assistent gespecialiseerd in het analyseren van Nederlandse werknemersdocumenten.
-Gebruik ALLEEN informatie uit de documenten zelf - geen aannames maken.
+    // Step 1: Create assistant with instructions
+    const assistant = await openai.beta.assistants.create({
+      name: "Employee Document Analyzer",
+      instructions: `Je bent een expert in het analyseren van Nederlandse werknemersdocumenten.
 
 BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 1. INTAKEFORMULIER (hoogste prioriteit - gebruik deze informatie bij conflicten)
 2. AD RAPPORT (tweede prioriteit)
 3. FML/IZP (derde prioriteit)
-4. OVERIG (laagste prioriteit)
+4. EXTRA (laagste prioriteit)
 
 BELANGRIJK: Je MOET alle velden invullen met EXACTE informatie uit de documenten.
 
@@ -111,57 +59,99 @@ Zoek specifiek naar deze informatie in de documenten:
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
 - Heeft de werknemer een computer thuis? (has_computer) - true/false
 
-Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.`
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ],
-        tools: [{
-          type: 'function',
-          function: {
-            name: 'extract_employee_fields',
-            description: 'Extract structured employee profile fields',
-            parameters: {
-              type: 'object',
-              properties: {
-                current_job: { type: 'string' },
-                work_experience: { type: 'string' },
-                education_level: { type: 'string' },
-                drivers_license: { type: 'boolean' },
-                has_transport: { type: 'boolean' },
-                dutch_speaking: { type: 'boolean' },
-                dutch_writing: { type: 'boolean' },
-                dutch_reading: { type: 'boolean' },
-                has_computer: { type: 'boolean' },
-                computer_skills: { type: 'integer', minimum: 1, maximum: 5 },
-                contract_hours: { type: 'integer' },
-                other_employers: { type: 'string' }
-              },
-              required: ['current_job', 'education_level']
-            }
-          }
-        }],
-        tool_choice: { type: 'function', function: { name: 'extract_employee_fields' } }
-      })
+Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
+
+Return ONLY a JSON object with the fields you find.`,
+      model: "gpt-4o",
+      tools: [{ type: "file_search" }]
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+    console.log('✅ Created assistant:', assistant.id);
+
+    // Step 2: Upload PDFs directly to OpenAI
+    const fileIds: string[] = [];
+    for (const doc of docs) {
+      if (!doc.url) continue;
+      
+      const path = extractStoragePath(doc.url);
+      if (!path) continue;
+      
+      console.log('📥 Downloading document for upload:', doc.type);
+      const { data: file } = await supabase.storage.from('documents').download(path);
+      if (!file) continue;
+      
+      const buffer = Buffer.from(await file.arrayBuffer());
+      
+      const uploadedFile = await openai.files.create({
+        file: new File([buffer], `${doc.type}.pdf`, { type: 'application/pdf' }),
+        purpose: "assistants"
+      });
+      fileIds.push(uploadedFile.id);
+      console.log('✅ Uploaded file:', uploadedFile.id);
     }
 
-    const data = await response.json();
-    const toolCall = data.choices[0]?.message?.tool_calls?.[0];
-    
-    if (toolCall?.function?.arguments) {
-      return JSON.parse(toolCall.function.arguments);
+    if (fileIds.length === 0) {
+      throw new Error('No files could be uploaded');
     }
-    
-    throw new Error('No valid response from AI');
+
+    // Step 3: Create thread with files
+    const thread = await openai.beta.threads.create({
+      messages: [{
+        role: "user",
+        content: "Analyseer deze documenten en extract de werknemersprofiel velden.",
+        attachments: fileIds.map(id => ({ file_id: id, tools: [{ type: "file_search" }] }))
+      }]
+    });
+
+    console.log('✅ Created thread:', thread.id);
+
+    // Step 4: Run assistant
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id
+    });
+
+    console.log('✅ Assistant run completed with status:', run.status);
+
+    // Step 5: Get response
+    if (run.status === 'completed') {
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      const response = messages.data[0].content[0];
+      if (response.type === 'text') {
+        console.log('📄 Raw assistant response:', response.text.value);
+        
+        // Clean the response by removing markdown formatting
+        let cleanedResponse = response.text.value;
+        
+        // Remove ```json and ``` markers
+        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
+        // Remove any text before the first { and after the last }
+        const firstBrace = cleanedResponse.indexOf('{');
+        const lastBrace = cleanedResponse.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+        }
+        
+        console.log('🧹 Cleaned response:', cleanedResponse);
+        
+        const extractedData = JSON.parse(cleanedResponse);
+        console.log('✅ Parsed extracted data:', extractedData);
+        
+        // Cleanup
+        await openai.beta.assistants.delete(assistant.id);
+        for (const fileId of fileIds) {
+          await openai.files.delete(fileId);
+        }
+        console.log('✅ Cleaned up assistant and files');
+        
+        return extractedData;
+      }
+    }
+
+    throw new Error(`Assistant run failed: ${run.status}`);
   } catch (error: any) {
-    console.error('AI processing failed:', error);
-    throw error;
+    console.error('❌ Assistants API error:', error.message);
+    return {};
   }
 }
 
@@ -214,64 +204,21 @@ export async function GET(req: NextRequest) {
       return aPriority - bPriority;
     });
 
-    // Process documents and extract text
-    const documentTexts: string[] = [];
-    let processedCount = 0;
+    console.log('🤖 Processing documents with Assistants API...');
+
+    // Process documents with Assistants API (same approach as TP-2)
+    const details = await processDocumentsWithAssistant(sortedDocs);
     
-    for (const doc of sortedDocs) {
-      try {
-        if (!doc.url) continue;
-
-        const path = extractStoragePath(doc.url);
-        if (!path) continue;
-
-        console.log('📥 Processing document:', doc.name, 'Type:', doc.type);
-
-        const { data: file, error: downloadError } = await supabase.storage
-          .from('documents')
-          .download(path);
-
-        if (!file || downloadError) {
-          console.warn('Download failed:', doc.name);
-          continue;
-        }
-
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Extract text from PDF
-        const text = await extractTextFromPdfSimple(buffer);
-        console.log('📄 Extracted text length:', text.length, 'from', doc.name);
-        if (text && text.trim().length > 10) {
-          const docType = doc.type || 'UNKNOWN';
-          documentTexts.push(`=== ${docType.toUpperCase()} ===\n${text.trim()}`);
-          processedCount++;
-          console.log('✅ Successfully processed:', doc.name, 'Type:', docType, 'Text preview:', text.substring(0, 100) + '...');
-        } else {
-          console.warn('⚠️ No text extracted from:', doc.name);
-        }
-      } catch (error: any) {
-        console.error('Error processing document:', doc.name, error);
-        continue;
-      }
-    }
-
-    if (documentTexts.length === 0) {
-      console.error('❌ No documents could be processed - PDF extraction failed');
+    if (Object.keys(details).length === 0) {
+      console.error('❌ No data extracted from documents');
       return NextResponse.json({ 
         success: false, 
         data: { details: {} },
-        message: 'Failed to extract text from PDF documents. Please ensure documents are valid PDFs.'
+        message: 'Geen relevante informatie gevonden in de documenten'
       });
     }
-
-    console.log('🤖 Processing with AI...');
-
-    // Process with AI
-    const combinedText = documentTexts.join('\n\n');
-    const details = await processWithAI(combinedText);
     
-    console.log('✅ AI processing completed');
+    console.log('✅ Assistants API processing completed');
 
     return NextResponse.json({
       success: true,
@@ -279,7 +226,7 @@ export async function GET(req: NextRequest) {
         details,
         autofilled_fields: Object.keys(details)
       },
-      message: `Employee information successfully extracted from ${processedCount} documents using AI`
+      message: `Employee information successfully extracted from ${sortedDocs.length} documents using Assistants API`
     });
 
   } catch (error: any) {
