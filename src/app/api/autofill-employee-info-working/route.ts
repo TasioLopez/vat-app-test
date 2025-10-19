@@ -48,7 +48,7 @@ Zoek specifiek naar deze informatie in de documenten:
 - Naam werknemer, Gespreksdatum, Leeftijd werknemer, Geslacht werknemer
 - Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:" (bijv. "Huiskamerbegeleider")
 - Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
-- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24")
+- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24" of "15.5")
 - Leeftijd werknemer (date_of_birth) - zoek naar "Leeftijd werknemer:" en converteer naar geboortedatum (bijv. "1968-01-15")
 - Geslacht werknemer (gender) - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
@@ -157,7 +157,26 @@ Return ONLY a JSON object with the fields you find.`,
             return;
           }
           
-          mappedData[mappedKey] = value;
+          // Special handling for contract_hours - convert to number (allow decimals)
+          if (mappedKey === 'contract_hours') {
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
+                mappedData[mappedKey] = numValue; // Keep decimal values
+                console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
+              } else {
+                console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
+                return;
+              }
+            } else if (typeof value === 'number') {
+              mappedData[mappedKey] = value; // Keep decimal values
+            } else {
+              console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
+              return;
+            }
+          } else {
+            mappedData[mappedKey] = value;
+          }
         });
         
         console.log('✅ Mapped field names:', mappedData);
