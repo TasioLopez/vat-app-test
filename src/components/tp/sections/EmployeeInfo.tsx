@@ -60,6 +60,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   const [saving, setSaving] = useState(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
   const [autofilledFields, setAutofilledFields] = useState<string[]>([]);
+  const [savedFields, setSavedFields] = useState<string[]>([]);
   const [autofillMessage, setAutofillMessage] = useState<{type: 'success' | 'warning' | 'error', title: string, content: string} | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
@@ -272,11 +273,38 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       const firstError = results.find(r => r?.error)?.error;
       if (firstError) {
         setSaveError(firstError.message || 'Opslaan mislukt.');
+        // Show error notification
+        setAutofillMessage({
+          type: 'error',
+          title: '❌ Opslaan Mislukt',
+          content: firstError.message || 'Er is een fout opgetreden bij het opslaan.'
+        });
         console.warn('Save warning:', firstError);
         return;
       }
 
       setSaveOk(true);
+      
+      // Show success notification
+      setAutofillMessage({
+        type: 'success',
+        title: '✅ Opslaan Succesvol',
+        content: 'De gegevens zijn succesvol opgeslagen.'
+      });
+      
+      // Mark all current fields as saved (green border)
+      const allFieldKeys = [
+        ...DETAILS_FIELDS,
+        ...META_FIELDS,
+        ...EMPLOYEE_FIELDS
+      ].map(f => String(f));
+      setSavedFields(allFieldKeys);
+      
+      // Clear saved state and notification after 3 seconds
+      setTimeout(() => {
+        setSavedFields([]);
+        setSaveOk(false);
+      }, 3000);
     } catch (e: any) {
       setSaveError(e?.message || 'Onbekende fout.');
       console.warn('Save exception:', e);
@@ -413,7 +441,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
-        <div className="sticky top-0 bg-white z-10 flex items-center gap-3 py-4 border-b border-gray-200">
+        <div className="sticky top-0 backdrop-blur-md bg-white/80 z-10 flex items-center gap-3 py-4 border-b border-gray-200 shadow-sm">
           <button
             onClick={handleAutofill}
             disabled={autofillLoading}
@@ -472,6 +500,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               type={isDate ? 'date' : 'text'}
               bool={isBool}
               highlight={autofilledFields.includes(field)}
+              saved={savedFields.includes(field)}
             />
           );
         })}
@@ -628,6 +657,7 @@ function Field({
   type = 'text',
   bool = false,
   highlight = false,
+  saved = false,
 }: {
   label: string;
   value: any;
@@ -635,8 +665,15 @@ function Field({
   type?: string;
   bool?: boolean;
   highlight?: boolean;
+  saved?: boolean;
 }) {
-  const inputClass = `w-full border px-2 py-1 rounded text-sm ${highlight ? 'border-yellow-400 border-2' : ''}`;
+  // Priority: saved (green) > highlight (yellow) > default
+  const borderColor = saved 
+    ? 'border-green-400 bg-green-50 border-2' 
+    : highlight 
+    ? 'border-yellow-400 bg-yellow-50 border-2' 
+    : '';
+  const inputClass = `w-full border px-2 py-1 rounded text-sm ${borderColor}`;
 
   if (bool) {
     return (
