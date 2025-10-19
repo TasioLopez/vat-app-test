@@ -1,0 +1,5 @@
+[33m378a3dd[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix document upload issue for overig category
+[33m30c19b3[m feat: Update Fase 2 template to match specification
+[33m2c734e9[m fix: Preserve user data and only apply templates on explicit action
+[33mf2a0cf0[m feat: Improve phase date handling and display format
+[33md6d9616[m feat: Dynamic template dates based on intake and traject dates
