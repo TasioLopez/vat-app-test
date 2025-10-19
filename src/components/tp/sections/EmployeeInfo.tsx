@@ -309,13 +309,19 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           setAutofilledFields(fieldNames);
           
           const fieldCount = fieldNames.length;
+          
+          // Convert database field names to human-readable labels
+          const humanReadableFields = fieldNames
+            .map(field => fieldLabels[field] || field)
+            .join(', ');
+          
           const message = data.message || `${fieldCount} velden ingevuld`;
           
           // Show success notification
           setAutofillMessage({
             type: 'success',
             title: '✅ Autofill Succesvol',
-            content: `${message}\n\nIngevulde velden: ${fieldNames.join(', ')}`
+            content: `${message}\n\nIngevulde velden:\n${humanReadableFields}`
           });
         } else {
           // Show warning notification
@@ -349,6 +355,37 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     'has_ad_report',
   ];
 
+  // Field label mapping for human-readable notifications
+  const fieldLabels: { [key: string]: string } = {
+    phone: 'Telefoon',
+    email: 'Email',
+    date_of_birth: 'Geboortedatum',
+    current_job: 'Huidige functie',
+    work_experience: 'Werkervaring',
+    education_level: 'Opleidingsniveau',
+    drivers_license: 'Rijbewijs',
+    has_transport: 'Eigen vervoer',
+    dutch_speaking: 'Spreekvaardigheid NL',
+    dutch_writing: 'Schrijfvaardigheid NL',
+    dutch_reading: 'Leesvaardigheid NL',
+    has_computer: 'Beschikt over PC',
+    computer_skills: 'PC-vaardigheden',
+    contract_hours: 'Contracturen per week',
+    other_employers: 'Andere werkgevers',
+    first_sick_day: 'Eerste ziektedag',
+    intake_date: 'Datum intakegesprek',
+    registration_date: 'Datum aanmelding',
+    tp_creation_date: 'Datum opmaak trajectplan',
+    ad_report_date: 'Datum AD rapportage',
+    occupational_doctor_name: 'Arbeidsdeskundige',
+    has_ad_report: 'Arbeidsdeskundig rapport aanwezig bij aanmelding',
+    occupational_doctor_org: 'Bedrijfsarts',
+    fml_izp_lab_date: 'Datum FML/IZP/LAB',
+    tp_lead_time: 'Doorlooptijd (in weken)',
+    tp_start_date: 'Startdatum traject',
+    tp_end_date: 'Einddatum traject',
+  };
+
   return (
     <>
       {/* Notification */}
@@ -376,7 +413,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
-        <div className="flex items-center gap-3 py-4 border-b border-gray-200">
+        <div className="sticky top-0 bg-white z-10 flex items-center gap-3 py-4 border-b border-gray-200">
           <button
             onClick={handleAutofill}
             disabled={autofillLoading}
