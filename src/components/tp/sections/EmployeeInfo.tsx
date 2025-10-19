@@ -441,18 +441,18 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
-        <div className="sticky top-0 backdrop-blur-lg bg-white/30 z-10 flex items-center gap-3 py-4 border-b border-gray-200/50 shadow-md">
+        <div className="sticky top-0 backdrop-blur-xl bg-white/10 hover:bg-white/30 z-10 flex items-center gap-3 px-6 py-4 rounded-b-2xl transition-all duration-300 shadow-lg">
           <button
             onClick={handleAutofill}
             disabled={autofillLoading}
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 font-semibold"
+            className="bg-purple-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-purple-700 font-semibold transition-all"
           >
             {autofillLoading ? 'Automatisch invullen...' : 'Automatisch invullen met AI'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
           >
             {saving ? 'Opslaan...' : 'Opslaan'}
           </button>
