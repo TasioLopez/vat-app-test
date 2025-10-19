@@ -370,7 +370,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 <textarea className={fieldClass('work_experience')} placeholder="Werkervaring" value={employeeDetails?.work_experience || ''} onChange={e => handleDetailChange('work_experience', e.target.value)} />
                 <select className={fieldClass('education_level')} value={employeeDetails?.education_level || ''} onChange={e => handleDetailChange('education_level', e.target.value)}>
                     <option value="">Selecteer opleidingsniveau</option>
-                    {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO', 'HBO', 'WO'].map(level => (
+                    {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
                         <option key={level} value={level}>{level}</option>
                     ))}
                 </select>

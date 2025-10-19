@@ -104,7 +104,7 @@ Zoek specifiek naar deze informatie in de documenten:
 - Leeftijd werknemer - zoek naar "Leeftijd werknemer:" (bijv. "56")
 - Geslacht werknemer - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
 - Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
-- Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO, HBO, WO
+- Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
 - Rijbewijs (drivers_license) - true/false
 - Vervoer beschikbaar (has_transport) - true/false
 - Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
