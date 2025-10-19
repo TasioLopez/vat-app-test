@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import SectionEditorModal from './SectionEditorModal';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -118,6 +119,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         title: string;
         content: string;
     } | null>(null);
+    const [openModal, setOpenModal] = useState<string | null>(null);
 
     // ✅ no need to keep this in state; it's static
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
@@ -696,6 +698,59 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </div>
                 </div>
 
+                {/* NEW: Section Cards (Modal-based UI) */}
+                <div className="mt-10 pt-6 border-t">
+                    <h3 className="text-lg font-semibold mb-3">📝 Secties (klik om te bewerken in modal)</h3>
+                    <div className="space-y-2">
+                        <SectionCard
+                            title="Inleiding"
+                            content={tpData.inleiding}
+                            onClick={() => setOpenModal('inleiding')}
+                        />
+                        <SectionCard
+                            title="Sociale achtergrond & Visie werknemer"
+                            content={tpData.sociale_achtergrond || tpData.visie_werknemer}
+                            onClick={() => setOpenModal('sociale-visie')}
+                        />
+                        <SectionCard
+                            title="Visie van loopbaanadviseur"
+                            content={tpData.visie_loopbaanadviseur}
+                            onClick={() => setOpenModal('visie-adviseur')}
+                            isReadOnly
+                        />
+                        <SectionCard
+                            title="Prognose van de bedrijfsarts"
+                            content={tpData.prognose_bedrijfsarts}
+                            onClick={() => setOpenModal('prognose')}
+                        />
+                        <SectionCard
+                            title="Persoonlijk profiel & Zoekprofiel"
+                            content={tpData.persoonlijk_profiel || tpData.zoekprofiel}
+                            onClick={() => setOpenModal('profiel-zoek')}
+                        />
+                        <SectionCard
+                            title="Praktische belemmeringen"
+                            content={tpData.praktische_belemmeringen}
+                            onClick={() => setOpenModal('belemmeringen')}
+                        />
+                        <SectionCard
+                            title="AD advies over passende arbeid"
+                            content={tpData.advies_ad_passende_arbeid}
+                            onClick={() => setOpenModal('ad-advies')}
+                        />
+                        <SectionCard
+                            title="Perspectief op Werk (PoW-meter)"
+                            content={tpData.pow_meter}
+                            onClick={() => setOpenModal('pow')}
+                        />
+                        <SectionCard
+                            title="Visie op plaatsbaarheid"
+                            content={tpData.visie_plaatsbaarheid}
+                            onClick={() => setOpenModal('plaatsbaarheid')}
+                        />
+                    </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                     <button
                         onClick={saveAll}
@@ -706,6 +761,120 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </button>
                 </div>
             </div>
+            
+            {/* MODALS */}
+            <SectionEditorModal
+                isOpen={openModal === 'inleiding'}
+                onClose={() => setOpenModal(null)}
+                title="Inleiding"
+                value={tpData.inleiding || ''}
+                onChange={(v) => updateField('inleiding', v)}
+                onAutofill={genInleiding}
+                onRewrite={() => rewriteInMyStyle('inleiding', tpData.inleiding || '')}
+                isAutofilling={busy.inleiding}
+                isRewriting={rewriting.inleiding}
+                placeholder="Laat AI dit genereren — of pas handmatig aan."
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'sociale-visie'}
+                onClose={() => setOpenModal(null)}
+                title="Sociale achtergrond & Visie werknemer"
+                value={tpData.sociale_achtergrond || ''}
+                onChange={(v) => updateField('sociale_achtergrond', v)}
+                onAutofill={genSocialeVisie}
+                onRewrite={() => rewriteInMyStyle('sociale_achtergrond', tpData.sociale_achtergrond || '')}
+                isAutofilling={busy.socialeVisie}
+                isRewriting={rewriting.sociale_achtergrond}
+                extraFields={[{
+                    label: 'Visie van werknemer',
+                    value: tpData.visie_werknemer || '',
+                    onChange: (v) => updateField('visie_werknemer', v)
+                }]}
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'visie-adviseur'}
+                onClose={() => setOpenModal(null)}
+                title="Visie van loopbaanadviseur (alleen-lezen)"
+                value={tpData.visie_loopbaanadviseur || ''}
+                onChange={(v) => updateField('visie_loopbaanadviseur', v)}
+                placeholder="Vaste tekst - niet aanpasbaar via UI"
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'prognose'}
+                onClose={() => setOpenModal(null)}
+                title="Prognose van de bedrijfsarts"
+                value={tpData.prognose_bedrijfsarts || ''}
+                onChange={(v) => updateField('prognose_bedrijfsarts', v)}
+                onAutofill={genPrognose}
+                onRewrite={() => rewriteInMyStyle('prognose_bedrijfsarts', tpData.prognose_bedrijfsarts || '')}
+                isAutofilling={busy.prognose}
+                isRewriting={rewriting.prognose_bedrijfsarts}
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'profiel-zoek'}
+                onClose={() => setOpenModal(null)}
+                title="Persoonlijk profiel & Zoekprofiel"
+                value={tpData.persoonlijk_profiel || ''}
+                onChange={(v) => updateField('persoonlijk_profiel', v)}
+                onAutofill={genProfielZoekprofiel}
+                onRewrite={() => rewriteInMyStyle('persoonlijk_profiel', tpData.persoonlijk_profiel || '')}
+                isAutofilling={busy.profielZoek}
+                isRewriting={rewriting.persoonlijk_profiel}
+                extraFields={[{
+                    label: 'Zoekprofiel',
+                    value: tpData.zoekprofiel || '',
+                    onChange: (v) => updateField('zoekprofiel', v)
+                }]}
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'belemmeringen'}
+                onClose={() => setOpenModal(null)}
+                title="Praktische belemmeringen"
+                value={tpData.praktische_belemmeringen || ''}
+                onChange={(v) => updateField('praktische_belemmeringen', v)}
+                onAutofill={genBelemmeringen}
+                onRewrite={() => rewriteInMyStyle('praktische_belemmeringen', tpData.praktische_belemmeringen || '')}
+                isAutofilling={busy.belemmeringen}
+                isRewriting={rewriting.praktische_belemmeringen}
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'ad-advies'}
+                onClose={() => setOpenModal(null)}
+                title="AD advies over passende arbeid"
+                value={tpData.advies_ad_passende_arbeid || ''}
+                onChange={(v) => updateField('advies_ad_passende_arbeid', v)}
+                onAutofill={genAdAdvies}
+                onRewrite={() => rewriteInMyStyle('advies_ad_passende_arbeid', tpData.advies_ad_passende_arbeid || '')}
+                isAutofilling={busy.adAdvies}
+                isRewriting={rewriting.advies_ad_passende_arbeid}
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'pow'}
+                onClose={() => setOpenModal(null)}
+                title="Perspectief op Werk (PoW-meter)"
+                value={tpData.pow_meter || ''}
+                onChange={(v) => updateField('pow_meter', v)}
+                placeholder="Laat de werknemer dit invullen"
+            />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'plaatsbaarheid'}
+                onClose={() => setOpenModal(null)}
+                title="Visie op plaatsbaarheid"
+                value={tpData.visie_plaatsbaarheid || ''}
+                onChange={(v) => updateField('visie_plaatsbaarheid', v)}
+                onAutofill={genPlaatsbaarheid}
+                onRewrite={() => rewriteInMyStyle('visie_plaatsbaarheid', tpData.visie_plaatsbaarheid || '')}
+                isAutofilling={busy.plaatsbaarheid}
+                isRewriting={rewriting.visie_plaatsbaarheid}
+            />
 
             {/* RIGHT: preview (A4 look) */}
             <div className="w-[50%] flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden max-h-[75vh]">
@@ -718,6 +887,43 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 }
 
 /* ---------- small helpers (UI) ---------- */
+
+function SectionCard({ 
+    title, 
+    content, 
+    onClick,
+    isReadOnly 
+}: { 
+    title: string; 
+    content?: string; 
+    onClick: () => void;
+    isReadOnly?: boolean;
+}) {
+    const preview = content 
+        ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
+        : '— nog niet ingevuld —';
+        
+    return (
+        <button
+            onClick={onClick}
+            className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-400 transition group"
+        >
+            <div className="flex items-center justify-between mb-1">
+                <h3 className="font-semibold text-sm group-hover:text-blue-600">
+                    {title}
+                </h3>
+                {isReadOnly && (
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        Alleen-lezen
+                    </span>
+                )}
+            </div>
+            <p className="text-xs text-gray-600 line-clamp-2">
+                {preview}
+            </p>
+        </button>
+    );
+}
 
 function SectionHeader({
     title,
