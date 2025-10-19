@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
-import SectionEditorModal from './SectionEditorModal';
+import SectionEditorModal from '../SectionEditorModal';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
