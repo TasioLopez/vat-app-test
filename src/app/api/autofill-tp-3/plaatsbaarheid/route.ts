@@ -11,10 +11,21 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 // ---- Citation Stripping ----
 function stripCitations(text: string): string {
   if (!text) return text;
-  // Remove patterns like [4:16/ad_rapportage.pdf] or [page:line/filename.pdf]
+  
+  // Remove all citation patterns:
   return text
+    // Remove [4:16/filename.pdf] style
     .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
-    .replace(/\s{2,}/g, ' ') // Clean up double spaces
+    // Remove 【4:13†source】 style (OpenAI file search annotations)
+    .replace(/【[^】]+】/g, '')
+    // Remove any other bracket annotations with numbers
+    .replace(/\[\d+:\d+[^\]]*\]/g, '')
+    // Clean up multiple spaces
+    .replace(/\s{2,}/g, ' ')
+    // Add proper paragraph spacing (replace single newlines with double)
+    .replace(/\n/g, '\n\n')
+    // Clean up triple+ newlines back to double
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 

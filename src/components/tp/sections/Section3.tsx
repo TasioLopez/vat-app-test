@@ -519,188 +519,20 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </div>
                 )}
                 
-                {/* Inleiding */}
-                <SectionHeader
-                    title="Inleiding"
-                    actionLabel={busy.inleiding ? "Automatisch invullen..." : "Automatisch invullen — Inleiding"}
-                    onAction={genInleiding}
-                    disabled={!!busy.inleiding}
-                    onRewrite={() => rewriteInMyStyle('inleiding', tpData.inleiding || '')}
-                    rewriteDisabled={!!rewriting.inleiding}
-                    currentText={tpData.inleiding}
-                />
-                <textarea
-                    className="w-full h-[200px] border rounded text-sm p-2"
-                    value={tpData.inleiding || ""}
-                    onChange={(e) => updateField("inleiding", e.target.value)}
-                    placeholder="Laat AI dit genereren — of pas handmatig aan."
-                />
-                <p className="text-xs text-gray-600 -mt-2">
-                    {tpData.has_ad_report
-                        ? "AD-rapport gedetecteerd → AD-subblok wordt automatisch onder de inleiding getoond."
-                        : "Geen AD-rapport gedetecteerd → vaste NB-regel wordt automatisch toegevoegd."}
-                </p>
-
-                {/* Sociale + Visie werknemer */}
-                <SectionHeader
-                    title="Sociale achtergrond & Visie werknemer"
-                    actionLabel={busy.socialeVisie ? "Automatisch invullen..." : "Automatisch invullen — Sociale + Visie"}
-                    onAction={genSocialeVisie}
-                    disabled={!!busy.socialeVisie}
-                    onRewrite={() => rewriteInMyStyle('sociale_achtergrond', tpData.sociale_achtergrond || '')}
-                    rewriteDisabled={!!rewriting.sociale_achtergrond}
-                    currentText={tpData.sociale_achtergrond}
-                />
-                <label className="block text-sm font-semibold mb-1">Sociale achtergrond & maatschappelijke context</label>
-                <textarea
-                    className="w-full h-[130px] border rounded p-2 text-sm mb-3"
-                    value={tpData.sociale_achtergrond || ""}
-                    onChange={(e) => updateField("sociale_achtergrond", e.target.value)}
-                />
-                <label className="block text-sm font-semibold mb-1">Visie van werknemer</label>
-                <textarea
-                    className="w-full h-[120px] border rounded p-2 text-sm"
-                    value={tpData.visie_werknemer || ""}
-                    onChange={(e) => updateField("visie_werknemer", e.target.value)}
-                />
-
-                {/* Visie van loopbaanadviseur (vast) */}
-                <label className="block text-sm font-semibold mt-6 mb-1">Visie van loopbaanadviseur (vast)</label>
-                <textarea
-                    className="w-full h-[110px] border rounded p-2 text-sm bg-gray-50"
-                    value={tpData.visie_loopbaanadviseur || ""}
-                    onChange={(e) => updateField("visie_loopbaanadviseur", e.target.value)}
-                    readOnly
-                />
-
-                {/* Prognose van de bedrijfsarts */}
-                <SectionHeader
-                    title="Prognose van de bedrijfsarts"
-                    actionLabel={busy.prognose ? "Automatisch invullen..." : "Automatisch invullen — Prognose (FML → AD)"}
-                    onAction={genPrognose}
-                    disabled={!!busy.prognose}
-                    onRewrite={() => rewriteInMyStyle('prognose_bedrijfsarts', tpData.prognose_bedrijfsarts || '')}
-                    rewriteDisabled={!!rewriting.prognose_bedrijfsarts}
-                    currentText={tpData.prognose_bedrijfsarts}
-                />
-                <textarea
-                    className="w-full h-[110px] border rounded p-2 text-sm"
-                    value={tpData.prognose_bedrijfsarts || ""}
-                    onChange={(e) => updateField("prognose_bedrijfsarts", e.target.value)}
-                />
-
-                {/* Persoonlijk profiel + Zoekprofiel */}
-                <SectionHeader
-                    title="Persoonlijk profiel & Zoekprofiel"
-                    actionLabel={busy.profielZoek ? "Automatisch invullen..." : "Automatisch invullen — Profiel + Zoekprofiel"}
-                    onAction={genProfielZoekprofiel}
-                    disabled={!!busy.profielZoek}
-                    onRewrite={() => rewriteInMyStyle('persoonlijk_profiel', tpData.persoonlijk_profiel || '')}
-                    rewriteDisabled={!!rewriting.persoonlijk_profiel}
-                    currentText={tpData.persoonlijk_profiel}
-                />
-                <label className="block text-sm font-semibold mb-1">Persoonlijk profiel</label>
-                <textarea
-                    className="w-full h-[110px] border rounded p-2 text-sm mb-3"
-                    value={tpData.persoonlijk_profiel || ""}
-                    onChange={(e) => updateField("persoonlijk_profiel", e.target.value)}
-                />
-                <label className="block text-sm font-semibold mb-1">Zoekprofiel</label>
-                <textarea
-                    className="w-full h-[110px] border rounded p-2 text-sm"
-                    value={tpData.zoekprofiel || ""}
-                    onChange={(e) => updateField("zoekprofiel", e.target.value)}
-                />
-
-                {/* Praktische belemmeringen (Intake) */}
-                <SectionHeader
-                    title="Praktische belemmeringen (uit Intake)"
-                    actionLabel={busy.belemmeringen ? "Automatisch invullen..." : "Automatisch invullen — Belemmeringen"}
-                    onAction={genBelemmeringen}
-                    disabled={!!busy.belemmeringen}
-                    onRewrite={() => rewriteInMyStyle('praktische_belemmeringen', tpData.praktische_belemmeringen || '')}
-                    rewriteDisabled={!!rewriting.praktische_belemmeringen}
-                    currentText={tpData.praktische_belemmeringen}
-                />
-                <textarea
-                    className="w-full h-[100px] border rounded p-2 text-sm"
-                    value={tpData.praktische_belemmeringen || ""}
-                    onChange={(e) => updateField("praktische_belemmeringen", e.target.value)}
-                />
-
-                {/* AD: advies passende arbeid */}
-                <SectionHeader
-                    title="AD-advies: passende arbeid (extract)"
-                    actionLabel={busy.adAdvies ? "Extraheren..." : "Extraheren — AD-advies"}
-                    onAction={genAdAdvies}
-                    disabled={!!busy.adAdvies}
-                    onRewrite={() => rewriteInMyStyle('advies_ad_passende_arbeid', tpData.advies_ad_passende_arbeid || '')}
-                    rewriteDisabled={!!rewriting.advies_ad_passende_arbeid}
-                    currentText={tpData.advies_ad_passende_arbeid}
-                />
-                <textarea
-                    className="w-full h-[90px] border rounded p-2 text-sm"
-                    value={tpData.advies_ad_passende_arbeid || ""}
-                    onChange={(e) => updateField("advies_ad_passende_arbeid", e.target.value)}
-                />
-
-                {/* PoW-meter (own fill by worker) */}
-                <label className="block text-sm font-semibold mt-6 mb-1">Perspectief op Werk (PoW-meter)</label>
-                <textarea
-                    className="w-full h-[80px] border rounded p-2 text-sm"
-                    value={tpData.pow_meter || ""}
-                    onChange={(e) => updateField("pow_meter", e.target.value)}
-                    placeholder="Laat de werknemer dit invullen (korte toelichting of score)."
-                />
-
-                {/* Visie op plaatsbaarheid */}
-                <SectionHeader
-                    title="Visie op plaatsbaarheid"
-                    actionLabel={busy.plaatsbaarheid ? "Automatisch invullen..." : "Automatisch invullen — Plaatsbaarheid (gebaseerd op zoekprofiel)"}
-                    onAction={genPlaatsbaarheid}
-                    disabled={!!busy.plaatsbaarheid}
-                    onRewrite={() => rewriteInMyStyle('visie_plaatsbaarheid', tpData.visie_plaatsbaarheid || '')}
-                    rewriteDisabled={!!rewriting.visie_plaatsbaarheid}
-                    currentText={tpData.visie_plaatsbaarheid}
-                />
-                <textarea
-                    className="w-full h-[120px] border rounded p-2 text-sm"
-                    value={tpData.visie_plaatsbaarheid || ""}
-                    onChange={(e) => updateField("visie_plaatsbaarheid", e.target.value)}
-                    placeholder="AI stelt 3–5 passende functies met korte motivatie voor."
-                />
-
-                {/* Trajectdoel & activiteiten (selector) */}
-                <div className="mt-8">
-                    <SectionHeader
-                        title="Trajectdoel en in te zetten activiteiten"
-                        actionLabel="—" onAction={() => { }} disabled
-                    />
-                    <p className="text-xs text-gray-600 mb-2">
-                        Vink de activiteiten aan die je in het trajectplan wilt opnemen.
-                    </p>
-                    <div className="space-y-2">
-                        {activities.filter(a => a).map((a) => {
-                            const checked = selectedActivities.includes(a.id);
-                            return (
-                                <label key={a.id} className="flex items-start gap-2 p-2 border rounded hover:bg-gray-50">
-                                    <input type="checkbox" className="mt-1" checked={checked} onChange={() => toggleActivity(a.id)} />
-                                    <div>
-                                        <div className="font-medium">{a.title}</div>
-                                        <div className="text-xs text-gray-600 line-clamp-2">{a.body}</div>
-                                    </div>
-                                </label>
-                            );
-                        })}
-                        {activities.length === 0 && (
-                            <div className="text-xs text-gray-500 italic">Geen activiteiten geladen.</div>
-                        )}
-                    </div>
+                {/* Sticky Save Button at the top */}
+                <div className="sticky top-0 backdrop-blur-2xl bg-gray-50/5 hover:bg-gray-50/15 z-10 flex items-center gap-3 px-6 py-4 rounded-b-3xl transition-all duration-300">
+                    <button
+                        onClick={saveAll}
+                        disabled={saving}
+                        className="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-blue-700 font-semibold transition-all"
+                    >
+                        {saving ? "Opslaan..." : "Opslaan"}
+                    </button>
                 </div>
-
-                {/* NEW: Section Cards (Modal-based UI) */}
-                <div className="mt-10 pt-6 border-t">
-                    <h3 className="text-lg font-semibold mb-3">📝 Secties (klik om te bewerken in modal)</h3>
+                
+                {/* Section Cards - MOVED TO TOP */}
+                <div className="space-y-2">
+                    <h3 className="text-lg font-semibold mb-3">📝 Secties</h3>
                     <div className="space-y-2">
                         <SectionCard
                             title="Inleiding"
@@ -751,14 +583,32 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </div>
                 </div>
 
-                <div className="flex gap-3 pt-2">
-                    <button
-                        onClick={saveAll}
-                        disabled={saving}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                        {saving ? "Opslaan..." : "Opslaan"}
-                    </button>
+                {/* Trajectdoel & activiteiten - KEEP THIS */}
+                <div className="mt-8">
+                    <SectionHeader
+                        title="Trajectdoel en in te zetten activiteiten"
+                        actionLabel="—" onAction={() => { }} disabled
+                    />
+                    <p className="text-xs text-gray-600 mb-2">
+                        Vink de activiteiten aan die je in het trajectplan wilt opnemen.
+                    </p>
+                    <div className="space-y-2">
+                        {activities.filter(a => a).map((a) => {
+                            const checked = selectedActivities.includes(a.id);
+                            return (
+                                <label key={a.id} className="flex items-start gap-2 p-2 border rounded hover:bg-gray-50">
+                                    <input type="checkbox" className="mt-1" checked={checked} onChange={() => toggleActivity(a.id)} />
+                                    <div>
+                                        <div className="font-medium">{a.title}</div>
+                                        <div className="text-xs text-gray-600 line-clamp-2">{a.body}</div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                        {activities.length === 0 && (
+                            <div className="text-xs text-gray-500 italic">Geen activiteiten geladen.</div>
+                        )}
+                    </div>
                 </div>
             </div>
             
