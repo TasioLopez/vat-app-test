@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
-import type { ChatCompletionMessageParam } from "openai/resources";
-import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static"; // make sure this export exists
-import { MijnStemService } from "@/lib/mijn-stem-service";
+import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static";
 
 // ---- INIT ----
 const supabase = createClient(
@@ -12,85 +10,13 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-// ---- helpers ----
+// ---- Helper Functions ----
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (m?.[1]) return m[1];
   if (url?.startsWith("documents/")) return url.slice("documents/".length);
   if (url && !url.includes("://") && !url.includes("object/")) return url;
   return null;
-}
-
-// Simple PDF text extraction that works 100% in Vercel
-async function readPdfFromStorage(path: string): Promise<string> {
-  const { data: file } = await supabase.storage.from("documents").download(path);
-  if (!file) return "";
-  const buf = Buffer.from(await file.arrayBuffer());
-  
-  try {
-    // Convert buffer to string and extract readable text
-    const bufferString = buf.toString('utf8');
-    
-    // Look for specific patterns from TP documents
-    const patterns = [
-      /inleiding[^:]*:\s*([^\n\r]+)/i,
-      /arbeidsdeskundig[^:]*:\s*([^\n\r]+)/i,
-      /rapport[^:]*:\s*([^\n\r]+)/i,
-      /advies[^:]*:\s*([^\n\r]+)/i,
-      /functieomschrijving[^:]*:\s*([^\n\r]+)/i,
-      /intake[^:]*:\s*([^\n\r]+)/i,
-      /datum[^:]*:\s*([^\n\r]+)/i,
-      /naam[^:]*:\s*([^\n\r]+)/i
-    ];
-    
-    const extractedInfo: string[] = [];
-    
-    for (const pattern of patterns) {
-      const match = bufferString.match(pattern);
-      if (match) {
-        extractedInfo.push(`${pattern.source}: ${match[1]}`);
-      }
-    }
-    
-    if (extractedInfo.length > 0) {
-      const text = extractedInfo.join('\n');
-      console.log('📄 TP Inleiding PDF extraction successful, found patterns:', extractedInfo.length);
-      return text;
-    }
-    
-    // Fallback: extract any readable text
-    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
-    if (readableText && readableText.length > 0) {
-      const text = readableText.join(' ');
-      console.log('📄 TP Inleiding PDF extraction successful, extracted readable text');
-      return text;
-    }
-    
-    return "";
-  } catch (error: any) {
-    console.error('TP Inleiding PDF extraction failed:', error.message);
-    return "";
-  }
-}
-
-async function getDocTextByTypes(employeeId: string, candidates: string[]) {
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("type,url,uploaded_at")
-    .eq("employee_id", employeeId)
-    .order("uploaded_at", { ascending: false });
-
-  if (!docs?.length) return "";
-
-  for (const c of candidates) {
-    const hit = docs.find(d => (d.type || "").toLowerCase().includes(c));
-    if (!hit?.url) continue;
-    const path = extractStoragePath(hit.url);
-    if (!path) continue;
-    const text = await readPdfFromStorage(path);
-    if (text && text.length > 50) return text;
-  }
-  return "";
 }
 
 function nlDate(iso?: string) {
@@ -100,136 +26,320 @@ function nlDate(iso?: string) {
   return d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// ---- ROUTE ----
+// Gender-based pronoun helpers
+function getGenderPronoun(gender?: string, type: 'possessive' | 'subject' | 'informal'): string {
+  const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
+  switch(type) {
+    case 'possessive': return isMale ? 'zijn' : 'haar';
+    case 'subject': return isMale ? 'Hij' : 'Zij';
+    case 'informal': return isMale ? 'Hij' : 'Ze';
+    default: return isMale ? 'zijn' : 'haar';
+  }
+}
+
+function getTitlePrefix(gender?: string): string {
+  const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
+  return isMale ? 'meneer' : 'mevrouw';
+}
+
+function getTitleAbbrev(gender?: string): string {
+  const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
+  return isMale ? 'dhr.' : 'mevr.';
+}
+
+function getInitials(firstName?: string): string {
+  if (!firstName) return '';
+  return firstName.split(' ').map(n => n[0]?.toUpperCase()).filter(Boolean).join('. ') + '.';
+}
+
+// ---- Build Detailed Assistant Instructions ----
+function buildInleidingInstructions(context: any): string {
+  const { employee, details, meta, client } = context;
+  
+  const gender = details?.gender;
+  const pronPoss = getGenderPronoun(gender, 'possessive');
+  const pronSubj = getGenderPronoun(gender, 'subject');
+  const pronInf = getGenderPronoun(gender, 'informal');
+  const title = getTitlePrefix(gender);
+  const titleAbbrev = getTitleAbbrev(gender);
+  
+  const empInitials = getInitials(employee?.first_name);
+  const empLastName = employee?.last_name || '';
+  const currentJob = (details?.current_job || '').toLowerCase();
+  
+  const hasFML = !!meta?.fml_izp_lab_date;
+  const fmlDate = nlDate(meta?.fml_izp_lab_date);
+  const hasAD = !!meta?.has_ad_report;
+  const adDate = nlDate(meta?.ad_report_date);
+  const firstSickDay = nlDate(meta?.first_sick_day);
+  
+  const refInitials = getInitials(client?.referent_first_name);
+  const refLastName = client?.referent_last_name || '';
+  const refTitle = getTitlePrefix(client?.referent_gender);
+  const companyName = client?.name || '';
+  
+  return `
+Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
+
+Schrijf de "Inleiding" sectie voor een trajectplan volgens EXACT deze 8-alinea structuur:
+
+ALINEA 1 - Introductie met naam:
+- Formaat: "${empInitials} ${empLastName} (hierna werknemer te noemen) is..."
+- Gebruik EXACT de tekst "(hierna werknemer te noemen)" - GEEN variaties zoals "(hierna: werknemer)"
+- Vermeld kort de situatie
+
+ALINEA 2 - Medische reden:
+- GEBRUIK ALTIJD "medische beperking" (ENKELVOUD) - NOOIT "medische beperkingen" (meervoud)
+- Functie in kleine letters: "${currentJob}"
+- Eerste ziektedag: ${firstSickDay || 'zie documenten'}
+- Voorbeeld: "Werknemer is sinds [datum] arbeidsongeschikt als gevolg van een medische beperking waardoor ${pronSubj.toLowerCase()} niet meer kan werken als ${currentJob}."
+
+ALINEA 3 - Functieomschrijving:
+- Begin met "**Functieomschrijving:**" (met vetgedrukt label)
+- Haal beschrijving uit documenten of gebruik placeholder indien niet beschikbaar
+
+ALINEA 4 - Aanmelder/Contactpersoon:
+- Formaat: "Werknemer is door ${refTitle} ${refInitials} ${refLastName} [functie] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
+- Als er een "extra aanmelder" in documenten staat, gebruik dan: "Werknemer is door [extra aanmelder details] In opdracht van: ${refTitle} ${refInitials} ${refLastName} [functie] ${companyName} aangemeld..."
+
+ALINEA 5 - Medische informatie & FML:
+${hasFML ? `
+- Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding en de daarbij horende gezondheidsproblematiek."
+- Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de [FML/IZP/LAB - bepaal welke] van ${fmlDate} op het gebied van [extract beperkingen uit hoofdstuk 5 van document]."
+` : `
+- Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding, de aanleiding hiervan en de bijbehorende gezondheidsproblemen."
+- Vervolg: "${pronInf} geeft aan medische beperkingen te hebben: [vul in indien beschikbaar]."
+`}
+- EINDIG ALTIJD MET: "Conform de wetgeving rondom de verwerking van persoonsgegevens wordt medische informatie niet geregistreerd in dit rapport."
+
+ALINEA 6 - Spoor 1 re-integratie status:
+- Check documenten of werknemer re-integreert in spoor 1
+- Als JA: "Op het moment van de intake re-integreert werknemer in spoor 1 door [frequency bijv. twee keer per week] [hours bijv. twee uur] per [aangepaste/eigen] werkzaamheden te verrichten."
+- Als NEE: "Werknemer geeft tijdens het intakegesprek aan niet in spoor 1 of elders te re-integreren." [Voeg toe indien contact info: "${pronInf} heeft 2-wekelijks telefonisch contact met ${pronPoss} werkgever."]
+
+ALINEA 7 - Trajectdoel (VASTE TEKST - gebruik exact):
+"Tijdens het gesprek is toegelicht wat het doel is van het 2e spoortraject. Werknemer geeft aan het belang van dit traject te begrijpen en hieraan mee te willen werken. In het 2e spoor zal onder andere worden onderzocht welke passende mogelijkheden er op de arbeidsmarkt beschikbaar zijn."
+
+ALINEA 8 - AD-rapport status:
+${hasAD ? `
+- "In het (Concept) Arbeidsdeskundige rapport opgesteld door ${titleAbbrev} [naam arbeidsdeskundige uit documenten] op ${adDate} staat het volgende:"
+- [Vat AD advies samen in 2-3 zinnen]
+` : `
+- "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
+`}
+
+BELANGRIJKE REGELS:
+- Gender pronouns: ${pronPoss} (possessive), ${pronSubj} (subject), ${pronInf} (informal)
+- Zakelijk en AVG-proof (GEEN diagnoses)
+- Gebruik ALLEEN informatie uit de documenten
+- Volg de 8-alinea structuur EXACT
+
+Return ONLY a JSON object:
+{
+  "inleiding_main": "string met alinea 1-7",
+  "inleiding_sub": "string met alinea 8 (AD-rapport deel)"
+}
+`.trim();
+}
+
+// ---- Assistants API Implementation ----
+async function processDocumentsWithAssistant(
+  docs: any[],
+  context: any
+): Promise<{ inleiding_main: string; inleiding_sub: string }> {
+  
+  console.log('🚀 Creating OpenAI Assistant for Inleiding generation...');
+  
+  // Step 1: Create assistant with detailed instructions
+  const assistant = await openai.beta.assistants.create({
+    name: "TP Inleiding Generator",
+    instructions: buildInleidingInstructions(context),
+    model: "gpt-4o",
+    tools: [{ type: "file_search" }]
+  });
+
+  console.log('✅ Created assistant:', assistant.id);
+
+  // Step 2: Upload PDFs directly to OpenAI
+  const fileIds: string[] = [];
+  for (const doc of docs) {
+    if (!doc.url) continue;
+    
+    const path = extractStoragePath(doc.url);
+    if (!path) continue;
+    
+    console.log('📥 Downloading document:', doc.type);
+    const { data: file } = await supabase.storage.from('documents').download(path);
+    if (!file) continue;
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    
+    const uploadedFile = await openai.files.create({
+      file: new File([buffer], `${doc.type}.pdf`, { type: 'application/pdf' }),
+      purpose: "assistants"
+    });
+    fileIds.push(uploadedFile.id);
+    console.log('✅ Uploaded file:', uploadedFile.id);
+  }
+
+  if (fileIds.length === 0) {
+    throw new Error('No files could be uploaded');
+  }
+
+  // Step 3: Create thread with files
+  const thread = await openai.beta.threads.create({
+    messages: [{
+      role: "user",
+      content: "Analyseer deze documenten en genereer de Inleiding sectie volgens de instructies.",
+      attachments: fileIds.map(id => ({ 
+        file_id: id, 
+        tools: [{ type: "file_search" }] 
+      }))
+    }]
+  });
+
+  console.log('✅ Created thread:', thread.id);
+
+  // Step 4: Run assistant
+  const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+    assistant_id: assistant.id
+  });
+
+  console.log('✅ Assistant run completed with status:', run.status);
+
+  // Step 5: Get response
+  if (run.status === 'completed') {
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const response = messages.data[0].content[0];
+    
+    if (response.type === 'text') {
+      console.log('📄 Raw assistant response:', response.text.value);
+      
+      // Clean the response
+      let cleanedResponse = response.text.value
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '');
+      
+      const firstBrace = cleanedResponse.indexOf('{');
+      const lastBrace = cleanedResponse.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+      }
+      
+      console.log('🧹 Cleaned response:', cleanedResponse);
+      const result = JSON.parse(cleanedResponse);
+      console.log('✅ Parsed result:', result);
+      
+      // Cleanup
+      await openai.beta.assistants.delete(assistant.id);
+      for (const fileId of fileIds) {
+        await openai.files.delete(fileId);
+      }
+      console.log('✅ Cleaned up assistant and files');
+      
+      return result;
+    }
+  }
+  
+  throw new Error(`Assistant run failed: ${run.status}`);
+}
+
+// ---- Main Route Handler ----
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
-    // Light meta (optional)
+    // Fetch all required data
     const { data: employee } = await supabase
       .from("employees")
-      .select("first_name,last_name,client_id")
+      .select("first_name, last_name, client_id")
       .eq("id", employeeId)
       .single();
 
     const { data: details } = await supabase
       .from("employee_details")
-      .select("intake_date")
+      .select("current_job, gender, contract_hours")
       .eq("employee_id", employeeId)
       .single();
 
     const { data: meta } = await supabase
       .from("tp_meta")
-      .select("intake_date, ad_report_date, client_name")
+      .select("*")
       .eq("employee_id", employeeId)
       .single();
 
-    // Sources: AD > Intake (tolerant to multiple naming variants)
-    const AD_TEXT = await getDocTextByTypes(employeeId, [
-      "ad_rapport", "ad-rapport", "adrapport",
-      "ad_rapportage", "ad-rapportage",
-      "arbeidsdeskund" // catches "arbeidsdeskundig(e) rapportage"
-    ]);
-    const INTAKE_TEXT = await getDocTextByTypes(employeeId, [
-      "intakeformulier", "intake-formulier", "intake"
-    ]);
+    const { data: client } = await supabase
+      .from("clients")
+      .select("name, referent_first_name, referent_last_name")
+      .eq("id", employee?.client_id)
+      .single();
 
-    const hasAD = AD_TEXT.length > 200; // simple heuristic
-    const intakeDate = nlDate(details?.intake_date || meta?.intake_date);
+    // Fetch all documents
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("type, url, uploaded_at")
+      .eq("employee_id", employeeId)
+      .order("uploaded_at", { ascending: false });
 
-    if (!AD_TEXT && !INTAKE_TEXT) {
-      return NextResponse.json({ error: "Geen leesbare documenten gevonden" }, { status: 200 });
+    if (!docs || docs.length === 0) {
+      return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
 
-    // ---- Prompt (function calling → strict JSON back) ----
-    const systemPrompt = `
-Je bent een NL re-integratie-rapportage assistent.
-Schrijf "Inleiding" in de stijl van de ValentineZ-voorbeelden:
-- 4–7 korte alinea's, zakelijk/AVG-proof (geen diagnoses).
-- Neem een "Functieomschrijving:" alinea op (label vet).
-- Gebruik primair AD-tekst; als geen AD, gebruik Intake-tekst.
-Returneer uitsluitend via function-call met:
-{ inleiding_main: string, inleiding_sub: string }
-  • Als AD aanwezig → inleiding_sub = blok dat exact begint met "In het Arbeidsdeskundige rapport ...", incl. naam/initialen (indien herkenbaar), datum (indien herkenbaar) en de samenvatting van advies.
-  • Als geen AD → inleiding_sub leeg laten (client voegt vaste NB in).
-`.trim();
-
-    const userPrompt = `
-CONTEXT:
-- has_ad: ${hasAD}
-- intake_date_nl: "${intakeDate}"
-- employee: ${JSON.stringify(employee || {})}
-- meta: ${JSON.stringify(meta || {})}
-
-AD SOURCE (kan leeg):
-${AD_TEXT.slice(0, 20000)}
-
-INTAKE SOURCE (kan leeg):
-${INTAKE_TEXT.slice(0, 20000)}
-`.trim();
-
-    const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ];
-
-    const tool = {
-      type: "function" as const,
-      function: {
-        name: "build_inleiding",
-        description: "Bouw Inleiding + sub-blok (strings).",
-        parameters: {
-          type: "object",
-          properties: {
-            inleiding_main: { type: "string" },
-            inleiding_sub: { type: "string" },
-          },
-          required: ["inleiding_main", "inleiding_sub"],
-        },
-      },
+    // Sort documents by priority
+    const docPriority: { [key: string]: number } = {
+      'intakeformulier': 1,
+      'ad_rapportage': 2,
+      'ad_rapport': 2,
+      'fml': 3,
+      'izp': 3,
+      'lab': 3,
+      'extra': 4,
     };
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",           // supports tool calling reliably
-      temperature: 0.1,
-      messages,
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: "build_inleiding" } },
+    const sortedDocs = docs.sort((a, b) => {
+      const aType = (a.type || '').toLowerCase();
+      const bType = (b.type || '').toLowerCase();
+      const aPriority = docPriority[aType] || 5;
+      const bPriority = docPriority[bType] || 5;
+      return aPriority - bPriority;
     });
 
-    const call = completion.choices[0]?.message?.tool_calls?.[0];
-    const args = call?.function?.arguments;
-    if (!args) {
-      return NextResponse.json({ error: "Geen inleiding gevonden" }, { status: 200 });
+    // Build context object
+    const context = { employee, details, meta, client };
+    
+    // Process documents with assistant
+    const extracted = await processDocumentsWithAssistant(sortedDocs, context);
+    
+    let { inleiding_main, inleiding_sub } = extracted;
+    
+    // Enforce NB default if no AD
+    const hasAD = meta?.has_ad_report || false;
+    if (!hasAD || !inleiding_sub) {
+      inleiding_sub = NB_DEFAULT_GEEN_AD;
     }
-
-    let parsed: { inleiding_main?: string; inleiding_sub?: string } | null = null;
-    try { parsed = JSON.parse(args); } catch { parsed = null; }
-
-    const main = (parsed?.inleiding_main || "").trim();
-    let sub = (parsed?.inleiding_sub || "").trim();
-
-    if (!main) {
-      return NextResponse.json({ error: "Geen inleiding gevonden" }, { status: 200 });
-    }
-
-    // If no AD, enforce NB line
-    if (!hasAD || !sub) sub = NB_DEFAULT_GEEN_AD;
-
-    // Persist (optional)
+    
+    // Persist to database
     await supabase.from("tp_meta").upsert(
-      { employee_id: employeeId, inleiding: main, inleiding_sub: sub, has_ad_report: hasAD } as any,
+      { 
+        employee_id: employeeId, 
+        inleiding: inleiding_main, 
+        inleiding_sub, 
+        has_ad_report: hasAD 
+      } as any,
       { onConflict: "employee_id" }
     );
 
     return NextResponse.json({
-      details: { inleiding: main, inleiding_sub: sub, has_ad_report: hasAD },
+      details: { inleiding: inleiding_main, inleiding_sub, has_ad_report: hasAD },
       autofilled_fields: ["inleiding", "inleiding_sub", "has_ad_report"],
     });
   } catch (err: any) {
     console.error("❌ Autofill inleiding error:", err);
-    return NextResponse.json({ error: "Server error", details: err?.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Server error", 
+      details: err?.message 
+    }, { status: 500 });
   }
 }
