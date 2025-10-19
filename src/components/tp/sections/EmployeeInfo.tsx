@@ -441,7 +441,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
-        <div className="sticky top-0 backdrop-blur-xl bg-white/10 hover:bg-white/30 z-10 flex items-center gap-3 px-6 py-4 rounded-b-2xl transition-all duration-300 shadow-lg">
+        <div className="sticky top-0 backdrop-blur-2xl bg-gray-50/5 hover:bg-gray-50/15 z-10 flex items-center gap-3 px-6 py-4 rounded-b-3xl transition-all duration-300">
           <button
             onClick={handleAutofill}
             disabled={autofillLoading}
