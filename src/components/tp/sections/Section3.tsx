@@ -438,16 +438,89 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
+    const genVisieAdviseur = async () => {
+        if (busy.visieAdviseur) return;
+        setBusy(prev => ({ ...prev, visieAdviseur: true }));
+        setAutofillMessage(null);
+        
+        try {
+            const res = await fetch(`/api/autofill-tp-3/visie-adviseur?employeeId=${employeeId}`);
+            const json = await res.json();
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("visie_loopbaanadviseur", json.details.visie_loopbaanadviseur || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Visie van loopbaanadviseur sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_loopbaanadviseur'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
+        } catch (err) {
+            console.error("❌ Autofill failed for visie-adviseur:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
+        } finally {
+            setBusy(prev => ({ ...prev, visieAdviseur: false }));
+        }
+    };
+
     const genPrognose = async () => {
         if (busy.prognose) return;
         setBusy(prev => ({ ...prev, prognose: true }));
+        setAutofillMessage(null);
+        
         try {
-            const res = await fetch(`/api/autofill-tp-3/prognose?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/prognose-bedrijfsarts?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) updateField("prognose_bedrijfsarts", json.content);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("prognose_bedrijfsarts", json.details.prognose_bedrijfsarts || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Prognose van bedrijfsarts sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'prognose_bedrijfsarts'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
         } catch (err) {
-            console.error("❌ Autofill failed for prognose:", err);
+            console.error("❌ Autofill failed for prognose-bedrijfsarts:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, prognose: false }));
         }
@@ -627,7 +700,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             title="Visie van loopbaanadviseur"
                             content={tpData.visie_loopbaanadviseur}
                             onClick={() => setOpenModal('visie-adviseur')}
-                            isReadOnly
                         />
                         <SectionCard
                             title="Prognose van de bedrijfsarts"
@@ -732,10 +804,14 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             <SectionEditorModal
                 isOpen={openModal === 'visie-adviseur'}
                 onClose={() => setOpenModal(null)}
-                title="Visie van loopbaanadviseur (alleen-lezen)"
+                title="Visie van loopbaanadviseur"
                 value={tpData.visie_loopbaanadviseur || ''}
                 onChange={(v) => updateField('visie_loopbaanadviseur', v)}
-                placeholder="Vaste tekst - niet aanpasbaar via UI"
+                onAutofill={genVisieAdviseur}
+                onRewrite={() => rewriteInMyStyle('visie_loopbaanadviseur', tpData.visie_loopbaanadviseur || '')}
+                isAutofilling={busy.visieAdviseur}
+                isRewriting={rewriting.visie_loopbaanadviseur}
+                placeholder="Laat AI dit genereren uit FML/IZP documenten — of pas handmatig aan."
             />
             
             <SectionEditorModal
@@ -748,6 +824,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 onRewrite={() => rewriteInMyStyle('prognose_bedrijfsarts', tpData.prognose_bedrijfsarts || '')}
                 isAutofilling={busy.prognose}
                 isRewriting={rewriting.prognose_bedrijfsarts}
+                placeholder="Laat AI dit genereren uit FML/IZP/AD documenten — of pas handmatig aan."
             />
             
             <SectionEditorModal
