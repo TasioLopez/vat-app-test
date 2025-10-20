@@ -13,7 +13,7 @@ function stripCitations(text: string): string {
   if (!text) return text;
   
   // Remove all citation patterns:
-  return text
+  let cleaned = text
     // Remove [4:16/filename.pdf] style
     .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
     // Remove 【4:13†source】 style (OpenAI file search annotations)
@@ -22,11 +22,10 @@ function stripCitations(text: string): string {
     .replace(/\[\d+:\d+[^\]]*\]/g, '')
     // Clean up multiple spaces
     .replace(/\s{2,}/g, ' ')
-    // Add proper paragraph spacing (replace single newlines with double)
-    .replace(/\n/g, '\n\n')
-    // Clean up triple+ newlines back to double
-    .replace(/\n{3,}/g, '\n\n')
     .trim();
+    
+  // Don't modify newlines - let the original formatting from AI remain
+  return cleaned;
 }
 
 function extractStoragePath(url: string): string | null {
