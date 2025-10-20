@@ -157,6 +157,14 @@ export default function RichTextEditor({
     onChange(markdown);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Handle Enter key for proper paragraph breaks
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.execCommand('insertHTML', false, '<br><br>');
+    }
+  };
+
   const htmlToMarkdown = (html: string): string => {
     return html
       .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
@@ -191,6 +199,18 @@ export default function RichTextEditor({
       .replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>')
       .replace(/\n/g, '<br>');
   };
+
+  // Use a ref to avoid cursor jumping
+  const editorRef = React.useRef<HTMLDivElement>(null);
+  const [isInitialized, setIsInitialized] = React.useState(false);
+
+  // Initialize content only once
+  React.useEffect(() => {
+    if (editorRef.current && !isInitialized && value) {
+      editorRef.current.innerHTML = markdownToHtml(value);
+      setIsInitialized(true);
+    }
+  }, [value, isInitialized]);
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -234,9 +254,10 @@ export default function RichTextEditor({
       {/* WYSIWYG Editor */}
       <div className="relative">
         <div
+          ref={editorRef}
           contentEditable
           onInput={handleContentChange}
-          dangerouslySetInnerHTML={{ __html: markdownToHtml(value) }}
+          onKeyDown={handleKeyDown}
           className="w-full p-4 text-sm leading-relaxed focus:outline-none"
           style={{ minHeight }}
         />

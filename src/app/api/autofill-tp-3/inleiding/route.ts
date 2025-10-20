@@ -251,6 +251,10 @@ async function processDocumentsWithAssistant(
       console.log('🧹 Cleaned response:', cleanedResponse);
       const result = JSON.parse(cleanedResponse);
       
+      // Debug: Log the raw AI response to see paragraph formatting
+      console.log('🔍 Raw AI inleiding_main:', JSON.stringify(result.inleiding_main));
+      console.log('🔍 Raw AI inleiding_sub:', JSON.stringify(result.inleiding_sub));
+      
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
       result.inleiding_sub = stripCitations(result.inleiding_sub || '');
