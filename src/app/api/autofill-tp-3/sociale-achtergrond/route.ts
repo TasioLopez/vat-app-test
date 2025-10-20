@@ -100,21 +100,18 @@ async function runAssistant(files: string[]) {
     ],
   });
 
-  const threadId = thread.id;
-  const runCreated: any = await openai.beta.threads.runs.create(threadId, { assistant_id: assistant.id });
-  const runId: string = runCreated?.id;
-  if (!threadId || !runId || !runId.startsWith('run_')) {
-    throw new Error(`Invalid IDs for assistant run: threadId=${threadId}, runId=${runId}`);
-  }
-  let run: any = runCreated;
-  for (let i = 0; i < 40; i++) {
-    await new Promise((r) => setTimeout(r, 1500));
-    run = await (openai as any).beta.threads.runs.retrieve(threadId as any, runId as any);
-    if (run.status === 'completed') break;
-    if (['failed','cancelled','expired','incomplete'].includes(run.status)) throw new Error(`Assistant run failed: ${run.status}`);
+  // Use createAndPoll like the working inleiding route
+  const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+    assistant_id: assistant.id
+  });
+
+  console.log('✅ Assistant run completed with status:', run.status);
+
+  if (run.status !== 'completed') {
+    throw new Error(`Assistant run failed: ${run.status}`);
   }
 
-  const msgs = await openai.beta.threads.messages.list(threadId);
+  const msgs = await openai.beta.threads.messages.list(thread.id);
   const text = msgs.data[0]?.content?.[0]?.type === 'text' ? msgs.data[0].content[0].text.value : '';
 
   // Try to extract JSON object
@@ -123,7 +120,6 @@ async function runAssistant(files: string[]) {
   let parsed: any = {};
   try { parsed = JSON.parse(jsonStr); } catch { parsed = { sociale_achtergrond: text }; }
 
-  // Optional cleanup intentionally skipped to avoid SDK type incompatibilities during build
   return parsed;
 }
 

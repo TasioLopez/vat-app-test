@@ -353,15 +353,42 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const genSocialeAchtergrond = async () => {
         if (busy.socialeAchtergrond) return;
         setBusy(prev => ({ ...prev, socialeAchtergrond: true }));
+        setAutofillMessage(null);
+        
         try {
             const res = await fetch(`/api/autofill-tp-3/sociale-achtergrond?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
             if (json.details) {
                 updateField("sociale_achtergrond", json.details.sociale_achtergrond || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Sociale achtergrond sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'sociale_achtergrond'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
             }
         } catch (err) {
             console.error("❌ Autofill failed for sociale-achtergrond:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, socialeAchtergrond: false }));
         }
@@ -370,15 +397,42 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const genVisieWerknemer = async () => {
         if (busy.visieWerknemer) return;
         setBusy(prev => ({ ...prev, visieWerknemer: true }));
+        setAutofillMessage(null);
+        
         try {
             const res = await fetch(`/api/autofill-tp-3/visie-werknemer?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
             if (json.details) {
                 updateField("visie_werknemer", json.details.visie_werknemer || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Visie van werknemer sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_werknemer'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
             }
         } catch (err) {
             console.error("❌ Autofill failed for visie-werknemer:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, visieWerknemer: false }));
         }

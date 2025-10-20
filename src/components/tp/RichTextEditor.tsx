@@ -150,12 +150,6 @@ export default function RichTextEditor({
     }, 0);
   };
   
-  const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
-    const content = e.currentTarget.innerHTML;
-    // Convert HTML back to markdown for storage
-    const markdown = htmlToMarkdown(content);
-    onChange(markdown);
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // Handle Enter key for proper paragraph breaks
@@ -188,14 +182,37 @@ export default function RichTextEditor({
   // Use a ref to avoid cursor jumping
   const editorRef = React.useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [lastExternalValue, setLastExternalValue] = React.useState(value);
+  const [isUserTyping, setIsUserTyping] = React.useState(false);
 
   // Initialize content only once
   React.useEffect(() => {
     if (editorRef.current && !isInitialized && value) {
       editorRef.current.innerHTML = markdownToHtml(value);
       setIsInitialized(true);
+      setLastExternalValue(value);
     }
   }, [value, isInitialized]);
+
+  // Handle external value changes (from autofill)
+  React.useEffect(() => {
+    if (editorRef.current && isInitialized && value !== lastExternalValue && !isUserTyping) {
+      // External change detected - update editor content
+      editorRef.current.innerHTML = markdownToHtml(value);
+      setLastExternalValue(value);
+    }
+  }, [value, lastExternalValue, isInitialized, isUserTyping]);
+
+  const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
+    setIsUserTyping(true);
+    const content = e.currentTarget.innerHTML;
+    // Convert HTML back to markdown for storage
+    const markdown = htmlToMarkdown(content);
+    onChange(markdown);
+    
+    // Reset user typing flag after a short delay
+    setTimeout(() => setIsUserTyping(false), 100);
+  };
 
   return (
     <div className="border rounded-lg overflow-hidden">
