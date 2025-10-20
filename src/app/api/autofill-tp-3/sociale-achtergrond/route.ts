@@ -100,15 +100,21 @@ async function runAssistant(files: string[]) {
     ],
   });
 
-  let run: any = await openai.beta.threads.runs.create(thread.id, { assistant_id: assistant.id });
+  const threadId = thread.id;
+  const runCreated: any = await openai.beta.threads.runs.create(threadId, { assistant_id: assistant.id });
+  const runId: string = runCreated?.id;
+  if (!threadId || !runId || !runId.startsWith('run_')) {
+    throw new Error(`Invalid IDs for assistant run: threadId=${threadId}, runId=${runId}`);
+  }
+  let run: any = runCreated;
   for (let i = 0; i < 40; i++) {
     await new Promise((r) => setTimeout(r, 1500));
-    run = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    run = await (openai as any).beta.threads.runs.retrieve(threadId as any, runId as any);
     if (run.status === 'completed') break;
     if (['failed','cancelled','expired','incomplete'].includes(run.status)) throw new Error(`Assistant run failed: ${run.status}`);
   }
 
-  const msgs = await openai.beta.threads.messages.list(thread.id);
+  const msgs = await openai.beta.threads.messages.list(threadId);
   const text = msgs.data[0]?.content?.[0]?.type === 'text' ? msgs.data[0].content[0].text.value : '';
 
   // Try to extract JSON object
