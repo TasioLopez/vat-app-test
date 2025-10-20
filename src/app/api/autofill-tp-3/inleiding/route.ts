@@ -83,7 +83,7 @@ Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
 Maak de Inleiding sectie in de schrijfstijl van professionele re-integratierapporten. Schrijf zakelijk en maak waar nodig formeel.
 
-SCHRIJF EXACT 8 ALINEA'S MET \\n\\n TUSSEN ELKE ALINEA:
+SCHRIJF EXACT 8 ALINEA'S MET dubbele newlines TUSSEN ELKE ALINEA:
 
 ALINEA 1 - Introductie met naam en leeftijd:
 - Formaat: "${empInitials} ${empLastName} (hierna werknemer te noemen) is op [datum uit documenten] arbeidsongeschikt geraakt als gevolg van een medische beperking..."
@@ -145,14 +145,14 @@ KRITIEKE FORMAAT REGELS:
 - Schrijf als voorletter(s). achternaam voor alle personen (bijv. "K. Baaijens" niet "Kim Baaijens")
 - Gender pronouns: ${pronPoss} (bezittelijk), ${pronSubj} (onderwerp), ${pronInf} (informeel)
 - Gebruik ${refTitle} voor meneer/mevrouw
-- ELKE alinea eindigt met \\n\\n (dubbele newline) voor paragraph spacing
+- ELKE alinea eindigt met dubbele newline voor paragraph spacing
 - Wees VOLLEDIG en GEDETAILLEERD - haal ALLE relevante informatie uit documenten
 - Zakelijk en AVG-proof (GEEN medische diagnoses)
 - Wees zo specifiek mogelijk met datums, uren, taken, locaties
 
 Return ONLY a JSON object:
 {
-  "inleiding_main": "string met alinea 1-7 (VERPLICHT \\n\\n tussen ELKE alinea)",
+  "inleiding_main": "string met alinea 1-7 (VERPLICHT dubbele newlines tussen ELKE alinea)",
   "inleiding_sub": "string met alinea 8 (AD-rapport deel)"
 }
 `.trim();
