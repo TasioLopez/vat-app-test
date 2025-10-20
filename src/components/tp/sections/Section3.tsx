@@ -526,38 +526,94 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
-    const genProfielZoekprofiel = async () => {
-        if (busy.profielZoek) return;
-        setBusy(prev => ({ ...prev, profielZoek: true }));
+    const genPersoonlijkProfiel = async () => {
+        if (busy.persoonlijkProfiel) return;
+        setBusy(prev => ({ ...prev, persoonlijkProfiel: true }));
+        setAutofillMessage(null);
+        
         try {
-            const res = await fetch(`/api/autofill-tp-3/profiel-zoekprofiel?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/persoonlijk-profiel?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) {
-                updateField("persoonlijk_profiel", json.content.persoonlijk_profiel || "");
-                updateField("zoekprofiel", json.content.zoekprofiel || "");
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("persoonlijk_profiel", json.details.persoonlijk_profiel || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Persoonlijk profiel sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'persoonlijk_profiel'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
             }
         } catch (err) {
-            console.error("❌ Autofill failed for profiel-zoekprofiel:", err);
+            console.error("❌ Autofill failed for persoonlijk-profiel:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
-            setBusy(prev => ({ ...prev, profielZoek: false }));
+            setBusy(prev => ({ ...prev, persoonlijkProfiel: false }));
         }
     };
 
-    const genBelemmeringen = async () => {
-        if (busy.belemmeringen) return;
-        setBusy(prev => ({ ...prev, belemmeringen: true }));
+    const genZoekprofiel = async () => {
+        if (busy.zoekprofiel) return;
+        setBusy(prev => ({ ...prev, zoekprofiel: true }));
+        setAutofillMessage(null);
+        
         try {
-            const res = await fetch(`/api/autofill-tp-3/belemmeringen?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/zoekprofiel?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) updateField("praktische_belemmeringen", json.content);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("zoekprofiel", json.details.zoekprofiel || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Zoekprofiel sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'zoekprofiel'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
         } catch (err) {
-            console.error("❌ Autofill failed for belemmeringen:", err);
+            console.error("❌ Autofill failed for zoekprofiel:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
-            setBusy(prev => ({ ...prev, belemmeringen: false }));
+            setBusy(prev => ({ ...prev, zoekprofiel: false }));
         }
     };
+
 
     const genAdAdvies = async () => {
         if (busy.adAdvies) return;
@@ -707,14 +763,19 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             onClick={() => setOpenModal('prognose')}
                         />
                         <SectionCard
-                            title="Persoonlijk profiel & Zoekprofiel"
-                            content={tpData.persoonlijk_profiel || tpData.zoekprofiel}
-                            onClick={() => setOpenModal('profiel-zoek')}
+                            title="Persoonlijk profiel"
+                            content={tpData.persoonlijk_profiel}
+                            onClick={() => setOpenModal('persoonlijk-profiel')}
                         />
                         <SectionCard
                             title="Praktische belemmeringen"
                             content={tpData.praktische_belemmeringen}
-                            onClick={() => setOpenModal('belemmeringen')}
+                            onClick={() => setOpenModal('praktische-belemmeringen')}
+                        />
+                        <SectionCard
+                            title="Zoekprofiel"
+                            content={tpData.zoekprofiel}
+                            onClick={() => setOpenModal('zoekprofiel')}
                         />
                         <SectionCard
                             title="AD advies over passende arbeid"
@@ -828,33 +889,42 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             />
             
             <SectionEditorModal
-                isOpen={openModal === 'profiel-zoek'}
+                isOpen={openModal === 'persoonlijk-profiel'}
                 onClose={() => setOpenModal(null)}
-                title="Persoonlijk profiel & Zoekprofiel"
+                title="Persoonlijk profiel"
                 value={tpData.persoonlijk_profiel || ''}
                 onChange={(v) => updateField('persoonlijk_profiel', v)}
-                onAutofill={genProfielZoekprofiel}
+                onAutofill={genPersoonlijkProfiel}
                 onRewrite={() => rewriteInMyStyle('persoonlijk_profiel', tpData.persoonlijk_profiel || '')}
-                isAutofilling={busy.profielZoek}
+                isAutofilling={busy.persoonlijkProfiel}
                 isRewriting={rewriting.persoonlijk_profiel}
-                extraFields={[{
-                    label: 'Zoekprofiel',
-                    value: tpData.zoekprofiel || '',
-                    onChange: (v) => updateField('zoekprofiel', v)
-                }]}
+                placeholder="Laat AI dit genereren uit alle documenten — of pas handmatig aan."
             />
             
             <SectionEditorModal
-                isOpen={openModal === 'belemmeringen'}
+                isOpen={openModal === 'praktische-belemmeringen'}
                 onClose={() => setOpenModal(null)}
                 title="Praktische belemmeringen"
                 value={tpData.praktische_belemmeringen || ''}
                 onChange={(v) => updateField('praktische_belemmeringen', v)}
-                onAutofill={genBelemmeringen}
                 onRewrite={() => rewriteInMyStyle('praktische_belemmeringen', tpData.praktische_belemmeringen || '')}
-                isAutofilling={busy.belemmeringen}
                 isRewriting={rewriting.praktische_belemmeringen}
+                placeholder="Handmatig invullen — geen AI autofill beschikbaar."
             />
+            
+            <SectionEditorModal
+                isOpen={openModal === 'zoekprofiel'}
+                onClose={() => setOpenModal(null)}
+                title="Zoekprofiel"
+                value={tpData.zoekprofiel || ''}
+                onChange={(v) => updateField('zoekprofiel', v)}
+                onAutofill={genZoekprofiel}
+                onRewrite={() => rewriteInMyStyle('zoekprofiel', tpData.zoekprofiel || '')}
+                isAutofilling={busy.zoekprofiel}
+                isRewriting={rewriting.zoekprofiel}
+                placeholder="Laat AI dit genereren uit alle documenten — of pas handmatig aan."
+            />
+            
             
             <SectionEditorModal
                 isOpen={openModal === 'ad-advies'}
