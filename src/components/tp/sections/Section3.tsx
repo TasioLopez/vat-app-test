@@ -615,31 +615,89 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     };
 
 
-    const genAdAdvies = async () => {
+    const genAdAdviesPassendeArbeid = async () => {
         if (busy.adAdvies) return;
         setBusy(prev => ({ ...prev, adAdvies: true }));
+        setAutofillMessage(null);
+        
         try {
-            const res = await fetch(`/api/autofill-tp-3/ad-advies?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/ad-advies-passende-arbeid?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) updateField("advies_ad_passende_arbeid", json.content);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("advies_ad_passende_arbeid", json.details.advies_ad_passende_arbeid || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De AD advies over passende arbeid sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'advies_ad_passende_arbeid'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
         } catch (err) {
-            console.error("❌ Autofill failed for ad-advies:", err);
+            console.error("❌ Autofill failed for ad-advies-passende-arbeid:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, adAdvies: false }));
         }
     };
 
-    const genPlaatsbaarheid = async () => {
+    const genVisiePlaatsbaarheid = async () => {
         if (busy.plaatsbaarheid) return;
         setBusy(prev => ({ ...prev, plaatsbaarheid: true }));
+        setAutofillMessage(null);
+        
         try {
-            const res = await fetch(`/api/autofill-tp-3/plaatsbaarheid?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/visie-plaatsbaarheid?employeeId=${employeeId}`);
             const json = await res.json();
-            if (json.error) throw new Error(json.error);
-            if (json.content) updateField("visie_plaatsbaarheid", json.content);
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.details) {
+                updateField("visie_plaatsbaarheid", json.details.visie_plaatsbaarheid || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De Visie op plaatsbaarheid sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_plaatsbaarheid'}`
+                });
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
         } catch (err) {
-            console.error("❌ Autofill failed for plaatsbaarheid:", err);
+            console.error("❌ Autofill failed for visie-plaatsbaarheid:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
         } finally {
             setBusy(prev => ({ ...prev, plaatsbaarheid: false }));
         }
@@ -660,8 +718,8 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
         B("prog", "Prognose van de bedrijfsarts", tpData.prognose_bedrijfsarts || "— nog niet ingevuld —"),
         B("prof", "Persoonlijk profiel", tpData.persoonlijk_profiel || "— nog niet ingevuld —"),
-        B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "— nog niet ingevuld —"),
+        B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
             tpData.advies_ad_passende_arbeid || "— nog niet ingevuld —"),
         B("pow", "Perspectief op Werk (PoW-meter)", tpData.pow_meter || "— door werknemer in te vullen —"),
@@ -932,10 +990,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 title="AD advies over passende arbeid"
                 value={tpData.advies_ad_passende_arbeid || ''}
                 onChange={(v) => updateField('advies_ad_passende_arbeid', v)}
-                onAutofill={genAdAdvies}
+                onAutofill={genAdAdviesPassendeArbeid}
                 onRewrite={() => rewriteInMyStyle('advies_ad_passende_arbeid', tpData.advies_ad_passende_arbeid || '')}
                 isAutofilling={busy.adAdvies}
                 isRewriting={rewriting.advies_ad_passende_arbeid}
+                placeholder="Laat AI dit genereren uit AD rapport, FML en IZP documenten — of pas handmatig aan."
             />
             
             <SectionEditorModal
@@ -953,10 +1012,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 title="Visie op plaatsbaarheid"
                 value={tpData.visie_plaatsbaarheid || ''}
                 onChange={(v) => updateField('visie_plaatsbaarheid', v)}
-                onAutofill={genPlaatsbaarheid}
+                onAutofill={genVisiePlaatsbaarheid}
                 onRewrite={() => rewriteInMyStyle('visie_plaatsbaarheid', tpData.visie_plaatsbaarheid || '')}
                 isAutofilling={busy.plaatsbaarheid}
                 isRewriting={rewriting.visie_plaatsbaarheid}
+                placeholder="Laat AI dit genereren uit alle documenten — of pas handmatig aan."
             />
 
             {/* RIGHT: preview (A4 look) */}
@@ -1153,7 +1213,14 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                         ) : s.variant === "block" && s.text ? (
                             <div>
                                 <div className={blockTitle}>{s.title}</div>
-                                <div className={paperText}>{renderFormattedText(s.text)}</div>
+                                <div className={paperText}>
+                                    {renderFormattedText(s.text)}
+                                    {s.key === "plaats" && (
+                                        <p className="text-sm italic text-gray-600 mt-4">
+                                            Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <div>{s.node}</div>
@@ -1210,7 +1277,14 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                 ) : s.variant === "block" && s.text ? (
                                     <>
                                         <div className={blockTitle}>{s.title}</div>
-                                        <div className={paperText}>{renderFormattedText(s.text)}</div>
+                                        <div className={paperText}>
+                                            {renderFormattedText(s.text)}
+                                            {s.key === "plaats" && (
+                                                <p className="text-sm italic text-gray-600 mt-4">
+                                                    Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
+                                                </p>
+                                            )}
+                                        </div>
                                     </>
                                 ) : (
                                     s.node
