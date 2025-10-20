@@ -81,63 +81,78 @@ function buildInleidingInstructions(context: any): string {
   return `
 Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
-Schrijf de "Inleiding" sectie voor een trajectplan volgens EXACT deze 8-alinea structuur:
+Maak de Inleiding sectie in de schrijfstijl van professionele re-integratierapporten. Schrijf zakelijk en maak waar nodig formeel.
 
-ALINEA 1 - Introductie met naam:
-- Formaat: "${empInitials} ${empLastName} (hierna werknemer te noemen) is..."
-- Gebruik EXACT de tekst "(hierna werknemer te noemen)" - GEEN variaties zoals "(hierna: werknemer)"
-- Vermeld kort de situatie
+SCHRIJF EXACT 8 ALINEA'S MET \\n\\n TUSSEN ELKE ALINEA:
 
-ALINEA 2 - Medische reden:
+ALINEA 1 - Introductie met naam en leeftijd:
+- Formaat: "${empInitials} ${empLastName} (hierna werknemer te noemen) is op [datum uit documenten] arbeidsongeschikt geraakt als gevolg van een medische beperking..."
+- BELANGRIJK: Gebruik EXACT "(hierna werknemer te noemen)" - GEEN variaties zoals "(hierna: werknemer)" of "(hierna te noemen: werknemer)"
+- Noem werknemer als voorletter(s). achternaam
+- Vermeld leeftijd indien beschikbaar: "51-jarige vrouw" of "[leeftijd]-jarige man/vrouw"
+- Vermeld eerste ziektedag specifiek
+- Vermeld functie en werkgever volledig
+
+ALINEA 2 - Herhaalde medische reden (uitgebreid):
+- Begin: "Werknemer is sinds ${firstSickDay || '[datum]'} arbeidsongeschikt als gevolg van een medische beperking waardoor ${pronSubj.toLowerCase()} niet meer kan werken als ${currentJob}."
 - GEBRUIK ALTIJD "medische beperking" (ENKELVOUD) - NOOIT "medische beperkingen" (meervoud)
-- Functie in kleine letters: "${currentJob}"
-- Eerste ziektedag: ${firstSickDay || 'zie documenten'}
-- Voorbeeld: "Werknemer is sinds [datum] arbeidsongeschikt als gevolg van een medische beperking waardoor ${pronSubj.toLowerCase()} niet meer kan werken als ${currentJob}."
+- Schrijf de functie ZONDER hoofdletter in deze alinea
+- Wees specifiek over de arbeidsbeperking en impact
 
-ALINEA 3 - Functieomschrijving:
-- Begin met "**Functieomschrijving:**" (met vetgedrukt label)
-- Haal beschrijving uit documenten of gebruik placeholder indien niet beschikbaar
+ALINEA 3 - Functieomschrijving (GEDETAILLEERD):
+- Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
+- Haal VOLLEDIGE beschrijving uit aangeleverde documenten
+- Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
+- Als niet in documenten: schrijf "..." als placeholder
+- Wees zo specifiek en gedetailleerd mogelijk
 
-ALINEA 4 - Aanmelder/Contactpersoon:
-- Formaat: "Werknemer is door ${refTitle} ${refInitials} ${refLastName} [functie] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
-- Als er een "extra aanmelder" in documenten staat, gebruik dan: "Werknemer is door [extra aanmelder details] In opdracht van: ${refTitle} ${refInitials} ${refLastName} [functie] ${companyName} aangemeld..."
+ALINEA 4 - Aanmelder/Contactpersoon (controleer Extra Aanmelder):
+- Check eerst of er een "Extra Aanmelder" is ingevuld in de documenten
+- ALS Extra Aanmelder BESTAAT: "Werknemer is door ${refTitle} [Voorletter. Achternaam Extra Aanmelder], [functie Extra Aanmelder] bij [bedrijf Extra Aanmelder] In opdracht van: ${refTitle} ${refInitials} ${refLastName}, [functie contactpersoon] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
+- ALS GEEN Extra Aanmelder: "Werknemer is door ${refTitle} ${refInitials} ${refLastName}, [functie contactpersoon] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
+- Gebruik correcte geslachtsaanduidingen (meneer/mevrouw) voor contactpersonen
 
-ALINEA 5 - Medische informatie & FML:
+ALINEA 5 - Medische informatie & FML (VOLLEDIG):
 ${hasFML ? `
 - Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding en de daarbij horende gezondheidsproblematiek."
-- Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de [FML/IZP/LAB - bepaal welke] van ${fmlDate} op het gebied van [extract beperkingen uit hoofdstuk 5 van document]."
+- Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de [bepaal: FML/IZP/LAB] van ${fmlDate} op het gebied van [EXTRACT ALLE beperkingen uit hoofdstuk 5 'Medische situatie - FML-beperkingen' van document - wees SPECIFIEK en VOLLEDIG, bijv. 'persoonlijk en sociaal functioneren, dynamische handelingen, statische houdingen, aanpassing fysieke omgevingseisen en werktijden']."
+- Geef ALLE beperkingengebieden weer, niet alleen een paar
 ` : `
 - Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding, de aanleiding hiervan en de bijbehorende gezondheidsproblemen."
-- Vervolg: "${pronInf} geeft aan medische beperkingen te hebben: [vul in indien beschikbaar]."
+- Vervolg: "${pronInf} geeft aan medische beperkingen te hebben: [vul in indien beschikbaar uit documenten, doe anders ...]."
 `}
 - EINDIG ALTIJD MET: "Conform de wetgeving rondom de verwerking van persoonsgegevens wordt medische informatie niet geregistreerd in dit rapport."
 
-ALINEA 6 - Spoor 1 re-integratie status:
-- Check documenten of werknemer re-integreert in spoor 1
-- Als JA: "Op het moment van de intake re-integreert werknemer in spoor 1 door [frequency bijv. twee keer per week] [hours bijv. twee uur] per [aangepaste/eigen] werkzaamheden te verrichten."
-- Als NEE: "Werknemer geeft tijdens het intakegesprek aan niet in spoor 1 of elders te re-integreren." [Voeg toe indien contact info: "${pronInf} heeft 2-wekelijks telefonisch contact met ${pronPoss} werkgever."]
+ALINEA 6 - Spoor 1 re-integratie status (GEDETAILLEERD):
+- Check documenten zorgvuldig of werknemer re-integreert in spoor 1
+- ALS JA (werkend): "Op het moment van de intake re-integreert werknemer in spoor 1 door [exact frequency uit documenten, bijv. 'twee keer per week'] [exact hours, bijv. 'zeven uur'] per [aangepaste/eigen] werkzaamheden te verrichten [bij specifieke werkplek indien vermeld, bijv. 'bij het Samsam eetcafé']."
+- ALS NEE (niet werkend): "Werknemer geeft tijdens het intakegesprek aan niet in spoor 1 of elders te re-integreren."
+- Voeg toe indien contact met werkgever vermeld: "${pronInf} heeft [frequency] telefonisch contact met ${pronPoss} werkgever." (bijv. "2-wekelijks")
 
-ALINEA 7 - Trajectdoel (VASTE TEKST - gebruik exact):
+ALINEA 7 - Trajectdoel (VASTE TEKST):
 "Tijdens het gesprek is toegelicht wat het doel is van het 2e spoortraject. Werknemer geeft aan het belang van dit traject te begrijpen en hieraan mee te willen werken. In het 2e spoor zal onder andere worden onderzocht welke passende mogelijkheden er op de arbeidsmarkt beschikbaar zijn."
 
-ALINEA 8 - AD-rapport status:
+ALINEA 8 - AD-rapport status (VOLLEDIG CITAAT):
 ${hasAD ? `
-- "In het (Concept) Arbeidsdeskundige rapport opgesteld door ${titleAbbrev} [naam arbeidsdeskundige uit documenten] op ${adDate} staat het volgende:"
-- [Vat AD advies samen in 2-3 zinnen]
+- "In het (Concept) Arbeidsdeskundige rapport opgesteld door ${titleAbbrev} [Voorletter. Achternaam arbeidsdeskundige uit documenten] op ${adDate} staat het volgende:"
+- CITEER het AD-advies VOLLEDIG uit het document - geef EXACTE aanbevelingen, niet alleen een samenvatting
+- Neem volledige quotes over met alle details over werkzoekproces, re-integratiemogelijkheden, prognose, etc.
 ` : `
 - "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
 `}
 
-BELANGRIJKE REGELS:
-- Gender pronouns: ${pronPoss} (possessive), ${pronSubj} (subject), ${pronInf} (informal)
-- Zakelijk en AVG-proof (GEEN diagnoses)
-- Gebruik ALLEEN informatie uit de documenten
-- Volg de 8-alinea structuur EXACT
-- FORMATEER: Gebruik dubbele newlines (\\n\\n) tussen elke alinea voor juiste paragraaf spacing
+KRITIEKE FORMAAT REGELS:
+- Schrijf als voorletter(s). achternaam voor alle personen (bijv. "K. Baaijens" niet "Kim Baaijens")
+- Gender pronouns: ${pronPoss} (bezittelijk), ${pronSubj} (onderwerp), ${pronInf} (informeel)
+- Gebruik ${refTitle} voor meneer/mevrouw
+- ELKE alinea eindigt met \\n\\n (dubbele newline) voor paragraph spacing
+- Wees VOLLEDIG en GEDETAILLEERD - haal ALLE relevante informatie uit documenten
+- Zakelijk en AVG-proof (GEEN medische diagnoses)
+- Wees zo specifiek mogelijk met datums, uren, taken, locaties
 
 Return ONLY a JSON object:
 {
-  "inleiding_main": "string met alinea 1-7 (met \\n\\n tussen alinea's)",
+  "inleiding_main": "string met alinea 1-7 (VERPLICHT \\n\\n tussen ELKE alinea)",
   "inleiding_sub": "string met alinea 8 (AD-rapport deel)"
 }
 `.trim();
@@ -155,8 +170,8 @@ function stripCitations(text: string): string {
     .replace(/【[^】]+】/g, '')
     // Remove any other bracket annotations with numbers
     .replace(/\[\d+:\d+[^\]]*\]/g, '')
-    // Clean up multiple spaces
-    .replace(/\s{2,}/g, ' ')
+    // Clean up multiple SPACES only (not newlines!) - use space character class
+    .replace(/ {2,}/g, ' ')
     .trim();
     
   // Don't modify newlines - let the original formatting from AI remain
