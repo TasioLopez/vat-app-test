@@ -232,14 +232,20 @@ export default function RichTextEditor({
       </div>
       
       {/* WYSIWYG Editor */}
-      <div
-        contentEditable
-        onInput={handleContentChange}
-        dangerouslySetInnerHTML={{ __html: markdownToHtml(value) }}
-        className="w-full p-4 text-sm leading-relaxed focus:outline-none"
-        style={{ minHeight }}
-        placeholder={placeholder}
-      />
+      <div className="relative">
+        <div
+          contentEditable
+          onInput={handleContentChange}
+          dangerouslySetInnerHTML={{ __html: markdownToHtml(value) }}
+          className="w-full p-4 text-sm leading-relaxed focus:outline-none"
+          style={{ minHeight }}
+        />
+        {!value && placeholder && (
+          <div className="absolute top-4 left-4 text-gray-400 pointer-events-none text-sm">
+            {placeholder}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
