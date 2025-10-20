@@ -150,30 +150,72 @@ export default function RichTextEditor({
     }, 0);
   };
   
+  const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const content = e.currentTarget.innerHTML;
+    // Convert HTML back to markdown for storage
+    const markdown = htmlToMarkdown(content);
+    onChange(markdown);
+  };
+
+  const htmlToMarkdown = (html: string): string => {
+    return html
+      .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+      .replace(/<em>(.*?)<\/em>/g, '*$1*')
+      .replace(/<br\s*\/?>/g, '\n')
+      .replace(/<p><\/p>/g, '\n\n')
+      .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
+      .replace(/<ul>(.*?)<\/ul>/gs, (match, content) => {
+        return content.replace(/<li>(.*?)<\/li>/g, '• $1\n') + '\n';
+      })
+      .replace(/<ol>(.*?)<\/ol>/gs, (match, content) => {
+        let counter = 1;
+        return content.replace(/<li>(.*?)<\/li>/g, () => `${counter++}. $1\n`) + '\n';
+      })
+      .replace(/<[^>]*>/g, '') // Remove any remaining HTML tags
+      .replace(/\n{3,}/g, '\n\n') // Clean up excessive newlines
+      .trim();
+  };
+
+  const markdownToHtml = (markdown: string): string => {
+    if (!markdown) return '';
+    
+    return markdown
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n+/g, '</p><p>')
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>')
+      .replace(/• (.*?)(?=\n|$)/g, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+      .replace(/\d+\. (.*?)(?=\n|$)/g, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>')
+      .replace(/\n/g, '<br>');
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden">
       {/* Toolbar */}
       <div className="bg-gray-50 border-b px-3 py-2 flex gap-2">
         <button
           type="button"
-          onClick={() => applyFormat('bold')}
+          onClick={() => document.execCommand('bold')}
           className="px-3 py-1 bg-white border rounded hover:bg-gray-100 font-bold text-sm"
-          title="Bold (select text first)"
+          title="Bold"
         >
           B
         </button>
         <button
           type="button"
-          onClick={() => applyFormat('italic')}
+          onClick={() => document.execCommand('italic')}
           className="px-3 py-1 bg-white border rounded hover:bg-gray-100 italic text-sm"
-          title="Italic (select text first)"
+          title="Italic"
         >
           I
         </button>
         <div className="w-px bg-gray-300 mx-1" />
         <button
           type="button"
-          onClick={() => insertList('bullet')}
+          onClick={() => document.execCommand('insertUnorderedList')}
           className="px-3 py-1 bg-white border rounded hover:bg-gray-100 text-sm"
           title="Bullet list"
         >
@@ -181,7 +223,7 @@ export default function RichTextEditor({
         </button>
         <button
           type="button"
-          onClick={() => insertList('numbered')}
+          onClick={() => document.execCommand('insertOrderedList')}
           className="px-3 py-1 bg-white border rounded hover:bg-gray-100 text-sm"
           title="Numbered list"
         >
@@ -189,28 +231,15 @@ export default function RichTextEditor({
         </button>
       </div>
       
-      {/* Split View: Editor + Preview */}
-      <div className="flex divide-x">
-        {/* Left: Editor */}
-        <div className="flex-1">
-          <textarea
-            id={id}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full p-4 text-sm leading-relaxed resize-none focus:outline-none"
-            style={{ minHeight }}
-          />
-        </div>
-        
-        {/* Right: Live Preview */}
-        <div className="flex-1 bg-gray-50 p-4 text-sm leading-relaxed overflow-y-auto" style={{ minHeight }}>
-          <div className="text-xs text-gray-500 mb-2 font-semibold">Preview:</div>
-          {value ? renderFormattedText(value) : (
-            <p className="text-gray-400 italic">Preview verschijnt hier...</p>
-          )}
-        </div>
-      </div>
+      {/* WYSIWYG Editor */}
+      <div
+        contentEditable
+        onInput={handleContentChange}
+        dangerouslySetInnerHTML={{ __html: markdownToHtml(value) }}
+        className="w-full p-4 text-sm leading-relaxed focus:outline-none"
+        style={{ minHeight }}
+        placeholder={placeholder}
+      />
     </div>
   );
 }

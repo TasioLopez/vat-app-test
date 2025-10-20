@@ -133,10 +133,11 @@ BELANGRIJKE REGELS:
 - Zakelijk en AVG-proof (GEEN diagnoses)
 - Gebruik ALLEEN informatie uit de documenten
 - Volg de 8-alinea structuur EXACT
+- FORMATEER: Gebruik dubbele newlines (\\n\\n) tussen elke alinea voor juiste paragraaf spacing
 
 Return ONLY a JSON object:
 {
-  "inleiding_main": "string met alinea 1-7",
+  "inleiding_main": "string met alinea 1-7 (met \\n\\n tussen alinea's)",
   "inleiding_sub": "string met alinea 8 (AD-rapport deel)"
 }
 `.trim();
