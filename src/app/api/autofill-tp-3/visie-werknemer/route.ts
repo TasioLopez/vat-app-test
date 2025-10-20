@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
-import type { ChatCompletionMessageParam } from "openai/resources";
+// Avoid importing beta types to keep build compatible
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,23 +41,82 @@ async function readPdfFromStorage(path: string): Promise<string> {
   }
 }
 
-async function getIntakeText(employeeId: string) {
+async function listEmployeeDocumentPaths(employeeId: string): Promise<string[]> {
   const { data: docs } = await supabase
     .from("documents")
-    .select("type,url,uploaded_at")
+    .select("url")
     .eq("employee_id", employeeId)
     .order("uploaded_at", { ascending: false });
-  if (!docs?.length) return "";
-  const candidates = ["intakeformulier", "intake-formulier", "intake"];
-  for (const c of candidates) {
-    const hit = docs.find(d => (d.type || "").toLowerCase().includes(c));
-    if (!hit?.url) continue;
-    const path = extractStoragePath(hit.url);
-    if (!path) continue;
-    const text = await readPdfFromStorage(path);
-    if (text && text.length > 50) return text;
+  if (!docs?.length) return [];
+  const paths: string[] = [];
+  for (const d of docs) {
+    const path = extractStoragePath(d.url as string);
+    if (path) paths.push(path);
   }
-  return "";
+  return paths;
+}
+
+async function uploadDocsToOpenAI(paths: string[]) {
+  const fileIds: string[] = [];
+  for (const p of paths) {
+    const { data: file } = await supabase.storage.from("documents").download(p);
+    if (!file) continue;
+    const buf = Buffer.from(await file.arrayBuffer());
+    const uploaded = await openai.files.create({
+      file: new File([buf], p.split('/').pop() || 'doc.pdf', { type: 'application/pdf' }),
+      purpose: "assistants",
+    });
+    fileIds.push(uploaded.id);
+  }
+  return fileIds;
+}
+
+function buildInstructions(): string {
+  return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
+Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_werknemer".
+Vereisten:
+- 1–2 alinea's, scheid alinea's met dubbele newlines (\n\n)
+- Benoem houding/motivatie/wensen, wat lukt/niet lukt gezien huidige belastbaarheid (in eigen woorden), bereidheid t.o.v. 2e spoor (onderzoeken, scholing/omscholing, trajectdoel)
+- Geen medische details of diagnoses. Zakelijk en AVG-proof
+- GEEN citations of bronvermeldingen
+Output uitsluitend JSON: { "visie_werknemer": string }`;
+}
+
+async function runAssistant(files: string[]) {
+  const assistant = await openai.beta.assistants.create({
+    name: "TP Visie Werknemer",
+    instructions: buildInstructions(),
+    model: "gpt-4o-mini",
+    tools: [{ type: "file_search" }],
+  });
+
+  const thread = await openai.beta.threads.create({
+    messages: [
+      {
+        role: "user",
+        content: "Genereer de JSON voor visie_werknemer.",
+        attachments: files.map((id) => ({ file_id: id, tools: [{ type: "file_search" }] })),
+      },
+    ],
+  });
+
+  let run: any = await openai.beta.threads.runs.create(thread.id, { assistant_id: assistant.id });
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    run = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    if (run.status === 'completed') break;
+    if (['failed','cancelled','expired','incomplete'].includes(run.status)) throw new Error(`Assistant run failed: ${run.status}`);
+  }
+
+  const msgs = await openai.beta.threads.messages.list(thread.id);
+  const text = msgs.data[0]?.content?.[0]?.type === 'text' ? msgs.data[0].content[0].text.value : '';
+  const match = text.match(/\{[\s\S]*\}/);
+  const jsonStr = match ? match[0] : text;
+  let parsed: any = {};
+  try { parsed = JSON.parse(jsonStr); } catch { parsed = { visie_werknemer: text }; }
+
+  // Optional cleanup intentionally skipped to avoid SDK type incompatibilities during build
+  return parsed;
 }
 
 export async function GET(req: NextRequest) {
@@ -66,55 +125,12 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
-    const INTAKE = await getIntakeText(employeeId);
-    if (!INTAKE) {
-      return NextResponse.json({ error: "Geen intakeformulier gevonden of niet leesbaar" }, { status: 200 });
+    const docPaths = await listEmployeeDocumentPaths(employeeId);
+    if (docPaths.length === 0) {
+      return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
-
-    const systemPrompt = `
-Je bent een NL re-integratie-rapportage assistent.
-Schrijf uitsluitend de sectie "visie_werknemer" op basis van het INTAKEFORMULIER.
-- 1–2 korte alinea's met dubbele newlines tussen alinea's.
-- Benoem houding/motivatie/wensen, wat lukt/niet lukt gezien huidige belastbaarheid (in eigen woorden), bereidheid t.o.v. 2e spoor (onderzoeken, scholing/omscholing, trajectdoel).
-- Geen medische details of diagnoses. Zakelijk en AVG-proof.
-Lever UITSLUITEND een function call met JSON: { visie_werknemer: string }.
-`.trim();
-
-    const userPrompt = `INTAKEFORMULIER:\n${INTAKE.slice(0, 22000)}`.trim();
-
-    const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ];
-
-    const tool = {
-      type: "function" as const,
-      function: {
-        name: "build_visie_werknemer",
-        description: "Bouw visie_werknemer (string).",
-        parameters: {
-          type: "object",
-          properties: { visie_werknemer: { type: "string" } },
-          required: ["visie_werknemer"],
-        },
-      },
-    };
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.1,
-      messages,
-      tools: [tool],
-      tool_choice: { type: "function", function: { name: "build_visie_werknemer" } },
-    });
-
-    const call = completion.choices[0]?.message?.tool_calls?.[0];
-    const args = call?.function?.arguments;
-    if (!args) return NextResponse.json({ error: "Geen tekst gegenereerd" }, { status: 200 });
-
-    let parsed: { visie_werknemer?: string } | null = null;
-    try { parsed = JSON.parse(args); } catch { parsed = null; }
-
+    const fileIds = await uploadDocsToOpenAI(docPaths);
+    const parsed = await runAssistant(fileIds);
     const visie_werknemer = stripCitations((parsed?.visie_werknemer || '').trim());
 
     await supabase.from("tp_meta").upsert(
