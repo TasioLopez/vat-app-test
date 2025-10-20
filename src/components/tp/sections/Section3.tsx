@@ -350,21 +350,37 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
-    const genSocialeVisie = async () => {
-        if (busy.socialeVisie) return;
-        setBusy(prev => ({ ...prev, socialeVisie: true }));
+    const genSocialeAchtergrond = async () => {
+        if (busy.socialeAchtergrond) return;
+        setBusy(prev => ({ ...prev, socialeAchtergrond: true }));
         try {
-            const res = await fetch(`/api/autofill-tp-3/sociale-visie?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-tp-3/sociale-achtergrond?employeeId=${employeeId}`);
             const json = await res.json();
             if (json.error) throw new Error(json.error);
-            if (json.content) {
-                updateField("sociale_achtergrond", json.content.sociale_achtergrond || "");
-                updateField("visie_werknemer", json.content.visie_werknemer || "");
+            if (json.details) {
+                updateField("sociale_achtergrond", json.details.sociale_achtergrond || "");
             }
         } catch (err) {
-            console.error("❌ Autofill failed for sociale-visie:", err);
+            console.error("❌ Autofill failed for sociale-achtergrond:", err);
         } finally {
-            setBusy(prev => ({ ...prev, socialeVisie: false }));
+            setBusy(prev => ({ ...prev, socialeAchtergrond: false }));
+        }
+    };
+
+    const genVisieWerknemer = async () => {
+        if (busy.visieWerknemer) return;
+        setBusy(prev => ({ ...prev, visieWerknemer: true }));
+        try {
+            const res = await fetch(`/api/autofill-tp-3/visie-werknemer?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) throw new Error(json.error);
+            if (json.details) {
+                updateField("visie_werknemer", json.details.visie_werknemer || "");
+            }
+        } catch (err) {
+            console.error("❌ Autofill failed for visie-werknemer:", err);
+        } finally {
+            setBusy(prev => ({ ...prev, visieWerknemer: false }));
         }
     };
 
@@ -544,9 +560,14 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             onClick={() => setOpenModal('inleiding')}
                         />
                         <SectionCard
-                            title="Sociale achtergrond & Visie werknemer"
-                            content={tpData.sociale_achtergrond || tpData.visie_werknemer}
-                            onClick={() => setOpenModal('sociale-visie')}
+                            title="Sociale achtergrond"
+                            content={tpData.sociale_achtergrond}
+                            onClick={() => setOpenModal('sociale-achtergrond')}
+                        />
+                        <SectionCard
+                            title="Visie van werknemer"
+                            content={tpData.visie_werknemer}
+                            onClick={() => setOpenModal('visie-werknemer')}
                         />
                         <SectionCard
                             title="Visie van loopbaanadviseur"
@@ -631,20 +652,27 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             />
             
             <SectionEditorModal
-                isOpen={openModal === 'sociale-visie'}
+                isOpen={openModal === 'sociale-achtergrond'}
                 onClose={() => setOpenModal(null)}
-                title="Sociale achtergrond & Visie werknemer"
+                title="Sociale achtergrond"
                 value={tpData.sociale_achtergrond || ''}
                 onChange={(v) => updateField('sociale_achtergrond', v)}
-                onAutofill={genSocialeVisie}
+                onAutofill={genSocialeAchtergrond}
                 onRewrite={() => rewriteInMyStyle('sociale_achtergrond', tpData.sociale_achtergrond || '')}
-                isAutofilling={busy.socialeVisie}
+                isAutofilling={busy.socialeAchtergrond}
                 isRewriting={rewriting.sociale_achtergrond}
-                extraFields={[{
-                    label: 'Visie van werknemer',
-                    value: tpData.visie_werknemer || '',
-                    onChange: (v) => updateField('visie_werknemer', v)
-                }]}
+            />
+
+            <SectionEditorModal
+                isOpen={openModal === 'visie-werknemer'}
+                onClose={() => setOpenModal(null)}
+                title="Visie van werknemer"
+                value={tpData.visie_werknemer || ''}
+                onChange={(v) => updateField('visie_werknemer', v)}
+                onAutofill={genVisieWerknemer}
+                onRewrite={() => rewriteInMyStyle('visie_werknemer', tpData.visie_werknemer || '')}
+                isAutofilling={busy.visieWerknemer}
+                isRewriting={rewriting.visie_werknemer}
             />
             
             <SectionEditorModal
