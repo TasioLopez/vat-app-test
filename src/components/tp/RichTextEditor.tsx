@@ -161,7 +161,8 @@ export default function RichTextEditor({
     // Handle Enter key for proper paragraph breaks
     if (e.key === 'Enter') {
       e.preventDefault();
-      document.execCommand('insertHTML', false, '<br><br>');
+      // Insert a simple line break, let the conversion handle paragraph spacing
+      document.execCommand('insertHTML', false, '<br>');
     }
   };
 
@@ -170,15 +171,6 @@ export default function RichTextEditor({
       .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
       .replace(/<em>(.*?)<\/em>/g, '*$1*')
       .replace(/<br\s*\/?>/g, '\n')
-      .replace(/<p><\/p>/g, '\n\n')
-      .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
-      .replace(/<ul>(.*?)<\/ul>/gs, (match, content) => {
-        return content.replace(/<li>(.*?)<\/li>/g, '• $1\n') + '\n';
-      })
-      .replace(/<ol>(.*?)<\/ol>/gs, (match, content) => {
-        let counter = 1;
-        return content.replace(/<li>(.*?)<\/li>/g, () => `${counter++}. $1\n`) + '\n';
-      })
       .replace(/<[^>]*>/g, '') // Remove any remaining HTML tags
       .replace(/\n{3,}/g, '\n\n') // Clean up excessive newlines
       .trim();
@@ -190,13 +182,6 @@ export default function RichTextEditor({
     return markdown
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\n\n+/g, '</p><p>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>')
-      .replace(/• (.*?)(?=\n|$)/g, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-      .replace(/\d+\. (.*?)(?=\n|$)/g, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>')
       .replace(/\n/g, '<br>');
   };
 
@@ -259,7 +244,11 @@ export default function RichTextEditor({
           onInput={handleContentChange}
           onKeyDown={handleKeyDown}
           className="w-full p-4 text-sm leading-relaxed focus:outline-none"
-          style={{ minHeight }}
+          style={{ 
+            minHeight,
+            // Ensure no default paragraph margins
+            lineHeight: '1.5'
+          }}
         />
         {!value && placeholder && (
           <div className="absolute top-4 left-4 text-gray-400 pointer-events-none text-sm">
