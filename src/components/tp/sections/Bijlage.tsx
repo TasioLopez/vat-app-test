@@ -100,25 +100,22 @@ const createTemplates = (startDate: string, endDate: string) => {
           activiteiten: [
             "Sollicitatievaardigheden vervolg (gesprek)",
             "Webinar",
-            "Solliciteren via social media en/of netwerken",
             "Netwerken",
+            "Solliciteren via social media en/of netwerken",
             "Vacatures zoeken en beoordeling",
             "Wekelijks solliciteren",
             "Voortgangsrapportage en evaluatie"
           ]
         },
         {
-          title: "Activering/betaalde arbeid",
+          title: "Betaald werk",
           periode: { from: formatISODate(phase3Start), to: formatISODate(end) },
           activiteiten: [
-            "Sollicitatievaardigheden vervolg (gesprek)",
             "Wekelijks solliciteren",
-            "Netwerken",
+            "Sollicitatiegesprek voorbereiden en presenteren",
             "Jobhunten",
-            "Solliciteren via social media en/of netwerken",
-            "Webinar",
-            "Vacatures zoeken en beoordeling",
             "Detacheren onderzoeken",
+            "Activering / werkervaring",
             "Webinar (gericht op eventuele WIA-aanvraag)",
             "Voortgangsrapportage en eindevaluatie",
             "Begeleiding WIA"
