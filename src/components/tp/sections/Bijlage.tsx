@@ -130,21 +130,15 @@ const createTemplates = (startDate: string, endDate: string) => {
       name: "2 Fases",
       fases: [
         {
-          title: "Oriëntatie en Activering",
+          title: "Oriëntatie",
           periode: { from: formatISODate(start), to: formatISODate(phase1End2Fases) },
           activiteiten: [
             "Verwerking verlies en acceptatie",
             "Empowerment",
-            "Kwaliteiten en vaardigheden onderzoeken", 
+            "Kwaliteiten en vaardigheden onderzoeken",
             "Beroeps-en arbeidsmarkt oriëntatie",
             "Scholingsmogelijkheden onderzoeken",
             "Sollicitatietools (brief en cv)",
-            "Sollicitatievaardigheden vervolg (gesprek)",
-            "Webinar",
-            "Solliciteren via social media en/of netwerken",
-            "Netwerken",
-            "Vacatures zoeken en beoordeling",
-            "Wekelijks solliciteren",
             "Voortgangsrapportage en evaluatie"
           ]
         },
