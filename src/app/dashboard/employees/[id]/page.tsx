@@ -483,7 +483,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         onChange={e => handleDetailChange('other_employers', e.target.value)} 
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        Vul hier alleen vorige werkgevers in, niet de huidige werkgever ({client?.name})
+                        Vul hier alleen vorige werkgevers in, niet de huidige werkgever ({clientName})
                     </p>
                 </div>
 
