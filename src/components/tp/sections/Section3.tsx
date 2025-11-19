@@ -9,6 +9,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
 import { FileText } from 'lucide-react';
+import { ActivityBody } from './ActivityBody';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -1214,11 +1215,21 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                             <div>
                                 <div className={blockTitle}>{s.title}</div>
                                 <div className={paperText}>
-                                    {renderFormattedText(s.text)}
-                                    {s.key === "plaats" && (
-                                        <p className="text-sm italic text-gray-600 mt-4">
-                                            Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                        </p>
+                                    {s.key.startsWith('act-') ? (
+                                        <ActivityBody 
+                                            activityId={s.key.replace('act-', '')} 
+                                            bodyText={s.text} 
+                                            className=""
+                                        />
+                                    ) : (
+                                        <>
+                                            {renderFormattedText(s.text)}
+                                            {s.key === "plaats" && (
+                                                <p className="text-sm italic text-gray-600 mt-4">
+                                                    Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
+                                                </p>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -1278,11 +1289,21 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                     <>
                                         <div className={blockTitle}>{s.title}</div>
                                         <div className={paperText}>
-                                            {renderFormattedText(s.text)}
-                                            {s.key === "plaats" && (
-                                                <p className="text-sm italic text-gray-600 mt-4">
-                                                    Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                                </p>
+                                            {s.key.startsWith('act-') ? (
+                                                <ActivityBody 
+                                                    activityId={s.key.replace('act-', '')} 
+                                                    bodyText={s.text} 
+                                                    className=""
+                                                />
+                                            ) : (
+                                                <>
+                                                    {renderFormattedText(s.text)}
+                                                    {s.key === "plaats" && (
+                                                        <p className="text-sm italic text-gray-600 mt-4">
+                                                            Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
+                                                        </p>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </>

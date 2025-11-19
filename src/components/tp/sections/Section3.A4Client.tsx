@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import { ActivityBody } from "./ActivityBody";
 
 const page =
     "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none";
@@ -347,7 +348,15 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                         ) : s.variant === "block" && s.text ? (
                             <div>
                                 <div className={blockTitle}>{s.title}</div>
-                                <div className={paperText}>{s.text}</div>
+                                {s.key.startsWith('act-') ? (
+                                    <ActivityBody 
+                                        activityId={s.key.replace('act-', '')} 
+                                        bodyText={s.text} 
+                                        className={paperText}
+                                    />
+                                ) : (
+                                    <div className={paperText}>{s.text}</div>
+                                )}
                             </div>
                         ) : (
                             <div>{s.node}</div>
@@ -403,7 +412,15 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                     ) : s.variant === "block" && s.text ? (
                                         <>
                                             <div className={blockTitle}>{s.title}</div>
-                                            <div className={paperText}>{s.text}</div>
+                                            {s.key.startsWith('act-') ? (
+                                                <ActivityBody 
+                                                    activityId={s.key.replace('act-', '')} 
+                                                    bodyText={s.text} 
+                                                    className={paperText}
+                                                />
+                                            ) : (
+                                                <div className={paperText}>{s.text}</div>
+                                            )}
                                         </>
                                     ) : (
                                         s.node

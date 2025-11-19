@@ -22,9 +22,7 @@ export const TP_ACTIVITIES: TPActivity[] = [
     title: "Scholing",
     body: `Scholing zal alleen ingezet worden als het noodzakelijk blijkt, hierbij wordt het uitgangspunt van redelijkheid en billijkheid toegepast, wat inhoudt dat het om een relatief korte cursus/ opleiding dient te gaan en de kosten naar verhouding zijn. Alle cursussen en opleidingen worden altijd ter goedkeuring voorgelegd aan de werkgever. 
 
- Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. 
-
- Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.`,
+ Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.`,
   },
   {
     id: "social-media",
@@ -72,3 +70,14 @@ export const TP_ACTIVITIES: TPActivity[] = [
 ];
 
 export default TP_ACTIVITIES;
+
+export const ACTIVITIES_WITH_LOGO_BULLETS = [
+  'scholing',
+  'social-media', 
+  'webinars',
+  'sollicitatievaardigheden-en-sollicitatietools'
+];
+
+export function shouldUseLogo(activityId: string): boolean {
+  return ACTIVITIES_WITH_LOGO_BULLETS.includes(activityId);
+}

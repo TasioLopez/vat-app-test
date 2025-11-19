@@ -41,7 +41,7 @@ Voorbeelden:
 - "Aanmeld: 12-06-2025" → registration_date: "2025-06-12"
 - "Arbeidsdeskundige: Marc Arendsen van Buro werk wijzer" → occupational_doctor_name: "Marc Arendsen, Buro werk wijzer"
 - "Bedrijfsarts: Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas."
-- "Bedrijfsarts: Dr. Smith" → occupational_doctor_org: "Dr. Smith"
+- "Dr. Smith" → occupational_doctor_org: "Dr. Smith"
 
 Return ONLY a JSON object with the fields you find.`,
       model: "gpt-4o",

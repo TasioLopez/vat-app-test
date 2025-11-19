@@ -6,6 +6,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import { ActivityBody } from "./ActivityBody";
 
 const page =
   "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
@@ -302,7 +303,15 @@ export default function Section3A4({ data }: { data: TPData }) {
               ) : (
                 <>
                   <div className={blockTitle}>{b.title}</div>
-                  <div className={paperText}>{b.text}</div>
+                  {b.key.startsWith('act-') ? (
+                    <ActivityBody 
+                      activityId={b.key.replace('act-', '')} 
+                      bodyText={b.text} 
+                      className={paperText}
+                    />
+                  ) : (
+                    <div className={paperText}>{b.text}</div>
+                  )}
                 </>
               )}
             </div>
