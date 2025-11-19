@@ -281,11 +281,8 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                         `${tpData.first_name ?? ""} ${tpData.last_name ?? ""}`.trim() ||
                         "Naam werknemer"
                     }
-                    advisorName={tpData.loopbaanadviseur_name || "Loopbaanadviseur"}
-                    employerContact={
-                        `${tpData.referent_first_name ?? ""} ${tpData.referent_last_name ?? ""}`.trim() ||
-                        "Naam opdrachtgever"
-                    }
+                    advisorName={tpData.consultant_name || "Loopbaanadviseur"}
+                    employerContact={tpData.client_referent_name || "Naam opdrachtgever"}
                 />
             ),
         });

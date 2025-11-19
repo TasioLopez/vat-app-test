@@ -163,10 +163,8 @@ export default function Section3A4({ data }: { data: TPData }) {
   const employeeName = 
     `${((data as any).first_name ?? "").trim()} ${((data as any).last_name ?? "").trim()}`.trim()
     || "Naam werknemer";
-  const advisorName = ((data as any).loopbaanadviseur_name as string) || "Loopbaanadviseur";
-  const employerContact = 
-    `${((data as any).referent_first_name ?? "").trim()} ${((data as any).referent_last_name ?? "").trim()}`.trim()
-    || "Naam opdrachtgever";
+  const advisorName = ((data as any).consultant_name as string) || "Loopbaanadviseur";
+  const employerContact = ((data as any).client_referent_name as string) || "Naam opdrachtgever";
 
   type Block =
     | { key: string; title?: string; text: string; variant: "block" | "subtle" }
