@@ -72,6 +72,7 @@ function buildInleidingInstructions(context: any): string {
   const hasAD = !!meta?.has_ad_report;
   const adDate = nlDate(meta?.ad_report_date);
   const firstSickDay = nlDate(meta?.first_sick_day);
+  const intakeDate = nlDate(meta?.intake_date);
   
   const refInitials = getInitials(client?.referent_first_name);
   const refLastName = client?.referent_last_name || '';
@@ -83,21 +84,17 @@ Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
 Maak de Inleiding sectie in de schrijfstijl van professionele re-integratierapporten. Schrijf zakelijk en maak waar nodig formeel.
 
-SCHRIJF EXACT 8 ALINEA'S MET dubbele newlines TUSSEN ELKE ALINEA:
+SCHRIJF EXACT 7 ALINEA'S MET dubbele newlines TUSSEN ELKE ALINEA:
 
-ALINEA 1 - Introductie met naam en leeftijd:
-- Formaat: "${empInitials} ${empLastName} (hierna werknemer te noemen) is op [datum uit documenten] arbeidsongeschikt geraakt als gevolg van een medische beperking..."
-- BELANGRIJK: Gebruik EXACT "(hierna werknemer te noemen)" - GEEN variaties zoals "(hierna: werknemer)" of "(hierna te noemen: werknemer)"
-- Noem werknemer als voorletter(s). achternaam
-- Vermeld leeftijd indien beschikbaar: "51-jarige vrouw" of "[leeftijd]-jarige man/vrouw"
-- Vermeld eerste ziektedag specifiek
-- Vermeld functie en werkgever volledig
+ALINEA 1 - Datum intake:
+- Begin met: "Ik heb ${title} ${empInitials} ${empLastName} (hierna werknemer te noemen) gesproken op ${intakeDate || '[datum intake]'}."
+- BELANGRIJK: Gebruik EXACT "(hierna werknemer te noemen)" - GEEN variaties
 
-ALINEA 2 - Herhaalde medische reden (uitgebreid):
-- Begin: "Werknemer is sinds ${firstSickDay || '[datum]'} arbeidsongeschikt als gevolg van een medische beperking waardoor ${pronSubj.toLowerCase()} niet meer kan werken als ${currentJob}."
-- GEBRUIK ALTIJD "medische beperking" (ENKELVOUD) - NOOIT "medische beperkingen" (meervoud)
-- Schrijf de functie ZONDER hoofdletter in deze alinea
-- Wees specifiek over de arbeidsbeperking en impact
+ALINEA 2 - Introductie met medische situatie (ALGEMEEN):
+- Formaat: "Werknemer is een [leeftijd indien bekend]-jarige ${gender === 'Male' ? 'man' : 'vrouw'} die als gevolg van een medische beperking is uitgevallen voor ${pronPoss} functie als ${currentJob} bij ${companyName}${details?.contract_hours ? `, voor ${details.contract_hours} uur per week` : ''}."
+- Voeg toe: "${pronSubj} is sinds ${firstSickDay || '[datum]'} arbeidsongeschikt geraakt."
+- GEBRUIK ALTIJD "medische beperking" (ENKELVOUD en ALGEMEEN) - NOOIT specifieke lichaamsdelen of diagnoses
+- BELANGRIJK: Beschrijf medische beperkingen ALLEEN in algemene termen zoals "fysieke beperking", "medische beperking", "functionele beperking" - NOOIT specifieke lichaamsdelen of details
 
 ALINEA 3 - Functieomschrijving (GEDETAILLEERD):
 - Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
@@ -112,31 +109,42 @@ ALINEA 4 - Aanmelder/Contactpersoon (controleer Extra Aanmelder):
 - ALS GEEN Extra Aanmelder: "Werknemer is door ${refTitle} ${refInitials} ${refLastName}, [functie contactpersoon] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
 - Gebruik correcte geslachtsaanduidingen (meneer/mevrouw) voor contactpersonen
 
-ALINEA 5 - Medische informatie & FML (VOLLEDIG):
-${hasFML ? `
+ALINEA 5 - Medische informatie (ALGEMEEN - GEEN SPECIFIEKE DETAILS):
 - Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding en de daarbij horende gezondheidsproblematiek."
-- Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de [bepaal: FML/IZP/LAB] van ${fmlDate} op het gebied van [EXTRACT ALLE beperkingen uit hoofdstuk 5 'Medische situatie - FML-beperkingen' van document - wees SPECIFIEK en VOLLEDIG, bijv. 'persoonlijk en sociaal functioneren, dynamische handelingen, statische houdingen, aanpassing fysieke omgevingseisen en werktijden']."
-- Geef ALLE beperkingengebieden weer, niet alleen een paar
+${hasFML ? `
+- Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de FML van ${fmlDate}."
+- BELANGRIJK: Beschrijf beperkingen ALLEEN in algemene categorieën zoals:
+  * "persoonlijk en sociaal functioneren"
+  * "dynamische handelingen" 
+  * "statische houdingen"
+  * "aanpassing aan fysieke omgevingseisen"
+  * "werktijden"
 ` : `
-- Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding, de aanleiding hiervan en de bijbehorende gezondheidsproblemen."
-- Vervolg: "${pronInf} geeft aan medische beperkingen te hebben: [vul in indien beschikbaar uit documenten, doe anders ...]."
+- Vervolg: "${pronInf} geeft aan medische beperkingen te hebben op fysiek en/of mentaal vlak."
 `}
+- STRIKT VERBODEN: Noem NOOIT specifieke lichaamsdelen, diagnoses, of medische details
 - EINDIG ALTIJD MET: "Conform de wetgeving rondom de verwerking van persoonsgegevens wordt medische informatie niet geregistreerd in dit rapport."
 
-ALINEA 6 - Spoor 1 re-integratie status (GEDETAILLEERD):
-- Check documenten zorgvuldig of werknemer re-integreert in spoor 1
-- ALS JA (werkend): "Op het moment van de intake re-integreert werknemer in spoor 1 door [exact frequency uit documenten, bijv. 'twee keer per week'] [exact hours, bijv. 'zeven uur'] per [aangepaste/eigen] werkzaamheden te verrichten [bij specifieke werkplek indien vermeld, bijv. 'bij het Samsam eetcafé']."
-- ALS NEE (niet werkend): "Werknemer geeft tijdens het intakegesprek aan niet in spoor 1 of elders te re-integreren."
-- Voeg toe indien contact met werkgever vermeld: "${pronInf} heeft [frequency] telefonisch contact met ${pronPoss} werkgever." (bijv. "2-wekelijks")
+ALINEA 6 - Spoor 1 re-integratie status:
+- Check documenten of werknemer re-integreert in spoor 1
+- ALS JA: "Op het moment van de intake re-integreert werknemer in spoor 1 door [details uit documenten]."
+- ALS NEE: "Werknemer geeft tijdens het intakegesprek aan niet in spoor 1 of elders te re-integreren. ${pronInf} heeft [frequency indien bekend] contact met ${pronPoss} werkgever."
 
 ALINEA 7 - Trajectdoel (VASTE TEKST):
 "Tijdens het gesprek is toegelicht wat het doel is van het 2e spoortraject. Werknemer geeft aan het belang van dit traject te begrijpen en hieraan mee te willen werken. In het 2e spoor zal onder andere worden onderzocht welke passende mogelijkheden er op de arbeidsmarkt beschikbaar zijn."
 
-ALINEA 8 - AD-rapport status (VOLLEDIG CITAAT):
-${hasAD ? `
-- "In het (Concept) Arbeidsdeskundige rapport opgesteld door ${titleAbbrev} [Voorletter. Achternaam arbeidsdeskundige uit documenten] op ${adDate} staat het volgende:"
-- CITEER het AD-advies VOLLEDIG uit het document - geef EXACTE aanbevelingen, niet alleen een samenvatting
-- Neem volledige quotes over met alle details over werkzoekproces, re-integratiemogelijkheden, prognose, etc.
+VOOR inleiding_sub (APARTE OUTPUT FIELD):
+${hasAD || hasFML ? `
+- Begin: "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
+- CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
+- Neem de complete passage over inclusief:
+  * Advies over passende arbeid binnen eigen werkgever
+  * Monitoren van re-integratiemogelijkheden
+  * Startadvies (bijv. "2 x 2 uur per week")
+  * Opbouwschema (bijv. "met een opbouw van één uur per dag per twee weken")
+  * Reden voor 2e spoor advies
+- BELANGRIJK: Gebruik LETTERLIJKE CITAAT uit document, inclusief exacte getallen en schema's
+- Formaat: Zet het citaat tussen aanhalingstekens zoals in voorbeeld
 ` : `
 - "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
 `}
@@ -147,13 +155,13 @@ KRITIEKE FORMAAT REGELS:
 - Gebruik ${refTitle} voor meneer/mevrouw
 - ELKE alinea eindigt met dubbele newline voor paragraph spacing
 - Wees VOLLEDIG en GEDETAILLEERD - haal ALLE relevante informatie uit documenten
-- Zakelijk en AVG-proof (GEEN medische diagnoses)
-- Wees zo specifiek mogelijk met datums, uren, taken, locaties
+- Zakelijk en AVG-proof (GEEN medische diagnoses of specifieke lichaamsdelen)
+- STRIKT: Medische informatie altijd algemeen houden - geen specifieke details
 
 Return ONLY a JSON object:
 {
   "inleiding_main": "string met alinea 1-7 (VERPLICHT dubbele newlines tussen ELKE alinea)",
-  "inleiding_sub": "string met alinea 8 (AD-rapport deel)"
+  "inleiding_sub": "string met AD-rapport citaat of NB tekst"
 }
 `.trim();
 }
@@ -329,13 +337,13 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from("tp_meta")
-      .select("*")
+      .select("*, intake_date")
       .eq("employee_id", employeeId)
       .single();
 
     const { data: client } = await supabase
       .from("clients")
-      .select("name, referent_first_name, referent_last_name")
+      .select("name, referent_first_name, referent_last_name, referent_gender")
       .eq("id", employee?.client_id)
       .single();
 
