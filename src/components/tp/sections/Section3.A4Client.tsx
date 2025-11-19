@@ -18,6 +18,46 @@ const blockTitle = "font-bold bg-gray-100 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
+// Special rendering for visie_loopbaanadviseur with logo bullets
+function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+    if (!text) return text;
+    
+    const paragraphs = text.split(/\n\n+/);
+    
+    return paragraphs.map((para, paraIdx) => {
+        const lines = para.trim().split('\n');
+        
+        // Check if this paragraph is a list
+        const isBulletList = lines.every(l => l.trim().startsWith('•'));
+        
+        if (isBulletList) {
+            // Render list items with logos instead of bullets
+            return (
+                <div key={paraIdx} className="ml-4 mb-4 space-y-2">
+                    {lines.map((line, idx) => {
+                        const content = line.replace(/^•\s*/, '');
+                        return (
+                            <div key={idx} className="flex items-start gap-2">
+                                <Image 
+                                    src="/val-logo.jpg" 
+                                    alt="" 
+                                    width={14} 
+                                    height={14} 
+                                    style={{ marginTop: '3px', flexShrink: 0 }}
+                                />
+                                <span>{content}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+        
+        // Regular paragraph
+        return <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>{para}</p>;
+    });
+}
+
 const TP_ACTIVITIES_INTRO =
     "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten kunnen worden ingezet om het doel van betaald werk te realiseren.";
 
@@ -346,6 +386,8 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                         bodyText={s.text} 
                                         className={paperText}
                                     />
+                                ) : s.key === 'vlb' ? (
+                                    <div className={paperText}>{renderVisieLoopbaanadviseurText(s.text)}</div>
                                 ) : (
                                     <div className={paperText}>{s.text}</div>
                                 )}
@@ -410,6 +452,8 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                                     bodyText={s.text} 
                                                     className={paperText}
                                                 />
+                                            ) : s.key === 'vlb' ? (
+                                                <div className={paperText}>{renderVisieLoopbaanadviseurText(s.text)}</div>
                                             ) : (
                                                 <div className={paperText}>{s.text}</div>
                                             )}

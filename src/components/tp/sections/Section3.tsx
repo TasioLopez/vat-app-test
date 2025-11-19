@@ -1062,6 +1062,54 @@ function formatInlineText(text: string): React.ReactNode {
     return parts.length > 0 ? parts : text;
 }
 
+// Special rendering for visie_loopbaanadviseur with logo bullets
+function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+    if (!text) return text;
+    
+    const paragraphs = text.split(/\n\n+/);
+    
+    return paragraphs.map((para, paraIdx) => {
+        const lines = para.trim().split('\n');
+        
+        // Check if this paragraph is a list
+        const isBulletList = lines.every(l => l.trim().startsWith('•'));
+        const isNumberedList = lines.every(l => /^\d+\./.test(l.trim()));
+        
+        if (isBulletList || isNumberedList) {
+            // Render list items with logos instead of bullets
+            return (
+                <div key={paraIdx} className="ml-4 mb-4 space-y-2">
+                    {lines.map((line, idx) => {
+                        const content = line.replace(/^[•\d+\.]\s*/, '');
+                        return (
+                            <div key={idx} className="flex items-start gap-2">
+                                <img 
+                                    src="/val-logo.jpg" 
+                                    alt="" 
+                                    style={{ width: '14px', height: '14px', marginTop: '3px', flexShrink: 0 }}
+                                />
+                                <span>{formatInlineText(content)}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+        
+        // Regular paragraph
+        return (
+            <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>
+                {lines.map((line, idx) => (
+                    <React.Fragment key={idx}>
+                        {idx > 0 && <br/>}
+                        {formatInlineText(line)}
+                    </React.Fragment>
+                ))}
+            </p>
+        );
+    });
+}
+
 function renderFormattedText(text: string): React.ReactNode {
     if (!text) return text;
     
@@ -1216,6 +1264,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                             bodyText={s.text} 
                                             className=""
                                         />
+                                    ) : s.key === 'vlb' ? (
+                                        renderVisieLoopbaanadviseurText(s.text)
                                     ) : (
                                         <>
                                             {renderFormattedText(s.text)}
@@ -1290,6 +1340,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                                     bodyText={s.text} 
                                                     className=""
                                                 />
+                                            ) : s.key === 'vlb' ? (
+                                                renderVisieLoopbaanadviseurText(s.text)
                                             ) : (
                                                 <>
                                                     {renderFormattedText(s.text)}
