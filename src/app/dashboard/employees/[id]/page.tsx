@@ -22,8 +22,11 @@ type EmployeeDetails = {
     current_job?: string;
     work_experience?: string;
     education_level?: string;
+    education_name?: string;
     drivers_license?: boolean;
+    drivers_license_type?: string;
     has_transport?: boolean;
+    transport_type?: string;
     dutch_speaking?: boolean;
     dutch_writing?: boolean;
     dutch_reading?: boolean;
@@ -405,12 +408,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 <input className={fieldClass('current_job')} placeholder="Huidig ​​werk" value={employeeDetails?.current_job || ''} onChange={e => handleDetailChange('current_job', e.target.value)} />
                 <textarea className={fieldClass('work_experience')} placeholder="Werkervaring" value={employeeDetails?.work_experience || ''} onChange={e => handleDetailChange('work_experience', e.target.value)} />
-                <select className={fieldClass('education_level')} value={employeeDetails?.education_level || ''} onChange={e => handleDetailChange('education_level', e.target.value)}>
-                    <option value="">Selecteer opleidingsniveau</option>
-                    {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
-                        <option key={level} value={level}>{level}</option>
-                    ))}
-                </select>
+                
+                <div className="flex gap-2">
+                    <select className={fieldClass('education_level')} value={employeeDetails?.education_level || ''} onChange={e => handleDetailChange('education_level', e.target.value)}>
+                        <option value="">Selecteer opleidingsniveau</option>
+                        {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
+                            <option key={level} value={level}>{level}</option>
+                        ))}
+                    </select>
+                    <input 
+                        className={fieldClass('education_name')} 
+                        placeholder="Specialisatie (bijv. Agogisch werk)" 
+                        value={employeeDetails?.education_name || ''} 
+                        onChange={e => handleDetailChange('education_name', e.target.value)} 
+                    />
+                </div>
 
                 <div className='flex p-2'>
                     {[['drivers_license', 'Rijbewijs'], ['has_transport', 'Eigen vervoer'], ['dutch_speaking', 'NL Spreken'], ['dutch_writing', 'NL Schrijven'], ['dutch_reading', 'NL Lezen'], ['has_computer', 'Heeft PC']].map(([key, label]) => (
@@ -420,6 +432,37 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         </label>
                     ))}
                 </div>
+
+                {/* Conditional inputs for license and transport types */}
+                {employeeDetails?.drivers_license && (
+                    <select 
+                        className={fieldClass('drivers_license_type')} 
+                        value={employeeDetails?.drivers_license_type || ''} 
+                        onChange={e => handleDetailChange('drivers_license_type', e.target.value)}
+                    >
+                        <option value="">Selecteer rijbewijstype</option>
+                        <option value="B">B (Auto)</option>
+                        <option value="C">C (Vrachtwagen)</option>
+                        <option value="D">D (Bus)</option>
+                        <option value="E">E (Aanhangwagen)</option>
+                        <option value="A">A (Motor)</option>
+                    </select>
+                )}
+
+                {employeeDetails?.has_transport && (
+                    <select 
+                        className={fieldClass('transport_type')} 
+                        value={employeeDetails?.transport_type || ''} 
+                        onChange={e => handleDetailChange('transport_type', e.target.value)}
+                    >
+                        <option value="">Selecteer vervoertype</option>
+                        <option value="Autovoertuig">Autovoertuig</option>
+                        <option value="Fiets">Fiets</option>
+                        <option value="Bromfiets">Bromfiets</option>
+                        <option value="Motor">Motor</option>
+                        <option value="OV">Openbaar vervoer</option>
+                    </select>
+                )}
 
                 <select className={fieldClass('computer_skills')} value={employeeDetails?.computer_skills || ''} onChange={e => handleDetailChange('computer_skills', e.target.value)}>
                     <option value="">Selecteer computervaardigheden</option>
@@ -431,7 +474,18 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </select>
 
                 <input className={fieldClass('contract_hours')} type="number" placeholder="Contracturen" value={employeeDetails?.contract_hours || ''} onChange={e => handleDetailChange('contract_hours', Number(e.target.value))} />
-                <textarea className={fieldClass('other_employers')} placeholder="Andere werkgevers" value={employeeDetails?.other_employers || ''} onChange={e => handleDetailChange('other_employers', e.target.value)} />
+                
+                <div>
+                    <textarea 
+                        className={fieldClass('other_employers')} 
+                        placeholder="Vorige werkgevers (niet de huidige werkgever)" 
+                        value={employeeDetails?.other_employers || ''} 
+                        onChange={e => handleDetailChange('other_employers', e.target.value)} 
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Vul hier alleen vorige werkgevers in, niet de huidige werkgever ({client?.name})
+                    </p>
+                </div>
 
                 <button onClick={saveDetails} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer transition" disabled={updating}>
                     {updating ? 'Opslaan...' : 'Profiel Opslaan'}

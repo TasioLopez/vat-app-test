@@ -1,5 +1,6 @@
 // src/lib/tp/load.ts
 import { createClient } from "@supabase/supabase-js";
+import { formatEmployeeName } from "@/lib/utils";
 
 export type TPData = Record<string, any>;
 
@@ -79,9 +80,14 @@ export async function loadTP(
     if (!isFilled(data.client_referent_email) && client?.referent_email) data.client_referent_email = client.referent_email;
   }
 
-  // 5) Full employee name
-  const full = [data.first_name, data.last_name].filter(Boolean).join(" ").trim();
-  if (full) data.employee_name = full;
+  // 5) Full employee name - use formatted version with gender/title
+  if (data.first_name && data.last_name) {
+    data.employee_name = formatEmployeeName(
+      data.first_name,
+      data.last_name,
+      data.gender
+    );
+  }
 
   // 6) Identity fallback
   data.employee_id ??= employee?.id ?? employeeId;

@@ -45,20 +45,26 @@ BELANGRIJKE PRIORITEIT: Documenten zijn gesorteerd op prioriteit:
 BELANGRIJK: Je MOET alle velden invullen met EXACTE informatie uit de documenten.
 
 Zoek specifiek naar deze informatie in de documenten (ALLEEN voor employee_details tabel):
-- Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:" (bijv. "Huiskamerbegeleider")
-- Werkgever/organisatie (other_employers) - VERPLICHT, zoek naar "Werkgever/organisatie:" of "Organisatie:" (bijv. "Laurens")
-- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang functie" of "Contracturen" (bijv. "24" of "15.5")
-- Leeftijd werknemer (date_of_birth) - zoek naar "Leeftijd werknemer:" en converteer naar geboortedatum (bijv. "1968-01-15")
-- Geslacht werknemer (gender) - zoek naar "Geslacht werknemer:" (bijv. "Vrouw")
-- Relevante werkervaring (work_experience) - VERPLICHT, beschrijf alle relevante werkervaring
-- Opleidingsniveau (education_level) - VERPLICHT, kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
+- Functietitel (current_job) - VERPLICHT, zoek naar "Functietitel:" of "Functie:"
+- Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang" of "Contracturen"
+- Leeftijd werknemer (date_of_birth) - converteer naar geboortedatum (bijv. "1968-01-15")
+- Geslacht werknemer (gender) - "Man" of "Vrouw"
+- Relevante werkervaring (work_experience) - beschrijf werkervaring, inclusief functies en organisaties
+- Opleidingsniveau (education_level) - kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
+- Opleidingsspecialisatie (education_name) - de naam van de opleiding/cursus (bijv. "Agogisch werk", "Bedrijfskunde")
 - Rijbewijs (drivers_license) - true/false
+- Rijbewijstype (drivers_license_type) - indien van toepassing: "B", "C", "D", "E", "A"
 - Vervoer beschikbaar (has_transport) - true/false
+- Vervoertype (transport_type) - indien van toepassing: "Autovoertuig", "Fiets", "Bromfiets", "Motor", "OV"
 - Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
 - Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
-- Heeft de werknemer een computer thuis? (has_computer) - true/false
+- Heeft computer thuis (has_computer) - true/false
+- Vorige werkgevers (other_employers) - ALLEEN VORIGE werkgevers, NIET de huidige werkgever. Scheid met komma's.
 
-BELANGRIJK: Gebruik ALLEEN de exacte veldnamen zoals hierboven tussen haakjes aangegeven (current_job, other_employers, contract_hours, gender, work_experience, education_level, drivers_license, has_transport, computer_skills, dutch_speaking, dutch_writing, dutch_reading, has_computer, date_of_birth). NIET intake_date - dat hoort in tp_meta tabel.
+BELANGRIJK: 
+- Het veld "other_employers" is ALLEEN voor VORIGE werkgevers, niet de huidige werkgever.
+- De huidige werkgever staat al in het systeem en hoeft NIET in other_employers.
+- Gebruik exacte veldnamen: current_job, work_experience, education_level, education_name, drivers_license, drivers_license_type, has_transport, transport_type, computer_skills, other_employers, etc.
 
 Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
 
@@ -148,8 +154,9 @@ Return ONLY a JSON object with the fields you find.`,
         
         // Fields that belong in employee_details table (not tp_meta)
         const validEmployeeDetailsFields = [
-          'current_job', 'work_experience', 'education_level', 'drivers_license', 
-          'has_transport', 'dutch_speaking', 'dutch_writing', 'dutch_reading', 
+          'current_job', 'work_experience', 'education_level', 'education_name',
+          'drivers_license', 'drivers_license_type', 'has_transport', 'transport_type',
+          'dutch_speaking', 'dutch_writing', 'dutch_reading', 
           'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
           'gender', 'date_of_birth', 'phone'
         ];
