@@ -2,7 +2,15 @@
 
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTP } from "@/context/TPContext";
-import { formatEmployeeName } from "@/lib/utils";
+import { 
+  formatEmployeeName,
+  formatWorkExperience,
+  formatEducationLevel,
+  formatDriversLicense,
+  formatTransportation,
+  formatComputerSkills,
+  filterOtherEmployers
+} from "@/lib/utils";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 
@@ -179,20 +187,20 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
         <Table
           rows={[
             { label: "Huidige functie", value: safe(tpData.current_job) },
-            { label: "Werkervaring", value: safe(tpData.work_experience) },
-            { label: "Opleidingsniveau", value: safe(tpData.education_level) },
-            { label: "Rijbewijs", value: yesNo(tpData.drivers_license) },
-            { label: "Eigen vervoer", value: yesNo(tpData.has_transport) },
+            { label: "Werkervaring", value: formatWorkExperience(tpData.work_experience) },
+            { label: "Opleidingsniveau", value: formatEducationLevel(tpData.education_level, tpData.education_name) },
+            { label: "Rijbewijs", value: formatDriversLicense(tpData.drivers_license, tpData.drivers_license_type) },
+            { label: "Eigen vervoer", value: formatTransportation(tpData.has_transport, tpData.transport_type) },
             { label: "Spreekvaardigheid NL-taal", value: yesNo(tpData.dutch_speaking) },
             { label: "Schrijfvaardigheid NL-taal", value: yesNo(tpData.dutch_writing) },
             { label: "Leesvaardigheid NL-taal", value: yesNo(tpData.dutch_reading) },
             { label: "Beschikt over een PC", value: yesNo(tpData.has_computer) },
-            { label: "PC-vaardigheden", value: safe(tpData.computer_skills) },
+            { label: "PC-vaardigheden", value: formatComputerSkills(tpData.computer_skills) },
             {
               label: "Aantal contracturen",
               value: tpData.contract_hours ? `${tpData.contract_hours} uur per week` : "—",
             },
-            { label: "Andere werkgever(s)", value: safe(tpData.other_employers) },
+            { label: "Andere werkgever(s)", value: filterOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name) },
           ]}
         />
       ),

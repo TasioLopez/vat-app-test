@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
-import { formatEmployeeName } from '@/lib/utils';
+import { 
+  formatEmployeeName, 
+  formatWorkExperience, 
+  formatEducationLevel,
+  formatDriversLicense,
+  formatTransportation,
+  formatComputerSkills,
+  filterOtherEmployers
+} from '@/lib/utils';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 
@@ -595,17 +603,17 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                 <tbody>
                   <tr><td colSpan={2} className="font-bold bg-gray-100">Basisgegevens re-integratie werknemer</td></tr>
                   <tr><td className={tdLabel}>Huidige functie</td><td className={tdValue}>{tpData.current_job}</td></tr>
-                  <tr><td className={tdLabel}>Werkervaring</td><td className={tdValue}>{tpData.work_experience}</td></tr>
-                  <tr><td className={tdLabel}>Opleidingsniveau</td><td className={tdValue}>{tpData.education_level}</td></tr>
-                  <tr><td className={tdLabel}>Rijbewijs</td><td className={tdValue}>{tpData.drivers_license ? 'Ja' : 'Nee'}</td></tr>
-                  <tr><td className={tdLabel}>Eigen vervoer</td><td className={tdValue}>{tpData.has_transport ? 'Ja' : 'Nee'}</td></tr>
+                  <tr><td className={tdLabel}>Werkervaring</td><td className={tdValue}>{formatWorkExperience(tpData.work_experience)}</td></tr>
+                  <tr><td className={tdLabel}>Opleidingsniveau</td><td className={tdValue}>{formatEducationLevel(tpData.education_level, tpData.education_name)}</td></tr>
+                  <tr><td className={tdLabel}>Rijbewijs</td><td className={tdValue}>{formatDriversLicense(tpData.drivers_license, tpData.drivers_license_type)}</td></tr>
+                  <tr><td className={tdLabel}>Eigen vervoer</td><td className={tdValue}>{formatTransportation(tpData.has_transport, tpData.transport_type)}</td></tr>
                   <tr><td className={tdLabel}>Spreekvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_speaking ? 'Ja' : 'Nee'}</td></tr>
                   <tr><td className={tdLabel}>Schrijfvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_writing ? 'Ja' : 'Nee'}</td></tr>
                   <tr><td className={tdLabel}>Leesvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_reading ? 'Ja' : 'Nee'}</td></tr>
                   <tr><td className={tdLabel}>Beschikt over een PC</td><td className={tdValue}>{tpData.has_computer ? 'Ja' : 'Nee'}</td></tr>
-                  <tr><td className={tdLabel}>PC-vaardigheden</td><td className={tdValue}>{tpData.computer_skills}</td></tr>
+                  <tr><td className={tdLabel}>PC-vaardigheden</td><td className={tdValue}>{formatComputerSkills(tpData.computer_skills)}</td></tr>
                   <tr><td className={tdLabel}>Aantal contracturen</td><td className={tdValue}>{tpData.contract_hours} uur per week</td></tr>
-                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{tpData.other_employers}</td></tr>
+                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{filterOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name)}</td></tr>
                 </tbody>
               </table>
 

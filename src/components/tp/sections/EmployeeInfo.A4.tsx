@@ -5,7 +5,15 @@
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { TPData } from "@/lib/tp/load";
-import { formatEmployeeName } from "@/lib/utils";
+import { 
+  formatEmployeeName,
+  formatWorkExperience,
+  formatEducationLevel,
+  formatDriversLicense,
+  formatTransportation,
+  formatComputerSkills,
+  filterOtherEmployers
+} from "@/lib/utils";
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
@@ -193,20 +201,20 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
         <Table
           rows={[
             { label: "Huidige functie", value: data.current_job || "—" },
-            { label: "Werkervaring", value: data.work_experience || "—" },
-            { label: "Opleidingsniveau", value: data.education_level || "—" },
-            { label: "Rijbewijs", value: yesNo(getBooleanValue(data.drivers_license)) },
-            { label: "Eigen vervoer", value: yesNo(getBooleanValue(data.has_transport)) },
+            { label: "Werkervaring", value: formatWorkExperience(data.work_experience) },
+            { label: "Opleidingsniveau", value: formatEducationLevel(data.education_level, data.education_name) },
+            { label: "Rijbewijs", value: formatDriversLicense(getBooleanValue(data.drivers_license), data.drivers_license_type) },
+            { label: "Eigen vervoer", value: formatTransportation(getBooleanValue(data.has_transport), data.transport_type) },
             { label: "Spreekvaardigheid NL-taal", value: yesNo(getBooleanValue(data.dutch_speaking))},
             { label: "Schrijfvaardigheid NL-taal", value: yesNo(getBooleanValue(data.dutch_writing))},
             { label: "Leesvaardigheid NL-taal", value: yesNo(getBooleanValue(data.dutch_reading)) },
             { label: "Beschikt over een PC", value: yesNo(getBooleanValue(data.has_computer)) },
-            { label: "PC-vaardigheden", value: data.computer_skills || "—" },
+            { label: "PC-vaardigheden", value: formatComputerSkills(data.computer_skills) },
             {
               label: "Aantal contracturen",
               value: data.contract_hours ? `${data.contract_hours} uur per week` : "—",
             },
-            { label: "Andere werkgever(s)", value: data.other_employers || "—" },
+            { label: "Andere werkgever(s)", value: filterOtherEmployers(data.other_employers, data.client_name || data.employer_name) },
           ]}
         />
       </div>
