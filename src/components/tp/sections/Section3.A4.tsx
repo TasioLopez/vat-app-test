@@ -93,7 +93,7 @@ function SignatureBlock({
           <div className="font-semibold mb-2">Werknemer</div>
           <div className="mb-1">
             <span className={label}>Naam: </span>
-            <span className={line}></span>
+            <span className={line}>{employeeName}</span>
           </div>
           <div className="mb-1">
             <span className={label}>Datum: </span>
@@ -103,7 +103,6 @@ function SignatureBlock({
             <span className={label}>Handtekening: </span>
             <span className={line}></span>
           </div>
-          <div className="text-xs mt-2 italic">{employeeName}</div>
         </div>
 
         {/* Loopbaanadviseur */}
@@ -111,7 +110,7 @@ function SignatureBlock({
           <div className="font-semibold mb-2">Loopbaanadviseur</div>
           <div className="mb-1">
             <span className={label}>Naam: </span>
-            <span className={line}></span>
+            <span className={line}>{advisorName}</span>
           </div>
           <div className="mb-1">
             <span className={label}>Datum: </span>
@@ -121,7 +120,6 @@ function SignatureBlock({
             <span className={label}>Handtekening: </span>
             <span className={line}></span>
           </div>
-          <div className="text-xs mt-2 italic">{advisorName}</div>
         </div>
 
         {/* Opdrachtgever */}
@@ -129,7 +127,7 @@ function SignatureBlock({
           <div className="font-semibold mb-2">Opdrachtgever</div>
           <div className="mb-1">
             <span className={label}>Naam: </span>
-            <span className={line}></span>
+            <span className={line}>{employerContact}</span>
           </div>
           <div className="mb-1">
             <span className={label}>Datum: </span>
@@ -139,7 +137,6 @@ function SignatureBlock({
             <span className={label}>Handtekening: </span>
             <span className={line}></span>
           </div>
-          <div className="text-xs mt-2 italic">{employerContact}</div>
         </div>
       </div>
     </div>
@@ -162,20 +159,14 @@ export default function Section3A4({ data }: { data: TPData }) {
     selectedIds.includes(a.id)
   );
 
-  // names for signature
-  const employeeName = fullName(
-    (data as any).employee_full_name,
-    (data as any).employee_first_name,
-    (data as any).employee_last_name,
-    "Naam werknemer"
-  );
+  // names for signature - use simple firstName lastName format
+  const employeeName = 
+    `${((data as any).first_name ?? "").trim()} ${((data as any).last_name ?? "").trim()}`.trim()
+    || "Naam werknemer";
   const advisorName = ((data as any).loopbaanadviseur_name as string) || "Loopbaanadviseur";
-  const employerContact = fullName(
-    (data as any).client_contact_full_name,
-    (data as any).referent_first_name,
-    (data as any).referent_last_name,
-    "Naam opdrachtgever"
-  );
+  const employerContact = 
+    `${((data as any).referent_first_name ?? "").trim()} ${((data as any).referent_last_name ?? "").trim()}`.trim()
+    || "Naam opdrachtgever";
 
   type Block =
     | { key: string; title?: string; text: string; variant: "block" | "subtle" }

@@ -737,13 +737,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         C("sign",
             <SignatureBlock
                 employeeName={
-                    tpData.employee_full_name ||
-                    `${tpData.employee_first_name ?? ""} ${tpData.employee_last_name ?? ""}`.trim() ||
+                    `${tpData.first_name ?? ""} ${tpData.last_name ?? ""}`.trim() ||
                     "Naam werknemer"
                 }
                 advisorName={tpData.loopbaanadviseur_name || "Loopbaanadviseur"}
                 employerContact={
-                    tpData.client_contact_full_name ||
                     `${tpData.referent_first_name ?? ""} ${tpData.referent_last_name ?? ""}`.trim() ||
                     "Naam opdrachtgever"
                 }

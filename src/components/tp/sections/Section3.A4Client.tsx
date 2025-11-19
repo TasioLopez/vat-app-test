@@ -89,7 +89,7 @@ function SignatureBlock({
                     <div className="font-semibold mb-2">Werknemer</div>
                     <div className="mb-1">
                         <span className={label}>Naam: </span>
-                        <span className={line}></span>
+                        <span className={line}>{employeeName}</span>
                     </div>
                     <div className="mb-1">
                         <span className={label}>Datum: </span>
@@ -99,13 +99,12 @@ function SignatureBlock({
                         <span className={label}>Handtekening: </span>
                         <span className={line}></span>
                     </div>
-                    <div className="text-xs mt-2 italic">{employeeName}</div>
                 </div>
                 <div className={cell}>
                     <div className="font-semibold mb-2">Loopbaanadviseur</div>
                     <div className="mb-1">
                         <span className={label}>Naam: </span>
-                        <span className={line}></span>
+                        <span className={line}>{advisorName}</span>
                     </div>
                     <div className="mb-1">
                         <span className={label}>Datum: </span>
@@ -115,13 +114,12 @@ function SignatureBlock({
                         <span className={label}>Handtekening: </span>
                         <span className={line}></span>
                     </div>
-                    <div className="text-xs mt-2 italic">{advisorName}</div>
                 </div>
                 <div className={cell}>
                     <div className="font-semibold mb-2">Opdrachtgever</div>
                     <div className="mb-1">
                         <span className={label}>Naam: </span>
-                        <span className={line}></span>
+                        <span className={line}>{employerContact}</span>
                     </div>
                     <div className="mb-1">
                         <span className={label}>Datum: </span>
@@ -131,7 +129,6 @@ function SignatureBlock({
                         <span className={label}>Handtekening: </span>
                         <span className={line}></span>
                     </div>
-                    <div className="text-xs mt-2 italic">{employerContact}</div>
                 </div>
             </div>
         </div>
@@ -281,13 +278,11 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             node: (
                 <SignatureBlock
                     employeeName={
-                        tpData.employee_full_name ||
-                        `${tpData.employee_first_name ?? ""} ${tpData.employee_last_name ?? ""}`.trim() ||
+                        `${tpData.first_name ?? ""} ${tpData.last_name ?? ""}`.trim() ||
                         "Naam werknemer"
                     }
                     advisorName={tpData.loopbaanadviseur_name || "Loopbaanadviseur"}
                     employerContact={
-                        tpData.client_contact_full_name ||
                         `${tpData.referent_first_name ?? ""} ${tpData.referent_last_name ?? ""}`.trim() ||
                         "Naam opdrachtgever"
                     }

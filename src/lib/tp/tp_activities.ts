@@ -43,9 +43,7 @@ export const TP_ACTIVITIES: TPActivity[] = [
     title: "Sollicitatievaardigheden en sollicitatietools",
     body: `De sollicitatiebegeleiding van ValentineZ is volledig maatwerk en wordt ondersteund vanuit de persoonlijke begeleiding die we werknemers bieden. Solliciteren is een vaardigheid die veel werknemers lang niet meer actief hebben uitgeoefend en soms ook grotendeels verleerd zijn. Wij helpen de werknemer bij het opstellen of bijwerken van een curriculum. Daarnaast laten wij werknemer zien waar vacatures te zoeken en te vinden, die aansluiten bij het persoonlijke zoekprofiel. Ook begeleiden we werknemer bij de geschreven en ongeschreven wetten van het schrijven van een sollicitatiebrief of motivatiebrief en wordt er aandacht besteed aan correct en overtuigend taalgebruik. We informeren werknemers waar, indien nodig, taaladvies in te winnen wanneer het opstellen van een sollicitatiebrief of motivatiebrief niet binnen de mogelijkheden ligt.  
 
- Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. 
-
- De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.`,
+ Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.`,
   },
   {
     id: "solliciteren",
