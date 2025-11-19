@@ -2,6 +2,7 @@
 
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTP } from "@/context/TPContext";
+import { formatEmployeeName } from "@/lib/utils";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 
@@ -82,7 +83,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
       node: (
         <Table
           rows={[
-            { label: "Naam", value: `${safe(tpData.first_name, "")} ${safe(tpData.last_name, "")}`.trim() || "—" },
+            { label: "Naam", value: formatEmployeeName(tpData.first_name, tpData.last_name, tpData.gender) },
             {
               label: "Geslacht",
               value: (

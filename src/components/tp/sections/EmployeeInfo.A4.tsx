@@ -5,6 +5,7 @@
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { TPData } from "@/lib/tp/load";
+import { formatEmployeeName } from "@/lib/utils";
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
@@ -103,7 +104,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
           rows={[
             {
               label: "Naam",
-              value: `${data.first_name || ""} ${data.last_name || ""}`.trim() || "—"
+              value: formatEmployeeName(data.first_name, data.last_name, data.gender)
             },
             {
               label: "Geslacht",

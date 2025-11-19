@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
+import { formatEmployeeName } from '@/lib/utils';
 import Image from 'next/image';
 import Cover from '@/assets/images/valentinez-cover.jpg';
 
@@ -21,8 +22,19 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                 .eq('id', employeeId)
                 .single();
 
+            const { data: employeeDetails } = await supabase
+                .from('employee_details')
+                .select('gender')
+                .eq('employee_id', employeeId)
+                .maybeSingle();
+
             if (employee) {
-                updateField('employee_name', `${employee.first_name} ${employee.last_name}`);
+                const formattedName = formatEmployeeName(
+                    employee.first_name,
+                    employee.last_name,
+                    employeeDetails?.gender
+                );
+                updateField('employee_name', formattedName);
 
                 if (employee.client_id) {
                     const { data: client } = await supabase

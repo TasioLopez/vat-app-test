@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Cover from "@/assets/images/valentinez-cover.jpg";
 import { TPData } from "@/lib/tp/load";
+import { formatEmployeeName } from "@/lib/utils";
 
 type Props = { data: TPData };
 
@@ -18,31 +19,15 @@ export default function CoverPageA4({ data }: Props) {
 
   // Helper function to get employee name from various possible sources
   const getEmployeeName = (): string => {
-    // First try the combined employee_name from context
-    if (data.employee_name) {
-      console.log('✅ Using employee_name:', data.employee_name);
-      return data.employee_name;
-    }
+    // Use formatEmployeeName utility for consistent formatting
+    const formattedName = formatEmployeeName(
+      data.first_name,
+      data.last_name,
+      data.gender
+    );
     
-    // Then try first_name + last_name from database
-    if (data.first_name && data.last_name) {
-      const fullName = `${data.first_name} ${data.last_name}`;
-      console.log('✅ Using first_name + last_name:', fullName);
-      return fullName;
-    }
-    
-    // Fallback to individual fields if only one exists
-    if (data.first_name) {
-      console.log('⚠️ Using only first_name:', data.first_name);
-      return data.first_name;
-    }
-    if (data.last_name) {
-      console.log('⚠️ Using only last_name:', data.last_name);
-      return data.last_name;
-    }
-    
-    console.log('❌ No employee name found, returning em dash');
-    return "—";
+    console.log('✅ Using formatted name:', formattedName);
+    return formattedName;
   };
 
   // Helper function to get employer name from various possible sources

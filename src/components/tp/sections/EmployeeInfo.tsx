@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
+import { formatEmployeeName } from '@/lib/utils';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 
@@ -524,7 +525,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               <table className="w-full border-collapse mb-4">
                 <tbody>
                   <tr><td colSpan={2} className="font-bold bg-gray-100">Gegevens werknemer</td></tr>
-                  <tr><td className={tdLabel}>Naam</td><td className={tdValue}>{tpData.first_name} {tpData.last_name}</td></tr>
+                  <tr><td className={tdLabel}>Naam</td><td className={tdValue}>{formatEmployeeName(tpData.first_name, tpData.last_name, tpData.gender)}</td></tr>
                   <tr>
                     <td className={tdLabel}>Geslacht</td>
                     <td className={tdValue}>
