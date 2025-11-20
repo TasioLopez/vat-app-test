@@ -1096,31 +1096,15 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
             );
         }
         
-        // Check if next paragraph is a list (if this is intro text)
-        const nextParaLines = paragraphs[paraIdx + 1]?.trim().split('\n') || [];
-        const nextIsList = nextParaLines.every(l => l.trim().startsWith('•') || /^\d+\./.test(l.trim()));
-        const isIntroBeforeList = paraIdx === 0 && nextIsList;
-        
-        // Regular paragraph - make bold if it's intro text before a list
+        // Regular paragraph - bold will come from **markdown** in the text itself
         return (
             <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>
-                {isIntroBeforeList ? (
-                    <strong>
-                        {lines.map((line, idx) => (
-                            <React.Fragment key={idx}>
-                                {idx > 0 && <br/>}
-                                {formatInlineText(line)}
-                            </React.Fragment>
-                        ))}
-                    </strong>
-                ) : (
-                    lines.map((line, idx) => (
-                        <React.Fragment key={idx}>
-                            {idx > 0 && <br/>}
-                            {formatInlineText(line)}
-                        </React.Fragment>
-                    ))
-                )}
+                {lines.map((line, idx) => (
+                    <React.Fragment key={idx}>
+                        {idx > 0 && <br/>}
+                        {formatInlineText(line)}
+                    </React.Fragment>
+                ))}
             </p>
         );
     });

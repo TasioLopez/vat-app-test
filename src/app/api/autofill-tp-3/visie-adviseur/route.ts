@@ -60,24 +60,29 @@ function buildInstructions(): string {
   return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_loopbaanadviseur".
 
-Vereisten:
-- Extracteer FML/IZP datum en arts informatie uit documenten
-- Identificeer welke beperking categorieën (rubrieken) aanwezig zijn
-- Gebruik checkmarks (☑) voor categorieën met beperkingen
-- Format als professionele Nederlandse tekst
+BELANGRIJKE FORMATTING REGELS:
+- Datum ALTIJD in format: "25 april 2025" (dag maand jaar, volledige maandnaam)
+- NOOIT gebruik: "25/04/2025" of "25-04-2025" of andere formaten
+- Eerste alinea (voor de lijst) MOET tussen **dubbele sterretjes** voor bold
+- Gebruik bullet points met • (niet ☑ of andere symbolen)
 
-Output structuur:
-"Werknemer heeft conform de FML van [datum] opgesteld door arts [naam arts] werkend onder supervisie van arts [naam supervisor] beperkingen in de volgende rubrieken:
+Output structuur (EXACT volgen):
+**Werknemer heeft conform de FML van [25 april 2025] opgesteld door arts [naam arts] werkend onder supervisie van arts [naam supervisor] beperkingen in de volgende rubrieken:**
 
-☑ Persoonlijk functioneren
-☑ Sociaal functioneren  
-☑ Aanpassing aan fysieke omgevingseisen
-☑ Dynamische handelingen
-☑ Statische houdingen
-☑ Werktijden"
+• Persoonlijk functioneren
+• Sociaal functioneren  
+• Aanpassing aan fysieke omgevingseisen
+• Dynamische handelingen
+• Statische houdingen
+• Werktijden
 
-Alleen categorieën met daadwerkelijke beperkingen moeten een ☑ krijgen.
-GEEN citations of bronvermeldingen.
+KRITIEKE REGELS:
+- Eerste zin TUSSEN **sterretjes** voor bold markdown
+- Datum als "25 april 2025" (GEEN andere formaten)
+- Gebruik • voor bullet points (niet ☑)
+- Alleen categorieën met daadwerkelijke beperkingen opnemen
+- GEEN citations of bronvermeldingen
+
 Output uitsluitend JSON: { "visie_loopbaanadviseur": string }`;
 }
 
