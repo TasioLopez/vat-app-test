@@ -18,6 +18,64 @@ const blockTitle = "font-bold bg-gray-100 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
+// Helper to format markdown (bold and italic)
+function formatInlineText(text: string): React.ReactNode {
+    if (!text) return text;
+    
+    const parts: React.ReactNode[] = [];
+    let currentIdx = 0;
+    
+    // Regex to match **bold** or *italic*
+    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    let match;
+    
+    while ((match = regex.exec(text)) !== null) {
+        // Add text before the match
+        if (match.index > currentIdx) {
+            parts.push(text.slice(currentIdx, match.index));
+        }
+        
+        const matched = match[0];
+        if (matched.startsWith('**') && matched.endsWith('**')) {
+            // Bold
+            parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
+        } else if (matched.startsWith('*') && matched.endsWith('*')) {
+            // Italic
+            parts.push(<em key={match.index}>{matched.slice(1, -1)}</em>);
+        }
+        
+        currentIdx = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (currentIdx < text.length) {
+        parts.push(text.slice(currentIdx));
+    }
+    
+    return parts.length > 0 ? parts : text;
+}
+
+// Render text with markdown support for paragraphs
+function formatTextWithParagraphs(text: string): React.ReactNode {
+    if (!text) return text;
+    
+    const paragraphs = text.split(/\n\n+/);
+    
+    return paragraphs.map((para, idx) => {
+        const lines = para.trim().split('\n');
+        return (
+            <p key={idx} className={idx > 0 ? "mt-4" : ""}>
+                {lines.map((line, lineIdx) => (
+                    <React.Fragment key={lineIdx}>
+                        {lineIdx > 0 && <br/>}
+                        {formatInlineText(line)}
+                    </React.Fragment>
+                ))}
+            </p>
+        );
+    });
+}
+
 // Special rendering for visie_loopbaanadviseur with logo bullets
 function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
     if (!text) return text;
@@ -45,7 +103,7 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
                                     height={14} 
                                     style={{ marginTop: '3px', flexShrink: 0 }}
                                 />
-                                <span>{content}</span>
+                                <span>{formatInlineText(content)}</span>
                             </div>
                         );
                     })}
@@ -53,32 +111,15 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
             );
         }
         
-        // Regular paragraph - bold will come from **markdown** in the text itself
-        // Helper to process bold markdown
-        const processMarkdown = (text: string) => {
-            const parts: React.ReactNode[] = [];
-            let currentIdx = 0;
-            const regex = /\*\*([^*]+)\*\*/g;
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                if (match.index > currentIdx) {
-                    parts.push(text.slice(currentIdx, match.index));
-                }
-                parts.push(<strong key={match.index}>{match[1]}</strong>);
-                currentIdx = match.index + match[0].length;
-            }
-            
-            if (currentIdx < text.length) {
-                parts.push(text.slice(currentIdx));
-            }
-            
-            return parts.length > 0 ? parts : text;
-        };
-        
+        // Regular paragraph with markdown support
         return (
             <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>
-                {processMarkdown(para)}
+                {lines.map((line, lineIdx) => (
+                    <React.Fragment key={lineIdx}>
+                        {lineIdx > 0 && <br/>}
+                        {formatInlineText(line)}
+                    </React.Fragment>
+                ))}
             </p>
         );
     });
@@ -415,7 +456,7 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                 ) : s.key === 'vlb' ? (
                                     <div className={paperText}>{renderVisieLoopbaanadviseurText(s.text)}</div>
                                 ) : (
-                                    <div className={paperText}>{s.text}</div>
+                                    <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                 )}
                             </div>
                         ) : (
@@ -481,7 +522,7 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                             ) : s.key === 'vlb' ? (
                                                 <div className={paperText}>{renderVisieLoopbaanadviseurText(s.text)}</div>
                                             ) : (
-                                                <div className={paperText}>{s.text}</div>
+                                                <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                             )}
                                         </>
                                     ) : (
