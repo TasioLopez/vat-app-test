@@ -6,6 +6,7 @@ import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator
 import { validateForm, passwordValidation } from "@/lib/validation";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 export default function PasswordChange() {
     const supabase = createBrowserClient(
