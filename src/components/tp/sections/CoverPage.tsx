@@ -142,7 +142,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Body */}
-                    <div className="p-4">
+                    <div className="p-4 pt-6">
                         <p className="text-[10px] font-semibold text-foreground leading-tight">{tpData.employee_name}</p>
                         <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
                             Rapportage datum: {formatDutchDate(tpData.tp_creation_date)}
@@ -150,7 +150,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Image */}
-                    <div className="w-full absolute bottom-[20%] right-0 z-10 flex justify-end">
+                    <div className="w-full absolute bottom-[22%] right-0 z-10 flex justify-end">
                         <Image
                             src={Cover}
                             alt="Valentinez Cover"
@@ -162,7 +162,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
 
                     {/* Bottom-right employer block */}
                     <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-[#660066ff] flex items-end justify-center z-0">
-                        <p className="text-white font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
+                        <p className="text-white font-semibold text-[10px] mb-20">{tpData.employer_name}</p>
                     </div>
                 </div>
             </div>

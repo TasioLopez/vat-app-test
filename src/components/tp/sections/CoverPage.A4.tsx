@@ -60,8 +60,8 @@ export default function CoverPageA4({ data }: Props) {
       </div>
 
       {/* Body */}
-      <div className="p-6">
-        <p className="text-xl font-semibold mt-6">
+      <div className="p-6 pt-8">
+        <p className="text-xl font-semibold mt-8">
           {getEmployeeName()}
         </p>
         <p className="text-lg text-muted-foreground mt-4">
@@ -70,7 +70,7 @@ export default function CoverPageA4({ data }: Props) {
       </div>
 
       {/* Image */}
-      <div className="w-full absolute bottom-[20%] right-0 z-10 flex justify-end">
+      <div className="w-full absolute bottom-[22%] right-0 z-10 flex justify-end">
         <Image
           src={Cover}
           alt="Valentinez Cover"
@@ -83,7 +83,7 @@ export default function CoverPageA4({ data }: Props) {
 
       {/* Bottom-right employer block */}
       <div className="absolute bottom-0 right-0 w-[33%] h-full bg-[#660066ff] flex items-end justify-center z-0">
-        <p className="text-white font-semibold text-[24px] mb-16">
+        <p className="text-white font-semibold text-[24px] mb-20">
           {getEmployerName()}
         </p>
       </div>
