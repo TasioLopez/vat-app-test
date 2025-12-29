@@ -85,7 +85,7 @@ export default function Sidebar({
     <aside
       className={`h-screen shadow-xl transition-all duration-300 ${
         collapsed ? "w-16" : "w-64"
-      } bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r border-purple-700/50 flex flex-col relative flex-shrink-0`}
+      } bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r border-purple-700/50 flex flex-col fixed left-0 top-0 z-10 flex-shrink-0`}
     >
       <button
         onClick={() => setCollapsed(!collapsed)}

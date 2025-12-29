@@ -128,7 +128,7 @@ export default function ClientsPage() {
 
 
   return (
-    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 min-h-screen">
+    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30">
       <div className="flex justify-between items-center">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-gray-900">Werkgevers</h1>

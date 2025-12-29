@@ -72,10 +72,13 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
       {!isMobile && sidebar}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0 h-screen",
+        !isMobile && (collapsed ? "ml-16" : "ml-64")
+      )}>
         {/* Mobile header */}
         {isMobile && (
-          <header className="bg-card border-b border-border shadow-sm px-4 py-3">
+          <header className="bg-card border-b border-border shadow-sm px-4 py-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -91,8 +94,8 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
           </header>
         )}
 
-        {/* Content */}
-        <main className={cn('flex-1 p-4 md:p-6', className)}>
+        {/* Content - removed default padding, pages handle their own */}
+        <main className={cn('flex-1 overflow-y-auto', className)}>
           {children}
         </main>
       </div>
