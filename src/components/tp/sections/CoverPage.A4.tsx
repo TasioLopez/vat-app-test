@@ -83,7 +83,7 @@ export default function CoverPageA4({ data }: Props) {
 
       {/* Bottom-right employer block */}
       <div className="absolute bottom-0 right-0 w-[33%] h-full bg-[#660066ff] flex items-end justify-center z-0">
-        <p className="text-white font-semibold text-[24px] mb-20">
+        <p className="text-white font-semibold text-[24px] mb-24">
           {getEmployerName()}
         </p>
       </div>
