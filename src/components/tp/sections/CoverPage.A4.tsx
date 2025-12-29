@@ -54,7 +54,7 @@ export default function CoverPageA4({ data }: Props) {
       <div className="flex h-[20%] z-20">
         <div className="w-full bg-gray-700 flex items-center pl-6 z-20 mt-10">
           <h1 className="text-white text-[28px] uppercase tracking-wider font-medium">
-            TRAJECTPLAN 2e SPOOR
+            TRAJECTPLAN 2ᵉ SPOOR
           </h1>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function CoverPageA4({ data }: Props) {
 
       {/* Bottom-right employer block */}
       <div className="absolute bottom-0 right-0 w-[33%] h-full bg-[#660066] flex items-end justify-center z-0">
-        <p className="text-white font-semibold text-[24px] mb-10">
+        <p className="text-white font-semibold text-[24px] mb-16">
           {getEmployerName()}
         </p>
       </div>

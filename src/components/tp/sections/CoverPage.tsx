@@ -127,7 +127,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     <div className="flex h-[20%] z-20">
                         <div className="w-[100%] bg-gray-700 flex items-center pl-6 z-20 mt-10">
                             <h1 className="text-white text-[12px] uppercase tracking-wider font-light">
-                                TRAJECTPLAN 2e SPOOR
+                                TRAJECTPLAN 2ᵉ SPOOR
                             </h1>
                         </div>
                     </div>
@@ -153,7 +153,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
 
                     {/* Bottom-right employer block */}
                     <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-[#660066ff] flex items-end justify-center z-0">
-                        <p className="text-white font-semibold text-[10px] mb-10">{tpData.employer_name}</p>
+                        <p className="text-white font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
                     </div>
                 </div>
             </div>
