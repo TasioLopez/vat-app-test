@@ -380,7 +380,7 @@ export default function EmployeesPage() {
               <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-purple-200 pb-3">
                 {clientName} ({group.length})
               </h2>
-              <div className="grid gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.map((employee) => (
                   <Card
                     key={employee.id}
@@ -388,8 +388,8 @@ export default function EmployeesPage() {
                     onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                     hover
                   >
-                    <CardContent className="p-6 flex justify-between items-center">
-                      <div>
+                    <CardContent className="p-6">
+                      <div className="mb-4">
                         <p className="text-lg font-bold text-gray-900">
                           {employee.first_name} {employee.last_name}
                         </p>
@@ -400,6 +400,7 @@ export default function EmployeesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                          className="flex-1"
                         >
                           <Eye className="w-4 h-4 mr-2" /> Bekijk
                         </Button>
