@@ -1,6 +1,7 @@
 // SERVER/DATA-DRIVEN — Section3.A4.tsx
 // Pure render from { data }. No hooks, no context, no "use client".
 
+import React from "react";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
