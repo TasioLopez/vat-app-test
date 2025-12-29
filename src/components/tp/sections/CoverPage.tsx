@@ -142,9 +142,9 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Body */}
-                    <div className="p-6">
-                        <p className="text-sm font-semibold text-foreground">{tpData.employee_name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                    <div className="p-4">
+                        <p className="text-[10px] font-semibold text-foreground leading-tight">{tpData.employee_name}</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">
                             Rapportage datum: {formatDutchDate(tpData.tp_creation_date)}
                         </p>
                     </div>
