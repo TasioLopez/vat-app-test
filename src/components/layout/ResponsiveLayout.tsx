@@ -39,20 +39,17 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'bg-sidebar border-r border-sidebar-border shadow-lg transition-transform duration-300 ease-in-out',
-          'flex flex-col',
-          isMobile
-            ? 'fixed inset-y-0 left-0 z-50 w-64 transform'
-            : 'w-64',
-          isMobile && !sidebarOpen && '-translate-x-full',
-          isMobile && sidebarOpen && 'translate-x-0'
-        )}
-      >
-        {/* Mobile close button */}
-        {isMobile && (
+      {/* Sidebar - only for mobile overlay */}
+      {isMobile && (
+        <aside
+          className={cn(
+            'bg-sidebar border-r border-sidebar-border shadow-lg transition-transform duration-300 ease-in-out',
+            'flex flex-col fixed inset-y-0 left-0 z-50 w-64 transform',
+            !sidebarOpen && '-translate-x-full',
+            sidebarOpen && 'translate-x-0'
+          )}
+        >
+          {/* Mobile close button */}
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
             <h2 className="text-lg font-semibold text-sidebar-foreground">
               Menu
@@ -64,18 +61,18 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
               <X className="h-5 w-5" />
             </button>
           </div>
-        )}
 
-        <div className="flex-1 overflow-y-auto">
-          {sidebar}
-        </div>
-      </aside>
+          <div className="flex-1 overflow-y-auto">
+            {sidebar}
+          </div>
+        </aside>
+      )}
+
+      {/* Desktop sidebar - rendered directly, not wrapped */}
+      {!isMobile && sidebar}
 
       {/* Main content */}
-      <div className={cn(
-        "flex-1 flex flex-col min-w-0 transition-all duration-300",
-        !isMobile && (collapsed ? "ml-16" : "ml-64")
-      )}>
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
         {isMobile && (
           <header className="bg-card border-b border-border shadow-sm px-4 py-3">

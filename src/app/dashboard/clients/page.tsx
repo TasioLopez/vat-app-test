@@ -128,15 +128,15 @@ export default function ClientsPage() {
 
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 min-h-screen">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Werkgevers</h1>
-          <p className="text-muted-foreground mt-2">Beheer werkgevers en hun gegevens</p>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-gray-900">Werkgevers</h1>
+          <p className="text-lg text-gray-600">Beheer werkgevers en hun gegevens</p>
         </div>
         {userRole === 'admin' && (
           <Link href="/dashboard/clients/new">
-            <Button>+ Nieuwe werkgever</Button>
+            <Button size="lg">+ Nieuwe werkgever</Button>
           </Link>
         )}
       </div>
@@ -198,9 +198,9 @@ export default function ClientsPage() {
 
       {/* Edit Modal */}
       {selectedClient && userRole === 'admin' && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-background/80 flex justify-center items-center z-50 p-4">
-          <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6 text-card-foreground">Werkgever bewerken</h2>
+        <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
+          <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-3xl font-bold mb-6 text-gray-900">Werkgever bewerken</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Client Info Column */}
               <div className="space-y-4">
@@ -218,7 +218,7 @@ export default function ClientsPage() {
                   <select
                     value={selectedClient.industry || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-lg border-2 border-purple-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:border-purple-500 hover:border-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Selecteer een branche</option>
                     {[
@@ -305,11 +305,11 @@ export default function ClientsPage() {
               </ul>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3 pt-6 border-t border-border">
-              <Button variant="outline" onClick={() => setSelectedClient(null)}>
+            <div className="mt-8 flex justify-end gap-4 pt-6 border-t border-purple-200/50">
+              <Button variant="outline" onClick={() => setSelectedClient(null)} size="lg">
                 Annuleren
               </Button>
-              <Button onClick={handleSave}>
+              <Button onClick={handleSave} size="lg">
                 Opslaan
               </Button>
             </div>
@@ -319,17 +319,17 @@ export default function ClientsPage() {
 
       {/* Delete Modal */}
       {showDeleteModal && clientToDelete && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-background/80 flex justify-center items-center z-50 p-4">
-          <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
-            <h2 className="text-lg font-semibold mb-4 text-card-foreground">Bevestig verwijderen</h2>
-            <p className="text-sm mb-6 text-muted-foreground">
-              Weet u zeker dat u wilt <strong className="text-card-foreground">{clientToDelete.name}</strong> verwijderen?
+        <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
+          <div className="bg-white border-2 border-red-200/50 p-8 rounded-xl shadow-2xl shadow-red-500/20 w-full max-w-sm text-center">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Bevestig verwijderen</h2>
+            <p className="text-base mb-8 text-gray-600">
+              Weet u zeker dat u wilt <strong className="text-gray-900">{clientToDelete.name}</strong> verwijderen?
             </p>
-            <div className="flex justify-center gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            <div className="flex justify-center gap-4">
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} size="lg">
                 Annuleren
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button variant="destructive" onClick={handleDelete} size="lg">
                 Verwijderen
               </Button>
             </div>

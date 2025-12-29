@@ -117,45 +117,46 @@ export default function EmployeesPage() {
   }, {});
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 min-h-screen">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Werknemers</h1>
-          <p className="text-muted-foreground mt-2">Beheer werknemers en hun gegevens</p>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-gray-900">Werknemers</h1>
+          <p className="text-lg text-gray-600">Beheer werknemers en hun gegevens</p>
         </div>
         <Link href="/dashboard/employees/new">
-          <Button>+ Werknemer toevoegen</Button>
+          <Button size="lg">+ Werknemer toevoegen</Button>
         </Link>
       </div>
 
       {employees.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Geen werknemers om te tonen.</p>
+          <div className="text-center py-16">
+            <p className="text-lg text-gray-500">Geen werknemers om te tonen.</p>
           </div>
         ) : Object.entries(groupedByClient).map(([clientName, group]) => (
-        <div key={clientName} className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground border-b border-border pb-2">{clientName}</h2>
-          <div className="grid gap-4">
+        <div key={clientName} className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-purple-200 pb-3">{clientName}</h2>
+          <div className="grid gap-6">
             {group.map((employee) => (
               <Card
                 key={employee.id}
-                className="cursor-pointer hover:shadow-md transition-all duration-200"
+                className="cursor-pointer hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-200"
                 onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                hover
               >
-                <CardContent className="p-4 flex justify-between items-center">
+                <CardContent className="p-6 flex justify-between items-center">
                   <div>
-                    <p className="font-semibold text-card-foreground">
+                    <p className="text-lg font-bold text-gray-900">
                       {employee.first_name} {employee.last_name}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{employee.email}</p>
+                    <p className="text-sm text-gray-600 mt-1">{employee.email}</p>
                   </div>
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                     >
-                      <Eye className="w-4 h-4 mr-1" /> Bekijk
+                      <Eye className="w-4 h-4 mr-2" /> Bekijk
                     </Button>
                     <Button
                       size="sm"

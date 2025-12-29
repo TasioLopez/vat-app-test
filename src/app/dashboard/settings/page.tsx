@@ -34,25 +34,25 @@ export default function SettingsPage() {
     ];
 
     return (
-        <div className="flex h-full">
+        <div className="flex h-full bg-gradient-to-br from-gray-50 to-purple-50/30">
             {/* Settings Sidebar */}
-            <div className="w-64 bg-muted/30 border-r border-border flex-shrink-0">
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold text-foreground mb-6">Instellingen</h1>
+            <div className="w-72 bg-white/80 backdrop-blur-sm border-r-2 border-purple-200/50 flex-shrink-0 shadow-lg">
+                <div className="p-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Instellingen</h1>
                     
-                    <nav className="space-y-1">
+                    <nav className="space-y-2">
                         {settingsTabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors ${
+                                className={`w-full flex items-center gap-4 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
                                     activeTab === tab.id
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'text-foreground/80 hover:bg-muted'
+                                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                                        : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
                                 }`}
                             >
-                                <span className="text-lg">{tab.icon}</span>
-                                <span className="font-medium">{tab.name}</span>
+                                <span className="text-xl">{tab.icon}</span>
+                                <span className="font-semibold">{tab.name}</span>
                             </button>
                         ))}
                     </nav>
@@ -60,8 +60,8 @@ export default function SettingsPage() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 p-6">
-                <div className="max-w-2xl">
+            <div className="flex-1 p-8 overflow-y-auto">
+                <div className="max-w-3xl">
                     {settingsTabs.find(tab => tab.id === activeTab)?.component}
                 </div>
             </div>

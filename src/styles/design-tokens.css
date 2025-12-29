@@ -10,18 +10,18 @@
      COLOR PALETTE - Professional Corporate
      ============================================ */
   
-  /* Primary Colors - Deep Navy Blue (Professional, Trustworthy) */
-  --color-primary-50: #f0f4f8;
-  --color-primary-100: #d9e2ec;
-  --color-primary-200: #bcccdc;
-  --color-primary-300: #9fb3c8;
-  --color-primary-400: #829ab1;
-  --color-primary-500: #627d98;
-  --color-primary-600: #486581;
-  --color-primary-700: #334e68;
-  --color-primary-800: #243b53;
-  --color-primary-900: #102a43;
-  --color-primary-950: #0a1929;
+  /* Primary Colors - Purple (Modern, Professional) */
+  --color-primary-50: #faf5ff;
+  --color-primary-100: #f3e8ff;
+  --color-primary-200: #e9d5ff;
+  --color-primary-300: #d8b4fe;
+  --color-primary-400: #c084fc;
+  --color-primary-500: #a855f7;
+  --color-primary-600: #9333ea;
+  --color-primary-700: #7e22ce;
+  --color-primary-800: #6b21a8;
+  --color-primary-900: #581c87;
+  --color-primary-950: #3b0764;
   
   /* Secondary Colors - Slate Gray (Neutral, Professional) */
   --color-secondary-50: #f8fafc;
@@ -36,18 +36,18 @@
   --color-secondary-900: #0f172a;
   --color-secondary-950: #020617;
   
-  /* Accent Colors - Teal (Modern, Fresh) */
-  --color-accent-50: #f0fdfa;
-  --color-accent-100: #ccfbf1;
-  --color-accent-200: #99f6e4;
-  --color-accent-300: #5eead4;
-  --color-accent-400: #2dd4bf;
-  --color-accent-500: #14b8a6;
-  --color-accent-600: #0d9488;
-  --color-accent-700: #0f766e;
-  --color-accent-800: #115e59;
-  --color-accent-900: #134e4a;
-  --color-accent-950: #042f2e;
+  /* Accent Colors - Purple Variations (Highlights, Interactive) */
+  --color-accent-50: #faf5ff;
+  --color-accent-100: #f3e8ff;
+  --color-accent-200: #e9d5ff;
+  --color-accent-300: #d8b4fe;
+  --color-accent-400: #c084fc;
+  --color-accent-500: #a855f7;
+  --color-accent-600: #9333ea;
+  --color-accent-700: #7e22ce;
+  --color-accent-800: #6b21a8;
+  --color-accent-900: #581c87;
+  --color-accent-950: #3b0764;
   
   /* Semantic Colors */
   --color-success-50: #f0fdf4;
@@ -153,6 +153,12 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  
+  /* Purple Glow Shadows */
+  --shadow-purple-sm: 0 2px 4px 0 rgba(147, 51, 234, 0.1);
+  --shadow-purple-md: 0 4px 8px 0 rgba(147, 51, 234, 0.15);
+  --shadow-purple-lg: 0 10px 20px 0 rgba(147, 51, 234, 0.2);
+  --shadow-purple-xl: 0 20px 40px 0 rgba(147, 51, 234, 0.25);
   
   /* ============================================
      BORDER RADIUS

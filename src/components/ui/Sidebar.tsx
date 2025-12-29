@@ -83,19 +83,19 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`h-screen shadow-lg transition-all duration-300 ${
+      className={`h-screen shadow-xl transition-all duration-300 ${
         collapsed ? "w-16" : "w-64"
-      } bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-10`}
+      } bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r border-purple-700/50 flex flex-col relative flex-shrink-0`}
     >
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="p-4 text-sidebar-foreground/70 hover:text-sidebar-foreground focus:outline-none transition-colors duration-200"
+        className="p-4 text-white/80 hover:text-white hover:bg-white/10 focus:outline-none transition-all duration-200 rounded-lg mx-2 mt-2"
       >
-        <FaBars />
+        <FaBars className="text-xl" />
       </button>
 
       {!collapsed && (
-        <h2 className="text-md font-semibold px-4 mb-4 text-sidebar-foreground">
+        <h2 className="text-lg font-bold px-4 mb-6 text-white mt-4">
           {firstName ? `Hi, ${firstName}` : "Welkom"}
         </h2>
       )}
@@ -107,26 +107,26 @@ export default function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
+                  : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className="text-xl">{item.icon}</span>
               {!collapsed && <span className="font-medium">{item.name}</span>}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-2 space-y-2 border-t border-sidebar-border">
+      <div className="p-2 space-y-2 border-t border-white/10">
         <Link
           href="/dashboard/settings"
-          className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
             pathname === "/dashboard/settings"
-              ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-              : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
+              : "text-white/70 hover:text-white hover:bg-white/10"
           }`}
         >
           <FaCog />
@@ -135,7 +135,7 @@ export default function Sidebar({
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-2 rounded-md w-full text-left text-error-600 hover:bg-error-50 dark:hover:bg-error-950/20 hover:cursor-pointer transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-white/70 hover:text-white hover:bg-red-500/20 transition-all duration-200"
         >
           <FaSignOutAlt />
           {!collapsed && <span className="font-medium">Uitloggen</span>}

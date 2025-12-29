@@ -94,12 +94,12 @@ export default async function DashboardPage() {
     employees.filter((e) => e.created_at?.startsWith(thisMonth)).length || 0;
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Overzicht van uw gegevens</p>
+    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 min-h-screen">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-lg text-gray-600">Overzicht van uw gegevens</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {profile.role === "admin" && (
           <StatCard title="Total Gebruikers" value={users.length} />
         )}

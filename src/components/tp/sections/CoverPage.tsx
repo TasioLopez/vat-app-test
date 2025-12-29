@@ -96,23 +96,33 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
     if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
 
     return (
-        <div className="flex gap-10 h-[65vh] items-center px-8 overflow-hidden">
-            <div className="w-[50%] space-y-4">
-                <div className="w-full p-3 border border-border rounded-md bg-muted text-muted-foreground">
-                    {tpData.employee_name || '—'}
+        <div className="flex gap-10 h-full items-center px-8 overflow-hidden">
+            <div className="w-[50%] space-y-6">
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Werknemer Naam</label>
+                    <div className="w-full p-4 border-2 border-purple-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
+                        {tpData.employee_name || '—'}
+                    </div>
                 </div>
-                <Input
-                    type="date"
-                    value={tpData.tp_creation_date || ''}
-                    onChange={(e) => handleChange('tp_creation_date', e.target.value)}
-                />
-                <div className="w-full p-3 border border-border rounded-md bg-muted text-muted-foreground">
-                    {tpData.employer_name || '—'}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Rapportage Datum</label>
+                    <Input
+                        type="date"
+                        value={tpData.tp_creation_date || ''}
+                        onChange={(e) => handleChange('tp_creation_date', e.target.value)}
+                    />
                 </div>
-                <div className="mt-4">
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Werkgever Naam</label>
+                    <div className="w-full p-4 border-2 border-purple-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
+                        {tpData.employer_name || '—'}
+                    </div>
+                </div>
+                <div className="pt-4">
                     <Button
                         onClick={handleSave}
                         disabled={saving}
+                        size="lg"
                     >
                         {saving ? 'Opslaan...' : 'Opslaan'}
                     </Button>

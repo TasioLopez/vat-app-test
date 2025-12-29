@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { FaUpload, FaFileAlt, FaTrash, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import { createBrowserClient } from "@supabase/ssr";
+import { Card } from '@/components/ui/card';
 
 interface Document {
     id: string;
@@ -288,22 +289,22 @@ export default function MijnStem() {
     }
 
     return (
-        <div>
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Mijn Stem</h2>
-                <p className="text-muted-foreground">
+        <div className="space-y-8">
+            <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Mijn Stem</h2>
+                <p className="text-lg text-gray-600">
                     Upload uw eerdere TP documenten zodat de AI uw schrijfstijl kan leren en deze kan repliceren bij het schrijven van nieuwe rapporten.
                 </p>
             </div>
 
             {/* Message Feedback */}
             {message && (
-                <div className={`mb-6 p-4 rounded-lg border ${
+                <div className={`p-4 rounded-xl border-2 shadow-md ${
                     message.type === 'success' 
-                        ? 'bg-success-50 text-success-800 border-success-500' 
+                        ? 'bg-green-50 text-green-800 border-green-300' 
                         : message.type === 'error'
-                        ? 'bg-error-50 text-error-800 border-error-500'
-                        : 'bg-info-50 text-info-800 border-info-500'
+                        ? 'bg-red-50 text-red-800 border-red-300'
+                        : 'bg-blue-50 text-blue-800 border-blue-300'
                 }`}>
                     {message.text}
                 </div>
@@ -312,64 +313,64 @@ export default function MijnStem() {
 
             {/* Master Style Summary */}
             {masterStyle && (
-                <div className="mb-8 p-6 bg-success-50 border border-success-500 rounded-lg">
-                    <h3 className="text-lg font-medium text-success-900 mb-3">Uw Schrijfstijl Profiel</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100/50 border-green-300">
+                    <h3 className="text-xl font-bold text-green-900 mb-4">Uw Schrijfstijl Profiel</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                         <div>
-                            <span className="font-medium text-success-800">Tonaliteit:</span>
-                            <span className="ml-2 text-success-700">{masterStyle.tone}</span>
+                            <span className="font-semibold text-green-800">Tonaliteit:</span>
+                            <span className="ml-2 text-green-700">{masterStyle.tone}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-success-800">Structuur:</span>
-                            <span className="ml-2 text-success-700">{masterStyle.structure}</span>
+                            <span className="font-semibold text-green-800">Structuur:</span>
+                            <span className="ml-2 text-green-700">{masterStyle.structure}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-success-800">Formaliteit:</span>
-                            <span className="ml-2 text-success-700">{masterStyle.formality}</span>
+                            <span className="font-semibold text-green-800">Formaliteit:</span>
+                            <span className="ml-2 text-green-700">{masterStyle.formality}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-success-800">Documenten geanalyseerd:</span>
-                            <span className="ml-2 text-success-700">{masterStyle.combined_from}</span>
+                            <span className="font-semibold text-green-800">Documenten geanalyseerd:</span>
+                            <span className="ml-2 text-green-700">{masterStyle.combined_from}</span>
                         </div>
                     </div>
-                    <p className="text-success-800 mt-3 text-sm">
+                    <p className="text-green-800 mt-4 font-medium">
                         ✅ De AI kan nu uw schrijfstijl repliceren in nieuwe TP rapporten.
                     </p>
-                </div>
+                </Card>
             )}
 
             {/* Upload Section */}
-            <div className="mb-8">
-                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            <Card className="p-8">
+                <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
                     isUploading 
-                        ? 'border-primary bg-primary/10' 
-                        : 'border-border hover:border-primary/50'
+                        ? 'border-purple-500 bg-purple-50/50' 
+                        : 'border-purple-300 hover:border-purple-400 hover:bg-purple-50/30'
                 }`}>
-                    <FaUpload className={`mx-auto text-4xl mb-4 ${
-                        isUploading ? 'text-primary' : 'text-muted-foreground'
+                    <FaUpload className={`mx-auto text-5xl mb-4 ${
+                        isUploading ? 'text-purple-600' : 'text-purple-400'
                     }`} />
-                    <h3 className="text-lg font-medium text-foreground mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
                         {isUploading ? 'Uploaden...' : 'Upload uw TP documenten'}
                     </h3>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-gray-600 mb-2">
                         Ondersteunde formaten: PDF, TXT (DOC/DOCX binnenkort beschikbaar)
                     </p>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-sm text-gray-500 mb-6">
                         Upload eerdere TP rapporten die u heeft geschreven om uw schrijfstijl te leren.
                     </p>
                     
                     {/* Upload Progress */}
                     {Object.keys(uploadProgress).length > 0 && (
-                        <div className="mb-4 space-y-2">
+                        <div className="mb-6 space-y-3">
                             {Object.entries(uploadProgress).map(([filename, progress]) => (
                                 <div key={filename} className="text-sm">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-foreground truncate">{filename}</span>
-                                        <span className="text-muted-foreground">{progress}%</span>
+                                    <div className="flex justify-between mb-2">
+                                        <span className="text-gray-900 font-medium truncate">{filename}</span>
+                                        <span className="text-purple-600 font-semibold">{progress}%</span>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2">
+                                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                                         <div 
-                                            className="bg-primary h-2 rounded-full transition-all duration-300"
+                                            className="bg-gradient-to-r from-purple-500 to-purple-600 h-3 rounded-full transition-all duration-300 shadow-sm"
                                             style={{ width: `${progress}%` }}
                                         ></div>
                                     </div>
@@ -378,7 +379,7 @@ export default function MijnStem() {
                         </div>
                     )}
                     
-                    <label className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <label className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed font-semibold">
                         <FaUpload className="mr-2" />
                         {isUploading ? 'Uploaden...' : 'Bestanden selecteren'}
                         <input
@@ -391,53 +392,58 @@ export default function MijnStem() {
                         />
                     </label>
                 </div>
-            </div>
+            </Card>
 
             {/* Uploaded Files List */}
             <div>
-                <h3 className="text-lg font-medium text-foreground mb-4">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     Geüploade documenten ({documents.length})
                 </h3>
                 
                 {documents.length === 0 ? (
-                    <div className="text-center py-8 bg-muted/30 border border-border rounded-lg">
-                        <FaFileAlt className="mx-auto text-muted-foreground text-4xl mb-3" />
-                        <p className="text-muted-foreground mb-2">Nog geen documenten geüpload</p>
-                        <p className="text-sm text-muted-foreground">
+                    <Card className="p-12 text-center">
+                        <FaFileAlt className="mx-auto text-gray-400 text-5xl mb-4" />
+                        <p className="text-gray-600 mb-2 font-medium">Nog geen documenten geüpload</p>
+                        <p className="text-sm text-gray-500">
                             Upload uw eerste TP documenten om uw schrijfstijl te leren
                         </p>
-                    </div>
+                    </Card>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {documents.map((doc) => (
-                            <div
+                            <Card
                                 key={doc.id}
-                                className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:shadow-sm transition-shadow"
+                                className="p-5 hover:shadow-lg transition-all duration-200"
+                                hover
                             >
-                                <div className="flex items-center space-x-3">
-                                    <FaFileAlt className="text-muted-foreground text-xl" />
-                                    <div>
-                                        <p className="font-medium text-card-foreground">{doc.filename}</p>
-                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                            <span>{formatFileSize(doc.file_size)}</span>
-                                            <span>•</span>
-                                            <span>{new Date(doc.created_at).toLocaleDateString('nl-NL')}</span>
-                                            <span>•</span>
-                                            <div className="flex items-center space-x-1">
-                                                {getStatusIcon(doc.status)}
-                                                <span>{getStatusText(doc.status, doc.error_message)}</span>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                                            <FaFileAlt className="text-purple-600 text-xl" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-gray-900">{doc.filename}</p>
+                                            <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
+                                                <span>{formatFileSize(doc.file_size)}</span>
+                                                <span>•</span>
+                                                <span>{new Date(doc.created_at).toLocaleDateString('nl-NL')}</span>
+                                                <span>•</span>
+                                                <div className="flex items-center space-x-2">
+                                                    {getStatusIcon(doc.status)}
+                                                    <span className="font-medium">{getStatusText(doc.status, doc.error_message)}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+                                    <button
+                                        onClick={() => removeFile(doc.id, doc.filename)}
+                                        className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                                        title="Verwijder bestand"
+                                    >
+                                        <FaTrash className="text-lg" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => removeFile(doc.id, doc.filename)}
-                                    className="p-2 text-muted-foreground hover:text-error-600 transition-colors"
-                                    title="Verwijder bestand"
-                                >
-                                    <FaTrash />
-                                </button>
-                            </div>
+                            </Card>
                         ))}
                     </div>
                 )}

@@ -96,10 +96,10 @@ body {
   --secondary-foreground: var(--color-gray-900);
   --muted: var(--color-gray-100);
   --muted-foreground: var(--color-gray-600);
-  --accent: var(--color-accent-500);
+  --accent: var(--color-accent-600);
   --accent-foreground: var(--color-white);
   --destructive: var(--color-error-600);
-  --border: var(--color-gray-200);
+  --border: var(--color-purple-200);
   --input: var(--color-gray-200);
   --ring: var(--color-primary-500);
   --chart-1: var(--color-primary-500);
@@ -108,12 +108,12 @@ body {
   --chart-4: var(--color-success-500);
   --chart-5: var(--color-warning-500);
   --sidebar: var(--color-white);
-  --sidebar-foreground: var(--color-gray-900);
-  --sidebar-primary: var(--color-primary-700);
+  --sidebar-foreground: var(--color-white);
+  --sidebar-primary: var(--color-primary-600);
   --sidebar-primary-foreground: var(--color-white);
-  --sidebar-accent: var(--color-gray-100);
-  --sidebar-accent-foreground: var(--color-gray-900);
-  --sidebar-border: var(--color-gray-200);
+  --sidebar-accent: rgba(255, 255, 255, 0.1);
+  --sidebar-accent-foreground: var(--color-white);
+  --sidebar-border: rgba(147, 51, 234, 0.3);
   --sidebar-ring: var(--color-primary-500);
 }
 

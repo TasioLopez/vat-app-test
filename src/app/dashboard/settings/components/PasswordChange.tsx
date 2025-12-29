@@ -79,73 +79,79 @@ export default function PasswordChange() {
     };
 
     return (
-        <div>
-            <h2 className="text-xl font-semibold text-foreground mb-6">Wachtwoord Wijzigen</h2>
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Wachtwoord Wijzigen</h2>
+                <p className="text-gray-600">Update uw wachtwoord voor beveiliging</p>
+            </div>
             
             {message && (
-                <div className={`mb-6 p-4 rounded-lg border ${
+                <div className={`p-4 rounded-xl border-2 shadow-md ${
                     message.type === 'success' 
-                        ? 'bg-success-50 text-success-800 border-success-500' 
-                        : 'bg-error-50 text-error-800 border-error-500'
+                        ? 'bg-green-50 text-green-800 border-green-300' 
+                        : 'bg-red-50 text-red-800 border-red-300'
                 }`}>
                     {message.text}
                 </div>
             )}
             
-            <form onSubmit={handlePasswordChange} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Huidig wachtwoord
-                    </label>
-                    <Input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Nieuw wachtwoord
-                    </label>
-                    <Input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Voer nieuw wachtwoord in"
-                        required
-                    />
-                    <div className="mt-2">
-                        <PasswordStrengthIndicator password={newPassword} />
+            <Card className="p-8">
+                <form onSubmit={handlePasswordChange} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Huidig wachtwoord
+                        </label>
+                        <Input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            required
+                        />
                     </div>
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Bevestig nieuw wachtwoord
-                    </label>
-                    <Input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Bevestig nieuw wachtwoord"
-                        required
-                    />
-                    {confirmPassword && newPassword !== confirmPassword && (
-                        <p className="text-sm text-error-600 mt-2">Wachtwoorden komen niet overeen</p>
-                    )}
-                </div>
-                
-                <div className="pt-4">
-                    <Button 
-                        type="submit" 
-                        disabled={saving || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
-                    >
-                        {saving ? 'Wachtwoord wijzigen...' : 'Wachtwoord wijzigen'}
-                    </Button>
-                </div>
-            </form>
+                    
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Nieuw wachtwoord
+                        </label>
+                        <Input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Voer nieuw wachtwoord in"
+                            required
+                        />
+                        <div className="mt-3">
+                            <PasswordStrengthIndicator password={newPassword} />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Bevestig nieuw wachtwoord
+                        </label>
+                        <Input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Bevestig nieuw wachtwoord"
+                            required
+                        />
+                        {confirmPassword && newPassword !== confirmPassword && (
+                            <p className="text-sm text-red-600 mt-2 font-medium">Wachtwoorden komen niet overeen</p>
+                        )}
+                    </div>
+                    
+                    <div className="pt-4">
+                        <Button 
+                            type="submit" 
+                            disabled={saving || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                            size="lg"
+                        >
+                            {saving ? 'Wachtwoord wijzigen...' : 'Wachtwoord wijzigen'}
+                        </Button>
+                    </div>
+                </form>
+            </Card>
         </div>
     );
 }

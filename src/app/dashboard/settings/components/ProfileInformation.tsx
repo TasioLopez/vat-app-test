@@ -95,65 +95,71 @@ export default function ProfileInformation() {
     }
 
     return (
-        <div>
-            <h2 className="text-xl font-semibold text-foreground mb-6">Profiel Informatie</h2>
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Profiel Informatie</h2>
+                <p className="text-gray-600">Beheer uw persoonlijke gegevens</p>
+            </div>
             
             {message && (
-                <div className={`mb-6 p-4 rounded-lg border ${
+                <div className={`p-4 rounded-xl border-2 shadow-md ${
                     message.type === 'success' 
-                        ? 'bg-success-50 text-success-800 border-success-500' 
-                        : 'bg-error-50 text-error-800 border-error-500'
+                        ? 'bg-green-50 text-green-800 border-green-300' 
+                        : 'bg-red-50 text-red-800 border-red-300'
                 }`}>
                     {message.text}
                 </div>
             )}
 
-            <form onSubmit={handleProfileSubmit} className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Email
-                    </label>
-                    <Input
-                        type="email"
-                        value={email}
-                        disabled
-                        className="bg-muted cursor-not-allowed"
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Voornaam
-                    </label>
-                    <Input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        required
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                        Achternaam
-                    </label>
-                    <Input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        required
-                    />
-                </div>
-                
-                <div className="pt-4">
-                    <Button 
-                        type="submit" 
-                        disabled={saving}
-                    >
-                        {saving ? 'Opslaan...' : 'Profiel opslaan'}
-                    </Button>
-                </div>
-            </form>
+            <Card className="p-8">
+                <form onSubmit={handleProfileSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Email
+                        </label>
+                        <Input
+                            type="email"
+                            value={email}
+                            disabled
+                            className="bg-gray-100 cursor-not-allowed"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Voornaam
+                        </label>
+                        <Input
+                            type="text"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                        />
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Achternaam
+                        </label>
+                        <Input
+                            type="text"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                        />
+                    </div>
+                    
+                    <div className="pt-4">
+                        <Button 
+                            type="submit" 
+                            disabled={saving}
+                            size="lg"
+                        >
+                            {saving ? 'Opslaan...' : 'Profiel opslaan'}
+                        </Button>
+                    </div>
+                </form>
+            </Card>
         </div>
     );
 }

@@ -11,13 +11,13 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 min-h-screen">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gebruikers beheren</h1>
-          <p className="text-muted-foreground mt-2">Beheer gebruikers en hun toegangsrechten</p>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-gray-900">Gebruikers beheren</h1>
+          <p className="text-lg text-gray-600">Beheer gebruikers en hun toegangsrechten</p>
         </div>
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)} size="lg">
           + Uitnodigen
         </Button>
       </div>

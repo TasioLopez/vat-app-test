@@ -21,9 +21,9 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border bg-card text-card-foreground shadow-sm',
-        hover && 'hover:shadow-md transition-shadow duration-200',
-        clickable && 'cursor-pointer hover:border-primary/50 transition-all duration-200',
+        'rounded-xl border border-purple-200/50 bg-card text-card-foreground shadow-md transition-all duration-200',
+        hover && 'hover:shadow-xl hover:shadow-purple-500/10',
+        clickable && 'cursor-pointer hover:border-purple-300 hover:scale-[1.02] active:scale-[0.98]',
         className
       )}
       onClick={onClick}
@@ -121,31 +121,31 @@ export function StatCard({
   className 
 }: StatCardProps) {
   return (
-    <Card className={cn('p-6 hover:shadow-md transition-shadow duration-200', className)}>
+    <Card className={cn('p-6 hover:shadow-xl hover:shadow-purple-500/20 border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30', className)} hover>
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground mb-2">
             {title}
           </p>
-          <p className="text-2xl font-semibold text-card-foreground mt-1">
+          <p className="text-3xl font-bold text-purple-700 mt-1">
             {value}
           </p>
           {description && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-2">
               {description}
             </p>
           )}
           {trend && (
-            <div className="flex items-center mt-2">
+            <div className="flex items-center mt-3">
               <span
                 className={cn(
-                  'text-sm font-medium',
+                  'text-sm font-semibold',
                   trend.positive ? 'text-success-600' : 'text-error-600'
                 )}
               >
                 {trend.positive ? '+' : ''}{trend.value}%
               </span>
-              <span className="text-sm text-muted-foreground ml-1">
+              <span className="text-sm text-muted-foreground ml-2">
                 {trend.label}
               </span>
             </div>
@@ -153,7 +153,7 @@ export function StatCard({
         </div>
         {icon && (
           <div className="flex-shrink-0 ml-4">
-            <div className="w-8 h-8 text-muted-foreground">
+            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
               {icon}
             </div>
           </div>
@@ -180,9 +180,9 @@ export function FeatureCard({
   className 
 }: FeatureCardProps) {
   return (
-    <Card className={cn('p-6 text-center hover:shadow-md transition-shadow duration-200', className)}>
+    <Card className={cn('p-6 text-center hover:shadow-xl hover:shadow-purple-500/20', className)} hover>
       <div className="flex justify-center mb-4">
-        <div className="w-12 h-12 text-primary">
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25">
           {icon}
         </div>
       </div>
