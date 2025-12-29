@@ -752,7 +752,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     if (loading) return <p>Laden...</p>;
 
     return (
-        <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
+        <div className="flex gap-10 h-full items-start p-6 overflow-hidden">
             {/* LEFT: builder controls */}
             <div className="w-[50%] space-y-6 overflow-y-auto max-h-full pr-2">
                 {/* Notification */}

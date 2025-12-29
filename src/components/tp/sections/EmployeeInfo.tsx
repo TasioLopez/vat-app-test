@@ -450,7 +450,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
         </div>
       )}
       
-      <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
+      <div className="flex gap-10 h-full items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
         <div className="sticky top-0 backdrop-blur-2xl bg-muted/30 hover:bg-muted/50 z-10 flex items-center gap-3 px-6 py-4 rounded-b-lg border-b border-border transition-all duration-300">

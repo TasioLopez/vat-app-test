@@ -8,9 +8,10 @@ interface ResponsiveLayoutProps {
   children: ReactNode;
   sidebar: ReactNode;
   className?: string;
+  collapsed?: boolean;
 }
 
-export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLayoutProps) {
+export function ResponsiveLayout({ children, sidebar, className, collapsed = false }: ResponsiveLayoutProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -71,7 +72,10 @@ export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLay
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 ml-64">
+      <div className={cn(
+        "flex-1 flex flex-col min-w-0 transition-all duration-300",
+        !isMobile && (collapsed ? "ml-16" : "ml-64")
+      )}>
         {/* Mobile header */}
         {isMobile && (
           <header className="bg-card border-b border-border shadow-sm px-4 py-3">

@@ -26,17 +26,17 @@ export default function TPBuilderPage() {
 
   return (
     <TPProvider>
-      <div className="max-h-[70%]] flex flex-col overflow-hidden p-6">
-        <div className="mb-4">
+      <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden p-6">
+        <div className="mb-4 flex-shrink-0">
           <h1 className="text-3xl font-bold text-foreground mb-2">Trajectplan Bouwer</h1>
           <h2 className="text-md font-semibold text-muted-foreground">Stap {currentStep} van {totalSteps}</h2>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <SectionComponent employeeId={employeeId} />
         </div>
 
-        <div className="flex justify-between pt-6 border-t border-border">
+        <div className="flex justify-between pt-6 border-t border-border flex-shrink-0">
           <Button
             variant="outline"
             onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}

@@ -15,6 +15,7 @@ export default function ClientLayout({
 
   return (
     <ResponsiveLayout
+      collapsed={collapsed}
       sidebar={
         <Sidebar 
           collapsed={collapsed} 

@@ -492,7 +492,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex h-[75vh] w-full overflow-visible relative">
+      <div className="flex h-full w-full overflow-visible relative">
         {/* COLUMN 1: Activities List */}
         <div className="w-[28%] min-w-[240px] max-w-[30%] border-r px-4 py-4 overflow-y-auto text-xs">
           <div className="flex items-center justify-between mb-3">

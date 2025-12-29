@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase/client';
 import { formatEmployeeName } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import Image from 'next/image';
 import Cover from '@/assets/images/valentinez-cover.jpg';
 
@@ -121,12 +120,12 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
             </div>
 
             {/* Right: A4-scaled Preview */}
-            <TPPreviewWrapper>
+            <div className="w-[50%] h-full flex justify-center items-center">
                 <div className="relative aspect-[210/297] h-[100%] max-h-full bg-white shadow-lg border border-border overflow-hidden">
                     {/* Top Banner */}
                     <div className="flex h-[20%] z-20">
-                        <div className="w-[100%] bg-primary flex items-center pl-6 z-20 mt-10">
-                            <h1 className="text-primary-foreground text-[12px] uppercase tracking-wider font-light">
+                        <div className="w-[100%] bg-gray-700 flex items-center pl-6 z-20 mt-10">
+                            <h1 className="text-white text-[12px] uppercase tracking-wider font-light">
                                 TRAJECTPLAN 2ᵉ SPOOR
                             </h1>
                         </div>
@@ -152,11 +151,11 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Bottom-right employer block */}
-                    <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-accent flex items-end justify-center z-0">
-                        <p className="text-accent-foreground font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
+                    <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-[#660066ff] flex items-end justify-center z-0">
+                        <p className="text-white font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
                     </div>
                 </div>
-            </TPPreviewWrapper>
+            </div>
         </div>
     );
 }
