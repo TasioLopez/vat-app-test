@@ -150,7 +150,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Image */}
-                    <div className="w-full justify-items-end z-50 absolute">
+                    <div className="w-full absolute bottom-[20%] right-0 z-10 flex justify-end">
                         <Image
                             src={Cover}
                             alt="Valentinez Cover"
