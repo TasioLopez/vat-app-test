@@ -653,7 +653,6 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               </table>
             </div>
           </div>
-        </div>
       </TPPreviewWrapper>
     </div>
     </>
