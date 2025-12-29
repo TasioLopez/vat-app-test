@@ -49,10 +49,10 @@ export default function CoverPageA4({ data }: Props) {
   };
 
   return (
-    <div className="relative aspect-[210/297] h-full w-full bg-white shadow border border-gray-300 overflow-hidden print:shadow-none">
+    <div className="relative aspect-[210/297] h-full w-full bg-white shadow border border-border overflow-hidden print:shadow-none">
       {/* Top Banner */}
       <div className="flex h-[20%] z-20">
-        <div className="w-full bg-gray-700 flex items-center pl-6 z-20 mt-10">
+        <div className="w-full bg-primary flex items-center pl-6 z-20 mt-10">
           <h1 className="text-white text-[28px] uppercase tracking-wider font-medium">
             TRAJECTPLAN 2ᵉ SPOOR
           </h1>
@@ -64,7 +64,7 @@ export default function CoverPageA4({ data }: Props) {
         <p className="text-xl font-semibold mt-6">
           {getEmployeeName()}
         </p>
-        <p className="text-lg text-gray-700 mt-4">
+        <p className="text-lg text-muted-foreground mt-4">
           Rapportage datum: {formatDutchDate(data.tp_creation_date)}
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function CoverPageA4({ data }: Props) {
       </div>
 
       {/* Bottom-right employer block */}
-      <div className="absolute bottom-0 right-0 w-[33%] h-full bg-[#660066] flex items-end justify-center z-0">
+      <div className="absolute bottom-0 right-0 w-[33%] h-full bg-accent flex items-end justify-center z-0">
         <p className="text-white font-semibold text-[24px] mb-16">
           {getEmployerName()}
         </p>

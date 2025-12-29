@@ -14,6 +14,9 @@ import {
 } from '@/lib/utils';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 
 const tdLabel = "py-1 px-2 border-collapse align-top w-[40%]";
 const tdValue = "py-1 px-2 border-collapse align-top";
@@ -427,10 +430,10 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     <>
       {/* Notification */}
       {autofillMessage && (
-        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg ${
-          autofillMessage.type === 'success' ? 'bg-green-100 border border-green-300 text-green-800' :
-          autofillMessage.type === 'warning' ? 'bg-yellow-100 border border-yellow-300 text-yellow-800' :
-          'bg-red-100 border border-red-300 text-red-800'
+        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-xl border ${
+          autofillMessage.type === 'success' ? 'bg-success-50 border-success-500 text-success-800' :
+          autofillMessage.type === 'warning' ? 'bg-warning-50 border-warning-500 text-warning-800' :
+          'bg-error-50 border-error-500 text-error-800'
         }`}>
           <div className="flex justify-between items-start">
             <div>
@@ -439,7 +442,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
             </div>
             <button
               onClick={() => setAutofillMessage(null)}
-              className="ml-4 text-lg font-bold hover:opacity-70"
+              className="ml-4 text-lg font-bold hover:opacity-70 transition-opacity"
             >
               ×
             </button>
@@ -450,21 +453,21 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <div className="flex gap-10 h-[75vh] items-start p-6 overflow-hidden">
       <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
         {/* AI Fill and Save buttons at the top */}
-        <div className="sticky top-0 backdrop-blur-2xl bg-gray-50/5 hover:bg-gray-50/15 z-10 flex items-center gap-3 px-6 py-4 rounded-b-3xl transition-all duration-300">
-          <button
+        <div className="sticky top-0 backdrop-blur-2xl bg-muted/30 hover:bg-muted/50 z-10 flex items-center gap-3 px-6 py-4 rounded-b-lg border-b border-border transition-all duration-300">
+          <Button
             onClick={handleAutofill}
             disabled={autofillLoading}
-            className="bg-purple-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-purple-700 font-semibold transition-all"
+            variant="secondary"
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
           >
             {autofillLoading ? 'Automatisch invullen...' : 'Automatisch invullen met AI'}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
           >
             {saving ? 'Opslaan...' : 'Opslaan'}
-          </button>
+          </Button>
         </div>
 
         {Object.entries({
@@ -517,11 +520,10 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       </div>
 
 
-      <div className="w-[50%] flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden max-h-[75vh]">
-        <div className="transform scale-[0.65] origin-top">
-          <div className="space-y-8">
-            {/* Page 1 */}
-            <div className="bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto">
+      <TPPreviewWrapper>
+        <div className="space-y-8">
+          {/* Page 1 */}
+          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
               <div className="w-full flex justify-end mb-6">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
               </div>
@@ -532,7 +534,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Gegevens werknemer</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Gegevens werknemer</td></tr>
                   <tr><td className={tdLabel}>Naam</td><td className={tdValue}>{formatEmployeeName(tpData.first_name, tpData.last_name, tpData.gender)}</td></tr>
                   <tr>
                     <td className={tdLabel}>Geslacht</td>
@@ -550,7 +552,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens re-integratietraject */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Gegevens re-integratietraject 2e spoor</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Gegevens re-integratietraject 2e spoor</td></tr>
                   <tr><td className={tdLabel}>Eerste ziektedag</td><td className={tdValue}>{formatDutchDate(tpData.first_sick_day)}</td></tr>
                   <tr><td className={tdLabel}>Datum aanmelding</td><td className={tdValue}>{formatDutchDate(tpData.registration_date)}</td></tr>
                   <tr><td className={tdLabel}>Datum intakegesprek</td><td className={tdValue}>{formatDutchDate(tpData.intake_date)}</td></tr>
@@ -572,7 +574,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens opdrachtgever */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Gegevens opdrachtgever</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Gegevens opdrachtgever</td></tr>
                   <tr><td className={tdLabel}>Werkgever</td><td className={tdValue}>{tpData.client_name}</td></tr>
                   <tr><td className={tdLabel}>Contactpersoon</td><td className={tdValue}>{tpData.client_referent_name}</td></tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.client_referent_phone}</td></tr>
@@ -583,7 +585,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens re-integratiebedrijf */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Gegevens re-integratiebedrijf</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Gegevens re-integratiebedrijf</td></tr>
                   <tr><td className={tdLabel}>Opdrachtnemer</td><td className={tdValue}>ValentineZ</td></tr>
                   <tr><td className={tdLabel}>Loopbaanadviseur</td><td className={tdValue}>{tpData.consultant_name}</td></tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.consultant_phone}</td></tr>
@@ -592,8 +594,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               </table>
             </div>
 
-            {/* Page 2 */}
-            <div className="bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto">
+          {/* Page 2 */}
+          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
               <div className="w-full flex justify-end mb-12">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
               </div>
@@ -601,7 +603,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Basisgegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Basisgegevens re-integratie werknemer</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Basisgegevens re-integratie werknemer</td></tr>
                   <tr><td className={tdLabel}>Huidige functie</td><td className={tdValue}>{tpData.current_job}</td></tr>
                   <tr><td className={tdLabel}>Werkervaring</td><td className={tdValue}>{formatWorkExperience(tpData.work_experience)}</td></tr>
                   <tr><td className={tdLabel}>Opleidingsniveau</td><td className={tdValue}>{formatEducationLevel(tpData.education_level, tpData.education_name)}</td></tr>
@@ -620,7 +622,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Opdrachtinformatie */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Opdrachtinformatie</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Opdrachtinformatie</td></tr>
                   <tr><td className={tdLabel}>Trajectsoort</td><td className={tdValue}>2e Spoor Traject</td></tr>
                   <tr><td className={tdLabel}>Doelstelling</td><td className={tdValue}>Het doel van dit traject is een bevredigend resultaat. Een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden.</td></tr>
                   <tr><td className={tdLabel}>Doorlooptijd</td><td className={tdValue}>{tpData.tp_lead_time}</td></tr>
@@ -636,7 +638,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Legenda */}
               <table className="w-full border-collapse">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-gray-100">Legenda</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-muted-foreground p-2">Legenda</td></tr>
                   <tr><td className={tdLabel}>EZD</td><td className={tdValue}>Eerste ziektedag</td></tr>
                   <tr><td className={tdLabel}>AO</td><td className={tdValue}>Arbeidsdeskundigonderzoek</td></tr>
                   <tr><td className={tdLabel}>AD</td><td className={tdValue}>Arbeidsdeskundig</td></tr>
@@ -652,8 +654,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
             </div>
           </div>
         </div>
-
-      </div>
+      </TPPreviewWrapper>
     </div>
     </>
   );
@@ -678,16 +679,16 @@ function Field({
 }) {
   // Priority: saved (green) > highlight (yellow) > default
   const borderColor = saved 
-    ? 'border-green-400 bg-green-50 border-2' 
+    ? 'border-success-500 bg-success-50 border-2' 
     : highlight 
-    ? 'border-yellow-400 bg-yellow-50 border-2' 
-    : '';
-  const inputClass = `w-full border px-2 py-1 rounded text-sm ${borderColor}`;
+    ? 'border-warning-500 bg-warning-50 border-2' 
+    : 'border-border';
+  const inputClass = `w-full border px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${borderColor}`;
 
   if (bool) {
     return (
       <div>
-        <label className="block text-sm font-medium mb-1">{label}</label>
+        <label className="block text-sm font-medium mb-1.5 text-foreground">{label}</label>
         <select
           className={inputClass}
           value={value === true ? 'Ja' : value === false ? 'Nee' : ''}
@@ -703,13 +704,22 @@ function Field({
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <input
-        type={type}
-        className={inputClass}
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <label className="block text-sm font-medium mb-1.5 text-foreground">{label}</label>
+      {type === 'date' ? (
+        <Input
+          type={type}
+          className={borderColor}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      ) : (
+        <Input
+          type={type}
+          className={borderColor}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
     </div>
   );
 }

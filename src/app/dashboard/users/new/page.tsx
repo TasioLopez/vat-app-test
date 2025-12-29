@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from "react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function AddUserPage() {
   const [email, setEmail] = useState("");
@@ -17,22 +19,26 @@ export default function AddUserPage() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Gebruiker uitnodigen</h1>
-      <input
-        className="border p-2 mr-2"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="email@example.com"
-      />
-      <button
-        onClick={handleInvite}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Uitnodiging verzenden
-      </button>
-      {message && <p className="mt-4 text-green-600">{message}</p>}
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Gebruiker uitnodigen</h1>
+        <p className="text-muted-foreground">Nodig een nieuwe gebruiker uit via e-mail</p>
+      </div>
+      <div className="flex gap-3 items-end max-w-md">
+        <div className="flex-1">
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">E-mailadres</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@example.com"
+          />
+        </div>
+        <Button onClick={handleInvite}>
+          Uitnodiging verzenden
+        </Button>
+      </div>
+      {message && <p className="text-success-600">{message}</p>}
     </div>
   );
 }

@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal"; // ← your modal
+import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 type Row = {
   id: string;
@@ -108,74 +117,75 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left">
-            <tr className="border-b">
-              <th className="px-4 py-3">TP</th>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Employer</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 w-24"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>TP</TableHead>
+              <TableHead>Employee</TableHead>
+              <TableHead>Employer</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="w-24"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {list.map((r) => (
-              <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50/60">
-                <td className="px-4 py-3 font-medium">{r.title}</td>
-                <td className="px-4 py-3">
+              <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.title}</TableCell>
+                <TableCell>
                   <div className="flex flex-col">
                     <span>{r.employeeName}</span>
-                    <span className="text-xs text-gray-500">{r.employeeEmail}</span>
+                    <span className="text-xs text-muted-foreground">{r.employeeEmail}</span>
                   </div>
-                </td>
-                <td className="px-4 py-3">{r.clientName}</td>
-                <td className="px-4 py-3">{fmtStable(r.created_at)}</td>
-                <td className="px-4 py-3 text-right">
-                  <button
+                </TableCell>
+                <TableCell>{r.clientName}</TableCell>
+                <TableCell>{fmtStable(r.created_at)}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => openPreview(r)}
-                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
                   >
                     Openen
-                  </button>
-                </td>
-              </tr>
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
             {!list.length && (
-              <tr>
-                <td className="px-4 py-6 text-sm text-gray-500" colSpan={5}>
+              <TableRow>
+                <TableCell className="px-4 py-6 text-sm text-muted-foreground text-center" colSpan={5}>
                   Geen TP documenten gevonden.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Preview modal */}
       {openId && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={closeModal} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-lg bg-card border border-border shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div className="min-w-0">
-                <div className="truncate text-sm font-medium">{active?.title || "Document"}</div>
-                <div className="truncate text-xs text-gray-500">
+                <div className="truncate text-sm font-medium text-card-foreground">{active?.title || "Document"}</div>
+                <div className="truncate text-xs text-muted-foreground">
                   {active?.employeeName} • {active?.clientName}
                 </div>
               </div>
-              <button onClick={closeModal} className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100" aria-label="Close">✕</button>
+              <button onClick={closeModal} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors" aria-label="Close">✕</button>
             </div>
 
-            <div className="h-[78vh] w-full bg-gray-50">
-              {!active?.url && <div className="p-6 text-sm text-red-600">Geen bestandspad op deze rij.</div>}
+            <div className="h-[78vh] w-full bg-muted/30">
+              {!active?.url && <div className="p-6 text-sm text-error-600">Geen bestandspad op deze rij.</div>}
               {active?.url && loading && (
-                <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   Loading preview…
                 </div>
               )}
               {active?.url && !loading && err && (
-                <div className="p-6 text-sm text-red-600">Couldn’t load the file preview. {err}</div>
+                <div className="p-6 text-sm text-error-600">Couldn't load the file preview. {err}</div>
               )}
               {active?.url && !loading && !err && previewUrl && (
                 <object
@@ -188,33 +198,34 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t bg-white px-4 py-2">
+            <div className="flex items-center justify-end gap-2 border-t border-border bg-card px-4 py-2">
               {previewUrl && (
                 <a
                   href={previewUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
+                  className="rounded-md border border-border px-3 py-1 text-xs hover:bg-muted transition-colors"
                 >
                   Openen in nieuw tabblad
                 </a>
               )}
-              <button
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={requestDelete}
                 disabled={!active?.url || deleting}
-                className="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100 disabled:opacity-50"
               >
                 Verwijderen
-              </button>
-              <button onClick={closeModal} className="rounded-md bg-gray-900 px-3 py-1 text-xs text-white hover:bg-black">
+              </Button>
+              <Button variant="outline" size="sm" onClick={closeModal}>
                 Sluiten
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Confirm delete dialog (ShadCN) */}
+      {/* Confirm delete dialog */}
       <ConfirmDeleteModal
         open={confirmOpen}
         onCancel={() => setConfirmOpen(false)}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation } from "@/lib/validation";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function PasswordChange() {
     const supabase = createBrowserClient(
@@ -78,13 +80,13 @@ export default function PasswordChange() {
 
     return (
         <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Wachtwoord Wijzigen</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-6">Wachtwoord Wijzigen</h2>
             
             {message && (
-                <div className={`mb-6 p-4 rounded-lg ${
+                <div className={`mb-6 p-4 rounded-lg border ${
                     message.type === 'success' 
-                        ? 'bg-green-50 text-green-800 border border-green-200' 
-                        : 'bg-red-50 text-red-800 border border-red-200'
+                        ? 'bg-success-50 text-success-800 border-success-500' 
+                        : 'bg-error-50 text-error-800 border-error-500'
                 }`}>
                     {message.text}
                 </div>
@@ -92,27 +94,25 @@ export default function PasswordChange() {
             
             <form onSubmit={handlePasswordChange} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Huidig wachtwoord
                     </label>
-                    <input
+                    <Input
                         type="password"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                     />
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Nieuw wachtwoord
                     </label>
-                    <input
+                    <Input
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Voer nieuw wachtwoord in"
                         required
                     />
@@ -122,30 +122,28 @@ export default function PasswordChange() {
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Bevestig nieuw wachtwoord
                     </label>
-                    <input
+                    <Input
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Bevestig nieuw wachtwoord"
                         required
                     />
                     {confirmPassword && newPassword !== confirmPassword && (
-                        <p className="text-sm text-red-600 mt-2">Wachtwoorden komen niet overeen</p>
+                        <p className="text-sm text-error-600 mt-2">Wachtwoorden komen niet overeen</p>
                     )}
                 </div>
                 
                 <div className="pt-4">
-                    <button 
+                    <Button 
                         type="submit" 
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                         disabled={saving || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                     >
                         {saving ? 'Wachtwoord wijzigen...' : 'Wachtwoord wijzigen'}
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>

@@ -182,7 +182,7 @@ function Draggable({ id, children }: DraggableProps) {
 
 function Droppable({
   id, children,
-  className = "min-h-[100px] border border-dashed rounded p-2 bg-gray-50 space-y-2",
+  className = "min-h-[100px] border border-dashed border-border rounded-md p-2 bg-muted/30 space-y-2",
 }: {
   id: string; children: React.ReactNode; className?: string;
 }) {
@@ -497,7 +497,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         <div className="w-[28%] min-w-[240px] max-w-[30%] border-r px-4 py-4 overflow-y-auto text-xs">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg">Beschikbare activiteiten</h2>
-            <div className="text-[11px] text-gray-500">
+            <div className="text-[11px] text-muted-foreground">
               {saving ? "Opslaan…" : lastSavedAt ? "Opgeslagen" : "—"}
             </div>
           </div>
@@ -523,7 +523,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
           </div>
 
           {/* Template Selection */}
-          <div className="mb-6 p-4 border rounded bg-blue-50">
+          <div className="mb-6 p-4 border border-border rounded-md bg-accent/10">
             <h3 className="font-semibold mb-3 text-sm">Templates</h3>
             <div className="flex gap-2">
               <Button 
@@ -546,12 +546,12 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
               </Button>
             </div>
             {!hasUserChanges && fases.length === 1 && fases[0].title === "" && (
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Geen fasen ingesteld. Klik op een template om te beginnen.
               </p>
             )}
             {!hasUserChanges && !(fases.length === 1 && fases[0].title === "") && (
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Template toegepast. Klik op een template om te wijzigen.
               </p>
             )}
@@ -564,7 +564,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
 
           <div className="space-y-6">
             {fases.map((fase, i) => (
-              <div key={i} className="border p-4 rounded space-y-4 bg-gray-100/10">
+              <div key={i} className="border border-border p-4 rounded-md space-y-4 bg-muted/10">
                 <div className="flex justify-between items-center">
                   <Label>Fase {i + 1} - Doel</Label>
                   <Button
@@ -651,7 +651,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         {/* RIGHT COLUMN: scaled A4 preview */}
         <div
           ref={previewRef}
-          className="basis-[420px] shrink-0 grow-0 px-3 py-3 bg-gray-50 overflow-y-auto overflow-x-hidden"
+          className="basis-[420px] shrink-0 grow-0 px-3 py-3 bg-muted/30 overflow-y-auto overflow-x-hidden"
         >
           {pages.map((page, pi) => {
             const scaledW = Math.round(A4_W * scale);
@@ -693,7 +693,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                   <div className="text-[18px] leading-tight">
                     {page.sections.map((fase, i) => (
                       <div key={`${pi}-${i}`} className="mb-4">
-                        <div className="bg-gray-100 font-bold py-[2px] px-2 flex justify-between text-[18px]">
+                        <div className="bg-muted font-bold py-[2px] px-2 flex justify-between text-[18px]">
                           <span>Fase{fase.title ? `: ${fase.title}` : ""}</span>
                           <span>
                             Periode: {formatDate(fase.periode.from)} - {formatDate(fase.periode.to)}
@@ -721,7 +721,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                             <p><strong>N</strong> = niet gedaan / geen succes</p>
                           </div>
                         </div>
-                        <p className="italic text-[14px] text-gray-600">
+                        <p className="italic text-[14px] text-muted-foreground">
                           *Het solliciteren geschiedt conform planning, aanvang sollicitatiefase
                           wordt vervroegd indien werknemer daar eerder klaar voor is.
                         </p>

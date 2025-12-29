@@ -36,19 +36,19 @@ export default function SettingsPage() {
     return (
         <div className="flex h-full">
             {/* Settings Sidebar */}
-            <div className="w-64 bg-gray-50 border-r border-gray-200 flex-shrink-0">
+            <div className="w-64 bg-muted/30 border-r border-border flex-shrink-0">
                 <div className="p-6">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-6">Instellingen</h1>
+                    <h1 className="text-2xl font-bold text-foreground mb-6">Instellingen</h1>
                     
                     <nav className="space-y-1">
                         {settingsTabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
+                                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors ${
                                     activeTab === tab.id
-                                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'text-foreground/80 hover:bg-muted'
                                 }`}
                             >
                                 <span className="text-lg">{tab.icon}</span>

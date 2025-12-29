@@ -29,11 +29,11 @@ export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLay
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex min-h-screen bg-background">
       {/* Mobile sidebar overlay */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50"
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -41,7 +41,7 @@ export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLay
       {/* Sidebar */}
       <aside
         className={cn(
-          'bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 ease-in-out',
+          'bg-sidebar border-r border-sidebar-border shadow-lg transition-transform duration-300 ease-in-out',
           'flex flex-col',
           isMobile
             ? 'fixed inset-y-0 left-0 z-50 w-64 transform'
@@ -52,13 +52,13 @@ export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLay
       >
         {/* Mobile close button */}
         {isMobile && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+          <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+            <h2 className="text-lg font-semibold text-sidebar-foreground">
               Menu
             </h2>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
+              className="p-2 rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -71,18 +71,18 @@ export function ResponsiveLayout({ children, sidebar, className }: ResponsiveLay
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 ml-64">
         {/* Mobile header */}
         {isMobile && (
-          <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <header className="bg-card border-b border-border shadow-sm px-4 py-3">
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700"
+                className="p-2 rounded-md text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <h1 className="text-lg font-semibold text-gray-800 dark:text-white">
+              <h1 className="text-lg font-semibold text-foreground">
                 VAT App
               </h1>
               <div className="w-9" /> {/* Spacer for centering */}

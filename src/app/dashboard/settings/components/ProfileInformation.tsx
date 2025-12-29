@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function ProfileInformation() {
     const supabase = createBrowserClient(
@@ -94,13 +96,13 @@ export default function ProfileInformation() {
 
     return (
         <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Profiel Informatie</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-6">Profiel Informatie</h2>
             
             {message && (
-                <div className={`mb-6 p-4 rounded-lg ${
+                <div className={`mb-6 p-4 rounded-lg border ${
                     message.type === 'success' 
-                        ? 'bg-green-50 text-green-800 border border-green-200' 
-                        : 'bg-red-50 text-red-800 border border-red-200'
+                        ? 'bg-success-50 text-success-800 border-success-500' 
+                        : 'bg-error-50 text-error-800 border-error-500'
                 }`}>
                     {message.text}
                 </div>
@@ -108,51 +110,48 @@ export default function ProfileInformation() {
 
             <form onSubmit={handleProfileSubmit} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Email
                     </label>
-                    <input
+                    <Input
                         type="email"
                         value={email}
                         disabled
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed text-gray-500"
+                        className="bg-muted cursor-not-allowed"
                     />
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Voornaam
                     </label>
-                    <input
+                    <Input
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                     />
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                         Achternaam
                     </label>
-                    <input
+                    <Input
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                     />
                 </div>
                 
                 <div className="pt-4">
-                    <button 
+                    <Button 
                         type="submit" 
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                         disabled={saving}
                     >
                         {saving ? 'Opslaan...' : 'Profiel opslaan'}
-                    </button>
+                    </Button>
                 </div>
             </form>
         </div>

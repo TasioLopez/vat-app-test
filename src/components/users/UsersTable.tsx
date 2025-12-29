@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import PhoneInput from 'react-phone-input-2';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 
 const supabase = createBrowserClient(
@@ -189,35 +199,41 @@ export default function UsersTable() {
         const selectableEmployees = employees.filter(e => selectedClients.includes(e.client_id));
 
         return (
-            <div className="fixed inset-0 backdrop-blur-sm bg-white/40 z-50 flex items-center justify-center">
-                <div className="bg-white dark:bg-gray-900 p-6 rounded-md shadow-md w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto">
-                    <h2 className="text-xl font-semibold mb-4">Gebruiker bewerken</h2>
+            <div className="fixed inset-0 backdrop-blur-sm bg-background/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <h2 className="text-2xl font-semibold mb-6 text-card-foreground">Gebruiker bewerken</h2>
 
-                    <div className="flex flex-col md:flex-row gap-10">
+                    <div className="flex flex-col md:flex-row gap-8">
                         {/* Left: User Info */}
-                        <div className="flex-1">
-                            <input
-                                name="first_name"
-                                placeholder="Voornaam"
-                                value={editedUser.first_name || ""}
-                                onChange={handleChange}
-                                className="border border-gray-300 rounded px-2 py-1 mb-2 w-full"
-                            />
-                            <input
-                                name="last_name"
-                                placeholder="Achternaam"
-                                value={editedUser.last_name || ""}
-                                onChange={handleChange}
-                                className="border border-gray-300 rounded px-2 py-1 mb-2 w-full"
-                            />
-                            <input
-                                name="email"
-                                type="email"
-                                placeholder="Email"
-                                value={editedUser.email || ""}
-                                onChange={handleChange}
-                                className="border border-gray-300 rounded px-2 py-1 mb-2 w-full"
-                            />
+                        <div className="flex-1 space-y-4">
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground mb-1 block">Voornaam</label>
+                                <Input
+                                    name="first_name"
+                                    placeholder="Voornaam"
+                                    value={editedUser.first_name || ""}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground mb-1 block">Achternaam</label>
+                                <Input
+                                    name="last_name"
+                                    placeholder="Achternaam"
+                                    value={editedUser.last_name || ""}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground mb-1 block">Email</label>
+                                <Input
+                                    name="email"
+                                    type="email"
+                                    placeholder="Email"
+                                    value={editedUser.email || ""}
+                                    onChange={handleChange}
+                                />
+                            </div>
                             <PhoneInput
                                 country={'nl'}
                                 value={editedUser.phone || ''}
@@ -241,74 +257,87 @@ export default function UsersTable() {
                                 }}
                                 enableSearch
                             />
-                            <select
-                                name="role"
-                                value={editedUser.role || ""}
-                                onChange={handleChange}
-                                className="border border-gray-300 rounded px-2 py-1 mb-4 w-full"
-                            >
-                                <option value="">Selecteer rol...</option>
-                                <option value="admin">Beheerder</option>
-                                <option value="user">Gebruiker</option>
-                            </select>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground mb-1 block">Rol</label>
+                                <select
+                                    name="role"
+                                    value={editedUser.role || ""}
+                                    onChange={handleChange}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="">Selecteer rol...</option>
+                                    <option value="admin">Beheerder</option>
+                                    <option value="user">Gebruiker</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* Right: Client/Employee Assignment (Only for non-admins) */}
                         {editedUser.role !== 'admin' && (
-                            <div className="flex-1">
-                                <label className="font-semibold mb-1 block">Klanten toewijzen</label>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {clients.map(c => {
-                                        const selected = selectedClients.includes(c.id);
-                                        return (
-                                            <button
-                                                key={c.id}
-                                                onClick={() => toggleClientSelection(uid, c.id)}
-                                                className={`px-3 py-1 text-sm rounded-full border ${selected ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-800"}`}
-                                            >
-                                                {c.name}
-                                            </button>
-                                        );
-                                    })}
+                            <div className="flex-1 space-y-4">
+                                <div>
+                                    <label className="text-sm font-semibold mb-2 block text-card-foreground">Klanten toewijzen</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {clients.map(c => {
+                                            const selected = selectedClients.includes(c.id);
+                                            return (
+                                                <button
+                                                    key={c.id}
+                                                    onClick={() => toggleClientSelection(uid, c.id)}
+                                                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                                                        selected 
+                                                            ? "bg-primary text-primary-foreground border-primary" 
+                                                            : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                                                    }`}
+                                                >
+                                                    {c.name}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
 
-                                <label className="font-semibold block mb-1">Medewerker toevoegen</label>
-                                <select
-                                    onChange={(e) => {
-                                        if (e.target.value) addEmployee(uid, e.target.value);
-                                        e.target.value = "";
-                                    }}
-                                    className="border border-gray-300 rounded px-2 py-1 w-full mb-2"
-                                >
-                                    <option value="">Medewerker selecteren...</option>
-                                    {selectableEmployees.map(e => (
-                                        <option key={e.id} value={e.id}>
-                                            {e.first_name} {e.last_name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div>
+                                    <label className="text-sm font-semibold block mb-2 text-card-foreground">Medewerker toevoegen</label>
+                                    <select
+                                        onChange={(e) => {
+                                            if (e.target.value) addEmployee(uid, e.target.value);
+                                            e.target.value = "";
+                                        }}
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">Medewerker selecteren...</option>
+                                        {selectableEmployees.map(e => (
+                                            <option key={e.id} value={e.id}>
+                                                {e.first_name} {e.last_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                <label className="font-semibold block mb-1">Toegewezen werknemers</label>
-                                <ul className="mb-4 text-sm space-y-1">
-                                    {(userEmployees[uid] || []).map(eid => {
-                                        const emp = employees.find(e => e.id === eid);
-                                        if (!emp) return null;
-                                        return (
-                                            <li key={eid} className="flex justify-between items-center bg-gray-100 px-3 py-1 rounded">
-                                                <span>{emp.first_name} {emp.last_name}</span>
-                                                <button onClick={() => removeEmployee(uid, eid)} className="text-red-600 text-xs">✕</button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                                <div>
+                                    <label className="text-sm font-semibold block mb-2 text-card-foreground">Toegewezen werknemers</label>
+                                    <ul className="space-y-2">
+                                        {(userEmployees[uid] || []).map(eid => {
+                                            const emp = employees.find(e => e.id === eid);
+                                            if (!emp) return null;
+                                            return (
+                                                <li key={eid} className="flex justify-between items-center bg-muted px-3 py-2 rounded-md">
+                                                    <span className="text-sm text-card-foreground">{emp.first_name} {emp.last_name}</span>
+                                                    <button onClick={() => removeEmployee(uid, eid)} className="text-error-600 hover:text-error-700 text-sm font-medium">✕</button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
                             </div>
                         )}
                     </div>
 
                     {/* Footer Buttons */}
-                    <div className="flex justify-end gap-4 mt-6">
-                        <button onClick={() => handleSave(uid)} className="bg-green-600 text-white px-4 py-2 rounded">Opslaan</button>
-                        <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-4 py-2 rounded">Annuleren</button>
+                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border">
+                        <Button variant="outline" onClick={() => setEditingId(null)}>Annuleren</Button>
+                        <Button onClick={() => handleSave(uid)}>Opslaan</Button>
                     </div>
                 </div>
             </div>
@@ -316,53 +345,59 @@ export default function UsersTable() {
     };
 
 
-    if (loading) return <p>Laden...</p>;
+    if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full text-md">
-                <thead className="bg-gray-100 dark:bg-gray-800">
-                    <tr>
-                        <th className="p-2">Email</th>
-                        <th className="p-2">Voornaam</th>
-                        <th className="p-2">Achternaam</th>
-                        <th className="p-2">Rol</th>
-                        <th className="p-2">Werkgevers</th>
-                        <th className="p-2">Werknemers</th>
-                        <th className="p-2">Acties</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div className="rounded-md border border-border">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Voornaam</TableHead>
+                        <TableHead>Achternaam</TableHead>
+                        <TableHead>Rol</TableHead>
+                        <TableHead>Werkgevers</TableHead>
+                        <TableHead>Werknemers</TableHead>
+                        <TableHead>Acties</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
                     {users.map((u) => (
-                        <tr key={u.id}>
-                            <td className="px-2">{u.email}</td>
-                            <td className="px-2">{u.first_name}</td>
-                            <td className="px-2">{u.last_name}</td>
-                            <td className="px-2">{u.role}</td>
-                            <td className="px-2">
+                        <TableRow key={u.id}>
+                            <TableCell className="font-medium">{u.email}</TableCell>
+                            <TableCell>{u.first_name}</TableCell>
+                            <TableCell>{u.last_name}</TableCell>
+                            <TableCell>
+                                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                    {u.role}
+                                </span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
                                 {(userClients[u.id] || [])
                                     .map(cid => clients.find(c => c.id === cid)?.name)
                                     .filter(Boolean)
-                                    .join(", ")}
-                            </td>
-                            <td className="px-2">
+                                    .join(", ") || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
                                 {(userEmployees[u.id] || [])
                                     .map(eid => {
                                         const emp = employees.find(e => e.id === eid);
                                         return emp ? `${emp.first_name} ${emp.last_name}` : null;
                                     })
                                     .filter(Boolean)
-                                    .join(", ")}
-                            </td>
-                            <td className="px-2 flex flex-col gap-2 py-2">
-                                <button onClick={() => handleEdit(u)} className="text-blue-600 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer hover:font-semibold">Bewerken</button>
-                                <button onClick={() => handleDelete(u.id)} className="text-red-600 rounded hover:bg-red-700 hover:text-white hover:cursor-pointer hover:font-semibold">Verwijderen</button>
+                                    .join(", ") || "—"}
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(u)}>Bewerken</Button>
+                                    <Button variant="destructive" size="sm" onClick={() => handleDelete(u.id)}>Verwijderen</Button>
+                                </div>
                                 {editingId === u.id && renderModal(u)}
-                            </td>
-                        </tr>
+                            </TableCell>
+                        </TableRow>
                     ))}
-                </tbody>
-            </table>
+                </TableBody>
+            </Table>
         </div>
     );
 }

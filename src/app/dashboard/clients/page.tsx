@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Trash2, Pencil } from 'lucide-react';
 
 
@@ -126,173 +128,190 @@ export default function ClientsPage() {
 
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Werkgevers</h1>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Werkgevers</h1>
+          <p className="text-muted-foreground mt-2">Beheer werkgevers en hun gegevens</p>
+        </div>
         {userRole === 'admin' && (
           <Link href="/dashboard/clients/new">
-            <Button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:cursor-pointer">+ Nieuwe werkgever</Button>
+            <Button>+ Nieuwe werkgever</Button>
           </Link>
         )}
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-4">
         {clients.length === 0 ? (
-          <p className="text-gray-500 text-center mt-10">Geen werkgevers om te tonen.</p>
-        ) : clients.map((client) => (
-          <div
-            key={client.id}
-            onClick={() => handleEdit(client)}
-            className="border border-indigo-600/10 rounded-lg p-6 flex justify-between items-start shadow-sm hover:bg-gray-50 hover:border-indigo-600/50 transition cursor-pointer"
-          >
-            <div className="flex items-center gap-10 ml-4">
-              <div>
-                <h2 className="text-lg font-bold">{client.name}</h2>
-              </div>
-              <div>
-                <p className="text-md text-gray-600">{client.industry || 'Geen branche geselecteerd'}</p>
-              </div>
-              <div>
-                <p className="text-md text-gray-500">{client.contact_email || 'Geen contact e-mailadres'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">
-                  Gemaakt op: {client.created_at ? new Date(client.created_at).toLocaleString() : '—'}
-                </p>
-              </div>
-            </div>
-
-            {userRole === 'admin' && (
-              <div className="flex gap-2 self-center mr-2" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  size="sm"
-                  onClick={() => handleEdit(client)}
-                  className="bg-blue-600 hover:bg-blue-700 hover:cursor-pointer"
-                >
-                  <Pencil className="w-4 h-4 mr-2" /> Bewerken
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleDeleteClick(client)}
-                  className="hover:cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Geen werkgevers om te tonen.</p>
           </div>
+        ) : clients.map((client) => (
+          <Card
+            key={client.id}
+            clickable
+            onClick={() => handleEdit(client)}
+            className="hover:shadow-md transition-all duration-200"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-8">
+                  <div>
+                    <h2 className="text-lg font-bold text-card-foreground">{client.name}</h2>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{client.industry || 'Geen branche geselecteerd'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{client.contact_email || 'Geen contact e-mailadres'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Gemaakt op: {client.created_at ? new Date(client.created_at).toLocaleString() : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                {userRole === 'admin' && (
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(client)}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" /> Bewerken
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeleteClick(client)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Edit Modal */}
       {selectedClient && userRole === 'admin' && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded w-full max-w-xl">
-            <h2 className="text-xl font-bold mb-4">Werkgever bewerken</h2>
+        <div className="fixed inset-0 backdrop-blur-sm bg-background/80 flex justify-center items-center z-50 p-4">
+          <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-6 text-card-foreground">Werkgever bewerken</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Client Info Column */}
-              <div className="space-y-3">
-                <p className='text-xs text-gray-400'>Werkgever naam</p>
-                <input
-                  type="text"
-                  value={selectedClient.name}
-                  onChange={(e) => setSelectedClient({ ...selectedClient, name: e.target.value })}
-                  className="w-full border p-2 rounded"
-                  placeholder="Company Name"
-                />
-                <p className='text-xs text-gray-400'>Werkgever branche</p>
-                <select
-                  value={selectedClient.industry || ''}
-                  onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
-                  className="w-full border p-2 rounded"
-                >
-                  <option value="">Selecteer een branche</option>
-                  {[
-                    'Gezondheidszorg', 'Onderwijs', 'Financiën', 'Technologie', 'Detailhandel',
-                    'Productie', 'Bouw', 'Horeca', 'Transport', 'Overig'
-                  ].map((industry) => (
-                    <option key={industry} value={industry}>{industry}</option>
-                  ))}
-                </select>
-                <p className='text-xs text-gray-400'>Werkgever email</p>
-                <input
-                  type="email"
-                  value={selectedClient.contact_email || ''}
-                  onChange={(e) => setSelectedClient({ ...selectedClient, contact_email: e.target.value })}
-                  className="w-full border p-2 rounded"
-                  placeholder="Contact Email"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever naam</label>
+                  <Input
+                    type="text"
+                    value={selectedClient.name}
+                    onChange={(e) => setSelectedClient({ ...selectedClient, name: e.target.value })}
+                    placeholder="Company Name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever branche</label>
+                  <select
+                    value={selectedClient.industry || ''}
+                    onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Selecteer een branche</option>
+                    {[
+                      'Gezondheidszorg', 'Onderwijs', 'Financiën', 'Technologie', 'Detailhandel',
+                      'Productie', 'Bouw', 'Horeca', 'Transport', 'Overig'
+                    ].map((industry) => (
+                      <option key={industry} value={industry}>{industry}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever email</label>
+                  <Input
+                    type="email"
+                    value={selectedClient.contact_email || ''}
+                    onChange={(e) => setSelectedClient({ ...selectedClient, contact_email: e.target.value })}
+                    placeholder="Contact Email"
+                  />
+                </div>
               </div>
 
               {/* Referent Info Column */}
-              <div className="space-y-3">
-                <p className='text-xs text-gray-400'>Voornaam referent</p>
-                <input
-                  type="text"
-                  value={selectedClient.referent_first_name || ''}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, referent_first_name: e.target.value })
-                  }
-                  className="w-full border p-2 rounded"
-                  placeholder="Referent First Name"
-                />
-                <p className='text-xs text-gray-400'>Achternaam referent</p>
-                <input
-                  type="text"
-                  value={selectedClient.referent_last_name || ''}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, referent_last_name: e.target.value })
-                  }
-                  className="w-full border p-2 rounded"
-                  placeholder="Referent Last Name"
-                />
-                <p className='text-xs text-gray-400'>Telefoon referent</p>
-                <input
-                  type="tel"
-                  value={selectedClient.referent_phone || ''}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, referent_phone: e.target.value })
-                  }
-                  className="w-full border p-2 rounded"
-                  placeholder="Referent Phone"
-                />
-                <p className='text-xs text-gray-400'>Email referent</p>
-                <input
-                  type="email"
-                  value={selectedClient.referent_email || ''}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, referent_email: e.target.value })
-                  }
-                  className="w-full border p-2 rounded"
-                  placeholder="Referent Email"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Voornaam referent</label>
+                  <Input
+                    type="text"
+                    value={selectedClient.referent_first_name || ''}
+                    onChange={(e) =>
+                      setSelectedClient({ ...selectedClient, referent_first_name: e.target.value })
+                    }
+                    placeholder="Referent First Name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Achternaam referent</label>
+                  <Input
+                    type="text"
+                    value={selectedClient.referent_last_name || ''}
+                    onChange={(e) =>
+                      setSelectedClient({ ...selectedClient, referent_last_name: e.target.value })
+                    }
+                    placeholder="Referent Last Name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Telefoon referent</label>
+                  <Input
+                    type="tel"
+                    value={selectedClient.referent_phone || ''}
+                    onChange={(e) =>
+                      setSelectedClient({ ...selectedClient, referent_phone: e.target.value })
+                    }
+                    placeholder="Referent Phone"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Email referent</label>
+                  <Input
+                    type="email"
+                    value={selectedClient.referent_email || ''}
+                    onChange={(e) =>
+                      setSelectedClient({ ...selectedClient, referent_email: e.target.value })
+                    }
+                    placeholder="Referent Email"
+                  />
+                </div>
               </div>
             </div>
 
-            <h3 className="mt-6 mb-2 font-semibold text-sm">Geassocieerde werknemers</h3>
-            <ul className="max-h-40 overflow-y-auto text-sm text-gray-700">
-              {employees.length === 0 ? (
-                <li className="text-gray-400">Geen werknemers gekoppeld</li>
-              ) : (
-                employees.map((emp) => (
-                  <li key={emp.id} className="border-b py-1">
-                    {emp.first_name} {emp.last_name} – {emp.email}
-                  </li>
-                ))
-              )}
-            </ul>
+            <div className="mt-6">
+              <h3 className="mb-3 font-semibold text-sm text-card-foreground">Geassocieerde werknemers</h3>
+              <ul className="max-h-40 overflow-y-auto text-sm space-y-2 border border-border rounded-md p-3 bg-muted/30">
+                {employees.length === 0 ? (
+                  <li className="text-muted-foreground">Geen werknemers gekoppeld</li>
+                ) : (
+                  employees.map((emp) => (
+                    <li key={emp.id} className="border-b border-border pb-2 last:border-0">
+                      <span className="text-card-foreground">{emp.first_name} {emp.last_name}</span>
+                      <span className="text-muted-foreground"> – {emp.email}</span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
 
-            <div className="mt-6 flex justify-end space-x-2">
-              <button
-                onClick={() => setSelectedClient(null)}
-                className="px-4 py-2 rounded border border-gray-300"
-              >
+            <div className="mt-6 flex justify-end gap-3 pt-6 border-t border-border">
+              <Button variant="outline" onClick={() => setSelectedClient(null)}>
                 Annuleren
-              </button>
-              <button onClick={handleSave} className="px-4 py-2 rounded bg-green-600 text-white">
+              </Button>
+              <Button onClick={handleSave}>
                 Opslaan
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -300,22 +319,19 @@ export default function ClientsPage() {
 
       {/* Delete Modal */}
       {showDeleteModal && clientToDelete && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded w-full max-w-sm text-center">
-            <h2 className="text-lg font-semibold mb-4">Bevestig verwijderen</h2>
-            <p className="text-sm mb-6">
-              Weet u zeker dat u wilt <strong>{clientToDelete.name}</strong> verwijderen?
+        <div className="fixed inset-0 backdrop-blur-sm bg-background/80 flex justify-center items-center z-50 p-4">
+          <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 className="text-lg font-semibold mb-4 text-card-foreground">Bevestig verwijderen</h2>
+            <p className="text-sm mb-6 text-muted-foreground">
+              Weet u zeker dat u wilt <strong className="text-card-foreground">{clientToDelete.name}</strong> verwijderen?
             </p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 rounded border border-gray-300"
-              >
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
                 Annuleren
-              </button>
-              <button onClick={handleDelete} className="px-4 py-2 rounded bg-red-600 text-white">
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
                 Verwijderen
-              </button>
+              </Button>
             </div>
           </div>
         </div>

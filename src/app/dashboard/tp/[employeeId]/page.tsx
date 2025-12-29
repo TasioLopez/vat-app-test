@@ -8,6 +8,7 @@ import Section3 from '@/components/tp/sections/Section3';
 import Bijlage from '@/components/tp/sections/Bijlage';
 import FinalReview from '@/components/tp/sections/FinalReview';
 import { TPProvider } from '@/context/TPContext';
+import { Button } from '@/components/ui/button';
 
 const SECTIONS = [
   { id: 1, title: 'Voorblad (Cover Page)', component: CoverPage },
@@ -25,31 +26,30 @@ export default function TPBuilderPage() {
 
   return (
     <TPProvider>
-      <div className="max-h-[70%]] flex flex-col overflow-hidden">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Trajectplan Bouwer</h1>
-          <h2 className="text-md font-semibold">Stap {currentStep} van {totalSteps}</h2>
+      <div className="max-h-[70%]] flex flex-col overflow-hidden p-6">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Trajectplan Bouwer</h1>
+          <h2 className="text-md font-semibold text-muted-foreground">Stap {currentStep} van {totalSteps}</h2>
         </div>
 
         <div className="flex-1 overflow-hidden">
           <SectionComponent employeeId={employeeId} />
         </div>
 
-        <div className="flex justify-between pt-6 px-6">
-          <button
+        <div className="flex justify-between pt-6 border-t border-border">
+          <Button
+            variant="outline"
             onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
             disabled={currentStep === 1}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 hover:bg-gray-400 hover:cursor-pointer transition"
           >
             Terug
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
             disabled={currentStep === totalSteps}
-            className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 hover:bg-blue-700 hover:cursor-pointer transition"
           >
             Volgende
-          </button>
+          </Button>
         </div>
       </div>
     </TPProvider>

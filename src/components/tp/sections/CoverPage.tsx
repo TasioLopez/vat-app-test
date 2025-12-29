@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
 import { formatEmployeeName } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import Image from 'next/image';
 import Cover from '@/assets/images/valentinez-cover.jpg';
 
@@ -91,42 +94,39 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
         setSaving(false);
     };
 
-    if (loading) return <p>Laden...</p>;
+    if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
 
     return (
         <div className="flex gap-10 h-[65vh] items-center px-8 overflow-hidden">
             <div className="w-[50%] space-y-4">
-                <div className="w-full p-2 border rounded bg-gray-100 text-gray-700">
+                <div className="w-full p-3 border border-border rounded-md bg-muted text-muted-foreground">
                     {tpData.employee_name || '—'}
                 </div>
-                <input
+                <Input
                     type="date"
-                    className="w-full p-2 border rounded"
                     value={tpData.tp_creation_date || ''}
                     onChange={(e) => handleChange('tp_creation_date', e.target.value)}
                 />
-                <div className="w-full p-2 border rounded bg-gray-100 text-gray-700">
+                <div className="w-full p-3 border border-border rounded-md bg-muted text-muted-foreground">
                     {tpData.employer_name || '—'}
                 </div>
                 <div className="mt-4">
-                    <button
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:cursor-pointer transition"
+                    <Button
                         onClick={handleSave}
                         disabled={saving}
                     >
                         {saving ? 'Opslaan...' : 'Opslaan'}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
-
             {/* Right: A4-scaled Preview */}
-            <div className="w-[50%] h-full flex justify-center items-center">
-                <div className="relative aspect-[210/297] h-[100%] max-h-full bg-white shadow border border-gray-300 overflow-hidden">
+            <TPPreviewWrapper>
+                <div className="relative aspect-[210/297] h-[100%] max-h-full bg-white shadow-lg border border-border overflow-hidden">
                     {/* Top Banner */}
                     <div className="flex h-[20%] z-20">
-                        <div className="w-[100%] bg-gray-700 flex items-center pl-6 z-20 mt-10">
-                            <h1 className="text-white text-[12px] uppercase tracking-wider font-light">
+                        <div className="w-[100%] bg-primary flex items-center pl-6 z-20 mt-10">
+                            <h1 className="text-primary-foreground text-[12px] uppercase tracking-wider font-light">
                                 TRAJECTPLAN 2ᵉ SPOOR
                             </h1>
                         </div>
@@ -134,8 +134,8 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
 
                     {/* Body */}
                     <div className="p-6">
-                        <p className="text-sm font-semibold">{tpData.employee_name}</p>
-                        <p className="text-xs text-gray-700 mt-1">
+                        <p className="text-sm font-semibold text-foreground">{tpData.employee_name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
                             Rapportage datum: {formatDutchDate(tpData.tp_creation_date)}
                         </p>
                     </div>
@@ -152,11 +152,11 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                     </div>
 
                     {/* Bottom-right employer block */}
-                    <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-[#660066ff] flex items-end justify-center z-0">
-                        <p className="text-white font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
+                    <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-accent flex items-end justify-center z-0">
+                        <p className="text-accent-foreground font-semibold text-[10px] mb-16">{tpData.employer_name}</p>
                     </div>
                 </div>
-            </div>
+            </TPPreviewWrapper>
         </div>
     );
 }

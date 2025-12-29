@@ -11,13 +11,13 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Gebruikers beheren</h1>
-        <Button
-          onClick={() => setOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 hover:cursor-pointer"
-        >
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Gebruikers beheren</h1>
+          <p className="text-muted-foreground mt-2">Beheer gebruikers en hun toegangsrechten</p>
+        </div>
+        <Button onClick={() => setOpen(true)}>
           + Uitnodigen
         </Button>
       </div>

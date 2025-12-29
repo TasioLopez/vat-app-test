@@ -117,38 +117,43 @@ export default function EmployeesPage() {
   }, {});
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Werknemers</h1>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Werknemers</h1>
+          <p className="text-muted-foreground mt-2">Beheer werknemers en hun gegevens</p>
+        </div>
         <Link href="/dashboard/employees/new">
-          <Button className="bg-blue-600 text-white hover:bg-blue-700 hover:cursor-pointer transition">+ Werknemer toevoegen</Button>
+          <Button>+ Werknemer toevoegen</Button>
         </Link>
       </div>
 
       {employees.length === 0 ? (
-          <p className="text-gray-500 text-center mt-10">Geen werknemers om to tonen.</p>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Geen werknemers om te tonen.</p>
+          </div>
         ) : Object.entries(groupedByClient).map(([clientName, group]) => (
-        <div key={clientName} className="mb-6">
-          <h2 className="text-xl font-semibold mb-4">{clientName}</h2>
+        <div key={clientName} className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground border-b border-border pb-2">{clientName}</h2>
           <div className="grid gap-4">
             {group.map((employee) => (
               <Card
                 key={employee.id}
-                className="cursor-pointer hover:shadow-md transition"
+                className="cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   <div>
-                    <p className="font-medium">
+                    <p className="font-semibold text-card-foreground">
                       {employee.first_name} {employee.last_name}
                     </p>
-                    <p className="text-sm text-muted-foreground">{employee.email}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{employee.email}</p>
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
+                      variant="outline"
                       onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                      className="bg-blue-600 hover:bg-blue-700 hover:cursor-pointer"
                     >
                       <Eye className="w-4 h-4 mr-1" /> Bekijk
                     </Button>
@@ -159,7 +164,6 @@ export default function EmployeesPage() {
                         setSelectedEmployeeId(employee.id);
                         setShowDeleteModal(true);
                       }}
-                      className="hover:cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

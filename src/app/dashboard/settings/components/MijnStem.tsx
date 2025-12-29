@@ -290,20 +290,20 @@ export default function MijnStem() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Mijn Stem</h2>
-                <p className="text-gray-600">
+                <h2 className="text-xl font-semibold text-foreground mb-2">Mijn Stem</h2>
+                <p className="text-muted-foreground">
                     Upload uw eerdere TP documenten zodat de AI uw schrijfstijl kan leren en deze kan repliceren bij het schrijven van nieuwe rapporten.
                 </p>
             </div>
 
             {/* Message Feedback */}
             {message && (
-                <div className={`mb-6 p-4 rounded-lg ${
+                <div className={`mb-6 p-4 rounded-lg border ${
                     message.type === 'success' 
-                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        ? 'bg-success-50 text-success-800 border-success-500' 
                         : message.type === 'error'
-                        ? 'bg-red-50 text-red-800 border border-red-200'
-                        : 'bg-blue-50 text-blue-800 border border-blue-200'
+                        ? 'bg-error-50 text-error-800 border-error-500'
+                        : 'bg-info-50 text-info-800 border-info-500'
                 }`}>
                     {message.text}
                 </div>
@@ -312,27 +312,27 @@ export default function MijnStem() {
 
             {/* Master Style Summary */}
             {masterStyle && (
-                <div className="mb-8 p-6 bg-green-50 border border-green-200 rounded-lg">
-                    <h3 className="text-lg font-medium text-green-900 mb-3">Uw Schrijfstijl Profiel</h3>
+                <div className="mb-8 p-6 bg-success-50 border border-success-500 rounded-lg">
+                    <h3 className="text-lg font-medium text-success-900 mb-3">Uw Schrijfstijl Profiel</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                            <span className="font-medium text-green-800">Tonaliteit:</span>
-                            <span className="ml-2 text-green-700">{masterStyle.tone}</span>
+                            <span className="font-medium text-success-800">Tonaliteit:</span>
+                            <span className="ml-2 text-success-700">{masterStyle.tone}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-green-800">Structuur:</span>
-                            <span className="ml-2 text-green-700">{masterStyle.structure}</span>
+                            <span className="font-medium text-success-800">Structuur:</span>
+                            <span className="ml-2 text-success-700">{masterStyle.structure}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-green-800">Formaliteit:</span>
-                            <span className="ml-2 text-green-700">{masterStyle.formality}</span>
+                            <span className="font-medium text-success-800">Formaliteit:</span>
+                            <span className="ml-2 text-success-700">{masterStyle.formality}</span>
                         </div>
                         <div>
-                            <span className="font-medium text-green-800">Documenten geanalyseerd:</span>
-                            <span className="ml-2 text-green-700">{masterStyle.combined_from}</span>
+                            <span className="font-medium text-success-800">Documenten geanalyseerd:</span>
+                            <span className="ml-2 text-success-700">{masterStyle.combined_from}</span>
                         </div>
                     </div>
-                    <p className="text-green-800 mt-3 text-sm">
+                    <p className="text-success-800 mt-3 text-sm">
                         ✅ De AI kan nu uw schrijfstijl repliceren in nieuwe TP rapporten.
                     </p>
                 </div>
@@ -342,19 +342,19 @@ export default function MijnStem() {
             <div className="mb-8">
                 <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                     isUploading 
-                        ? 'border-blue-400 bg-blue-50' 
-                        : 'border-gray-300 hover:border-gray-400'
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-primary/50'
                 }`}>
                     <FaUpload className={`mx-auto text-4xl mb-4 ${
-                        isUploading ? 'text-blue-500' : 'text-gray-400'
+                        isUploading ? 'text-primary' : 'text-muted-foreground'
                     }`} />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <h3 className="text-lg font-medium text-foreground mb-2">
                         {isUploading ? 'Uploaden...' : 'Upload uw TP documenten'}
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-muted-foreground mb-4">
                         Ondersteunde formaten: PDF, TXT (DOC/DOCX binnenkort beschikbaar)
                     </p>
-                    <p className="text-sm text-gray-500 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                         Upload eerdere TP rapporten die u heeft geschreven om uw schrijfstijl te leren.
                     </p>
                     
@@ -364,12 +364,12 @@ export default function MijnStem() {
                             {Object.entries(uploadProgress).map(([filename, progress]) => (
                                 <div key={filename} className="text-sm">
                                     <div className="flex justify-between mb-1">
-                                        <span className="text-gray-600 truncate">{filename}</span>
-                                        <span className="text-gray-500">{progress}%</span>
+                                        <span className="text-foreground truncate">{filename}</span>
+                                        <span className="text-muted-foreground">{progress}%</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div className="w-full bg-muted rounded-full h-2">
                                         <div 
-                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            className="bg-primary h-2 rounded-full transition-all duration-300"
                                             style={{ width: `${progress}%` }}
                                         ></div>
                                     </div>
@@ -378,7 +378,7 @@ export default function MijnStem() {
                         </div>
                     )}
                     
-                    <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <label className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <FaUpload className="mr-2" />
                         {isUploading ? 'Uploaden...' : 'Bestanden selecteren'}
                         <input
@@ -395,15 +395,15 @@ export default function MijnStem() {
 
             {/* Uploaded Files List */}
             <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                <h3 className="text-lg font-medium text-foreground mb-4">
                     Geüploade documenten ({documents.length})
                 </h3>
                 
                 {documents.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
-                        <FaFileAlt className="mx-auto text-gray-300 text-4xl mb-3" />
-                        <p className="text-gray-500 mb-2">Nog geen documenten geüpload</p>
-                        <p className="text-sm text-gray-400">
+                    <div className="text-center py-8 bg-muted/30 border border-border rounded-lg">
+                        <FaFileAlt className="mx-auto text-muted-foreground text-4xl mb-3" />
+                        <p className="text-muted-foreground mb-2">Nog geen documenten geüpload</p>
+                        <p className="text-sm text-muted-foreground">
                             Upload uw eerste TP documenten om uw schrijfstijl te leren
                         </p>
                     </div>
@@ -412,13 +412,13 @@ export default function MijnStem() {
                         {documents.map((doc) => (
                             <div
                                 key={doc.id}
-                                className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                                className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:shadow-sm transition-shadow"
                             >
                                 <div className="flex items-center space-x-3">
-                                    <FaFileAlt className="text-gray-400 text-xl" />
+                                    <FaFileAlt className="text-muted-foreground text-xl" />
                                     <div>
-                                        <p className="font-medium text-gray-900">{doc.filename}</p>
-                                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                        <p className="font-medium text-card-foreground">{doc.filename}</p>
+                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                                             <span>{formatFileSize(doc.file_size)}</span>
                                             <span>•</span>
                                             <span>{new Date(doc.created_at).toLocaleDateString('nl-NL')}</span>
@@ -432,7 +432,7 @@ export default function MijnStem() {
                                 </div>
                                 <button
                                     onClick={() => removeFile(doc.id, doc.filename)}
-                                    className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                    className="p-2 text-muted-foreground hover:text-error-600 transition-colors"
                                     title="Verwijder bestand"
                                 >
                                     <FaTrash />
@@ -445,9 +445,9 @@ export default function MijnStem() {
 
             {/* Analysis Summary */}
             {documents.filter(d => d.status === 'analyzed').length > 0 && (
-                <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2">Analyse Status</h3>
-                    <p className="text-blue-800">
+                <div className="mt-8 p-6 bg-info-50 border border-info-500 rounded-lg">
+                    <h3 className="text-lg font-medium text-info-900 mb-2">Analyse Status</h3>
+                    <p className="text-info-800">
                         De AI heeft {documents.filter(d => d.status === 'analyzed').length} document(en) geanalyseerd 
                         en kan nu uw schrijfstijl repliceren in nieuwe TP rapporten.
                     </p>
@@ -455,9 +455,9 @@ export default function MijnStem() {
             )}
 
             {/* Instructions */}
-            <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Hoe werkt dit?</h3>
-                <ul className="text-gray-600 space-y-2">
+            <div className="mt-8 p-6 bg-muted/30 border border-border rounded-lg">
+                <h3 className="text-lg font-medium text-foreground mb-2">Hoe werkt dit?</h3>
+                <ul className="text-muted-foreground space-y-2">
                     <li>• Upload TP documenten die u eerder heeft geschreven</li>
                     <li>• De AI analyseert uw taalgebruik, structuur, toon en schrijfstijl</li>
                     <li>• Bij het autofillen van nieuwe TP rapporten wordt uw stijl automatisch gerepliceerd</li>

@@ -160,14 +160,15 @@ export default async function TPDocsPage() {
   });
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">TP Documents</h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">TP Documents</h1>
+        <p className="text-muted-foreground mt-2">Beheer en bekijk trajectplan documenten</p>
       </div>
 
       <TPDocsClient rows={rows} />
 
-      <p className="mt-3 text-xs text-gray-500">Showing {rows.length} document(s).</p>
+      <p className="text-sm text-muted-foreground">Showing {rows.length} document(s).</p>
     </div>
   );
 }

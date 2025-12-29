@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
+import { StatCard } from "@/components/ui/card";
 
 type User = Database["public"]["Tables"]["users"]["Row"];
 type Client = Database["public"]["Tables"]["clients"]["Row"];
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <div className="text-red-500">Unauthorized</div>;
+    return <div className="text-error-600 p-6">Unauthorized</div>;
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
     .single();
 
   if (profileError || !profile) {
-    return <div className="text-red-500">User profile not found.</div>;
+    return <div className="text-error-600 p-6">User profile not found.</div>;
   }
 
   let users: User[] = [];
@@ -93,8 +94,11 @@ export default async function DashboardPage() {
     employees.filter((e) => e.created_at?.startsWith(thisMonth)).length || 0;
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4">Dashboard</h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-2">Overzicht van uw gegevens</p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {profile.role === "admin" && (
           <StatCard title="Total Gebruikers" value={users.length} />
@@ -105,15 +109,6 @@ export default async function DashboardPage() {
         <StatCard title="TPs deze maand" value={newTPs} />
         <StatCard title="Nieuwe werknemers deze maand" value={newEmployees} />
       </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="bg-white p-4 rounded shadow text-center">
-      <h2 className="text-lg font-medium">{title}</h2>
-      <p className="text-3xl font-bold">{value}</p>
     </div>
   );
 }

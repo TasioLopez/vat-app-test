@@ -1,9 +1,18 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase/client"; // your existing browser client
-import { X } from "lucide-react"; // or remove if you don't use lucide
+import { supabase } from "@/lib/supabase/client";
+import { X } from "lucide-react";
 import Link from "next/link";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 type Row = {
   id: string;
@@ -74,50 +83,53 @@ export default function TPDocsTable({ rows }: Props) {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left">
-            <tr className="border-b">
-              <th className="px-4 py-3">TP</th>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Employer</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 w-36"></th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>TP</TableHead>
+              <TableHead>Employee</TableHead>
+              <TableHead>Employer</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="w-36"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50/60">
-                <td className="px-4 py-3 font-medium">{r.title}</td>
-                <td className="px-4 py-3">
+              <TableRow key={r.id}>
+                <TableCell className="font-medium">{r.title}</TableCell>
+                <TableCell>
                   <div className="flex flex-col">
                     <span>{r.employeeName}</span>
-                    <span className="text-xs text-gray-500">{r.employeeEmail}</span>
+                    <span className="text-xs text-muted-foreground">{r.employeeEmail}</span>
                   </div>
-                </td>
-                <td className="px-4 py-3">{r.clientName}</td>
-                <td className="px-4 py-3">{r.created_at ? new Date(r.created_at).toLocaleString("nl-NL") : "—"}</td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  <button
-                    onClick={() => onOpen(r)}
-                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
-                  >
-                    Openen
-                  </button>
-                  {r.storagePath && (
-                    <Link
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); onOpen(r); }}
-                      className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
+                </TableCell>
+                <TableCell>{r.clientName}</TableCell>
+                <TableCell>{r.created_at ? new Date(r.created_at).toLocaleString("nl-NL") : "—"}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onOpen(r)}
                     >
-                      Preview
-                    </Link>
-                  )}
-                </td>
-              </tr>
+                      Openen
+                    </Button>
+                    {r.storagePath && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => { e.preventDefault(); onOpen(r); }}
+                      >
+                        Preview
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Modal */}
@@ -125,41 +137,42 @@ export default function TPDocsTable({ rows }: Props) {
         <div className="fixed inset-0 z-50">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             onClick={onClose}
           />
           {/* Sheet */}
           <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="w-[95vw] max-w-5xl h-[85vh] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
-              <div className="px-4 py-3 border-b flex items-center justify-between">
+            <div className="w-[95vw] max-w-5xl h-[85vh] bg-card border border-border rounded-lg shadow-xl overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <div className="min-w-0">
-                  <h2 className="text-sm font-semibold truncate">
+                  <h2 className="text-sm font-semibold truncate text-card-foreground">
                     {active?.title || "Document"}
                   </h2>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {active?.employeeName} · {active?.clientName}
                   </p>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={onClose}
-                  className="inline-flex items-center rounded-md border px-2 py-1 text-xs hover:bg-gray-100"
                   aria-label="Close"
                   title="Close"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden bg-muted/30">
                 {loading && (
-                  <div className="h-full w-full flex items-center justify-center text-sm text-gray-600">
+                  <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
                     Loading preview…
                   </div>
                 )}
                 {signError && (
-                  <div className="p-4 text-sm text-red-600">
-                    Couldn’t load the file preview. {signError}
+                  <div className="p-4 text-sm text-error-600">
+                    Couldn't load the file preview. {signError}
                   </div>
                 )}
                 {!loading && !signError && signedUrl && (
@@ -171,30 +184,27 @@ export default function TPDocsTable({ rows }: Props) {
                   />
                 )}
                 {!loading && !signError && !signedUrl && (
-                  <div className="h-full w-full flex items-center justify-center text-sm text-gray-600">
+                  <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
                     No preview available.
                   </div>
                 )}
               </div>
 
               {/* Footer */}
-              <div className="px-4 py-2 border-t flex items-center justify-end gap-2">
+              <div className="px-4 py-2 border-t border-border flex items-center justify-end gap-2">
                 {signedUrl && (
                   <a
                     href={signedUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center rounded-md border px-3 py-1 text-xs hover:bg-gray-100"
+                    className="inline-flex items-center rounded-md border border-border px-3 py-1 text-xs hover:bg-muted transition-colors"
                   >
                     Openen in nieuw tabblad
                   </a>
                 )}
-                <button
-                  onClick={onClose}
-                  className="inline-flex items-center rounded-md bg-gray-900 text-white px-3 py-1 text-xs hover:bg-black"
-                >
+                <Button variant="outline" size="sm" onClick={onClose}>
                   Sluiten
-                </button>
+                </Button>
               </div>
             </div>
           </div>

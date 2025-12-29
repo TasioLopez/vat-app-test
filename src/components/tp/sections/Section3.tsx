@@ -10,16 +10,18 @@ import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
 import { FileText } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
+import { Button } from '@/components/ui/button';
+import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
 };
 
-const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
+const page = "bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
-const blockTitle = "font-bold bg-gray-100 px-2 py-1";
+const blockTitle = "font-bold bg-muted text-muted-foreground px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
 // --- Static "agreement" text (from TP template) ---
 const AGREEMENT_INTRO =
@@ -774,14 +776,13 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 )}
                 
                 {/* Sticky Save Button at the top */}
-                <div className="sticky top-0 backdrop-blur-2xl bg-gray-50/5 hover:bg-gray-50/15 z-10 flex items-center gap-3 px-6 py-4 rounded-b-3xl transition-all duration-300">
-                    <button
+                <div className="sticky top-0 backdrop-blur-2xl bg-muted/30 hover:bg-muted/50 z-10 flex items-center gap-3 px-6 py-4 rounded-b-lg border-b border-border transition-all duration-300">
+                    <Button
                         onClick={saveAll}
                         disabled={saving}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg hover:bg-blue-700 font-semibold transition-all"
                     >
                         {saving ? "Opslaan..." : "Opslaan"}
-                    </button>
+                    </Button>
                 </div>
                 
                 {/* Section Cards - MOVED TO TOP */}
@@ -855,14 +856,14 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                         title="Trajectdoel en in te zetten activiteiten"
                         actionLabel="—" onAction={() => { }} disabled
                     />
-                    <p className="text-xs text-gray-600 mb-2">
+                    <p className="text-xs text-muted-foreground mb-2">
                         Vink de activiteiten aan die je in het trajectplan wilt opnemen.
                     </p>
                     <div className="space-y-2">
                         {activities.filter(a => a).map((a) => {
                             const checked = selectedActivities.includes(a.id);
                             return (
-                                <label key={a.id} className="flex items-start gap-2 p-2 border rounded hover:bg-gray-50">
+                                <label key={a.id} className="flex items-start gap-2 p-2 border border-border rounded-md hover:bg-muted/50 transition-colors">
                                     <input type="checkbox" className="mt-1" checked={checked} onChange={() => toggleActivity(a.id)} />
                                     <div>
                                         <div className="font-medium">{a.title}</div>
@@ -1016,11 +1017,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             />
 
             {/* RIGHT: preview (A4 look) */}
-            <div className="w-[50%] flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden max-h-[75vh]">
-                <div className="transform scale-[0.65] origin-top">
-                    <PaginatedPreview sections={sectionsArr} />
-                </div>
-            </div>
+            <TPPreviewWrapper>
+                <PaginatedPreview sections={sectionsArr} />
+            </TPPreviewWrapper>
         </div>
     );
 }
@@ -1168,19 +1167,19 @@ function SectionCard({
     return (
         <button
             onClick={onClick}
-            className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 hover:border-blue-400 transition group"
+            className="w-full text-left p-4 border border-border rounded-lg hover:bg-muted/50 hover:border-primary transition group"
         >
             <div className="flex items-center justify-between mb-1">
-                <h3 className="font-semibold text-sm group-hover:text-blue-600">
+                <h3 className="font-semibold text-sm group-hover:text-primary">
                     {title}
                 </h3>
                 {isReadOnly && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                         Alleen-lezen
                     </span>
                 )}
             </div>
-            <p className="text-xs text-gray-600 line-clamp-2">
+            <p className="text-xs text-muted-foreground line-clamp-2">
                 {preview}
             </p>
         </button>
@@ -1212,22 +1211,26 @@ function SectionHeader({
         <div className="flex items-center justify-between mt-6 mb-1">
             <label className="block text-sm font-semibold">{title}</label>
             <div className="flex gap-2">
-                <button
+                <Button
                     onClick={onAction}
                     disabled={disabled}
-                    className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 text-sm disabled:opacity-60"
+                    size="sm"
+                    variant="secondary"
+                    className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                     {actionLabel}
-                </button>
+                </Button>
                 {canRewrite && (
-                    <button
+                    <Button
                         onClick={onRewrite}
                         disabled={rewriteDisabled}
-                        className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 text-sm disabled:opacity-60"
+                        size="sm"
+                        variant="secondary"
+                        className="bg-success-500 text-white hover:bg-success-600"
                         title="Herschrijf in mijn stijl"
                     >
                         {rewriteDisabled ? "Herschrijf..." : "Mijn Stijl"}
-                    </button>
+                    </Button>
                 )}
             </div>
         </div>

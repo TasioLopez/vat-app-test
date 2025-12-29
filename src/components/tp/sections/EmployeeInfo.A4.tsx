@@ -17,9 +17,9 @@ import {
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
-const blockTitle = "font-bold bg-gray-100 px-2 py-1";
+const blockTitle = "font-bold bg-muted text-muted-foreground px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 const tdLabel = "py-1 px-2 border-collapse align-top w-[40%]";
 const tdValue = "py-1 px-2 border-collapse align-top";
 
