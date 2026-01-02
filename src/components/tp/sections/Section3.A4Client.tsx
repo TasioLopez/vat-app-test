@@ -14,7 +14,7 @@ import { ActivityBody } from "./ActivityBody";
 
 const page =
     "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none";
-const blockTitle = "font-bold bg-gray-100 px-2 py-1";
+const blockTitle = "font-bold bg-purple-600 text-white px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
@@ -187,7 +187,7 @@ function SignatureBlock({
     const row = "grid grid-cols-3 gap-6 mt-3";
     const cell = "border rounded p-3";
     const line = "border-b border-black inline-block min-w-[140px]";
-    const label = "text-xs text-gray-600";
+    const label = "text-xs text-gray-600 font-bold";
     return (
         <div>
             <div className={blockTitle}>Ondertekening</div>

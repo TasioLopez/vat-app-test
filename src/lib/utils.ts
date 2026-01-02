@@ -41,6 +41,41 @@ export function formatEmployeeName(
 }
 
 /**
+ * Formats employee name without title prefix: "Initial. LastName (FirstName)"
+ * e.g., "K. Baaijens (Kim)"
+ * Used in EmployeeInfo section (Step 2) where title is not needed
+ * 
+ * @param firstName - Employee's first name
+ * @param lastName - Employee's last name
+ * @param gender - Employee's gender ("Male" or "Female")
+ * @returns Formatted name string without title
+ */
+export function formatEmployeeNameWithoutPrefix(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+  gender: string | null | undefined
+): string {
+  // Return em dash if both names are missing
+  if (!firstName && !lastName) {
+    return "—";
+  }
+
+  // Return whatever we have if either name is missing
+  if (!firstName || !lastName) {
+    return [firstName, lastName].filter(Boolean).join(' ');
+  }
+
+  // If we have gender, format with initial (no title)
+  if (gender === 'Male' || gender === 'Female') {
+    const initial = firstName.charAt(0).toUpperCase();
+    return `${initial}. ${lastName} (${firstName})`;
+  }
+
+  // Fallback to simple format if gender not specified
+  return `${firstName} ${lastName}`;
+}
+
+/**
  * Formats work experience to extract only job titles/functions
  * Removes dates, years, and connecting words
  * 

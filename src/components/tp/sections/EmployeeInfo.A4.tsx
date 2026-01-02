@@ -7,6 +7,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import { TPData } from "@/lib/tp/load";
 import { 
   formatEmployeeName,
+  formatEmployeeNameWithoutPrefix,
   formatWorkExperience,
   formatEducationLevel,
   formatDriversLicense,
@@ -17,10 +18,10 @@ import {
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
-const blockTitle = "font-bold bg-muted text-muted-foreground px-2 py-1";
+const blockTitle = "font-bold bg-purple-600 text-white px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
-const tdLabel = "py-1 px-2 border-collapse align-top w-[40%]";
+const tdLabel = "py-1 px-2 border-collapse align-top w-[40%] font-bold";
 const tdValue = "py-1 px-2 border-collapse align-top";
 
 // Simple utility for "break-inside: avoid" to keep each block intact over page breaks.
@@ -112,7 +113,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
           rows={[
             {
               label: "Naam",
-              value: formatEmployeeName(data.first_name, data.last_name, data.gender)
+              value: formatEmployeeNameWithoutPrefix(data.first_name, data.last_name, data.gender)
             },
             {
               label: "Geslacht",
@@ -141,8 +142,8 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
             { label: "Datum aanmelding", value: formatDutchDate(data.registration_date) || "—" },
             { label: "Datum intakegesprek", value: formatDutchDate(data.intake_date) || "—" },
             { label: "Datum opmaak trajectplan", value: formatDutchDate(data.tp_creation_date) || "—" },
-            { label: "Datum AD Rapportage", value: formatDutchDate(data.ad_report_date) || "—" },
-            { label: "Arbeidsdeskundige", value: data.occupational_doctor_name || "—" },
+            { label: "Datum AD Rapportage", value: formatDutchDate(data.ad_report_date) || "Niet aanwezig" },
+            { label: "Arbeidsdeskundige", value: data.occupational_doctor_name || "Niet aanwezig" },
             {
               label: "Arbeidsdeskundig rapport aanwezig bij aanmelding",
               value: (

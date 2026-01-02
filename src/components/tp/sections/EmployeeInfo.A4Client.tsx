@@ -4,6 +4,7 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTP } from "@/context/TPContext";
 import { 
   formatEmployeeName,
+  formatEmployeeNameWithoutPrefix,
   formatWorkExperience,
   formatEducationLevel,
   formatDriversLicense,
@@ -16,10 +17,10 @@ import Logo2 from "@/assets/images/logo-2.png";
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
-const blockTitle = "font-bold bg-gray-100 px-2 py-1";
+const blockTitle = "font-bold bg-purple-600 text-white px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
-const tdLabel = "py-1 px-2 border-collapse align-top w-[40%]";
+const tdLabel = "py-1 px-2 border-collapse align-top w-[40%] font-bold";
 const tdValue = "py-1 px-2 border-collapse align-top";
 
 type Row = { label: React.ReactNode; value: React.ReactNode };
@@ -91,7 +92,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
       node: (
         <Table
           rows={[
-            { label: "Naam", value: formatEmployeeName(tpData.first_name, tpData.last_name, tpData.gender) },
+            { label: "Naam", value: formatEmployeeNameWithoutPrefix(tpData.first_name, tpData.last_name, tpData.gender) },
             {
               label: "Geslacht",
               value: (
@@ -121,8 +122,8 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
             { label: "Datum aanmelding", value: formatDutchDate(tpData.registration_date) || "—" },
             { label: "Datum intakegesprek", value: formatDutchDate(tpData.intake_date) || "—" },
             { label: "Datum opmaak trajectplan", value: formatDutchDate(tpData.tp_creation_date) || "—" },
-            { label: "Datum AD Rapportage", value: formatDutchDate(tpData.ad_report_date) || "—" },
-            { label: "Arbeidsdeskundige", value: safe(tpData.occupational_doctor_name) },
+            { label: "Datum AD Rapportage", value: formatDutchDate(tpData.ad_report_date) || "Niet aanwezig" },
+            { label: "Arbeidsdeskundige", value: tpData.occupational_doctor_name || "Niet aanwezig" },
             {
               label: "Arbeidsdeskundig rapport aanwezig bij aanmelding",
               value: (
