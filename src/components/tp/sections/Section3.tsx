@@ -19,7 +19,7 @@ const safeParse = <T,>(v: any, fallback: T): T => {
 
 const page = "bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
-const blockTitle = "font-bold bg-purple-600 text-white px-2 py-1";
+const blockTitle = "font-bold bg-muted text-purple-600 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
 const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 

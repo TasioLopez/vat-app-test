@@ -535,7 +535,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Gegevens werknemer</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Gegevens werknemer</td></tr>
                   <tr><td className={tdLabel}>Naam</td><td className={tdValue}>{formatEmployeeNameWithoutPrefix(tpData.first_name, tpData.last_name, tpData.gender)}</td></tr>
                   <tr>
                     <td className={tdLabel}>Geslacht</td>
@@ -553,7 +553,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens re-integratietraject */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Gegevens re-integratietraject 2e spoor</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Gegevens re-integratietraject 2e spoor</td></tr>
                   <tr><td className={tdLabel}>Eerste ziektedag</td><td className={tdValue}>{formatDutchDate(tpData.first_sick_day)}</td></tr>
                   <tr><td className={tdLabel}>Datum aanmelding</td><td className={tdValue}>{formatDutchDate(tpData.registration_date)}</td></tr>
                   <tr><td className={tdLabel}>Datum intakegesprek</td><td className={tdValue}>{formatDutchDate(tpData.intake_date)}</td></tr>
@@ -575,7 +575,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens opdrachtgever */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Gegevens opdrachtgever</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Gegevens opdrachtgever</td></tr>
                   <tr><td className={tdLabel}>Werkgever</td><td className={tdValue}>{tpData.client_name}</td></tr>
                   <tr><td className={tdLabel}>Contactpersoon</td><td className={tdValue}>{tpData.client_referent_name}</td></tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.client_referent_phone}</td></tr>
@@ -586,7 +586,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Gegevens re-integratiebedrijf */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Gegevens re-integratiebedrijf</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Gegevens re-integratiebedrijf</td></tr>
                   <tr><td className={tdLabel}>Opdrachtnemer</td><td className={tdValue}>ValentineZ</td></tr>
                   <tr><td className={tdLabel}>Loopbaanadviseur</td><td className={tdValue}>{tpData.consultant_name}</td></tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.consultant_phone}</td></tr>
@@ -604,7 +604,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Basisgegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Basisgegevens re-integratie werknemer</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Basisgegevens re-integratie werknemer</td></tr>
                   <tr><td className={tdLabel}>Huidige functie</td><td className={tdValue}>{tpData.current_job}</td></tr>
                   <tr><td className={tdLabel}>Werkervaring</td><td className={tdValue}>{formatWorkExperience(tpData.work_experience)}</td></tr>
                   <tr><td className={tdLabel}>Opleidingsniveau</td><td className={tdValue}>{formatEducationLevel(tpData.education_level, tpData.education_name)}</td></tr>
@@ -623,7 +623,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Opdrachtinformatie */}
               <table className="w-full border-collapse mb-4">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Opdrachtinformatie</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Opdrachtinformatie</td></tr>
                   <tr><td className={tdLabel}>Trajectsoort</td><td className={tdValue}>2e Spoor Traject</td></tr>
                   <tr><td className={tdLabel}>Doelstelling</td><td className={tdValue}>Het doel van dit traject is een bevredigend resultaat. Een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden.</td></tr>
                   <tr><td className={tdLabel}>Doorlooptijd</td><td className={tdValue}>{tpData.tp_lead_time}</td></tr>
@@ -639,7 +639,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               {/* Legenda */}
               <table className="w-full border-collapse">
                 <tbody>
-                  <tr><td colSpan={2} className="font-bold bg-purple-600 text-white p-2">Legenda</td></tr>
+                  <tr><td colSpan={2} className="font-bold bg-muted text-purple-600 p-2">Legenda</td></tr>
                   <tr><td className={tdLabel}>EZD</td><td className={tdValue}>Eerste ziektedag</td></tr>
                   <tr><td className={tdLabel}>AO</td><td className={tdValue}>Arbeidsdeskundigonderzoek</td></tr>
                   <tr><td className={tdLabel}>AD</td><td className={tdValue}>Arbeidsdeskundig</td></tr>
