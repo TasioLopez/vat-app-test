@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import mammoth from 'mammoth';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -36,19 +37,562 @@ function getFileType(path: string, docName?: string): { ext: string; mime: strin
   }
   if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
     return { ext: 'doc', mime: 'application/msword' };
-  }
+    }
   return { ext: 'pdf', mime: 'application/pdf' };
+}
+
+// ============================================
+// DOCX TABLE EXTRACTION USING MAMMOTH
+// ============================================
+
+interface ExtractedTableData {
+  vervoer: {
+    auto: boolean;
+    fiets: boolean;
+    bromfiets: boolean;
+    motor: boolean;
+    ov: boolean;
+    rijbewijs: boolean;
+    rijbewijsType?: string;
+  };
+  talen: {
+    nederlands: {
+      spreken: 'G' | 'R' | 'S' | null;
+      schrijven: 'G' | 'R' | 'S' | null;
+      lezen: 'G' | 'R' | 'S' | null;
+    };
+  };
+  computer: {
+    heeftPcThuis: boolean;
+    heeftPcThuisNotitie: string | null;
+    bekendMetMsOffice: boolean;
+  };
+  rawText: string;
+}
+
+// Fallback: Parse raw text for table data using pattern matching
+function parseRawTextForTableData(rawText: string, result: ExtractedTableData) {
+  console.log('📝 Parsing raw text for table data patterns...');
+  
+  const textLower = rawText.toLowerCase();
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  
+  // Look for Vervoer patterns
+  // Pattern: "Auto" followed by "Ja" or "Nee" (or X in Ja/Nee column)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toLowerCase();
+    const nextLine = (lines[i + 1] || '').toLowerCase();
+    const combinedLine = line + ' ' + nextLine;
+    
+    // Check for transport items with Ja/Nee
+    if (line.includes('auto') && !line.includes('bromfiets')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.auto = true;
+      } else if (combinedLine.includes('nee')) {
+        result.vervoer.auto = false;
+      }
+    }
+    if (line.includes('fiets') && !line.includes('bromfiets')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.fiets = true;
+      } else if (combinedLine.includes('nee')) {
+        result.vervoer.fiets = false;
+      }
+    }
+    if (line.includes('bromfiets')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.bromfiets = true;
+      } else if (combinedLine.includes('nee')) {
+        result.vervoer.bromfiets = false;
+      }
+    }
+    if (line.includes('motor') && !line.includes('bromfiets')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.motor = true;
+      } else if (combinedLine.includes('nee')) {
+        result.vervoer.motor = false;
+      }
+    }
+    if (line.includes('ov') || line.includes('openbaar vervoer')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.ov = true;
+      } else if (combinedLine.includes('nee')) {
+        result.vervoer.ov = false;
+      }
+    }
+    if (line.includes('rijbewijs')) {
+      if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
+        result.vervoer.rijbewijs = true;
+        // Look for license type
+        const typeMatch = combinedLine.match(/\b([a-e])\b/i);
+        if (typeMatch) {
+          result.vervoer.rijbewijsType = typeMatch[1].toUpperCase();
+        }
+      }
+    }
+    
+    // Check for language skills - look for Nederlands row with G/R/S
+    if (line.includes('nederlands')) {
+      // Look for G, R, S markers in same or next lines
+      const context = lines.slice(i, i + 3).join(' ').toLowerCase();
+      
+      // Pattern: "spreken" near G/R/S
+      if (context.includes('spreken')) {
+        if (context.match(/spreken[^a-z]*s\b/) || context.match(/s[^a-z]*spreken/)) {
+          result.talen.nederlands.spreken = 'S';
+        } else if (context.match(/spreken[^a-z]*r\b/) || context.match(/r[^a-z]*spreken/)) {
+          result.talen.nederlands.spreken = 'R';
+        } else if (context.match(/spreken[^a-z]*g\b/) || context.match(/g[^a-z]*spreken/)) {
+          result.talen.nederlands.spreken = 'G';
+        }
+      }
+      if (context.includes('schrijven')) {
+        if (context.match(/schrijven[^a-z]*s\b/) || context.match(/s[^a-z]*schrijven/)) {
+          result.talen.nederlands.schrijven = 'S';
+        } else if (context.match(/schrijven[^a-z]*r\b/) || context.match(/r[^a-z]*schrijven/)) {
+          result.talen.nederlands.schrijven = 'R';
+        } else if (context.match(/schrijven[^a-z]*g\b/) || context.match(/g[^a-z]*schrijven/)) {
+          result.talen.nederlands.schrijven = 'G';
+        }
+      }
+      if (context.includes('lezen')) {
+        if (context.match(/lezen[^a-z]*s\b/) || context.match(/s[^a-z]*lezen/)) {
+          result.talen.nederlands.lezen = 'S';
+        } else if (context.match(/lezen[^a-z]*r\b/) || context.match(/r[^a-z]*lezen/)) {
+          result.talen.nederlands.lezen = 'R';
+        } else if (context.match(/lezen[^a-z]*g\b/) || context.match(/g[^a-z]*lezen/)) {
+          result.talen.nederlands.lezen = 'G';
+        }
+      }
+    }
+    
+    // Check for PC/computer skills
+    if (line.includes('pc thuis') || line.includes('computer thuis')) {
+      const context = combinedLine;
+      if (context.includes('nee')) {
+        result.computer.heeftPcThuis = false;
+      } else if (context.includes('ja')) {
+        // Check for notitie
+        if (context.includes('evt') || context.includes('dochter') || context.includes('familie')) {
+          result.computer.heeftPcThuis = false;
+          result.computer.heeftPcThuisNotitie = '(bij familie)';
+        } else {
+          result.computer.heeftPcThuis = true;
+        }
+      }
+    }
+    if (line.includes('ms office') || line.includes('office')) {
+      const context = combinedLine;
+      if (context.includes('ja') && !context.includes('nee')) {
+        result.computer.bekendMetMsOffice = true;
+      } else if (context.includes('nee')) {
+        result.computer.bekendMetMsOffice = false;
+      }
+    }
+  }
+  
+  console.log('📝 Raw text parsing results:', JSON.stringify(result, null, 2));
+}
+
+// Extract tables from DOCX using mammoth
+async function extractDocxTables(buffer: Buffer): Promise<ExtractedTableData> {
+  console.log('📊 Extracting tables from DOCX using mammoth...');
+  
+  // Extract HTML to preserve table structure
+  const htmlResult = await mammoth.convertToHtml({ buffer });
+  const html = htmlResult.value;
+  
+  // Also extract raw text for other fields
+  const textResult = await mammoth.extractRawText({ buffer });
+  const rawText = textResult.value;
+  
+  console.log('📄 Extracted HTML length:', html.length);
+  console.log('📄 Extracted text length:', rawText.length);
+  
+  // Log first 500 chars of raw text for debugging
+  console.log('📄 Raw text preview:', rawText.substring(0, 500));
+  
+  // Initialize result
+  const result: ExtractedTableData = {
+    vervoer: {
+      auto: false,
+      fiets: false,
+      bromfiets: false,
+      motor: false,
+      ov: false,
+      rijbewijs: false,
+      rijbewijsType: undefined
+    },
+    talen: {
+      nederlands: {
+        spreken: null,
+        schrijven: null,
+        lezen: null
+      }
+    },
+    computer: {
+      heeftPcThuis: false,
+      heeftPcThuisNotitie: null,
+      bekendMetMsOffice: false
+    },
+    rawText
+  };
+  
+  // Parse tables from HTML
+  const tables = html.match(/<table[^>]*>[\s\S]*?<\/table>/gi) || [];
+  console.log(`📊 Found ${tables.length} tables in document`);
+  
+  for (const table of tables) {
+    const tableText = table.toLowerCase();
+    
+    // Check if this is the Vervoer table
+    if (tableText.includes('vervoer') || tableText.includes('auto') && tableText.includes('fiets') && tableText.includes('rijbewijs')) {
+      console.log('🚗 Found Vervoer table');
+      parseVervoerTable(table, result.vervoer);
+    }
+    
+    // Check if this is the Talen table
+    if (tableText.includes('talen') || (tableText.includes('spreken') && tableText.includes('schrijven') && tableText.includes('lezen'))) {
+      console.log('🗣️ Found Talen table');
+      parseTalenTable(table, result.talen);
+    }
+    
+    // Check if this is the Computer skills table
+    if (tableText.includes('computer') || tableText.includes('pc thuis') || tableText.includes('ms office')) {
+      console.log('💻 Found Computer table');
+      parseComputerTable(table, result.computer);
+    }
+  }
+  
+  // If HTML table parsing didn't find much, try raw text parsing as fallback
+  const tableFieldsFound = 
+    result.vervoer.auto || result.vervoer.fiets || result.vervoer.bromfiets || 
+    result.vervoer.motor || result.vervoer.ov || result.vervoer.rijbewijs ||
+    result.talen.nederlands.spreken || result.talen.nederlands.schrijven || result.talen.nederlands.lezen ||
+    result.computer.heeftPcThuis || result.computer.bekendMetMsOffice;
+  
+  if (!tableFieldsFound) {
+    console.log('⚠️ HTML table parsing found few fields, using raw text fallback...');
+    parseRawTextForTableData(rawText, result);
+  }
+  
+  console.log('📊 Final extracted table data:', JSON.stringify(result, null, 2));
+  return result;
+}
+
+// Parse Vervoer table
+function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervoer']) {
+  // Extract rows
+  const rows = tableHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  
+  for (const row of rows) {
+    const rowLower = row.toLowerCase();
+    const cells = row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
+    
+    // Clean cell content
+    const cellContents = cells.map(cell => 
+      cell.replace(/<[^>]+>/g, '').trim().toLowerCase()
+    );
+    
+    // Check which transport type this row is about
+    const rowText = cellContents.join(' ');
+    
+    // Look for X or checkmark in Ja/Nee columns
+    // Usually: [Transport type] [Ja column] [Nee column]
+    const hasJa = rowText.includes('x') || rowText.includes('✓') || rowText.includes('✔');
+    
+    // Determine which column the X is in by checking cell positions
+    let jaChecked = false;
+    let neeChecked = false;
+    
+    for (let i = 0; i < cellContents.length; i++) {
+      const cell = cellContents[i];
+      if (cell === 'x' || cell === '✓' || cell === '✔' || cell === 'ja') {
+        // Check if this is likely the Ja column (usually column 1 or 2)
+        if (i === 1 || (i === 0 && cellContents.length === 2)) {
+          jaChecked = true;
+        } else if (i === 2 || (i === 1 && cellContents.length === 2)) {
+          neeChecked = true;
+        }
+      }
+    }
+    
+    // Also check for explicit "Ja" or "Nee" text with X
+    const jaCell = cellContents.find((c, i) => i > 0 && (c === 'x' || c.includes('ja')));
+    const neeCell = cellContents.find((c, i) => i > 0 && c.includes('nee'));
+    
+    // Determine if Ja is checked based on cell content analysis
+    const firstCell = cellContents[0] || '';
+    
+    if (firstCell.includes('auto') && !firstCell.includes('bromfiets')) {
+      vervoer.auto = jaChecked && !neeChecked;
+      console.log(`  Auto: ${vervoer.auto ? 'Ja' : 'Nee'}`);
+    }
+    if (firstCell.includes('fiets') && !firstCell.includes('bromfiets')) {
+      vervoer.fiets = jaChecked && !neeChecked;
+      console.log(`  Fiets: ${vervoer.fiets ? 'Ja' : 'Nee'}`);
+    }
+    if (firstCell.includes('bromfiets')) {
+      vervoer.bromfiets = jaChecked && !neeChecked;
+      console.log(`  Bromfiets: ${vervoer.bromfiets ? 'Ja' : 'Nee'}`);
+    }
+    if (firstCell.includes('motor') && !firstCell.includes('bromfiets')) {
+      vervoer.motor = jaChecked && !neeChecked;
+      console.log(`  Motor: ${vervoer.motor ? 'Ja' : 'Nee'}`);
+    }
+    if (firstCell.includes('ov') || firstCell.includes('openbaar vervoer')) {
+      vervoer.ov = jaChecked && !neeChecked;
+      console.log(`  OV: ${vervoer.ov ? 'Ja' : 'Nee'}`);
+    }
+    if (firstCell.includes('rijbewijs')) {
+      vervoer.rijbewijs = jaChecked && !neeChecked;
+      // Try to extract license type
+      const typeMatch = rowText.match(/\b([a-e])\b/i);
+      if (typeMatch) {
+        vervoer.rijbewijsType = typeMatch[1].toUpperCase();
+      }
+      console.log(`  Rijbewijs: ${vervoer.rijbewijs ? 'Ja' : 'Nee'}, Type: ${vervoer.rijbewijsType || 'N/A'}`);
+    }
+  }
+}
+
+// Parse Talen table
+function parseTalenTable(tableHtml: string, talen: ExtractedTableData['talen']) {
+  const rows = tableHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  
+  // Find header row to determine column positions
+  let sprekenCol = -1;
+  let schrijvenCol = -1;
+  let lezenCol = -1;
+  
+  for (const row of rows) {
+    const cells = row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
+    const cellContents = cells.map(cell => 
+      cell.replace(/<[^>]+>/g, '').trim().toLowerCase()
+    );
+    
+    // Check if this is header row
+    if (cellContents.some(c => c.includes('spreken') || c.includes('schrijven') || c.includes('lezen'))) {
+      // This is header - find column positions
+      for (let i = 0; i < cellContents.length; i++) {
+        if (cellContents[i].includes('spreken')) sprekenCol = i;
+        if (cellContents[i].includes('schrijven')) schrijvenCol = i;
+        if (cellContents[i].includes('lezen')) lezenCol = i;
+      }
+      console.log(`  Header columns - Spreken: ${sprekenCol}, Schrijven: ${schrijvenCol}, Lezen: ${lezenCol}`);
+      continue;
+    }
+    
+    // Check if this is the Nederlands row
+    const rowText = cellContents.join(' ');
+    if (rowText.includes('nederlands') || cellContents[0]?.includes('nederland')) {
+      console.log('  Found Nederlands row:', cellContents);
+      
+      // Extract G/R/S values from the appropriate columns
+      // The table structure is usually: [Language] [Spreken G R S] [Schrijven G R S] [Lezen G R S]
+      // Or: [Language] [G] [R] [S] [G] [R] [S] [G] [R] [S]
+      
+      // Look for X markers in the cells
+      for (let i = 1; i < cellContents.length; i++) {
+        const cell = cellContents[i];
+        
+        // Check if cell contains X or checkmark
+        if (cell === 'x' || cell === '✓' || cell === '✔' || cell === 'g' || cell === 'r' || cell === 's') {
+          // Determine which skill and level based on position
+          // Common patterns:
+          // - 3 columns per skill (G, R, S)
+          // - Or explicit G/R/S value in single column
+          
+          const skillIndex = Math.floor((i - 1) / 3); // 0=spreken, 1=schrijven, 2=lezen
+          const levelIndex = (i - 1) % 3; // 0=G, 1=R, 2=S
+          
+          const level: 'G' | 'R' | 'S' = levelIndex === 0 ? 'G' : levelIndex === 1 ? 'R' : 'S';
+          
+          if (skillIndex === 0) {
+            talen.nederlands.spreken = level;
+            console.log(`  Spreken: ${level}`);
+          } else if (skillIndex === 1) {
+            talen.nederlands.schrijven = level;
+            console.log(`  Schrijven: ${level}`);
+          } else if (skillIndex === 2) {
+            talen.nederlands.lezen = level;
+            console.log(`  Lezen: ${level}`);
+          }
+        }
+      }
+      
+      // Alternative: Look for explicit G/R/S text in cells
+      for (let i = 0; i < cellContents.length; i++) {
+        const cell = cellContents[i];
+        if (cell === 'g' || cell === 'goed') {
+          // Determine which skill based on column header or position
+          if (sprekenCol !== -1 && i === sprekenCol) talen.nederlands.spreken = 'G';
+          else if (schrijvenCol !== -1 && i === schrijvenCol) talen.nederlands.schrijven = 'G';
+          else if (lezenCol !== -1 && i === lezenCol) talen.nederlands.lezen = 'G';
+        }
+        if (cell === 'r' || cell === 'redelijk') {
+          if (sprekenCol !== -1 && i === sprekenCol) talen.nederlands.spreken = 'R';
+          else if (schrijvenCol !== -1 && i === schrijvenCol) talen.nederlands.schrijven = 'R';
+          else if (lezenCol !== -1 && i === lezenCol) talen.nederlands.lezen = 'R';
+        }
+        if (cell === 's' || cell === 'slecht') {
+          if (sprekenCol !== -1 && i === sprekenCol) talen.nederlands.spreken = 'S';
+          else if (schrijvenCol !== -1 && i === schrijvenCol) talen.nederlands.schrijven = 'S';
+          else if (lezenCol !== -1 && i === lezenCol) talen.nederlands.lezen = 'S';
+        }
+      }
+    }
+  }
+}
+
+// Parse Computer skills table
+function parseComputerTable(tableHtml: string, computer: ExtractedTableData['computer']) {
+  const rows = tableHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  
+  for (const row of rows) {
+    const rowLower = row.toLowerCase();
+    const cells = row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
+    const cellContents = cells.map(cell => 
+      cell.replace(/<[^>]+>/g, '').trim()
+    );
+    const cellContentsLower = cellContents.map(c => c.toLowerCase());
+    
+    const rowText = cellContentsLower.join(' ');
+    const firstCell = cellContentsLower[0] || '';
+    
+    // Check for "Heeft u een pc thuis" row
+    if (firstCell.includes('pc thuis') || firstCell.includes('computer thuis')) {
+      // Look for Ja/Nee
+      let hasJa = false;
+      let notitie: string | null = null;
+      
+      for (let i = 1; i < cellContents.length; i++) {
+        const cell = cellContentsLower[i];
+        const originalCell = cellContents[i];
+        
+        if (cell === 'x' || cell === '✓' || cell === '✔' || cell.includes('ja')) {
+          // Check if previous cell or this cell indicates Ja column
+          if (i === 1 || cellContentsLower[i-1]?.includes('ja')) {
+            hasJa = true;
+          }
+        }
+        
+        // Check for notitie like "(evt. bij dochter)"
+        if (originalCell.includes('(') && originalCell.includes(')')) {
+          notitie = originalCell.match(/\([^)]+\)/)?.[0] || null;
+        }
+      }
+      
+      // Check for notitie in any cell
+      for (const cell of cellContents) {
+        if (cell.includes('(evt') || cell.includes('bij dochter') || cell.includes('bij familie')) {
+          notitie = cell;
+          break;
+        }
+      }
+      
+      computer.heeftPcThuis = hasJa && !notitie;
+      computer.heeftPcThuisNotitie = notitie;
+      console.log(`  Heeft PC thuis: ${computer.heeftPcThuis}, Notitie: ${notitie || 'geen'}`);
+    }
+    
+    // Check for "Bekend met MS Office" row
+    if (firstCell.includes('ms office') || firstCell.includes('microsoft office') || firstCell.includes('office')) {
+      let hasJa = false;
+      
+      for (let i = 1; i < cellContents.length; i++) {
+        const cell = cellContentsLower[i];
+        if (cell === 'x' || cell === '✓' || cell === '✔' || cell.includes('ja')) {
+          if (i === 1 || cellContentsLower[i-1]?.includes('ja')) {
+            hasJa = true;
+          }
+        }
+      }
+      
+      computer.bekendMetMsOffice = hasJa;
+      console.log(`  Bekend met MS Office: ${computer.bekendMetMsOffice}`);
+    }
+  }
+}
+
+// Convert extracted table data to employee details format
+function convertTableDataToEmployeeDetails(tableData: ExtractedTableData): any {
+  const result: any = {};
+  
+  // Convert transport_type
+  const transportTypes: string[] = [];
+  if (tableData.vervoer.auto) transportTypes.push('Auto');
+  if (tableData.vervoer.fiets) transportTypes.push('Fiets');
+  if (tableData.vervoer.bromfiets) transportTypes.push('Bromfiets');
+  if (tableData.vervoer.motor) transportTypes.push('Motor');
+  if (tableData.vervoer.ov) transportTypes.push('OV');
+  result.transport_type = transportTypes;
+  
+  // Convert drivers_license
+  result.drivers_license = tableData.vervoer.rijbewijs;
+  if (tableData.vervoer.rijbewijsType) {
+    result.drivers_license_type = tableData.vervoer.rijbewijsType;
+  }
+  
+  // Convert language skills
+  const mapLevel = (level: 'G' | 'R' | 'S' | null): string | null => {
+    if (level === 'G') return 'Goed';
+    if (level === 'R') return 'Gemiddeld';
+    if (level === 'S') return 'Niet goed';
+    return null;
+  };
+  
+  if (tableData.talen.nederlands.spreken) {
+    result.dutch_speaking = mapLevel(tableData.talen.nederlands.spreken);
+  }
+  if (tableData.talen.nederlands.schrijven) {
+    result.dutch_writing = mapLevel(tableData.talen.nederlands.schrijven);
+  }
+  if (tableData.talen.nederlands.lezen) {
+    result.dutch_reading = mapLevel(tableData.talen.nederlands.lezen);
+  }
+  
+  // Convert computer skills
+  result.has_computer = tableData.computer.heeftPcThuis;
+  
+  // Calculate computer_skills level
+  const hasPc = tableData.computer.heeftPcThuis;
+  const hasOffice = tableData.computer.bekendMetMsOffice;
+  const hasNotitie = !!tableData.computer.heeftPcThuisNotitie;
+  
+  if (!hasPc && !hasOffice) {
+    result.computer_skills = 1; // Geen
+  } else if (!hasPc && hasOffice) {
+    result.computer_skills = 2; // Basis
+  } else if (hasPc && hasOffice) {
+    result.computer_skills = 3; // Gemiddeld
+  } else if (hasPc && !hasOffice) {
+    result.computer_skills = 2; // Basis
+  }
+  
+  // If has notitie like "(evt. bij dochter)", treat as no PC
+  if (hasNotitie) {
+    result.has_computer = false;
+    if (hasOffice) {
+      result.computer_skills = 2; // Basis - knows Office but no own PC
+    } else {
+      result.computer_skills = 1; // Geen
+    }
+  }
+  
+  console.log('📊 Converted table data to employee details:', JSON.stringify(result, null, 2));
+  return result;
 }
 
 // Helper function to clean and parse assistant response
 function parseAssistantResponse(responseText: string): any {
   let cleanedResponse = responseText;
-  
-  // Remove ```json and ``` markers
-  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  
+        
+        // Remove ```json and ``` markers
+        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
   // Try to find JSON object - look for first { and matching }
-  const firstBrace = cleanedResponse.indexOf('{');
+        const firstBrace = cleanedResponse.indexOf('{');
   if (firstBrace === -1) {
     throw new Error('No JSON object found in response');
   }
@@ -71,7 +615,7 @@ function parseAssistantResponse(responseText: string): any {
     throw new Error('No matching closing brace found');
   }
   
-  cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
   
   try {
     return JSON.parse(cleanedResponse);
@@ -84,55 +628,55 @@ function parseAssistantResponse(responseText: string): any {
 
 // Helper function to map and validate extracted data
 function mapAndValidateData(extractedData: any): any {
-  const fieldMapping: { [key: string]: string } = {
-    'geslacht_werknemer': 'gender',
-    'geslacht': 'gender',
-    'leeftijd_werknemer': 'date_of_birth',
-    'naam_werknemer': 'name'
-  };
-  
-  const validEmployeeDetailsFields = [
-    'current_job', 'work_experience', 'education_level', 'education_name',
+        const fieldMapping: { [key: string]: string } = {
+          'geslacht_werknemer': 'gender',
+          'geslacht': 'gender',
+          'leeftijd_werknemer': 'date_of_birth',
+          'naam_werknemer': 'name'
+        };
+        
+        const validEmployeeDetailsFields = [
+          'current_job', 'work_experience', 'education_level', 'education_name',
     'drivers_license', 'drivers_license_type', 'transport_type',
-    'dutch_speaking', 'dutch_writing', 'dutch_reading', 
-    'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
-    'gender', 'date_of_birth', 'phone'
-  ];
+          'dutch_speaking', 'dutch_writing', 'dutch_reading', 
+          'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
+          'gender', 'date_of_birth', 'phone'
+        ];
+        
+        const mappedData: any = {};
   
-  const mappedData: any = {};
-  
-  Object.entries(extractedData).forEach(([key, value]) => {
-    const mappedKey = fieldMapping[key] || key;
-    
-    // Skip fields that don't belong in employee_details table
-    if (!validEmployeeDetailsFields.includes(mappedKey)) {
-      console.log(`⚠️ Skipping field "${mappedKey}" - belongs in tp_meta table, not employee_details`);
-      return;
-    }
-    
-    // Special handling for date_of_birth - if it's a number (age), skip it
-    if (mappedKey === 'date_of_birth' && typeof value === 'number') {
-      console.log('⚠️ Skipping age number, expecting date format for date_of_birth');
-      return;
-    }
-    
+        Object.entries(extractedData).forEach(([key, value]) => {
+          const mappedKey = fieldMapping[key] || key;
+          
+          // Skip fields that don't belong in employee_details table
+          if (!validEmployeeDetailsFields.includes(mappedKey)) {
+            console.log(`⚠️ Skipping field "${mappedKey}" - belongs in tp_meta table, not employee_details`);
+            return;
+          }
+          
+          // Special handling for date_of_birth - if it's a number (age), skip it
+          if (mappedKey === 'date_of_birth' && typeof value === 'number') {
+            console.log('⚠️ Skipping age number, expecting date format for date_of_birth');
+            return;
+          }
+          
     // Special handling for contract_hours - convert to number
-    if (mappedKey === 'contract_hours') {
-      if (typeof value === 'string') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
+          if (mappedKey === 'contract_hours') {
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
           mappedData[mappedKey] = numValue;
-          console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
-        } else {
-          console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
-          return;
-        }
-      } else if (typeof value === 'number') {
+                console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
+              } else {
+                console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
+                return;
+              }
+            } else if (typeof value === 'number') {
         mappedData[mappedKey] = value;
-      } else {
-        console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
-        return;
-      }
+            } else {
+              console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
+              return;
+            }
     } 
     // Special handling for transport_type - ensure it's an array
     else if (mappedKey === 'transport_type') {
@@ -146,15 +690,16 @@ function mapAndValidateData(extractedData: any): any {
         mappedData[mappedKey] = [];
         console.log(`✅ Set transport_type to empty array`);
       }
-    } else {
-      mappedData[mappedKey] = value;
-    }
-  });
-  
+          } else {
+            mappedData[mappedKey] = value;
+          }
+        });
+        
   return mappedData;
 }
 
 // Process intake form document (contains TABLES and text)
+// NEW APPROACH: Use mammoth for deterministic table extraction, AI only for text fields
 async function processIntakeForm(doc: any): Promise<any> {
   console.log(`📋 Processing intake form: ${doc.type}`);
   
@@ -165,7 +710,7 @@ async function processIntakeForm(doc: any): Promise<any> {
       return {};
     }
     
-    // Download and upload file
+    // Download file
     const { data: file } = await supabase.storage.from('documents').download(path);
     if (!file) {
       console.log('⚠️ Could not download intake form');
@@ -174,146 +719,103 @@ async function processIntakeForm(doc: any): Promise<any> {
     
     const buffer = Buffer.from(await file.arrayBuffer());
     const fileType = getFileType(path, doc.name);
-    const fileName = `${doc.type}.${fileType.ext}`;
     
-    // Create assistant with intake-specific instructions
-    const assistant = await openai.beta.assistants.create({
-      name: "Intake Form Analyzer",
-      instructions: `Je bent een expert in het analyseren van Nederlandse intake formulieren.
+    // Initialize result
+    let tableData: any = {};
+    let textData: any = {};
+    let rawText = '';
+    
+    // STEP 1: If DOCX, use mammoth for deterministic table extraction
+    if (fileType.ext === 'docx') {
+      console.log('📊 DOCX detected - using mammoth for table extraction...');
+      
+      try {
+        const extractedTables = await extractDocxTables(buffer);
+        tableData = convertTableDataToEmployeeDetails(extractedTables);
+        rawText = extractedTables.rawText;
+        
+        console.log('✅ Mammoth table extraction completed:', JSON.stringify(tableData, null, 2));
+      } catch (mammothError: any) {
+        console.error('⚠️ Mammoth extraction failed, falling back to AI:', mammothError.message);
+      }
+    } else {
+      // For non-DOCX (PDF), extract raw text
+      console.log('📄 Non-DOCX file, will use AI for all extraction');
+    }
+    
+    // STEP 2: Use AI for TEXT fields only (job, experience, education, etc.)
+    // The AI no longer needs to parse tables - we already have that data
+    console.log('🤖 Using AI for text field extraction...');
+    
+    const textFieldsToExtract = [
+      'current_job',
+      'contract_hours', 
+      'date_of_birth',
+      'gender',
+      'work_experience',
+      'education_level',
+      'education_name',
+      'other_employers'
+    ];
+    
+    // Only use AI if we have raw text or it's not DOCX
+    if (rawText || fileType.ext !== 'docx') {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        temperature: 0, // Deterministic output
+        messages: [
+          {
+            role: "system",
+            content: `Je bent een expert in het extracten van informatie uit Nederlandse intake formulieren.
 
-BELANGRIJK: Dit intake formulier bevat TABELLEN en vrije tekst.
-
-VELDEN TE EXTRACTEN (employee_details tabel):
-
-TABEL VELDEN (extract uit TABELLEN):
-
-1. transport_type (array): 
-   - Zoek de "Vervoer" tabel
-   - Voor ELKE rij (Auto, Fiets, Bromfiets, Motor, OV):
-     * Kijk naar "Ja" kolom: Als X of vinkje → voeg TOE aan array
-     * Kijk naar "Nee" kolom: Als X of vinkje → voeg NIET toe
-   - "Rijbewijs" rij negeren (is apart veld drivers_license)
-   - Als alle op "Nee" → lege array []
-
-2. computer_skills (1-5):
-   STAP-VOOR-STAP:
-   1) Zoek de tabel "Kunt u met een computer omgaan" OF "Heeft u een pc thuis"
-   2) Lees de RIJ "Heeft u een pc thuis":
-      - Als er een X of vinkje in "Ja" kolom STAAT EN er is GEEN notitie zoals "(evt. bij dochter)" of "(bij dochter/familie)" → pc thuis = Ja
-      - Als er een X of vinkje in "Nee" kolom STAAT → pc thuis = Nee
-      - Als er "Ja" is MAAR met notitie zoals "(evt. bij dochter)" of "(bij dochter/familie)" → pc thuis = Nee (GEEN eigen PC)
-   3) Lees de RIJ "Bekend met MS Office":
-      - Als X of vinkje in "Ja" kolom → MS Office = Ja
-      - Als X of vinkje in "Nee" kolom → MS Office = Nee
-   4) BEREKEN computer_skills:
-      - Als pc thuis = Nee EN MS Office = Nee → computer_skills = 1
-      - Als pc thuis = Nee MAAR MS Office = Ja → computer_skills = 2
-      - Als pc thuis = Ja (zonder notitie) EN MS Office = Ja → computer_skills = 3
-      - Meer vaardigheden → 4 of 5
-   BELANGRIJK: Als beide "Nee" zijn → computer_skills = 1 (NIET 2)
-
-3. has_computer (true/false):
-   - Gebruik dezelfde logica als bij computer_skills stap 2
-   - Als pc thuis = Ja ZONDER notitie → has_computer = true
-   - Als pc thuis = Nee OF met notitie → has_computer = false
-
-4. dutch_speaking/writing/reading ("Niet goed"/"Gemiddeld"/"Goed"):
-   STAP-VOOR-STAP:
-   1) Zoek de "Talen" tabel in het document
-   2) Vind de RIJ "Nederlands" (NIET "Engels", NIET "Turks", ALLEEN "Nederlands")
-   3) Lees de KOLOMMEN in deze rij:
-      - "Spreken" kolom → dutch_speaking
-      - "Schrijven" kolom → dutch_writing  
-      - "Lezen" kolom → dutch_reading
-   4) Voor ELKE kolom, kijk naar de X of vinkje positie:
-      - Als X/vinkje onder "G" (Goed) kolom → "Goed"
-      - Als X/vinkje onder "R" (Redelijk) kolom → "Gemiddeld"
-      - Als X/vinkje onder "S" (Slecht) kolom → "Niet goed"
-   VOORBEELD:
-   - Als in "Spreken" kolom de X onder "S" staat → dutch_speaking = "Niet goed"
-   - Als in "Schrijven" kolom de X onder "R" staat → dutch_writing = "Gemiddeld"
-   - Als in "Lezen" kolom de X onder "G" staat → dutch_reading = "Goed"
-   BELANGRIJK: Gebruik ALLEEN wat je ziet. Als X onder "S" staat = "Niet goed", NIET "Gemiddeld" of "Goed"
-
-5. drivers_license (true/false):
-   - Zoek "Vervoer" tabel, rij "Rijbewijs"
-   - Als "Ja" aangevinkt → true, anders false
-
-6. drivers_license_type ("B"/"C"/"D"/"E"/"A"):
-   - Zoek in "Vervoer" tabel of tekst bij "Rijbewijs"
-
-TEKST VELDEN (extract uit vrije tekst):
-
-- current_job: Zoek "Functietitel:" of "Functie:"
-- contract_hours: Zoek "Urenomvang" of "Contracturen"
-- date_of_birth: Geboortedatum (YYYY-MM-DD), converteer uit leeftijd indien nodig
+EXTRACT ALLEEN DEZE VELDEN (uit vrije tekst, NIET uit tabellen):
+- current_job: De huidige/laatste functietitel (bijv. "Helpende incl medicatie")
+- contract_hours: Aantal contracturen (als getal, bijv. 16)
+- date_of_birth: Geboortedatum in YYYY-MM-DD formaat
 - gender: "Man" of "Vrouw"
-- work_experience: ALLEEN functietitels, gescheiden door komma's (geen datums/jaren/organisaties)
-- education_level: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1-4, HBO, WO
-- education_name: Opleiding/cursus naam
-- other_employers: VORIGE werkgevers (niet huidige), komma-gescheiden
+- work_experience: ALLEEN functietitels/beroepen, gescheiden door komma's. Geen datums, geen jaren, geen organisatienamen.
+- education_level: Hoogste opleidingsniveau (Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO)
+- education_name: Naam van de opleiding/cursus
+- other_employers: Vorige werkgevers (niet de huidige), komma-gescheiden
 
 BELANGRIJK:
-- Gebruik ALLEEN wat je ziet in de tabel/tekst
-- Maak GEEN aannames
+- Zoek ALLEEN in de vrije tekst
+- NEGEER tabellen (vervoer, talen, computer - die worden apart verwerkt)
+- Als een veld niet gevonden kan worden, gebruik null
 
-RETURN FORMAT:
-Je MOET ALLEEN een JSON object teruggeven, GEEN tekst voor of na.
-VOORBEELD:
-{"transport_type": ["Auto"], "computer_skills": 2, "has_computer": false, "dutch_speaking": "Niet goed", "dutch_writing": "Niet goed", "dutch_reading": "Niet goed"}
-NIET dit:
-Hier is de informatie: {"transport_type": ["Auto"]}
-NIET markdown, NIET bullet points, NIET uitleg tekst, ALLEEN JSON object.`,
-      model: "gpt-4o",
-      tools: [{ type: "file_search" }]
-    });
-    
-    // Upload file
-    const uploadedFile = await openai.files.create({
-      file: new File([buffer], fileName, { type: fileType.mime }),
-      purpose: "assistants"
-    });
-    
-    console.log(`✅ Uploaded intake form (${fileType.mime}):`, uploadedFile.id);
-    
-    // Create thread and run
-    const thread = await openai.beta.threads.create({
-      messages: [{
-        role: "user",
-        content: "Analyseer dit intake formulier en extract de werknemersprofiel velden.",
-        attachments: [{ file_id: uploadedFile.id, tools: [{ type: "file_search" }] }]
-      }]
-    });
-    
-    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
-      assistant_id: assistant.id
-    });
-    
-    if (run.status !== 'completed') {
-      throw new Error(`Assistant run failed: ${run.status}`);
+RETURN FORMAT: ALLEEN een JSON object, geen tekst ervoor of erna.
+Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw"}`
+          },
+          {
+            role: "user",
+            content: `Extract de tekstvelden uit dit intake formulier:\n\n${rawText || '(document wordt via file_search geanalyseerd)'}`
+          }
+        ]
+      });
+      
+      const aiResponse = completion.choices[0]?.message?.content || '{}';
+      console.log('📄 AI text extraction response:', aiResponse.substring(0, 300));
+      
+      try {
+        textData = parseAssistantResponse(aiResponse);
+        textData = mapAndValidateData(textData);
+        console.log('✅ AI text extraction completed:', Object.keys(textData).length, 'fields');
+      } catch (parseError: any) {
+        console.error('⚠️ Failed to parse AI response:', parseError.message);
+      }
     }
     
-    // Get response
-    const messages = await openai.beta.threads.messages.list(thread.id);
-    const response = messages.data[0].content[0];
+    // STEP 3: Merge table data (from mammoth) with text data (from AI)
+    // Table data takes priority for fields it covers
+    const mergedData = {
+      ...textData,  // AI-extracted text fields first
+      ...tableData  // Mammoth-extracted table fields override
+    };
     
-    if (response.type === 'text') {
-      console.log('📄 Raw intake form response (first 500 chars):', response.text.value.substring(0, 500));
-      const extractedData = parseAssistantResponse(response.text.value);
-      const mappedData = mapAndValidateData(extractedData);
-      
-      // Cleanup
-      await openai.beta.assistants.delete(assistant.id);
-      await openai.files.delete(uploadedFile.id);
-      
-      console.log(`✅ Intake form processing completed:`, Object.keys(mappedData).length, 'fields');
-      return mappedData;
-    }
+    console.log('✅ Intake form processing completed with merged data:', Object.keys(mergedData).length, 'fields');
+    console.log('📊 Final merged data:', JSON.stringify(mergedData, null, 2));
     
-    // Cleanup on error
-    await openai.beta.assistants.delete(assistant.id);
-    await openai.files.delete(uploadedFile.id);
-    return {};
+    return mergedData;
     
   } catch (error: any) {
     console.error('❌ Error processing intake form:', error.message);
@@ -513,8 +1015,8 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
       await openai.files.delete(uploadedFile.id);
       
       console.log(`✅ FML/IZP processing completed:`, Object.keys(mappedData).length, 'fields');
-      return mappedData;
-    }
+        return mappedData;
+      }
     
     await openai.beta.assistants.delete(assistant.id);
     await openai.files.delete(uploadedFile.id);
@@ -594,7 +1096,7 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
     });
     
     if (run.status !== 'completed') {
-      throw new Error(`Assistant run failed: ${run.status}`);
+    throw new Error(`Assistant run failed: ${run.status}`);
     }
     
     const messages = await openai.beta.threads.messages.list(thread.id);
