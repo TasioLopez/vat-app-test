@@ -78,6 +78,7 @@ Vereisten:
 - 1–2 alinea's, scheid alinea's met dubbele newlines (\n\n)
 - Benoem houding/motivatie/wensen, wat lukt/niet lukt gezien huidige belastbaarheid (in eigen woorden), bereidheid t.o.v. 2e spoor (onderzoeken, scholing/omscholing, trajectdoel)
 - Geen medische details of diagnoses. Zakelijk en AVG-proof
+- SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
 - GEEN citations of bronvermeldingen
 Output uitsluitend JSON: { "visie_werknemer": string }`;
 }

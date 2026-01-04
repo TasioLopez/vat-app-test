@@ -142,6 +142,8 @@ Schrijf twee secties op basis van het INTAKEFORMULIER, in dezelfde stijl/structu
 1) "sociale_achtergrond": 1–3 korte alinea's. Context werknemer: werk-/opleidingsachtergrond, thuissituatie/ondersteuning indien relevant, taal/rijbewijs/vervoer/uren-indicatie wanneer expliciet uit intake blijkt. Geen medische details of diagnoses. Zakelijk/AVG-proof.
 2) "visie_werknemer": 1–2 korte alinea's. Samenvatting van houding/motivatie/wensen, belemmeringen in eigen woorden, bereidheid tot 2e spoor (onderzoeken, scholing, trajectdoel). Zakelijk/AVG-proof.
 
+SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
+
 Geen hallucinaties: neem alleen op wat expliciet of logisch uit de intake volgt. Als specifieke info ontbreekt, laat het weg (niet invullen met aannames).
 Lever UITSLUITEND een function call met JSON: { sociale_achtergrond: string, visie_werknemer: string }.
 `.trim();
