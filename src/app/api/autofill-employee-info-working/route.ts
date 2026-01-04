@@ -196,28 +196,44 @@ TABEL VELDEN (extract uit TABELLEN):
    - Als alle op "Nee" → lege array []
 
 2. computer_skills (1-5):
-   - Zoek "Kunt u met een computer omgaan" tabel
-   - "Heeft u een pc thuis": Als "Ja" MAAR notitie zoals "(bij dochter/familie)" → GEEN eigen PC (behandel als "Nee")
-   - "Bekend met MS Office": Check "Ja" of "Nee"
-   - Logica:
-     * pc thuis = Nee (of notitie) EN MS Office = Nee → 1 (Geen)
-     * pc thuis = Nee (of notitie) MAAR MS Office = Ja → 2 (Basis)
-     * pc thuis = Ja (zonder notitie) EN MS Office = Ja → 3 (Gemiddeld)
-     * Meer vaardigheden → 4 of 5
-   - Als ALLE "Nee" → 1 (Geen)
+   STAP-VOOR-STAP:
+   1) Zoek de tabel "Kunt u met een computer omgaan" OF "Heeft u een pc thuis"
+   2) Lees de RIJ "Heeft u een pc thuis":
+      - Als er een X of vinkje in "Ja" kolom STAAT EN er is GEEN notitie zoals "(evt. bij dochter)" of "(bij dochter/familie)" → pc thuis = Ja
+      - Als er een X of vinkje in "Nee" kolom STAAT → pc thuis = Nee
+      - Als er "Ja" is MAAR met notitie zoals "(evt. bij dochter)" of "(bij dochter/familie)" → pc thuis = Nee (GEEN eigen PC)
+   3) Lees de RIJ "Bekend met MS Office":
+      - Als X of vinkje in "Ja" kolom → MS Office = Ja
+      - Als X of vinkje in "Nee" kolom → MS Office = Nee
+   4) BEREKEN computer_skills:
+      - Als pc thuis = Nee EN MS Office = Nee → computer_skills = 1
+      - Als pc thuis = Nee MAAR MS Office = Ja → computer_skills = 2
+      - Als pc thuis = Ja (zonder notitie) EN MS Office = Ja → computer_skills = 3
+      - Meer vaardigheden → 4 of 5
+   BELANGRIJK: Als beide "Nee" zijn → computer_skills = 1 (NIET 2)
 
 3. has_computer (true/false):
-   - Zoek "Heeft u een pc thuis" in computer tabel
-   - Als "Ja" ZONDER notitie → true
-   - Anders (met notitie of "Nee") → false
+   - Gebruik dezelfde logica als bij computer_skills stap 2
+   - Als pc thuis = Ja ZONDER notitie → has_computer = true
+   - Als pc thuis = Nee OF met notitie → has_computer = false
 
 4. dutch_speaking/writing/reading ("Niet goed"/"Gemiddeld"/"Goed"):
-   - Zoek "Talen" tabel, rij "Nederlands" (NIET Engels/Turks)
-   - Voor Spreken/Schrijven/Lezen kolommen:
-     * X onder "G" (Goed) → "Goed"
-     * X onder "R" (Redelijk) → "Gemiddeld"
-     * X onder "S" (Slecht) → "Niet goed"
-   - Spreken → dutch_speaking, Schrijven → dutch_writing, Lezen → dutch_reading
+   STAP-VOOR-STAP:
+   1) Zoek de "Talen" tabel in het document
+   2) Vind de RIJ "Nederlands" (NIET "Engels", NIET "Turks", ALLEEN "Nederlands")
+   3) Lees de KOLOMMEN in deze rij:
+      - "Spreken" kolom → dutch_speaking
+      - "Schrijven" kolom → dutch_writing  
+      - "Lezen" kolom → dutch_reading
+   4) Voor ELKE kolom, kijk naar de X of vinkje positie:
+      - Als X/vinkje onder "G" (Goed) kolom → "Goed"
+      - Als X/vinkje onder "R" (Redelijk) kolom → "Gemiddeld"
+      - Als X/vinkje onder "S" (Slecht) kolom → "Niet goed"
+   VOORBEELD:
+   - Als in "Spreken" kolom de X onder "S" staat → dutch_speaking = "Niet goed"
+   - Als in "Schrijven" kolom de X onder "R" staat → dutch_writing = "Gemiddeld"
+   - Als in "Lezen" kolom de X onder "G" staat → dutch_reading = "Goed"
+   BELANGRIJK: Gebruik ALLEEN wat je ziet. Als X onder "S" staat = "Niet goed", NIET "Gemiddeld" of "Goed"
 
 5. drivers_license (true/false):
    - Zoek "Vervoer" tabel, rij "Rijbewijs"
