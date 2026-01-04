@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
     // (Optional) bring in some small context from profile for tone/anchoring
     const { data: details } = await supabase
       .from("employee_details")
-      .select("education_level, work_experience, dutch_speaking, dutch_writing, dutch_reading, has_transport, contract_hours")
+      .select("education_level, work_experience, dutch_speaking, dutch_writing, dutch_reading, transport_type, contract_hours")
       .eq("employee_id", employeeId)
       .single();
 

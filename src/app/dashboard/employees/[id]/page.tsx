@@ -25,11 +25,10 @@ type EmployeeDetails = {
     education_name?: string;
     drivers_license?: boolean;
     drivers_license_type?: string;
-    has_transport?: boolean;
-    transport_type?: string;
-    dutch_speaking?: boolean;
-    dutch_writing?: boolean;
-    dutch_reading?: boolean;
+    transport_type?: string[];
+    dutch_speaking?: string;
+    dutch_writing?: string;
+    dutch_reading?: string;
     has_computer?: boolean;
     computer_skills?: string;
     contract_hours?: number;
@@ -226,9 +225,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         setUpdating(true);
         try {
+            // Ensure transport_type is saved as array
+            const payload = {
+                ...employeeDetails,
+                transport_type: Array.isArray(employeeDetails.transport_type) 
+                    ? employeeDetails.transport_type 
+                    : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
+                        ? [employeeDetails.transport_type] 
+                        : null)
+            };
+            
             const { error } = await supabase
                 .from('employee_details')
-                .upsert([employeeDetails], { onConflict: 'employee_id' });
+                .upsert([payload], { onConflict: 'employee_id' });
 
             if (error) {
                 console.error('Error saving details:', error);
@@ -263,9 +272,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             }
 
             // Save employee details (including gender)
+            // Ensure transport_type is saved as array
+            const detailsPayload = {
+                ...employeeDetails,
+                transport_type: Array.isArray(employeeDetails.transport_type) 
+                    ? employeeDetails.transport_type 
+                    : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
+                        ? [employeeDetails.transport_type] 
+                        : null)
+            };
+            
             const { error: detailsError } = await supabase
                 .from('employee_details')
-                .upsert([employeeDetails], { onConflict: 'employee_id' });
+                .upsert([detailsPayload], { onConflict: 'employee_id' });
 
             if (detailsError) {
                 console.error('Error saving details:', detailsError);
@@ -297,10 +316,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             if (details && Object.keys(details).length > 0) {
                 const fields = Object.keys(details);
 
+                // Ensure transport_type is handled as array
+                const processedDetails: any = { ...details };
+                if (processedDetails.transport_type) {
+                    if (!Array.isArray(processedDetails.transport_type)) {
+                        // Convert string to array if needed
+                        processedDetails.transport_type = typeof processedDetails.transport_type === 'string' 
+                            ? [processedDetails.transport_type] 
+                            : [];
+                    }
+                }
+
                 // Create a new updated version of the employeeDetails object
                 const updatedDetails: EmployeeDetails = {
                     ...(employeeDetails || {}),
-                    ...details,
+                    ...processedDetails,
                     employee_id: employeeId,
                     autofilled_fields: fields,
                 };
@@ -424,8 +454,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     />
                 </div>
 
+                {/* Checkboxes for drivers_license and has_computer */}
                 <div className='flex p-2'>
-                    {[['drivers_license', 'Rijbewijs'], ['has_transport', 'Eigen vervoer'], ['dutch_speaking', 'NL Spreken'], ['dutch_writing', 'NL Schrijven'], ['dutch_reading', 'NL Lezen'], ['has_computer', 'Heeft PC']].map(([key, label]) => (
+                    {[['drivers_license', 'Rijbewijs'], ['has_computer', 'Heeft PC']].map(([key, label]) => (
                         <label key={key} className="flex items-center space-x-2 w-1/2">
                             <input type="checkbox" checked={Boolean(employeeDetails?.[key as keyof EmployeeDetails])} onChange={e => handleDetailChange(key as keyof EmployeeDetails, e.target.checked)} />
                             <span className={autofilledFields.has(key) ? 'text-yellow-500' : ''}>{label}</span>
@@ -433,7 +464,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     ))}
                 </div>
 
-                {/* Conditional inputs for license and transport types */}
+                {/* Conditional input for license type */}
                 {employeeDetails?.drivers_license && (
                     <select 
                         className={fieldClass('drivers_license_type')} 
@@ -449,20 +480,80 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </select>
                 )}
 
-                {employeeDetails?.has_transport && (
+                {/* Multi-select transport */}
+                <div>
+                    <label className="block text-sm font-semibold mb-2">Eigen vervoer</label>
+                    <div className="space-y-2">
+                        {['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'].map((option) => {
+                            const selected = Array.isArray(employeeDetails?.transport_type) 
+                                ? employeeDetails.transport_type.includes(option)
+                                : false;
+                            return (
+                                <label key={option} className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={(e) => {
+                                            const current = Array.isArray(employeeDetails?.transport_type) 
+                                                ? employeeDetails.transport_type 
+                                                : (typeof employeeDetails?.transport_type === 'string' && employeeDetails.transport_type 
+                                                    ? [employeeDetails.transport_type] 
+                                                    : []);
+                                            if (e.target.checked) {
+                                                handleDetailChange('transport_type', [...current, option]);
+                                            } else {
+                                                handleDetailChange('transport_type', current.filter(v => v !== option));
+                                            }
+                                        }}
+                                        className="rounded border-border text-accent focus:ring-accent"
+                                    />
+                                    <span className={autofilledFields.has('transport_type') ? 'text-yellow-500' : ''}>{option}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Language proficiency dropdowns */}
+                <div className="space-y-2">
+                    <label className="block text-sm font-semibold">Nederlandse taalvaardigheid</label>
                     <select 
-                        className={fieldClass('transport_type')} 
-                        value={employeeDetails?.transport_type || ''} 
-                        onChange={e => handleDetailChange('transport_type', e.target.value)}
+                        className={fieldClass('dutch_speaking')} 
+                        value={employeeDetails?.dutch_speaking || ''} 
+                        onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
                     >
-                        <option value="">Selecteer vervoertype</option>
-                        <option value="Autovoertuig">Autovoertuig</option>
-                        <option value="Fiets">Fiets</option>
-                        <option value="Bromfiets">Bromfiets</option>
-                        <option value="Motor">Motor</option>
-                        <option value="OV">Openbaar vervoer</option>
+                        <option value="">Selecteer spreekvaardigheid</option>
+                        <option value="1 - Geen">1 - Geen</option>
+                        <option value="2 - Matig">2 - Matig</option>
+                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
+                        <option value="4 - Goed">4 - Goed</option>
+                        <option value="5 - Zeer goed">5 - Zeer goed</option>
                     </select>
-                )}
+                    <select 
+                        className={fieldClass('dutch_writing')} 
+                        value={employeeDetails?.dutch_writing || ''} 
+                        onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
+                    >
+                        <option value="">Selecteer schrijfvaardigheid</option>
+                        <option value="1 - Geen">1 - Geen</option>
+                        <option value="2 - Matig">2 - Matig</option>
+                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
+                        <option value="4 - Goed">4 - Goed</option>
+                        <option value="5 - Zeer goed">5 - Zeer goed</option>
+                    </select>
+                    <select 
+                        className={fieldClass('dutch_reading')} 
+                        value={employeeDetails?.dutch_reading || ''} 
+                        onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
+                    >
+                        <option value="">Selecteer leesvaardigheid</option>
+                        <option value="1 - Geen">1 - Geen</option>
+                        <option value="2 - Matig">2 - Matig</option>
+                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
+                        <option value="4 - Goed">4 - Goed</option>
+                        <option value="5 - Zeer goed">5 - Zeer goed</option>
+                    </select>
+                </div>
 
                 <select className={fieldClass('computer_skills')} value={employeeDetails?.computer_skills || ''} onChange={e => handleDetailChange('computer_skills', e.target.value)}>
                     <option value="">Selecteer computervaardigheden</option>

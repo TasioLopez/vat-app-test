@@ -150,17 +150,31 @@ export function formatDriversLicense(
 /**
  * Formats transportation/vehicle information
  * 
- * @param hasTransport - Boolean indicating if person has transport
- * @param transportType - Type of transport (e.g., "Autovoertuig", "Fiets")
+ * @param hasTransport - Boolean indicating if person has transport (deprecated, derive from transportType)
+ * @param transportType - Array of transport types (e.g., ["Auto", "Fiets", "OV"])
  * @returns Formatted transport string
  */
 export function formatTransportation(
   hasTransport: boolean | null | undefined,
-  transportType?: string | null | undefined
+  transportType?: string[] | string | null | undefined
 ): string {
-  if (!hasTransport) return "Nee";
-  const type = transportType || "Autovoertuig";
-  return `Ja (${type})`;
+  // Handle array (new format)
+  if (Array.isArray(transportType)) {
+    if (transportType.length === 0) return "Nee";
+    return `Ja (${transportType.join(', ')})`;
+  }
+  
+  // Handle string (legacy format - for backward compatibility)
+  if (typeof transportType === 'string' && transportType.length > 0) {
+    return `Ja (${transportType})`;
+  }
+  
+  // Fallback to hasTransport boolean (legacy)
+  if (hasTransport) {
+    return "Ja (Auto)";
+  }
+  
+  return "Nee";
 }
 
 /**

@@ -35,8 +35,7 @@ export interface EmployeeDetails {
   computer_skills?: string;
   drivers_license?: boolean;
   drivers_license_type?: string;
-  has_transport?: boolean;
-  transport_type?: string;
+  transport_type?: string[];
   contract_hours?: number;
   dutch_speaking?: string;
   dutch_writing?: string;
@@ -124,8 +123,7 @@ export interface EmployeeFormData {
   computer_skills?: string;
   drivers_license?: boolean;
   drivers_license_type?: string;
-  has_transport?: boolean;
-  transport_type?: string;
+  transport_type?: string[];
   contract_hours?: number;
   dutch_speaking?: string;
   dutch_writing?: string;

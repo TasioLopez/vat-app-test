@@ -27,7 +27,11 @@ async function processDocumentsWithAssistant(docs: any[]): Promise<any> {
       name: "Trajectplan Document Analyzer",
       instructions: `Je bent een expert in het analyseren van Nederlandse re-integratie documenten.
 
-Extract ALLEEN deze velden als je ze vindt:
+BELANGRIJK: Extract ALLEEN TP metadata velden (trajectplan-specifieke velden). 
+NIET extracten: employee profile velden zoals current_job, work_experience, education_level, transport_type, dutch_speaking/writing/reading, computer_skills, etc. 
+Deze velden horen in het werknemersprofiel, niet in TP metadata.
+
+Extract ALLEEN deze TP metadata velden als je ze vindt:
 1. first_sick_day: "Datum ziekmelding:" (YYYY-MM-DD format)
 2. registration_date: "Aanmeld:" (YYYY-MM-DD format)
 3. intake_date: "Gespreksdatum:" (YYYY-MM-DD format)
@@ -50,7 +54,7 @@ Return ONLY a JSON object with the fields you find.`,
 
     console.log('✅ Created assistant:', assistant.id);
 
-    // Step 2: Upload PDFs directly to OpenAI
+    // Step 2: Upload documents directly to OpenAI with correct MIME types
     const fileIds: string[] = [];
     for (const doc of docs) {
       if (!doc.url) continue;
@@ -64,12 +68,32 @@ Return ONLY a JSON object with the fields you find.`,
       
       const buffer = Buffer.from(await file.arrayBuffer());
       
+      // Detect file type from path extension or document name
+      const getFileType = (path: string, docName?: string): { ext: string; mime: string } => {
+        const pathLower = path.toLowerCase();
+        const nameLower = (docName || '').toLowerCase();
+        
+        // Check for DOCX
+        if (pathLower.endsWith('.docx') || nameLower.endsWith('.docx')) {
+          return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+        }
+        // Check for DOC
+        if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
+          return { ext: 'doc', mime: 'application/msword' };
+        }
+        // Default to PDF
+        return { ext: 'pdf', mime: 'application/pdf' };
+      };
+      
+      const fileType = getFileType(path, doc.name);
+      const fileName = `${doc.type}.${fileType.ext}`;
+      
       const uploadedFile = await openai.files.create({
-        file: new File([buffer], `${doc.type}.pdf`, { type: 'application/pdf' }),
+        file: new File([buffer], fileName, { type: fileType.mime }),
         purpose: "assistants"
       });
       fileIds.push(uploadedFile.id);
-      console.log('✅ Uploaded file:', uploadedFile.id);
+      console.log(`✅ Uploaded file (${fileType.mime}):`, uploadedFile.id);
     }
 
     if (fileIds.length === 0) {

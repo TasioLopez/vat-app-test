@@ -35,7 +35,7 @@ const employeeDetailsSchema = z.object({
   education_level: z.string().optional(),
   computer_skills: z.string().optional(),
   drivers_license: z.boolean().optional(),
-  has_transport: z.boolean().optional(),
+  transport_type: z.array(z.string()).optional(),
   contract_hours: z.number()
     .min(0, 'Contracturen mogen niet negatief zijn')
     .max(40, 'Contracturen mogen niet meer dan 40 zijn')

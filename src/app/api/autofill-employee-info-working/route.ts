@@ -49,22 +49,21 @@ Zoek specifiek naar deze informatie in de documenten (ALLEEN voor employee_detai
 - Urenomvang functie (contract_hours) - VERPLICHT, zoek naar "Urenomvang" of "Contracturen"
 - Leeftijd werknemer (date_of_birth) - converteer naar geboortedatum (bijv. "1968-01-15")
 - Geslacht werknemer (gender) - "Man" of "Vrouw"
-- Relevante werkervaring (work_experience) - beschrijf werkervaring, inclusief functies en organisaties
+- Relevante werkervaring (work_experience) - Extract ALLEEN functietitels/beroepen (bijv. "Verloskundige, Verzorgende IG, Helpende"). Geen datums, jaren, of organisatienamen. Alleen de functietitels, gescheiden door komma's.
 - Opleidingsniveau (education_level) - kies uit: Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO
 - Opleidingsspecialisatie (education_name) - de naam van de opleiding/cursus (bijv. "Agogisch werk", "Bedrijfskunde")
 - Rijbewijs (drivers_license) - true/false
 - Rijbewijstype (drivers_license_type) - indien van toepassing: "B", "C", "D", "E", "A"
-- Vervoer beschikbaar (has_transport) - true/false
-- Vervoertype (transport_type) - indien van toepassing: "Autovoertuig", "Fiets", "Bromfiets", "Motor", "OV"
-- Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert
-- Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - true/false
-- Heeft computer thuis (has_computer) - true/false
+- Vervoertype (transport_type) - array van transportopties: ["Auto", "Fiets", "Bromfiets", "Motor", "OV"]. Kan meerdere waarden bevatten. Als er geen vervoer is, gebruik lege array [].
+- Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert. Lees de checkbox tabel in het intake formulier: "Kunt u met een computer omgaan", "Heeft u een pc thuis", "Bekend met MS Office". Als alle drie aangevinkt zijn → 3 (Gemiddeld). Als alleen eerste → 2 (Basis). Als geen → 1 (Geen).
+- Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - kies uit: "1 - Geen", "2 - Matig", "3 - Gemiddeld", "4 - Goed", "5 - Zeer goed". Gebruik de intake form tabel met G/R/S (Goed/Redelijk/Slecht) en map naar de 5-niveau schaal: G (Goed) → "4 - Goed", R (Redelijk) → "3 - Gemiddeld", S (Slecht) → "2 - Matig". Als niet gevonden, gebruik "3 - Gemiddeld" als standaard.
+- Heeft computer thuis (has_computer) - true/false. Lees de checkbox "Heeft u een pc thuis" in het intake formulier.
 - Vorige werkgevers (other_employers) - ALLEEN VORIGE werkgevers, NIET de huidige werkgever. Scheid met komma's.
 
 BELANGRIJK: 
 - Het veld "other_employers" is ALLEEN voor VORIGE werkgevers, niet de huidige werkgever.
 - De huidige werkgever staat al in het systeem en hoeft NIET in other_employers.
-- Gebruik exacte veldnamen: current_job, work_experience, education_level, education_name, drivers_license, drivers_license_type, has_transport, transport_type, computer_skills, other_employers, etc.
+- Gebruik exacte veldnamen: current_job, work_experience, education_level, education_name, drivers_license, drivers_license_type, transport_type (als array), computer_skills, other_employers, etc.
 
 Bij conflicterende informatie, geef ALTIJD voorrang aan het INTAKEFORMULIER.
 
@@ -75,7 +74,7 @@ Return ONLY a JSON object with the fields you find.`,
 
     console.log('✅ Created assistant:', assistant.id);
 
-    // Step 2: Upload PDFs directly to OpenAI
+    // Step 2: Upload documents directly to OpenAI with correct MIME types
     const fileIds: string[] = [];
     for (const doc of docs) {
       if (!doc.url) continue;
@@ -89,12 +88,34 @@ Return ONLY a JSON object with the fields you find.`,
       
       const buffer = Buffer.from(await file.arrayBuffer());
       
+      // Detect file type from path extension or document name
+      const getFileType = (path: string, docName?: string): { ext: string; mime: string } => {
+        const pathLower = path.toLowerCase();
+        const nameLower = (docName || '').toLowerCase();
+        
+        // Check for DOCX
+        if (pathLower.endsWith('.docx') || nameLower.endsWith('.docx')) {
+          return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+        }
+        // Check for DOC
+        if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
+          return { ext: 'doc', mime: 'application/msword' };
+        }
+        // Default to PDF
+        return { ext: 'pdf', mime: 'application/pdf' };
+      };
+      
+      const fileType = getFileType(path, doc.name);
+      const fileName = `${doc.type}.${fileType.ext}`;
+      
+      console.log(`📄 Detected file type: ${fileType.ext} (${fileType.mime}) for document: ${doc.type}`);
+      
       const uploadedFile = await openai.files.create({
-        file: new File([buffer], `${doc.type}.pdf`, { type: 'application/pdf' }),
+        file: new File([buffer], fileName, { type: fileType.mime }),
         purpose: "assistants"
       });
       fileIds.push(uploadedFile.id);
-      console.log('✅ Uploaded file:', uploadedFile.id);
+      console.log(`✅ Uploaded file (${fileType.mime}):`, uploadedFile.id);
     }
 
     if (fileIds.length === 0) {
@@ -155,7 +176,7 @@ Return ONLY a JSON object with the fields you find.`,
         // Fields that belong in employee_details table (not tp_meta)
         const validEmployeeDetailsFields = [
           'current_job', 'work_experience', 'education_level', 'education_name',
-          'drivers_license', 'drivers_license_type', 'has_transport', 'transport_type',
+          'drivers_license', 'drivers_license_type', 'transport_type',
           'dutch_speaking', 'dutch_writing', 'dutch_reading', 
           'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
           'gender', 'date_of_birth', 'phone'
@@ -193,6 +214,20 @@ Return ONLY a JSON object with the fields you find.`,
             } else {
               console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
               return;
+            }
+          } 
+          // Special handling for transport_type - ensure it's an array
+          else if (mappedKey === 'transport_type') {
+            if (Array.isArray(value)) {
+              mappedData[mappedKey] = value;
+              console.log(`✅ transport_type is array:`, value);
+            } else if (typeof value === 'string' && value.length > 0) {
+              // Convert single string to array
+              mappedData[mappedKey] = [value];
+              console.log(`✅ Converted transport_type from string "${value}" to array`);
+            } else {
+              mappedData[mappedKey] = [];
+              console.log(`✅ Set transport_type to empty array`);
             }
           } else {
             mappedData[mappedKey] = value;

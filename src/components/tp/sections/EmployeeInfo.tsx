@@ -225,7 +225,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   const DETAILS_FIELDS = [
     'phone',                      // ✅ moved here
     'date_of_birth', 'current_job', 'work_experience', 'education_level',
-    'drivers_license', 'has_transport', 'dutch_speaking', 'dutch_writing', 'dutch_reading',
+    'drivers_license', 'transport_type', 'dutch_speaking', 'dutch_writing', 'dutch_reading',
     'has_computer', 'computer_skills', 'contract_hours', 'other_employers'
   ] as const;
 
@@ -344,26 +344,47 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       }
 
         if (data?.details && Object.keys(data.details).length > 0) {
-          Object.entries(data.details).forEach(([key, value]) => updateField(key, value));
+          // Only update TP metadata fields, NOT employee_details fields
+          const tpMetaFields = [
+            'first_sick_day', 'registration_date', 'intake_date', 
+            'ad_report_date', 'fml_izp_lab_date', 'occupational_doctor_name', 
+            'occupational_doctor_org', 'has_ad_report', 'tp_lead_time', 
+            'tp_start_date', 'tp_end_date', 'tp_creation_date'
+          ];
           
-          const fieldNames = data.autofilled_fields || Object.keys(data.details);
-          setAutofilledFields(fieldNames);
-          
-          const fieldCount = fieldNames.length;
-          
-          // Convert database field names to human-readable labels
-          const humanReadableFields = fieldNames
-            .map((field: string) => fieldLabels[field] || field)
-            .join(', ');
-          
-          const message = data.message || `${fieldCount} velden ingevuld`;
-          
-          // Show success notification
-          setAutofillMessage({
-            type: 'success',
-            title: '✅ Autofill Succesvol',
-            content: `${message}\n\nIngevulde velden:\n${humanReadableFields}`
+          const filledFields: string[] = [];
+          Object.entries(data.details).forEach(([key, value]) => {
+            // Only update if it's a TP metadata field and not already filled
+            if (tpMetaFields.includes(key) && (!tpData[key] || tpData[key] === null || tpData[key] === '')) {
+              updateField(key, value);
+              filledFields.push(key);
+            }
           });
+          
+          if (filledFields.length > 0) {
+            setAutofilledFields(filledFields);
+            
+            // Convert database field names to human-readable labels
+            const humanReadableFields = filledFields
+              .map((field: string) => fieldLabels[field] || field)
+              .join(', ');
+            
+            const message = data.message || `${filledFields.length} velden ingevuld`;
+            
+            // Show success notification
+            setAutofillMessage({
+              type: 'success',
+              title: '✅ Autofill Succesvol',
+              content: `${message}\n\nIngevulde velden:\n${humanReadableFields}`
+            });
+          } else {
+            // Show warning if no new fields were filled
+            setAutofillMessage({
+              type: 'warning',
+              title: '⚠️ Geen Nieuwe Velden',
+              content: 'Alle TP metadata velden zijn al ingevuld. Employee profile velden worden niet overschreven.'
+            });
+          }
         } else {
           // Show warning notification
           setAutofillMessage({
@@ -388,13 +409,35 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
 
   const boolFields = [
     'drivers_license',
-    'has_transport',
-    'dutch_speaking',
-    'dutch_writing',
-    'dutch_reading',
     'has_computer',
     'has_ad_report',
   ];
+  
+  // Language proficiency levels
+  const languageLevels = [
+    '1 - Geen',
+    '2 - Matig',
+    '3 - Gemiddeld',
+    '4 - Goed',
+    '5 - Zeer goed'
+  ];
+  
+  // Education levels
+  const educationLevels = [
+    'Praktijkonderwijs',
+    'VMBO',
+    'HAVO',
+    'VWO',
+    'MBO 1',
+    'MBO 2',
+    'MBO 3',
+    'MBO 4',
+    'HBO',
+    'WO'
+  ];
+  
+  // Transport options
+  const transportOptions = ['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'];
 
   // Field label mapping for human-readable notifications
   const fieldLabels: { [key: string]: string } = {
@@ -405,7 +448,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     work_experience: 'Werkervaring',
     education_level: 'Opleidingsniveau',
     drivers_license: 'Rijbewijs',
-    has_transport: 'Eigen vervoer',
+    transport_type: 'Eigen vervoer',
     dutch_speaking: 'Spreekvaardigheid NL',
     dutch_writing: 'Schrijfvaardigheid NL',
     dutch_reading: 'Leesvaardigheid NL',
@@ -471,18 +514,76 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           </Button>
         </div>
 
+        {/* Special fields first */}
+        <Field
+          label="Eigen vervoer"
+          value={tpData.transport_type || []}
+          onChange={(v) => handleChange('transport_type', v)}
+          type="multiselect"
+          options={transportOptions}
+          highlight={autofilledFields.includes('transport_type')}
+          saved={savedFields.includes('transport_type')}
+        />
+        
+        <Field
+          label="Opleidingsniveau"
+          value={tpData.education_level || ''}
+          onChange={(v) => handleChange('education_level', v)}
+          type="select"
+          options={educationLevels}
+          highlight={autofilledFields.includes('education_level')}
+          saved={savedFields.includes('education_level')}
+        />
+        
+        {tpData.education_level && (
+          <Field
+            label="Opleidingsspecialisatie"
+            value={tpData.education_name || ''}
+            onChange={(v) => handleChange('education_name', v)}
+            type="text"
+            highlight={autofilledFields.includes('education_name')}
+            saved={savedFields.includes('education_name')}
+          />
+        )}
+        
+        <Field
+          label="Spreekvaardigheid NL"
+          value={tpData.dutch_speaking || ''}
+          onChange={(v) => handleChange('dutch_speaking', v)}
+          type="select"
+          options={languageLevels}
+          highlight={autofilledFields.includes('dutch_speaking')}
+          saved={savedFields.includes('dutch_speaking')}
+        />
+        
+        <Field
+          label="Schrijfvaardigheid NL"
+          value={tpData.dutch_writing || ''}
+          onChange={(v) => handleChange('dutch_writing', v)}
+          type="select"
+          options={languageLevels}
+          highlight={autofilledFields.includes('dutch_writing')}
+          saved={savedFields.includes('dutch_writing')}
+        />
+        
+        <Field
+          label="Leesvaardigheid NL"
+          value={tpData.dutch_reading || ''}
+          onChange={(v) => handleChange('dutch_reading', v)}
+          type="select"
+          options={languageLevels}
+          highlight={autofilledFields.includes('dutch_reading')}
+          saved={savedFields.includes('dutch_reading')}
+        />
+        
+        {/* Regular fields */}
         {Object.entries({
           phone: 'Telefoon',
           email: 'Email',
           date_of_birth: 'Geboortedatum',
           current_job: 'Huidige functie',
           work_experience: 'Werkervaring',
-          education_level: 'Opleidingsniveau',
           drivers_license: 'Rijbewijs',
-          has_transport: 'Eigen vervoer',
-          dutch_speaking: 'Spreekvaardigheid NL',
-          dutch_writing: 'Schrijfvaardigheid NL',
-          dutch_reading: 'Leesvaardigheid NL',
           has_computer: 'Beschikt over PC',
           computer_skills: 'PC-vaardigheden',
           contract_hours: 'Contracturen per week',
@@ -609,10 +710,10 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr><td className={tdLabel}>Werkervaring</td><td className={tdValue}>{formatWorkExperience(tpData.work_experience)}</td></tr>
                   <tr><td className={tdLabel}>Opleidingsniveau</td><td className={tdValue}>{formatEducationLevel(tpData.education_level, tpData.education_name)}</td></tr>
                   <tr><td className={tdLabel}>Rijbewijs</td><td className={tdValue}>{formatDriversLicense(tpData.drivers_license, tpData.drivers_license_type)}</td></tr>
-                  <tr><td className={tdLabel}>Eigen vervoer</td><td className={tdValue}>{formatTransportation(tpData.has_transport, tpData.transport_type)}</td></tr>
-                  <tr><td className={tdLabel}>Spreekvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_speaking ? 'Ja' : 'Nee'}</td></tr>
-                  <tr><td className={tdLabel}>Schrijfvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_writing ? 'Ja' : 'Nee'}</td></tr>
-                  <tr><td className={tdLabel}>Leesvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_reading ? 'Ja' : 'Nee'}</td></tr>
+                  <tr><td className={tdLabel}>Eigen vervoer</td><td className={tdValue}>{formatTransportation(null, tpData.transport_type)}</td></tr>
+                  <tr><td className={tdLabel}>Spreekvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_speaking || '—'}</td></tr>
+                  <tr><td className={tdLabel}>Schrijfvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_writing || '—'}</td></tr>
+                  <tr><td className={tdLabel}>Leesvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_reading || '—'}</td></tr>
                   <tr><td className={tdLabel}>Beschikt over een PC</td><td className={tdValue}>{tpData.has_computer ? 'Ja' : 'Nee'}</td></tr>
                   <tr><td className={tdLabel}>PC-vaardigheden</td><td className={tdValue}>{formatComputerSkills(tpData.computer_skills)}</td></tr>
                   <tr><td className={tdLabel}>Aantal contracturen</td><td className={tdValue}>{tpData.contract_hours} uur per week</td></tr>
@@ -666,6 +767,7 @@ function Field({
   onChange,
   type = 'text',
   bool = false,
+  options,
   highlight = false,
   saved = false,
 }: {
@@ -674,6 +776,7 @@ function Field({
   onChange: (val: any) => void;
   type?: string;
   bool?: boolean;
+  options?: string[];
   highlight?: boolean;
   saved?: boolean;
 }) {
@@ -685,6 +788,57 @@ function Field({
     : 'border-border';
   const inputClass = `w-full border px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${borderColor}`;
 
+  // Multi-select for transport
+  if (type === 'multiselect' && options) {
+    const selectedValues = Array.isArray(value) ? value : [];
+    return (
+      <div>
+        <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
+        <div className="space-y-2">
+          {options.map((option) => (
+            <label key={option} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onChange([...selectedValues, option]);
+                  } else {
+                    onChange(selectedValues.filter((v) => v !== option));
+                  }
+                }}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm">{option}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Select dropdown
+  if (type === 'select' && options) {
+    return (
+      <div>
+        <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
+        <select
+          className={inputClass}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value || null)}
+        >
+          <option value="">Selecteer</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  // Boolean field
   if (bool) {
     return (
       <div>
@@ -702,6 +856,7 @@ function Field({
     );
   }
 
+  // Text or date input
   return (
     <div>
       <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
