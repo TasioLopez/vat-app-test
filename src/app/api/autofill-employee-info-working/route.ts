@@ -285,8 +285,36 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
   // Extract rows
   const rows = tableHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
   
+  // First, find the header row to determine column positions
+  // Table structure: [Type, Welk?, Ja, Nee] or [Type, Ja, Nee]
+  let jaColIndex = -1;
+  let neeColIndex = -1;
+  
   for (const row of rows) {
-    const rowLower = row.toLowerCase();
+    const cells = row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
+    const cellContents = cells.map(cell => 
+      cell.replace(/<[^>]+>/g, '').trim().toLowerCase()
+    );
+    
+    // Check if this is the header row
+    for (let i = 0; i < cellContents.length; i++) {
+      if (cellContents[i] === 'ja') jaColIndex = i;
+      if (cellContents[i] === 'nee') neeColIndex = i;
+    }
+    
+    if (jaColIndex !== -1 && neeColIndex !== -1) {
+      console.log(`  Vervoer header found: Ja col=${jaColIndex}, Nee col=${neeColIndex}`);
+      break;
+    }
+  }
+  
+  // If header not found, assume default positions
+  // Common structure: [Type, Welk?, Ja, Nee] → Ja=2, Nee=3
+  // Or: [Type, Ja, Nee] → Ja=1, Nee=2
+  if (jaColIndex === -1) jaColIndex = 2;
+  if (neeColIndex === -1) neeColIndex = 3;
+  
+  for (const row of rows) {
     const cells = row.match(/<t[dh][^>]*>[\s\S]*?<\/t[dh]>/gi) || [];
     
     // Clean cell content
@@ -294,64 +322,55 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
       cell.replace(/<[^>]+>/g, '').trim().toLowerCase()
     );
     
-    // Check which transport type this row is about
+    const firstCell = cellContents[0] || '';
     const rowText = cellContents.join(' ');
     
-    // Look for X or checkmark in Ja/Nee columns
-    // Usually: [Transport type] [Ja column] [Nee column]
-    const hasJa = rowText.includes('x') || rowText.includes('✓') || rowText.includes('✔');
+    // Skip header row
+    if (firstCell === 'vervoer' || firstCell.includes('welk')) continue;
     
-    // Determine which column the X is in by checking cell positions
-    let jaChecked = false;
-    let neeChecked = false;
+    // Check if X is in Ja column or Nee column
+    const jaCell = cellContents[jaColIndex] || '';
+    const neeCell = cellContents[neeColIndex] || '';
     
-    for (let i = 0; i < cellContents.length; i++) {
-      const cell = cellContents[i];
-      if (cell === 'x' || cell === '✓' || cell === '✔' || cell === 'ja') {
-        // Check if this is likely the Ja column (usually column 1 or 2)
-        if (i === 1 || (i === 0 && cellContents.length === 2)) {
-          jaChecked = true;
-        } else if (i === 2 || (i === 1 && cellContents.length === 2)) {
-          neeChecked = true;
-        }
-      }
-    }
+    const jaChecked = jaCell === 'x' || jaCell === '✓' || jaCell === '✔';
+    const neeChecked = neeCell === 'x' || neeCell === '✓' || neeCell === '✔';
     
-    // Also check for explicit "Ja" or "Nee" text with X
-    const jaCell = cellContents.find((c, i) => i > 0 && (c === 'x' || c.includes('ja')));
-    const neeCell = cellContents.find((c, i) => i > 0 && c.includes('nee'));
+    // Also check column index - 1 as fallback (for tables without Welk? column)
+    const jaCheckedAlt = (cellContents[jaColIndex - 1] || '') === 'x';
+    const neeCheckedAlt = (cellContents[neeColIndex - 1] || '') === 'x';
     
-    // Determine if Ja is checked based on cell content analysis
-    const firstCell = cellContents[0] || '';
+    const isJa = jaChecked || (jaCheckedAlt && !neeCheckedAlt);
+    const isNee = neeChecked || neeCheckedAlt;
     
-    if (firstCell.includes('auto') && !firstCell.includes('bromfiets')) {
-      vervoer.auto = jaChecked && !neeChecked;
-      console.log(`  Auto: ${vervoer.auto ? 'Ja' : 'Nee'}`);
-    }
-    if (firstCell.includes('fiets') && !firstCell.includes('bromfiets')) {
-      vervoer.fiets = jaChecked && !neeChecked;
-      console.log(`  Fiets: ${vervoer.fiets ? 'Ja' : 'Nee'}`);
-    }
-    if (firstCell.includes('bromfiets')) {
-      vervoer.bromfiets = jaChecked && !neeChecked;
-      console.log(`  Bromfiets: ${vervoer.bromfiets ? 'Ja' : 'Nee'}`);
-    }
-    if (firstCell.includes('motor') && !firstCell.includes('bromfiets')) {
-      vervoer.motor = jaChecked && !neeChecked;
-      console.log(`  Motor: ${vervoer.motor ? 'Ja' : 'Nee'}`);
-    }
-    if (firstCell.includes('ov') || firstCell.includes('openbaar vervoer')) {
-      vervoer.ov = jaChecked && !neeChecked;
-      console.log(`  OV: ${vervoer.ov ? 'Ja' : 'Nee'}`);
-    }
     if (firstCell.includes('rijbewijs')) {
-      vervoer.rijbewijs = jaChecked && !neeChecked;
-      // Try to extract license type
-      const typeMatch = rowText.match(/\b([a-e])\b/i);
+      vervoer.rijbewijs = isJa && !isNee;
+      // Extract license type from Welk? column (usually column 1)
+      const welkCell = cellContents[1] || '';
+      const typeMatch = welkCell.match(/\b([a-e])\b/i) || rowText.match(/\b([a-e])\b/i);
       if (typeMatch) {
         vervoer.rijbewijsType = typeMatch[1].toUpperCase();
       }
-      console.log(`  Rijbewijs: ${vervoer.rijbewijs ? 'Ja' : 'Nee'}, Type: ${vervoer.rijbewijsType || 'N/A'}`);
+      console.log(`  Rijbewijs: ${vervoer.rijbewijs ? 'Ja' : 'Nee'}, Type: ${vervoer.rijbewijsType || 'N/A'}, cells: [${cellContents.join(', ')}]`);
+    }
+    else if (firstCell.includes('auto') && !firstCell.includes('bromfiets')) {
+      vervoer.auto = isJa && !isNee;
+      console.log(`  Auto: ${vervoer.auto ? 'Ja' : 'Nee'}, cells: [${cellContents.join(', ')}]`);
+    }
+    else if (firstCell.includes('fiets') && !firstCell.includes('bromfiets')) {
+      vervoer.fiets = isJa && !isNee;
+      console.log(`  Fiets: ${vervoer.fiets ? 'Ja' : 'Nee'}, cells: [${cellContents.join(', ')}]`);
+    }
+    else if (firstCell.includes('bromfiets')) {
+      vervoer.bromfiets = isJa && !isNee;
+      console.log(`  Bromfiets: ${vervoer.bromfiets ? 'Ja' : 'Nee'}`);
+    }
+    else if (firstCell.includes('motor') && !firstCell.includes('bromfiets')) {
+      vervoer.motor = isJa && !isNee;
+      console.log(`  Motor: ${vervoer.motor ? 'Ja' : 'Nee'}`);
+    }
+    else if (firstCell.includes('ov') || firstCell.includes('openbaar vervoer')) {
+      vervoer.ov = isJa && !isNee;
+      console.log(`  OV: ${vervoer.ov ? 'Ja' : 'Nee'}, cells: [${cellContents.join(', ')}]`);
     }
   }
 }
@@ -661,9 +680,12 @@ function mapAndValidateData(extractedData: any): any {
           }
           
     // Special handling for contract_hours - convert to number
+    // Handle European decimal format (15,5 → 15.5)
           if (mappedKey === 'contract_hours') {
             if (typeof value === 'string') {
-              const numValue = parseFloat(value);
+              // Replace comma with dot for European decimal format
+              const normalizedValue = value.replace(',', '.');
+              const numValue = parseFloat(normalizedValue);
               if (!isNaN(numValue)) {
           mappedData[mappedKey] = numValue;
                 console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
@@ -770,7 +792,7 @@ async function processIntakeForm(doc: any): Promise<any> {
 
 EXTRACT ALLEEN DEZE VELDEN (uit vrije tekst, NIET uit tabellen):
 - current_job: De huidige/laatste functietitel (bijv. "Helpende incl medicatie")
-- contract_hours: Aantal contracturen (als getal, bijv. 16)
+- contract_hours: Aantal contracturen als string (bijv. "16" of "15,5" - behoud de komma als decimaal)
 - date_of_birth: Geboortedatum in YYYY-MM-DD formaat
 - gender: "Man" of "Vrouw"
 - work_experience: ALLEEN functietitels/beroepen, gescheiden door komma's. Geen datums, geen jaren, geen organisatienamen.
