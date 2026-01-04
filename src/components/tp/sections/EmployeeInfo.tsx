@@ -363,20 +363,20 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           
           if (filledFields.length > 0) {
             setAutofilledFields(filledFields);
-            
-            // Convert database field names to human-readable labels
+          
+          // Convert database field names to human-readable labels
             const humanReadableFields = filledFields
-              .map((field: string) => fieldLabels[field] || field)
-              .join(', ');
-            
+            .map((field: string) => fieldLabels[field] || field)
+            .join(', ');
+          
             const message = data.message || `${filledFields.length} velden ingevuld`;
-            
-            // Show success notification
-            setAutofillMessage({
-              type: 'success',
-              title: '✅ Autofill Succesvol',
-              content: `${message}\n\nIngevulde velden:\n${humanReadableFields}`
-            });
+          
+          // Show success notification
+          setAutofillMessage({
+            type: 'success',
+            title: '✅ Autofill Succesvol',
+            content: `${message}\n\nIngevulde velden:\n${humanReadableFields}`
+          });
           } else {
             // Show warning if no new fields were filled
             setAutofillMessage({
@@ -413,30 +413,6 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     'has_ad_report',
   ];
   
-  // Language proficiency levels
-  const languageLevels = [
-    'Niet goed',
-    'Gemiddeld',
-    'Goed'
-  ];
-  
-  // Education levels
-  const educationLevels = [
-    'Praktijkonderwijs',
-    'VMBO',
-    'HAVO',
-    'VWO',
-    'MBO 1',
-    'MBO 2',
-    'MBO 3',
-    'MBO 4',
-    'HBO',
-    'WO'
-  ];
-  
-  // Transport options
-  const transportOptions = ['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'];
-
   // Field label mapping for human-readable notifications
   const fieldLabels: { [key: string]: string } = {
     phone: 'Telefoon',
@@ -512,80 +488,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           </Button>
         </div>
 
-        {/* Special fields first */}
-        <Field
-          label="Eigen vervoer"
-          value={tpData.transport_type || []}
-          onChange={(v) => handleChange('transport_type', v)}
-          type="multiselect"
-          options={transportOptions}
-          highlight={autofilledFields.includes('transport_type')}
-          saved={savedFields.includes('transport_type')}
-        />
-        
-        <Field
-          label="Opleidingsniveau"
-          value={tpData.education_level || ''}
-          onChange={(v) => handleChange('education_level', v)}
-          type="select"
-          options={educationLevels}
-          highlight={autofilledFields.includes('education_level')}
-          saved={savedFields.includes('education_level')}
-        />
-        
-        {tpData.education_level && (
-          <Field
-            label="Opleidingsspecialisatie"
-            value={tpData.education_name || ''}
-            onChange={(v) => handleChange('education_name', v)}
-            type="text"
-            highlight={autofilledFields.includes('education_name')}
-            saved={savedFields.includes('education_name')}
-          />
-        )}
-        
-        <Field
-          label="Spreekvaardigheid NL"
-          value={tpData.dutch_speaking || ''}
-          onChange={(v) => handleChange('dutch_speaking', v)}
-          type="select"
-          options={languageLevels}
-          highlight={autofilledFields.includes('dutch_speaking')}
-          saved={savedFields.includes('dutch_speaking')}
-        />
-        
-        <Field
-          label="Schrijfvaardigheid NL"
-          value={tpData.dutch_writing || ''}
-          onChange={(v) => handleChange('dutch_writing', v)}
-          type="select"
-          options={languageLevels}
-          highlight={autofilledFields.includes('dutch_writing')}
-          saved={savedFields.includes('dutch_writing')}
-        />
-        
-        <Field
-          label="Leesvaardigheid NL"
-          value={tpData.dutch_reading || ''}
-          onChange={(v) => handleChange('dutch_reading', v)}
-          type="select"
-          options={languageLevels}
-          highlight={autofilledFields.includes('dutch_reading')}
-          saved={savedFields.includes('dutch_reading')}
-        />
-        
-        {/* Regular fields */}
+        {/* TP-specific fields only (employee profile fields are already filled before TP) */}
         {Object.entries({
-          phone: 'Telefoon',
-          email: 'Email',
-          date_of_birth: 'Geboortedatum',
-          current_job: 'Huidige functie',
-          work_experience: 'Werkervaring',
-          drivers_license: 'Rijbewijs',
-          has_computer: 'Beschikt over PC',
-          computer_skills: 'PC-vaardigheden',
-          contract_hours: 'Contracturen per week',
-          other_employers: 'Andere werkgevers',
           first_sick_day: 'Eerste ziektedag',
           intake_date: 'Datum intakegesprek',
           registration_date: 'Datum aanmelding',
@@ -621,8 +525,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
 
 
       <TPPreviewWrapper>
-        <div className="space-y-8">
-          {/* Page 1 */}
+          <div className="space-y-8">
+            {/* Page 1 */}
           <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
               <div className="w-full flex justify-end mb-6">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
@@ -639,8 +543,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr>
                     <td className={tdLabel}>Geslacht</td>
                     <td className={tdValue}>
-                      <span className="mr-4">{tpData.gender === 'Male' ? '☑ Man' : '☐ Man'}</span>
-                      <span>{tpData.gender === 'Female' ? '☑ Vrouw' : '☐ Vrouw'}</span>
+                      <span className="mr-4">{(tpData.gender === 'Male' || tpData.gender === 'Man') ? '☑ Man' : '☐ Man'}</span>
+                      <span>{(tpData.gender === 'Female' || tpData.gender === 'Vrouw') ? '☑ Vrouw' : '☐ Vrouw'}</span>
                     </td>
                   </tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.phone}</td></tr>
@@ -694,7 +598,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               </table>
             </div>
 
-          {/* Page 2 */}
+            {/* Page 2 */}
           <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
               <div className="w-full flex justify-end mb-12">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
@@ -867,11 +771,11 @@ function Field({
         />
       ) : (
         <Input
-          type={type}
+        type={type}
           className={borderColor}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+      />
       )}
     </div>
   );
