@@ -36,8 +36,16 @@ const AGREEMENT_POINTS: string[] = [
     "U bent zelf eindverantwoordelijk voor het slagen van uw 2e spoortraject. Het volgen van dit traject vraagt om een investering van tijd en energie van beide partijen. Wij verwachten van u dat u de onderling gemaakte afspraken nakomt en dat u zelf actief meewerkt aan uw eigen re-integratie, met als doel deze zo succesvol mogelijk te laten verlopen.",
 ];
 
-const AGREEMENT_FOOTER =
-    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat. Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website www.valentinez.nl. Een papieren versie kunt u opvragen via 085 - 800 2010 of info@ValentineZ.nl.";
+const AGREEMENT_FOOTER_1 =
+    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat.";
+
+const AGREEMENT_FOOTER_2 = {
+    text: "Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website ",
+    link1: "www.valentinez.nl",
+    middle: ". Een papieren versie kunt u opvragen via 085 - 800 2010 of ",
+    link2: "info@ValentineZ.nl",
+    end: "."
+};
 
 type PreviewVariant = "block" | "subtle" | "custom";
 
@@ -70,12 +78,26 @@ function AgreementBlock() {
             <div className={blockTitle}>Akkoordverklaring</div>
             <div className={paperText}>
                 <p className="mb-3">{AGREEMENT_INTRO}</p>
-                <ol className="list-decimal list-inside space-y-2 mb-4">
+                <div className="ml-4 space-y-2 mb-4">
                     {AGREEMENT_POINTS.map((point, i) => (
-                        <li key={i} className="text-xs leading-relaxed">{point}</li>
+                        <div key={i} className="flex items-start gap-2">
+                            <img 
+                                src="/val-logo.jpg" 
+                                alt="" 
+                                style={{ width: '14px', height: '14px', marginTop: '3px', flexShrink: 0 }}
+                            />
+                            <span className="text-xs leading-relaxed">{point}</span>
+                        </div>
                     ))}
-                </ol>
-                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER}</p>
+                </div>
+                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER_1}</p>
+                <p className="text-xs leading-relaxed mt-2">
+                    {AGREEMENT_FOOTER_2.text}
+                    <span className="underline">{AGREEMENT_FOOTER_2.link1}</span>
+                    {AGREEMENT_FOOTER_2.middle}
+                    <span className="underline">{AGREEMENT_FOOTER_2.link2}</span>
+                    {AGREEMENT_FOOTER_2.end}
+                </p>
             </div>
         </div>
     );
