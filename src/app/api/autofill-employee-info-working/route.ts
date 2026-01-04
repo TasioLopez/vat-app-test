@@ -328,30 +328,41 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
     // Skip header row
     if (firstCell === 'vervoer' || firstCell.includes('welk')) continue;
     
-    // Check if X is in Ja column or Nee column
-    const jaCell = cellContents[jaColIndex] || '';
-    const neeCell = cellContents[neeColIndex] || '';
+    // Find where the 'x' is in this row (after the first cell which is the transport type)
+    let xIndex = -1;
+    for (let i = 1; i < cellContents.length; i++) {
+      if (cellContents[i] === 'x' || cellContents[i] === '✓' || cellContents[i] === '✔') {
+        xIndex = i;
+        break;
+      }
+    }
     
-    const jaChecked = jaCell === 'x' || jaCell === '✓' || jaCell === '✔';
-    const neeChecked = neeCell === 'x' || neeCell === '✓' || neeCell === '✔';
+    // Determine if Ja or Nee based on x position and row structure
+    // The table structure is: [Type, Welk?, Ja, Nee] but empty cells may be collapsed
+    let isJa = false;
+    let isNee = false;
     
-    // Determine result: Ja if x in Ja column, Nee if x in Nee column
-    // If neither found, check if any cell contains 'x' and try to infer
-    let isJa = jaChecked;
-    let isNee = neeChecked;
-    
-    // If neither column has x, but there's an x somewhere in the row, try to figure it out
-    if (!jaChecked && !neeChecked) {
-      // Find which cell has the x
-      for (let i = 1; i < cellContents.length; i++) {
-        if (cellContents[i] === 'x' || cellContents[i] === '✓' || cellContents[i] === '✔') {
-          // If x is closer to jaColIndex, it's Ja; if closer to neeColIndex, it's Nee
-          if (Math.abs(i - jaColIndex) <= Math.abs(i - neeColIndex)) {
-            isJa = true;
-          } else {
-            isNee = true;
-          }
-          break;
+    if (xIndex !== -1) {
+      // Check if there's a cell after x - if yes and it's empty, x is likely in Ja column
+      // If x is at the last position and there's an empty cell before it, x is in Nee column
+      const hasWelkColumn = cellContents.length >= 4 || (cellContents.length >= 2 && cellContents[1] && cellContents[1].match(/^[a-e]$/i));
+      
+      if (hasWelkColumn) {
+        // 4-column structure: [Type, Welk?, Ja, Nee]
+        // x at index 2 = Ja, x at index 3 = Nee
+        isJa = xIndex === 2;
+        isNee = xIndex === 3;
+      } else {
+        // 3-column structure (no Welk?): [Type, Ja, Nee]
+        // But cells may be collapsed, so we need to check the pattern
+        // If x is at index 1 and followed by empty = Ja
+        // If x is at index 2 and preceded by empty at index 1 = Nee
+        if (xIndex === 1) {
+          isJa = true;  // x right after type name = Ja
+        } else if (xIndex === 2 && (!cellContents[1] || cellContents[1] === '')) {
+          isNee = true;  // empty cell before x = Nee
+        } else if (xIndex === 2) {
+          isJa = true;  // x at index 2 without empty before = Ja (has Welk?)
         }
       }
     }
