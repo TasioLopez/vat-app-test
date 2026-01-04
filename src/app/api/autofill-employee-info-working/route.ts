@@ -348,7 +348,14 @@ NIET EXTRACTEN (niet beschikbaar in AD rapporten):
 BELANGRIJK:
 - Extract ALLEEN uit vrije tekst beschrijvingen
 - Geen tabellen verwacht
-- Return ONLY JSON object met gevonden velden`,
+
+RETURN FORMAT:
+Je MOET ALLEEN een JSON object teruggeven, GEEN tekst voor of na.
+VOORBEELD:
+{"current_job": "Helpende", "contract_hours": 16}
+NIET dit:
+Hier is de informatie: {"current_job": "Helpende"}
+NIET markdown, NIET bullet points, ALLEEN JSON object.`,
       model: "gpt-4o",
       tools: [{ type: "file_search" }]
     });
@@ -439,7 +446,12 @@ NIET EXTRACTEN (medische informatie niet relevant voor employee_details):
 BELANGRIJK:
 - Extract ALLEEN uit tekst
 - Focus op demografische gegevens
-- Return ONLY JSON object met gevonden velden`,
+
+RETURN FORMAT:
+Je MOET ALLEEN een JSON object teruggeven, GEEN tekst voor of na.
+VOORBEELD:
+{"date_of_birth": "1977-01-02", "gender": "Vrouw"}
+NIET markdown, NIET bullet points, ALLEEN JSON object.`,
       model: "gpt-4o",
       tools: [{ type: "file_search" }]
     });
@@ -529,7 +541,12 @@ VELDEN TE EXTRACTEN (employee_details tabel - ALLEEN uit tekst):
 
 BELANGRIJK:
 - Extract ALLEEN uit tekst
-- Return ONLY JSON object met gevonden velden`,
+
+RETURN FORMAT:
+Je MOET ALLEEN een JSON object teruggeven, GEEN tekst voor of na.
+VOORBEELD:
+{"current_job": "Helpende", "contract_hours": 16}
+NIET markdown, NIET bullet points, ALLEEN JSON object.`,
       model: "gpt-4o",
       tools: [{ type: "file_search" }]
     });
