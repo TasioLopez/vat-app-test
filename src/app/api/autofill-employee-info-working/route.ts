@@ -47,14 +47,39 @@ function parseAssistantResponse(responseText: string): any {
   // Remove ```json and ``` markers
   cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   
-  // Remove any text before the first { and after the last }
+  // Try to find JSON object - look for first { and matching }
   const firstBrace = cleanedResponse.indexOf('{');
-  const lastBrace = cleanedResponse.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1) {
-    cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+  if (firstBrace === -1) {
+    throw new Error('No JSON object found in response');
   }
   
-  return JSON.parse(cleanedResponse);
+  // Find the matching closing brace by counting braces
+  let braceCount = 0;
+  let lastBrace = -1;
+  for (let i = firstBrace; i < cleanedResponse.length; i++) {
+    if (cleanedResponse[i] === '{') braceCount++;
+    if (cleanedResponse[i] === '}') {
+      braceCount--;
+      if (braceCount === 0) {
+        lastBrace = i;
+        break;
+      }
+    }
+  }
+  
+  if (lastBrace === -1) {
+    throw new Error('No matching closing brace found');
+  }
+  
+  cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+  
+  try {
+    return JSON.parse(cleanedResponse);
+  } catch (error: any) {
+    console.error('❌ JSON parsing error:', error.message);
+    console.error('📄 Attempted to parse:', cleanedResponse.substring(0, 200));
+    throw new Error(`Failed to parse JSON: ${error.message}`);
+  }
 }
 
 // Helper function to map and validate extracted data
@@ -250,6 +275,7 @@ BELANGRIJK:
     const response = messages.data[0].content[0];
     
     if (response.type === 'text') {
+      console.log('📄 Raw intake form response (first 500 chars):', response.text.value.substring(0, 500));
       const extractedData = parseAssistantResponse(response.text.value);
       const mappedData = mapAndValidateData(extractedData);
       
@@ -268,6 +294,7 @@ BELANGRIJK:
     
   } catch (error: any) {
     console.error('❌ Error processing intake form:', error.message);
+    console.error('❌ Error stack:', error.stack);
     return {};
   }
 }
