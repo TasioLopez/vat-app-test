@@ -67,7 +67,7 @@ BELANGRIJKE FORMATTING REGELS:
 - Gebruik bullet points met • (niet ☑ of andere symbolen)
 
 Output structuur (EXACT volgen):
-**Werknemer heeft conform de FML van [25 april 2025] opgesteld door arts [naam arts] werkend onder supervisie van arts [naam supervisor] beperkingen in de volgende rubrieken:**
+**Werknemer heeft conform de FML van [25 april 2025] opgesteld door bedrijfsarts [naam bedrijfsarts] werkend onder supervisie van bedrijfsarts [naam supervisor] beperkingen in de volgende rubrieken:**
 
 • Persoonlijk functioneren
 • Sociaal functioneren  
