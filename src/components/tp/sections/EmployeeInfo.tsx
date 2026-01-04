@@ -415,11 +415,9 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   
   // Language proficiency levels
   const languageLevels = [
-    '1 - Geen',
-    '2 - Matig',
-    '3 - Gemiddeld',
-    '4 - Goed',
-    '5 - Zeer goed'
+    'Niet goed',
+    'Gemiddeld',
+    'Goed'
   ];
   
   // Education levels

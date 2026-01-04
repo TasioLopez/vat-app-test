@@ -54,10 +54,33 @@ Zoek specifiek naar deze informatie in de documenten (ALLEEN voor employee_detai
 - Opleidingsspecialisatie (education_name) - de naam van de opleiding/cursus (bijv. "Agogisch werk", "Bedrijfskunde")
 - Rijbewijs (drivers_license) - true/false
 - Rijbewijstype (drivers_license_type) - indien van toepassing: "B", "C", "D", "E", "A"
-- Vervoertype (transport_type) - array van transportopties: ["Auto", "Fiets", "Bromfiets", "Motor", "OV"]. Kan meerdere waarden bevatten. Als er geen vervoer is, gebruik lege array [].
-- Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert. Lees de checkbox tabel in het intake formulier: "Kunt u met een computer omgaan", "Heeft u een pc thuis", "Bekend met MS Office". Als alle drie aangevinkt zijn → 3 (Gemiddeld). Als alleen eerste → 2 (Basis). Als geen → 1 (Geen).
-- Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - kies uit: "1 - Geen", "2 - Matig", "3 - Gemiddeld", "4 - Goed", "5 - Zeer goed". Gebruik de intake form tabel met G/R/S (Goed/Redelijk/Slecht) en map naar de 5-niveau schaal: G (Goed) → "4 - Goed", R (Redelijk) → "3 - Gemiddeld", S (Slecht) → "2 - Matig". Als niet gevonden, gebruik "3 - Gemiddeld" als standaard.
-- Heeft computer thuis (has_computer) - true/false. Lees de checkbox "Heeft u een pc thuis" in het intake formulier.
+- Vervoertype (transport_type) - array van transportopties: ["Auto", "Fiets", "Bromfiets", "Motor", "OV"]. 
+  BELANGRIJK: Lees de "Vervoer" tabel in het intake formulier. Alleen de opties met "Ja" aangevinkt moeten in de array worden opgenomen. 
+  Als "Auto" op "Nee" staat, voeg "Auto" NIET toe aan de array. 
+  Als "Fiets" op "Nee" staat, voeg "Fiets" NIET toe aan de array.
+  Als "OV" op "Nee" staat, voeg "OV" NIET toe aan de array.
+  "Rijbewijs" is een apart veld (drivers_license), niet transport_type.
+  Als alle vervoeropties op "Nee" staan, gebruik lege array [].
+- Computervaardigheden (computer_skills) - 1-5: 1=Geen, 2=Basis, 3=Gemiddeld, 4=Gevorderd, 5=Expert. 
+  Lees de checkbox tabel "Kunt u met een computer omgaan" in het intake formulier:
+  - "Heeft u een pc thuis": Als dit "Ja" is MAAR er staat een notitie zoals "(evt. bij dochter)" of "(bij dochter)" of "(bij familie)", dan betekent dit dat de persoon GEEN eigen PC heeft → behandel als "Nee".
+  - "Bekend met MS Office": Check of dit "Ja" of "Nee" is.
+  Logica: 
+  - Als "Heeft u een pc thuis" = Nee (of met notitie dat het bij iemand anders is) EN "Bekend met MS Office" = Nee → 1 (Geen)
+  - Als "Heeft u een pc thuis" = Nee (of met notitie) MAAR "Bekend met MS Office" = Ja → 2 (Basis)
+  - Als "Heeft u een pc thuis" = Ja (zonder notitie) EN "Bekend met MS Office" = Ja → 3 (Gemiddeld)
+  - Als er meer vaardigheden zijn vermeld → 4 (Gevorderd) of 5 (Expert)
+- Taalvaardigheid Nederlands (dutch_speaking, dutch_writing, dutch_reading) - kies uit: "Niet goed", "Gemiddeld", "Goed". 
+  Gebruik de intake form "Talen" tabel met G/R/S (Goed/Redelijk/Slecht) voor "Nederlands" en map naar de 3-niveau schaal: 
+  G (Goed) → "Goed", 
+  R (Redelijk) → "Gemiddeld", 
+  S (Slecht) → "Niet goed". 
+  Lees de kolommen "Spreken", "Schrijven", en "Lezen" voor dutch_speaking, dutch_writing, en dutch_reading respectievelijk.
+  Als niet gevonden, gebruik "Gemiddeld" als standaard.
+- Heeft computer thuis (has_computer) - true/false. 
+  Lees de checkbox "Heeft u een pc thuis" in het intake formulier. 
+  BELANGRIJK: Als er een notitie staat zoals "(evt. bij dochter)" of "(bij dochter)" of "(bij familie)", dan betekent dit dat de persoon GEEN eigen PC heeft → gebruik false.
+  Alleen als "Heeft u een pc thuis" = Ja ZONDER notitie → gebruik true.
 - Vorige werkgevers (other_employers) - ALLEEN VORIGE werkgevers, NIET de huidige werkgever. Scheid met komma's.
 
 BELANGRIJK: 

@@ -523,11 +523,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
                     >
                         <option value="">Selecteer spreekvaardigheid</option>
-                        <option value="1 - Geen">1 - Geen</option>
-                        <option value="2 - Matig">2 - Matig</option>
-                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
-                        <option value="4 - Goed">4 - Goed</option>
-                        <option value="5 - Zeer goed">5 - Zeer goed</option>
+                        <option value="Niet goed">Niet goed</option>
+                        <option value="Gemiddeld">Gemiddeld</option>
+                        <option value="Goed">Goed</option>
                     </select>
                     <select 
                         className={fieldClass('dutch_writing')} 
@@ -535,11 +533,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
                     >
                         <option value="">Selecteer schrijfvaardigheid</option>
-                        <option value="1 - Geen">1 - Geen</option>
-                        <option value="2 - Matig">2 - Matig</option>
-                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
-                        <option value="4 - Goed">4 - Goed</option>
-                        <option value="5 - Zeer goed">5 - Zeer goed</option>
+                        <option value="Niet goed">Niet goed</option>
+                        <option value="Gemiddeld">Gemiddeld</option>
+                        <option value="Goed">Goed</option>
                     </select>
                     <select 
                         className={fieldClass('dutch_reading')} 
@@ -547,11 +543,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
                     >
                         <option value="">Selecteer leesvaardigheid</option>
-                        <option value="1 - Geen">1 - Geen</option>
-                        <option value="2 - Matig">2 - Matig</option>
-                        <option value="3 - Gemiddeld">3 - Gemiddeld</option>
-                        <option value="4 - Goed">4 - Goed</option>
-                        <option value="5 - Zeer goed">5 - Zeer goed</option>
+                        <option value="Niet goed">Niet goed</option>
+                        <option value="Gemiddeld">Gemiddeld</option>
+                        <option value="Goed">Goed</option>
                     </select>
                 </div>
 
