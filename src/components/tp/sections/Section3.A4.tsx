@@ -84,24 +84,38 @@ function formatTextWithParagraphs(text: string): React.ReactNode {
   });
 }
 
-// Special rendering for visie_loopbaanadviseur with logo bullets
-function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+// Render text with Z-logo bullets for list items
+function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = false): React.ReactNode {
   if (!text) return text;
   
   const paragraphs = text.split(/\n\n+/);
   
   return paragraphs.map((para, paraIdx) => {
-    const lines = para.trim().split('\n');
+    const trimmedPara = para.trim();
     
-    // Check if this paragraph is a list
-    const isBulletList = lines.every(l => l.trim().startsWith('•'));
+    // Check for disclaimer text in plaatsbaarheid (should be purple)
+    if (isPlaatsbaarheid && trimmedPara.startsWith('Dit is geen limitatieve opsomming')) {
+      return (
+        <p key={paraIdx} className="mt-4 text-purple-600 italic">
+          {formatInlineText(trimmedPara)}
+        </p>
+      );
+    }
+    
+    const lines = trimmedPara.split('\n');
+    
+    // Check if this paragraph is a list (starts with •, ☑, ✓, or -)
+    const isBulletList = lines.every(l => {
+      const t = l.trim();
+      return t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
+    });
     
     if (isBulletList) {
-      // Render list items with logos instead of bullets
+      // Render list items with Z logos instead of bullets
       return (
         <div key={paraIdx} className="ml-4 mb-4 space-y-2">
           {lines.map((line, idx) => {
-            const content = line.replace(/^•\s*/, '');
+            const content = line.replace(/^[•☑✓\-]\s*/, '');
             return (
               <div key={idx} className="flex items-start gap-2">
                 <Image 
@@ -131,6 +145,11 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
       </p>
     );
   });
+}
+
+// Alias for backward compatibility
+function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+  return renderTextWithLogoBullets(text, false);
 }
 
 /* ------------ static text ------------ */
@@ -406,8 +425,10 @@ export default function Section3A4({ data }: { data: TPData }) {
                       bodyText={b.text} 
                       className={paperText}
                     />
-                  ) : b.key === 'vlb' ? (
-                    <div className={paperText}>{renderVisieLoopbaanadviseurText(b.text)}</div>
+                  ) : b.key === 'vlb' || b.key === 'wk' ? (
+                    <div className={paperText}>{renderTextWithLogoBullets(b.text, false)}</div>
+                  ) : b.key === 'plaats' ? (
+                    <div className={paperText}>{renderTextWithLogoBullets(b.text, true)}</div>
                   ) : (
                     <div className={paperText}>{formatTextWithParagraphs(b.text)}</div>
                   )}

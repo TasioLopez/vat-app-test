@@ -1061,25 +1061,39 @@ function formatInlineText(text: string): React.ReactNode {
     return parts.length > 0 ? parts : text;
 }
 
-// Special rendering for visie_loopbaanadviseur with logo bullets
-function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+// Render text with Z-logo bullets for list items
+function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = false): React.ReactNode {
     if (!text) return text;
     
     const paragraphs = text.split(/\n\n+/);
     
     return paragraphs.map((para, paraIdx) => {
-        const lines = para.trim().split('\n');
+        const trimmedPara = para.trim();
         
-        // Check if this paragraph is a list
-        const isBulletList = lines.every(l => l.trim().startsWith('•'));
+        // Check for disclaimer text in plaatsbaarheid (should be purple)
+        if (isPlaatsbaarheid && trimmedPara.startsWith('Dit is geen limitatieve opsomming')) {
+            return (
+                <p key={paraIdx} className="mt-4 text-purple-600 italic">
+                    {formatInlineText(trimmedPara)}
+                </p>
+            );
+        }
+        
+        const lines = trimmedPara.split('\n');
+        
+        // Check if this paragraph is a list (starts with •, ☑, ✓, -, or numbered)
+        const isBulletList = lines.every(l => {
+            const t = l.trim();
+            return t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
+        });
         const isNumberedList = lines.every(l => /^\d+\./.test(l.trim()));
         
         if (isBulletList || isNumberedList) {
-            // Render list items with logos instead of bullets
+            // Render list items with Z logos instead of bullets
             return (
                 <div key={paraIdx} className="ml-4 mb-4 space-y-2">
                     {lines.map((line, idx) => {
-                        const content = line.replace(/^[•\d+\.]\s*/, '');
+                        const content = line.replace(/^[•☑✓\-\d+\.]\s*/, '');
                         return (
                             <div key={idx} className="flex items-start gap-2">
                                 <img 
@@ -1107,6 +1121,11 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
             </p>
         );
     });
+}
+
+// Alias for backward compatibility
+function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+    return renderTextWithLogoBullets(text, false);
 }
 
 function renderFormattedText(text: string): React.ReactNode {
@@ -1267,17 +1286,12 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                             bodyText={s.text} 
                                             className=""
                                         />
-                                    ) : s.key === 'vlb' ? (
-                                        renderVisieLoopbaanadviseurText(s.text)
+                                    ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                        renderTextWithLogoBullets(s.text, false)
+                                    ) : s.key === 'plaats' ? (
+                                        renderTextWithLogoBullets(s.text, true)
                                     ) : (
-                                        <>
-                                            {renderFormattedText(s.text)}
-                                            {s.key === "plaats" && (
-                                                <p className="text-sm italic text-gray-600 mt-4">
-                                                    Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                                </p>
-                                            )}
-                                        </>
+                                        renderFormattedText(s.text)
                                     )}
                                 </div>
                             </div>
@@ -1343,17 +1357,12 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                                     bodyText={s.text} 
                                                     className=""
                                                 />
-                                            ) : s.key === 'vlb' ? (
-                                                renderVisieLoopbaanadviseurText(s.text)
+                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                renderTextWithLogoBullets(s.text, false)
+                                            ) : s.key === 'plaats' ? (
+                                                renderTextWithLogoBullets(s.text, true)
                                             ) : (
-                                                <>
-                                                    {renderFormattedText(s.text)}
-                                                    {s.key === "plaats" && (
-                                                        <p className="text-sm italic text-gray-600 mt-4">
-                                                            Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                                        </p>
-                                                    )}
-                                                </>
+                                                renderFormattedText(s.text)
                                             )}
                                         </div>
                                     </>
