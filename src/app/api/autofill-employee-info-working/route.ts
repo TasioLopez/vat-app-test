@@ -240,7 +240,14 @@ TEKST VELDEN (extract uit vrije tekst):
 BELANGRIJK:
 - Gebruik ALLEEN wat je ziet in de tabel/tekst
 - Maak GEEN aannames
-- Return ONLY JSON object met gevonden velden`,
+
+RETURN FORMAT:
+Je MOET ALLEEN een JSON object teruggeven, GEEN tekst voor of na.
+VOORBEELD:
+{"transport_type": ["Auto"], "computer_skills": 2, "has_computer": false, "dutch_speaking": "Niet goed", "dutch_writing": "Niet goed", "dutch_reading": "Niet goed"}
+NIET dit:
+Hier is de informatie: {"transport_type": ["Auto"]}
+NIET markdown, NIET bullet points, NIET uitleg tekst, ALLEEN JSON object.`,
       model: "gpt-4o",
       tools: [{ type: "file_search" }]
     });
