@@ -335,12 +335,26 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
     const jaChecked = jaCell === 'x' || jaCell === '✓' || jaCell === '✔';
     const neeChecked = neeCell === 'x' || neeCell === '✓' || neeCell === '✔';
     
-    // Also check column index - 1 as fallback (for tables without Welk? column)
-    const jaCheckedAlt = (cellContents[jaColIndex - 1] || '') === 'x';
-    const neeCheckedAlt = (cellContents[neeColIndex - 1] || '') === 'x';
+    // Determine result: Ja if x in Ja column, Nee if x in Nee column
+    // If neither found, check if any cell contains 'x' and try to infer
+    let isJa = jaChecked;
+    let isNee = neeChecked;
     
-    const isJa = jaChecked || (jaCheckedAlt && !neeCheckedAlt);
-    const isNee = neeChecked || neeCheckedAlt;
+    // If neither column has x, but there's an x somewhere in the row, try to figure it out
+    if (!jaChecked && !neeChecked) {
+      // Find which cell has the x
+      for (let i = 1; i < cellContents.length; i++) {
+        if (cellContents[i] === 'x' || cellContents[i] === '✓' || cellContents[i] === '✔') {
+          // If x is closer to jaColIndex, it's Ja; if closer to neeColIndex, it's Nee
+          if (Math.abs(i - jaColIndex) <= Math.abs(i - neeColIndex)) {
+            isJa = true;
+          } else {
+            isNee = true;
+          }
+          break;
+        }
+      }
+    }
     
     if (firstCell.includes('rijbewijs')) {
       vervoer.rijbewijs = isJa && !isNee;
