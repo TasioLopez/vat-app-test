@@ -104,30 +104,42 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
     
     const lines = trimmedPara.split('\n');
     
-    // Check if this paragraph is a list (starts with •, ☑, ✓, or -)
-    const isBulletList = lines.every(l => {
+    // Check if ANY line is a bullet point (not requiring ALL lines to be bullets)
+    const hasBullets = lines.some(l => {
       const t = l.trim();
       return t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
     });
     
-    if (isBulletList) {
-      // Render list items with Z logos instead of bullets
+    if (hasBullets) {
+      // Render mixed content: intro text + bullet list with Z logos
       return (
-        <div key={paraIdx} className="ml-4 mb-4 space-y-2">
+        <div key={paraIdx} className="mb-4">
           {lines.map((line, idx) => {
-            const content = line.replace(/^[•☑✓\-]\s*/, '');
-            return (
-              <div key={idx} className="flex items-start gap-2">
-                <Image 
-                  src="/val-logo.jpg" 
-                  alt="" 
-                  width={14} 
-                  height={14} 
-                  style={{ marginTop: '3px', flexShrink: 0 }}
-                />
-                <span>{formatInlineText(content)}</span>
-              </div>
-            );
+            const t = line.trim();
+            const isBullet = t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
+            
+            if (isBullet) {
+              const content = t.replace(/^[•☑✓\-]\s*/, '');
+              return (
+                <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
+                  <Image 
+                    src="/val-logo.jpg" 
+                    alt="" 
+                    width={14} 
+                    height={14} 
+                    style={{ marginTop: '3px', flexShrink: 0 }}
+                  />
+                  <span>{formatInlineText(content)}</span>
+                </div>
+              );
+            } else {
+              // Non-bullet line (intro text)
+              return (
+                <p key={idx} className={idx > 0 ? "mt-2" : ""}>
+                  {formatInlineText(t)}
+                </p>
+              );
+            }
           })}
         </div>
       );
