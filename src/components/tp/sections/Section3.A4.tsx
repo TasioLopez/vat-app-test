@@ -467,6 +467,16 @@ export default function Section3A4({ data }: { data: TPData }) {
                     <div className={paperText}>{renderTextWithLogoBullets(b.text, true)}</div>
                   ) : b.key === 'ad' && b.text.startsWith('N.B.') ? (
                     <div className={`${paperText} text-purple-600 italic`}>{b.text}</div>
+                  ) : b.key === 'pow' ? (
+                    <div className={paperText}>
+                      {b.text && b.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(b.text)}</p>}
+                      <div className="my-4">
+                        <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                      </div>
+                      <p className="text-purple-600 italic text-[10px] mt-4">
+                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                      </p>
+                    </div>
                   ) : (
                     <div className={paperText}>{formatTextWithParagraphs(b.text)}</div>
                   )}

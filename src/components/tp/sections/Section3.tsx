@@ -1325,6 +1325,16 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                         renderTextWithLogoBullets(s.text, true)
                                     ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                         <span className="text-purple-600 italic">{s.text}</span>
+                                    ) : s.key === 'pow' ? (
+                                        <div>
+                                          {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                          <div className="my-4">
+                                            <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                          </div>
+                                          <p className="text-purple-600 italic text-[10px] mt-4">
+                                            * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                          </p>
+                                        </div>
                                     ) : (
                                         renderFormattedText(s.text)
                                     )}
@@ -1398,6 +1408,16 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                                 renderTextWithLogoBullets(s.text, true)
                                             ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                                 <span className="text-purple-600 italic">{s.text}</span>
+                                            ) : s.key === 'pow' ? (
+                                                <div>
+                                                  {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                                  <div className="my-4">
+                                                    <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                                  </div>
+                                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                  </p>
+                                                </div>
                                             ) : (
                                                 renderFormattedText(s.text)
                                             )}

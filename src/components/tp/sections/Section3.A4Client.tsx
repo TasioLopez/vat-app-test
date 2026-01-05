@@ -514,6 +514,16 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
                                 ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                     <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
+                                ) : s.key === 'pow' ? (
+                                    <div className={paperText}>
+                                      {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                      <div className="my-4">
+                                        <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                      </div>
+                                      <p className="text-purple-600 italic text-[10px] mt-4">
+                                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                      </p>
+                                    </div>
                                 ) : (
                                     <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                 )}
@@ -584,6 +594,16 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                                 <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
                                             ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                                 <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
+                                            ) : s.key === 'pow' ? (
+                                                <div className={paperText}>
+                                                  {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                                  <div className="my-4">
+                                                    <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                                  </div>
+                                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                  </p>
+                                                </div>
                                             ) : (
                                                 <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                             )}
