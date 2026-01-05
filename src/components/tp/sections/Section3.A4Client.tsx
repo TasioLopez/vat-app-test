@@ -157,7 +157,7 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
 }
 
 const TP_ACTIVITIES_INTRO =
-    "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten kunnen worden ingezet om het doel van betaald werk te realiseren.";
+    "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.";
 
 // Agreement (Door het …)
 const AGREEMENT_INTRO =
