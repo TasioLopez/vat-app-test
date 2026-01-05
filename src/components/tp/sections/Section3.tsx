@@ -746,7 +746,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject."),
         B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
-            tpData.advies_ad_passende_arbeid || "— nog niet ingevuld —"),
+            tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "— nog niet ingevuld —")),
         B("pow", "Perspectief op Werk (PoW-meter)", tpData.pow_meter || "— door werknemer in te vullen —"),
         B("plaats", "Visie op plaatsbaarheid", tpData.visie_plaatsbaarheid || "— nog niet ingevuld —"),
 
@@ -1323,6 +1323,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                         renderTextWithLogoBullets(s.text, false)
                                     ) : s.key === 'plaats' ? (
                                         renderTextWithLogoBullets(s.text, true)
+                                    ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                        <span className="text-purple-600 italic">{s.text}</span>
                                     ) : (
                                         renderFormattedText(s.text)
                                     )}
@@ -1394,6 +1396,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                                 renderTextWithLogoBullets(s.text, false)
                                             ) : s.key === 'plaats' ? (
                                                 renderTextWithLogoBullets(s.text, true)
+                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                <span className="text-purple-600 italic">{s.text}</span>
                                             ) : (
                                                 renderFormattedText(s.text)
                                             )}

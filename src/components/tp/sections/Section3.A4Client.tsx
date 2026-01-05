@@ -16,7 +16,7 @@ const page =
     "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none";
 const blockTitle = "font-bold bg-gray-100 text-purple-600 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-gray-50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic text-purple-600";
 
 // Helper to format markdown (bold and italic)
 function formatInlineText(text: string): React.ReactNode {
@@ -397,7 +397,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                 key: "ad",
                 title:
                     "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
-                text: tpData.advies_ad_passende_arbeid || "—",
+                text: tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "—"),
                 variant: "block",
             },
             {
@@ -512,6 +512,8 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
                                 ) : s.key === 'plaats' ? (
                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                    <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
                                 ) : (
                                     <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                 )}
@@ -580,6 +582,8 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                                 <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
                                             ) : s.key === 'plaats' ? (
                                                 <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
                                             ) : (
                                                 <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                             )}

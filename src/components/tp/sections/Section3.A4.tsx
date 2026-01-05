@@ -13,7 +13,7 @@ const page =
   "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const blockTitle = "font-bold bg-muted text-purple-600 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic text-purple-600";
 // keep blocks together across page breaks
 const avoidBreak = "mb-3 [break-inside:avoid] print:[break-inside:avoid]";
 
@@ -391,7 +391,7 @@ export default function Section3A4({ data }: { data: TPData }) {
       key: "ad",
       title:
         "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
-      text: safe(data.advies_ad_passende_arbeid),
+      text: safe(data.advies_ad_passende_arbeid, data.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "—"),
       variant: "block",
     },
     {
@@ -465,6 +465,8 @@ export default function Section3A4({ data }: { data: TPData }) {
                     <div className={paperText}>{renderTextWithLogoBullets(b.text, false)}</div>
                   ) : b.key === 'plaats' ? (
                     <div className={paperText}>{renderTextWithLogoBullets(b.text, true)}</div>
+                  ) : b.key === 'ad' && b.text.startsWith('N.B.') ? (
+                    <div className={`${paperText} text-purple-600 italic`}>{b.text}</div>
                   ) : (
                     <div className={paperText}>{formatTextWithParagraphs(b.text)}</div>
                   )}
