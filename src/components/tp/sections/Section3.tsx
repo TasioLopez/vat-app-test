@@ -21,7 +21,7 @@ const page = "bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 
 const heading = "text-lg font-semibold text-center mb-6";
 const blockTitle = "font-bold bg-muted text-purple-600 px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic text-purple-600";
 
 // --- Static "agreement" text (from TP template) ---
 const AGREEMENT_INTRO =
