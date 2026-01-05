@@ -205,11 +205,11 @@ export default function EmployeesPage() {
 
   const groupedByClient = useMemo(() => {
     return filteredAndSortedEmployees.reduce<Record<string, Employee[]>>((acc, emp) => {
-      const clientName = emp.clients?.name || 'Unassigned';
-      if (!acc[clientName]) acc[clientName] = [];
-      acc[clientName].push(emp);
-      return acc;
-    }, {});
+    const clientName = emp.clients?.name || 'Unassigned';
+    if (!acc[clientName]) acc[clientName] = [];
+    acc[clientName].push(emp);
+    return acc;
+  }, {});
   }, [filteredAndSortedEmployees]);
 
   return (
@@ -336,7 +336,7 @@ export default function EmployeesPage() {
                 onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
               >
                 <TableCell className="font-semibold">
-                  {employee.first_name} {employee.last_name}
+                      {employee.first_name} {employee.last_name}
                 </TableCell>
                 <TableCell>{employee.email}</TableCell>
                 {userRole === 'admin' && (
@@ -411,16 +411,16 @@ export default function EmployeesPage() {
                             setSelectedEmployeeId(employee.id);
                             setShowDeleteModal(true);
                           }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
         </div>
       )}
 

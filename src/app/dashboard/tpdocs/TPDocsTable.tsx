@@ -111,19 +111,19 @@ export default function TPDocsTable({ rows }: Props) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onOpen(r)}
-                    >
-                      Openen
+                    onClick={() => onOpen(r)}
+                  >
+                    Openen
                     </Button>
-                    {r.storagePath && (
+                  {r.storagePath && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => { e.preventDefault(); onOpen(r); }}
-                      >
-                        Preview
+                      onClick={(e) => { e.preventDefault(); onOpen(r); }}
+                    >
+                      Preview
                       </Button>
-                    )}
+                  )}
                   </div>
                 </TableCell>
               </TableRow>
