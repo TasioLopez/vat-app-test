@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
       .eq("employee_id", employeeId)
       .single();
 
-    const employeeData = details || {};
+    const employeeData: any = details || {};
 
     console.log("📋 Using employee details for zoekprofiel:", {
       education_level: employeeData.education_level,
