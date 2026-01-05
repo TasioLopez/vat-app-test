@@ -743,7 +743,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
         B("prog", "Prognose van de bedrijfsarts", tpData.prognose_bedrijfsarts || "— nog niet ingevuld —"),
         B("prof", "Persoonlijk profiel", tpData.persoonlijk_profiel || "— nog niet ingevuld —"),
-        B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "— nog niet ingevuld —"),
+        B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject."),
         B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
             tpData.advies_ad_passende_arbeid || "— nog niet ingevuld —"),

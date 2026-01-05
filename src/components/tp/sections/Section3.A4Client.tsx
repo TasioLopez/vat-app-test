@@ -390,7 +390,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             {
                 key: "blem",
                 title: "Praktische belemmeringen",
-                text: tpData.praktische_belemmeringen || "—",
+                text: tpData.praktische_belemmeringen || "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.",
                 variant: "block",
             },
             {

@@ -384,7 +384,7 @@ export default function Section3A4({ data }: { data: TPData }) {
     {
       key: "blem",
       title: "Praktische belemmeringen",
-      text: safe(data.praktische_belemmeringen),
+      text: safe(data.praktische_belemmeringen, "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject."),
       variant: "block",
     },
     {
