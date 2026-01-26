@@ -438,7 +438,7 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
                 <LogoBar />
               </>
             )}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
               {idxs.map((i) => {
               const b = blocks.filter((x) => !x.key.startsWith("__header"))[i];
               return (

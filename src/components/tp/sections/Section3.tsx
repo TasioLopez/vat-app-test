@@ -1425,7 +1425,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
             {pages.map((idxs, p) => (
                 <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <PageHeader />
-                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
                         {idxs.map(i => {
                         const s = sections[i];
                         if (!s) return null; // Safety check for undefined sections

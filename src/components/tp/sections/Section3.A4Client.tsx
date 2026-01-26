@@ -615,7 +615,7 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                 <section key={`p-${p}`} className="print-page">
                     <div className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <LogoBar />
-                        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
                             {idxs.map((i) => {
                             const s = sections[i];
                             return (
