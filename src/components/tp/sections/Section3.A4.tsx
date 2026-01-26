@@ -120,13 +120,37 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
             
             if (isBullet) {
               const content = t.replace(/^[•☑✓\-]\s*/, '');
+              
+              // For plaatsbaarheid sections, format job titles as bold
+              if (isPlaatsbaarheid) {
+                  const colonIndex = content.indexOf(':');
+                  if (colonIndex > 0) {
+                      const jobTitle = content.substring(0, colonIndex).trim();
+                      const description = content.substring(colonIndex + 1).trim();
+                      return (
+                          <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
+                              <Image 
+                                  src="/val-logo.jpg" 
+                                  alt="" 
+                                  width={14} 
+                                  height={14}
+                                  style={{ marginTop: '3px', flexShrink: 0 }}
+                              />
+                              <span>
+                                  <strong>{jobTitle}:</strong> {formatInlineText(description)}
+                              </span>
+                          </div>
+                      );
+                  }
+              }
+              
               return (
                 <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
                   <Image 
                     src="/val-logo.jpg" 
                     alt="" 
                     width={14} 
-                    height={14} 
+                    height={14}
                     style={{ marginTop: '3px', flexShrink: 0 }}
                   />
                   <span>{formatInlineText(content)}</span>
