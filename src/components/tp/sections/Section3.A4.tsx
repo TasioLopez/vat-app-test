@@ -11,9 +11,9 @@ import { ActivityBody } from "./ActivityBody";
 
 const page =
   "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
-const blockTitle = "font-bold bg-muted text-purple-600 px-2 py-1";
-const paperText = "p-2 whitespace-pre-wrap leading-relaxed";
-const subtle = "bg-muted/50 px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const blockTitle = "font-bold text-[#660066] px-2 py-1";
+const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
+const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 // keep blocks together across page breaks
 const avoidBreak = "mb-3 [break-inside:avoid] print:[break-inside:avoid]";
 

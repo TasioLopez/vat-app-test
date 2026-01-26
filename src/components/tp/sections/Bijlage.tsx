@@ -693,13 +693,13 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                   <div className="text-[18px] leading-tight">
                     {page.sections.map((fase, i) => (
                       <div key={`${pi}-${i}`} className="mb-4">
-                        <div className="bg-muted font-bold py-[2px] px-2 flex justify-between text-[18px]">
+                        <div className="font-bold py-[2px] px-2 flex justify-between text-[18px] text-[#660066]">
                           <span>Fase{fase.title ? `: ${fase.title}` : ""}</span>
                           <span>
                             Periode: {formatDate(fase.periode.from)} - {formatDate(fase.periode.to)}
                           </span>
                         </div>
-                        <div className="mt-1 space-y-[1px]">
+                        <div className="mt-1 space-y-[1px] bg-[#e7e6e6]">
                           {fase.activiteiten.map((a) => (
                             <div key={a.name} className="flex justify-between gap-2 py-0.5 px-2">
                               <span className="flex-1">{a.name}</span>

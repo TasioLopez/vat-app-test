@@ -36,19 +36,19 @@ function getFileType(path: string, docName?: string): { ext: string; mime: strin
   }
   if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
     return { ext: 'doc', mime: 'application/msword' };
-  }
+    }
   return { ext: 'pdf', mime: 'application/pdf' };
 }
 
 // Helper function to clean and parse assistant response
 function parseAssistantResponse(responseText: string): any {
   let cleanedResponse = responseText;
-  
-  // Remove ```json and ``` markers
-  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  
+        
+        // Remove ```json and ``` markers
+        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+        
   // Try to find JSON object - look for first { and matching }
-  const firstBrace = cleanedResponse.indexOf('{');
+        const firstBrace = cleanedResponse.indexOf('{');
   if (firstBrace === -1) {
     throw new Error('No JSON object found in response');
   }
@@ -71,7 +71,7 @@ function parseAssistantResponse(responseText: string): any {
     throw new Error('No matching closing brace found');
   }
   
-  cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
   
   try {
     return JSON.parse(cleanedResponse);
@@ -84,55 +84,55 @@ function parseAssistantResponse(responseText: string): any {
 
 // Helper function to map and validate extracted data
 function mapAndValidateData(extractedData: any): any {
-  const fieldMapping: { [key: string]: string } = {
-    'geslacht_werknemer': 'gender',
-    'geslacht': 'gender',
-    'leeftijd_werknemer': 'date_of_birth',
-    'naam_werknemer': 'name'
-  };
-  
-  const validEmployeeDetailsFields = [
-    'current_job', 'work_experience', 'education_level', 'education_name',
+        const fieldMapping: { [key: string]: string } = {
+          'geslacht_werknemer': 'gender',
+          'geslacht': 'gender',
+          'leeftijd_werknemer': 'date_of_birth',
+          'naam_werknemer': 'name'
+        };
+        
+        const validEmployeeDetailsFields = [
+          'current_job', 'work_experience', 'education_level', 'education_name',
     'drivers_license', 'drivers_license_type', 'transport_type',
-    'dutch_speaking', 'dutch_writing', 'dutch_reading', 
-    'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
-    'gender', 'date_of_birth', 'phone'
-  ];
+          'dutch_speaking', 'dutch_writing', 'dutch_reading', 
+          'has_computer', 'computer_skills', 'contract_hours', 'other_employers',
+          'gender', 'date_of_birth', 'phone'
+        ];
+        
+        const mappedData: any = {};
   
-  const mappedData: any = {};
-  
-  Object.entries(extractedData).forEach(([key, value]) => {
-    const mappedKey = fieldMapping[key] || key;
-    
-    // Skip fields that don't belong in employee_details table
-    if (!validEmployeeDetailsFields.includes(mappedKey)) {
-      console.log(`⚠️ Skipping field "${mappedKey}" - belongs in tp_meta table, not employee_details`);
-      return;
-    }
-    
-    // Special handling for date_of_birth - if it's a number (age), skip it
-    if (mappedKey === 'date_of_birth' && typeof value === 'number') {
-      console.log('⚠️ Skipping age number, expecting date format for date_of_birth');
-      return;
-    }
-    
+        Object.entries(extractedData).forEach(([key, value]) => {
+          const mappedKey = fieldMapping[key] || key;
+          
+          // Skip fields that don't belong in employee_details table
+          if (!validEmployeeDetailsFields.includes(mappedKey)) {
+            console.log(`⚠️ Skipping field "${mappedKey}" - belongs in tp_meta table, not employee_details`);
+            return;
+          }
+          
+          // Special handling for date_of_birth - if it's a number (age), skip it
+          if (mappedKey === 'date_of_birth' && typeof value === 'number') {
+            console.log('⚠️ Skipping age number, expecting date format for date_of_birth');
+            return;
+          }
+          
     // Special handling for contract_hours - convert to number
-    if (mappedKey === 'contract_hours') {
-      if (typeof value === 'string') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
+          if (mappedKey === 'contract_hours') {
+            if (typeof value === 'string') {
+              const numValue = parseFloat(value);
+              if (!isNaN(numValue)) {
           mappedData[mappedKey] = numValue;
-          console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
-        } else {
-          console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
-          return;
-        }
-      } else if (typeof value === 'number') {
+                console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
+              } else {
+                console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
+                return;
+              }
+            } else if (typeof value === 'number') {
         mappedData[mappedKey] = value;
-      } else {
-        console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
-        return;
-      }
+            } else {
+              console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
+              return;
+            }
     } 
     // Special handling for transport_type - ensure it's an array
     else if (mappedKey === 'transport_type') {
@@ -146,11 +146,11 @@ function mapAndValidateData(extractedData: any): any {
         mappedData[mappedKey] = [];
         console.log(`✅ Set transport_type to empty array`);
       }
-    } else {
-      mappedData[mappedKey] = value;
-    }
-  });
-  
+          } else {
+            mappedData[mappedKey] = value;
+          }
+        });
+        
   return mappedData;
 }
 
@@ -301,9 +301,9 @@ NIET markdown, NIET bullet points, NIET uitleg tekst, ALLEEN JSON object.`,
       console.log('📄 Raw intake form response (first 500 chars):', response.text.value.substring(0, 500));
       const extractedData = parseAssistantResponse(response.text.value);
       const mappedData = mapAndValidateData(extractedData);
-      
-      // Cleanup
-      await openai.beta.assistants.delete(assistant.id);
+        
+        // Cleanup
+        await openai.beta.assistants.delete(assistant.id);
       await openai.files.delete(uploadedFile.id);
       
       console.log(`✅ Intake form processing completed:`, Object.keys(mappedData).length, 'fields');
@@ -513,8 +513,8 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
       await openai.files.delete(uploadedFile.id);
       
       console.log(`✅ FML/IZP processing completed:`, Object.keys(mappedData).length, 'fields');
-      return mappedData;
-    }
+        return mappedData;
+      }
     
     await openai.beta.assistants.delete(assistant.id);
     await openai.files.delete(uploadedFile.id);
@@ -594,7 +594,7 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
     });
     
     if (run.status !== 'completed') {
-      throw new Error(`Assistant run failed: ${run.status}`);
+    throw new Error(`Assistant run failed: ${run.status}`);
     }
     
     const messages = await openai.beta.threads.messages.list(thread.id);
