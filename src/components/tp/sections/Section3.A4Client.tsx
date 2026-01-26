@@ -562,46 +562,57 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
     );
 
     useLayoutEffect(() => {
-        const headerH = headerRef.current?.offsetHeight ?? 0;
-        const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+        // Use requestAnimationFrame to ensure DOM is fully laid out before measuring
+        const measureAndPaginate = () => {
+            const headerH = headerRef.current?.offsetHeight ?? 0;
+            const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
-        const usable = CONTENT_H - headerH;
-        const SAFETY_MARGIN = 20; // Add safety margin to prevent overflow
-        const maxUsable = usable - SAFETY_MARGIN;
-        
-        const out: number[][] = [];
-        let cur: number[] = [];
-        let used = 0;
+            const usable = CONTENT_H - headerH;
+            const SAFETY_MARGIN = 40; // Increased safety margin to prevent overflow
+            const maxUsable = usable - SAFETY_MARGIN;
+            
+            const out: number[][] = [];
+            let cur: number[] = [];
+            let used = 0;
 
-        heights.forEach((h, idx) => {
-            // If a single block is taller than the usable space, it needs its own page
-            if (h > maxUsable) {
-                // Finalize current page if it has content
-                if (cur.length) {
-                    out.push(cur);
-                    cur = [];
+            heights.forEach((h, idx) => {
+                // If a single block is taller than the usable space, it needs its own page
+                if (h > maxUsable) {
+                    // Finalize current page if it has content
+                    if (cur.length) {
+                        out.push(cur);
+                        cur = [];
+                        used = 0;
+                    }
+                    // Place oversized block on its own page
+                    out.push([idx]);
                     used = 0;
-                }
-                // Place oversized block on its own page
-                out.push([idx]);
-                used = 0;
-            } else {
-                const add = (cur.length ? BLOCK_SPACING : 0) + h;
-                if (used + add > maxUsable) {
-                    // Start new page
-                    if (cur.length) out.push(cur);
-                    cur = [idx];
-                    used = h;
                 } else {
-                    // Add to current page
-                    used += add;
-                    cur.push(idx);
+                    const add = (cur.length ? BLOCK_SPACING : 0) + h;
+                    // Use >= instead of > to be more conservative - if it would equal or exceed, start new page
+                    if (used + add >= maxUsable) {
+                        // Start new page
+                        if (cur.length) out.push(cur);
+                        cur = [idx];
+                        used = h;
+                    } else {
+                        // Add to current page
+                        used += add;
+                        cur.push(idx);
+                    }
                 }
-            }
-        });
+            });
 
-        if (cur.length) out.push(cur);
-        setPages(out);
+            if (cur.length) out.push(cur);
+            setPages(out);
+        };
+
+        // Delay measurement to ensure DOM is fully rendered
+        const timeoutId = setTimeout(() => {
+            requestAnimationFrame(measureAndPaginate);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
     }, [
         sections.length,
         JSON.stringify(sections.map((s) => [s.key, s.title ?? "", s.text?.length ?? 0, s.variant])),

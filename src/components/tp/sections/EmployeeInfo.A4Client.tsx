@@ -373,53 +373,64 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
   );
 
   useLayoutEffect(() => {
-    const firstH = headerFirstRef.current?.offsetHeight ?? 0;
-    const restH = headerRestRef.current?.offsetHeight ?? 0;
+    // Use requestAnimationFrame to ensure DOM is fully laid out before measuring
+    const measureAndPaginate = () => {
+      const firstH = headerFirstRef.current?.offsetHeight ?? 0;
+      const restH = headerRestRef.current?.offsetHeight ?? 0;
 
-    // measure all blocks (excluding the special header markers)
-    const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
-    const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+      // measure all blocks (excluding the special header markers)
+      const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
+      const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
-    const limitFirst = CONTENT_H - firstH;
-    const limitRest = CONTENT_H - restH;
-    const SAFETY_MARGIN = 20; // Add safety margin to prevent overflow
-    const maxLimitFirst = limitFirst - SAFETY_MARGIN;
-    const maxLimitRest = limitRest - SAFETY_MARGIN;
+      const limitFirst = CONTENT_H - firstH;
+      const limitRest = CONTENT_H - restH;
+      const SAFETY_MARGIN = 40; // Increased safety margin to prevent overflow
+      const maxLimitFirst = limitFirst - SAFETY_MARGIN;
+      const maxLimitRest = limitRest - SAFETY_MARGIN;
 
-    const out: number[][] = [];
-    let cur: number[] = [];
-    let used = 0;
-    let limit = maxLimitFirst;
+      const out: number[][] = [];
+      let cur: number[] = [];
+      let used = 0;
+      let limit = maxLimitFirst;
 
-    heights.forEach((h, idx) => {
-      // If a single block is taller than the current limit, it needs its own page
-      const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
-      if (h > currentMaxLimit) {
-        // Finalize current page if it has content
-        if (cur.length) {
-          out.push(cur);
-          cur = [];
+      heights.forEach((h, idx) => {
+        // If a single block is taller than the current limit, it needs its own page
+        const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
+        if (h > currentMaxLimit) {
+          // Finalize current page if it has content
+          if (cur.length) {
+            out.push(cur);
+            cur = [];
+            used = 0;
+          }
+          // Place oversized block on its own page
+          out.push([idx]);
           used = 0;
-        }
-        // Place oversized block on its own page
-        out.push([idx]);
-        used = 0;
-        limit = maxLimitRest; // Next pages use rest header
-      } else {
-        const add = (cur.length ? BLOCK_SPACING : 0) + h;
-        if (used + add > limit) {
-          if (cur.length) out.push(cur);
-          cur = [idx];
-          used = h;
-          limit = maxLimitRest;
+          limit = maxLimitRest; // Next pages use rest header
         } else {
-          used += add;
-          cur.push(idx);
+          const add = (cur.length ? BLOCK_SPACING : 0) + h;
+          // Use >= instead of > to be more conservative - if it would equal or exceed, start new page
+          if (used + add >= limit) {
+            if (cur.length) out.push(cur);
+            cur = [idx];
+            used = h;
+            limit = maxLimitRest;
+          } else {
+            used += add;
+            cur.push(idx);
+          }
         }
-      }
-    });
-    if (cur.length) out.push(cur);
-    setPages(out);
+      });
+      if (cur.length) out.push(cur);
+      setPages(out);
+    };
+
+    // Delay measurement to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(measureAndPaginate);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [JSON.stringify(blocks.map((b) => [b.key, "title" in b ? b.title : "", b.variant]))]);
 
   return (
