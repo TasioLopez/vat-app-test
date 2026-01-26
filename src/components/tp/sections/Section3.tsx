@@ -1068,8 +1068,8 @@ function formatInlineText(text: string): React.ReactNode {
             // Bold
             parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
         } else if (matched.startsWith('*') && matched.endsWith('*')) {
-            // Italic - wrap in brackets
-            parts.push(<span key={match.index}>(<em>{matched.slice(1, -1)}</em>)</span>);
+            // Italic - wrap in quotes
+            parts.push(<span key={match.index}>"<em>{matched.slice(1, -1)}</em>"</span>);
         }
         
         currentIdx = match.index + matched.length;
