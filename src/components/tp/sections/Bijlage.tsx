@@ -68,14 +68,15 @@ const createTemplates = (startDate: string, endDate: string) => {
   const end = new Date(endDate);
   
   // For 3-fases: each phase is 3 months, except the last one gets the remainder
+  // Next phase starts on SAME DAY as previous phase ends
   const phase1End = addMonths(start, 3);
-  const phase2Start = addOneDay(phase1End); // Start next day
+  const phase2Start = phase1End; // Start same day as previous phase ends
   const phase2End = addMonths(phase2Start, 3);
-  const phase3Start = addOneDay(phase2End); // Start next day
+  const phase3Start = phase2End; // Start same day as previous phase ends
   
   // For 2-fases: first phase is 3 months, second phase gets the remainder
   const phase1End2Fases = addMonths(start, 3);
-  const phase2Start2Fases = addOneDay(phase1End2Fases); // Start next day
+  const phase2Start2Fases = phase1End2Fases; // Start same day as previous phase ends
   
   return {
     "3-fases": {
@@ -135,8 +136,8 @@ const createTemplates = (startDate: string, endDate: string) => {
             "Kwaliteiten en vaardigheden onderzoeken",
             "Beroeps-en arbeidsmarkt oriëntatie",
             "Scholingsmogelijkheden onderzoeken",
-            "Sollicitatietools (brief en cv)",
-            "Voortgangsrapportage en evaluatie"
+            "Sollicitatietools (brief en cv)"
+            // "Voortgangsrapportage en evaluatie" removed - not needed when phases are combined
           ]
         },
         {
@@ -149,7 +150,7 @@ const createTemplates = (startDate: string, endDate: string) => {
             "Solliciteren via social media en/of netwerken",
             "Vacatures zoeken en beoordeling",
             "Wekelijks solliciteren",
-            "Voortgangsrapportage en evaluatie",
+            // "Voortgangsrapportage en evaluatie" removed - not needed when phases are combined
             "Sollicitatiegesprek voorbereiden en presenteren",
             "Jobhunten",
             "Detacheren onderzoeken",

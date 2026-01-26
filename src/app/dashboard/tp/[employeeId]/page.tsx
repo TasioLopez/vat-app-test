@@ -61,7 +61,7 @@ export default function TPBuilderPage() {
 
         {/* Content Area - takes remaining space */}
         <div className="flex-1 overflow-hidden min-h-0">
-          <div className="h-full p-6">
+          <div className="h-full overflow-y-auto p-6">
             <SectionComponent employeeId={employeeId} />
           </div>
         </div>

@@ -395,9 +395,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             <div className="flex flex-col gap-2 w-2/5">
                                 <select className={fieldClass('gender')} value={employeeDetails?.gender || ''} onChange={e => handleDetailChange('gender', e.target.value)} >
                                     <option value="">Geslacht selecteren</option>
-                                    <option value="Male">Man</option>
-                                    <option value="Female">Vrouw</option>
-                                    <option value="Other">Anders</option>
+                                    <option value="Man">Man</option>
+                                    <option value="Vrouw">Vrouw</option>
+                                    <option value="Anders">Anders</option>
                                 </select>
                                 <input className={fieldClass('phone')} placeholder="Telefoon" value={employeeDetails?.phone || ''} onChange={e => handleDetailChange('phone', e.target.value)} />
                                 <input className={fieldClass('date_of_birth')} type="date" value={employeeDetails?.date_of_birth || ''} onChange={e => handleDetailChange('date_of_birth', e.target.value)} />

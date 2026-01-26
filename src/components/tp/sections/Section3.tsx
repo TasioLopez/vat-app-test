@@ -36,8 +36,16 @@ const AGREEMENT_POINTS: string[] = [
     "U bent zelf eindverantwoordelijk voor het slagen van uw 2e spoortraject. Het volgen van dit traject vraagt om een investering van tijd en energie van beide partijen. Wij verwachten van u dat u de onderling gemaakte afspraken nakomt en dat u zelf actief meewerkt aan uw eigen re-integratie, met als doel deze zo succesvol mogelijk te laten verlopen.",
 ];
 
-const AGREEMENT_FOOTER =
-    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat. Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website www.valentinez.nl. Een papieren versie kunt u opvragen via 085 - 800 2010 of info@ValentineZ.nl.";
+const AGREEMENT_FOOTER_1 =
+    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat.";
+
+const AGREEMENT_FOOTER_2 = {
+    text: "Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website ",
+    link1: "www.valentinez.nl",
+    middle: ". Een papieren versie kunt u opvragen via 085 - 800 2010 of ",
+    link2: "info@ValentineZ.nl",
+    end: "."
+};
 
 type PreviewVariant = "block" | "subtle" | "custom";
 
@@ -62,7 +70,7 @@ const C = (key: string, node: React.ReactNode, measureKey?: string | number): Pr
     key, node, variant: "custom", measureKey
 });
 
-const TP_ACTIVITIES_INTRO = "Op basis van de intake en de beschikbare documenten zijn de volgende activiteiten geselecteerd voor dit traject:";
+const TP_ACTIVITIES_INTRO = "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.";
 
 function AgreementBlock() {
     return (
@@ -70,12 +78,26 @@ function AgreementBlock() {
             <div className={blockTitle}>Akkoordverklaring</div>
             <div className={paperText}>
                 <p className="mb-3">{AGREEMENT_INTRO}</p>
-                <ol className="list-decimal list-inside space-y-2 mb-4">
+                <div className="ml-4 space-y-2 mb-4">
                     {AGREEMENT_POINTS.map((point, i) => (
-                        <li key={i} className="text-xs leading-relaxed">{point}</li>
+                        <div key={i} className="flex items-start gap-2">
+                            <img 
+                                src="/val-logo.jpg" 
+                                alt="" 
+                                style={{ width: '14px', height: '14px', marginTop: '3px', flexShrink: 0 }}
+                            />
+                            <span className="text-xs leading-relaxed">{point}</span>
+                        </div>
                     ))}
-                </ol>
-                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER}</p>
+                </div>
+                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER_1}</p>
+                <p className="text-xs leading-relaxed mt-2">
+                    {AGREEMENT_FOOTER_2.text}
+                    <span className="underline">{AGREEMENT_FOOTER_2.link1}</span>
+                    {AGREEMENT_FOOTER_2.middle}
+                    <span className="underline">{AGREEMENT_FOOTER_2.link2}</span>
+                    {AGREEMENT_FOOTER_2.end}
+                </p>
             </div>
         </div>
     );
@@ -721,10 +743,10 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
         B("prog", "Prognose van de bedrijfsarts", tpData.prognose_bedrijfsarts || "— nog niet ingevuld —"),
         B("prof", "Persoonlijk profiel", tpData.persoonlijk_profiel || "— nog niet ingevuld —"),
-        B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "— nog niet ingevuld —"),
+        B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject."),
         B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
-            tpData.advies_ad_passende_arbeid || "— nog niet ingevuld —"),
+            tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "— nog niet ingevuld —")),
         B("pow", "Perspectief op Werk (PoW-meter)", tpData.pow_meter || "— door werknemer in te vullen —"),
         B("plaats", "Visie op plaatsbaarheid", tpData.visie_plaatsbaarheid || "— nog niet ingevuld —"),
 
@@ -1061,35 +1083,60 @@ function formatInlineText(text: string): React.ReactNode {
     return parts.length > 0 ? parts : text;
 }
 
-// Special rendering for visie_loopbaanadviseur with logo bullets
-function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+// Render text with Z-logo bullets for list items
+function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = false): React.ReactNode {
     if (!text) return text;
     
     const paragraphs = text.split(/\n\n+/);
     
     return paragraphs.map((para, paraIdx) => {
-        const lines = para.trim().split('\n');
+        const trimmedPara = para.trim();
         
-        // Check if this paragraph is a list
-        const isBulletList = lines.every(l => l.trim().startsWith('•'));
-        const isNumberedList = lines.every(l => /^\d+\./.test(l.trim()));
-        
-        if (isBulletList || isNumberedList) {
-            // Render list items with logos instead of bullets
+        // Check for disclaimer text in plaatsbaarheid (should be purple)
+        if (isPlaatsbaarheid && trimmedPara.startsWith('Dit is geen limitatieve opsomming')) {
             return (
-                <div key={paraIdx} className="ml-4 mb-4 space-y-2">
+                <p key={paraIdx} className="mt-4 text-purple-600 italic">
+                    {formatInlineText(trimmedPara)}
+                </p>
+            );
+        }
+        
+        const lines = trimmedPara.split('\n');
+        
+        // Check if ANY line is a bullet point (not requiring ALL lines to be bullets)
+        const hasBullets = lines.some(l => {
+            const t = l.trim();
+            return t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ') || /^\d+\./.test(t);
+        });
+        
+        if (hasBullets) {
+            // Render mixed content: intro text + bullet list with Z logos
+            return (
+                <div key={paraIdx} className="mb-4">
                     {lines.map((line, idx) => {
-                        const content = line.replace(/^[•\d+\.]\s*/, '');
-                        return (
-                            <div key={idx} className="flex items-start gap-2">
-                                <img 
-                                    src="/val-logo.jpg" 
-                                    alt="" 
-                                    style={{ width: '14px', height: '14px', marginTop: '3px', flexShrink: 0 }}
-                                />
-                                <span>{formatInlineText(content)}</span>
-                            </div>
-                        );
+                        const t = line.trim();
+                        const isBullet = t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ') || /^\d+\./.test(t);
+                        
+                        if (isBullet) {
+                            const content = t.replace(/^[•☑✓\-]\s*/, '').replace(/^\d+\.\s*/, '');
+                            return (
+                                <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
+                                    <img 
+                                        src="/val-logo.jpg" 
+                                        alt="" 
+                                        style={{ width: '14px', height: '14px', marginTop: '3px', flexShrink: 0 }}
+                                    />
+                                    <span>{formatInlineText(content)}</span>
+                                </div>
+                            );
+                        } else {
+                            // Non-bullet line (intro text)
+                            return (
+                                <p key={idx} className={idx > 0 ? "mt-2" : ""}>
+                                    {formatInlineText(t)}
+                                </p>
+                            );
+                        }
                     })}
                 </div>
             );
@@ -1107,6 +1154,11 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
             </p>
         );
     });
+}
+
+// Alias for backward compatibility
+function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
+    return renderTextWithLogoBullets(text, false);
 }
 
 function renderFormattedText(text: string): React.ReactNode {
@@ -1267,17 +1319,24 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                             bodyText={s.text} 
                                             className=""
                                         />
-                                    ) : s.key === 'vlb' ? (
-                                        renderVisieLoopbaanadviseurText(s.text)
+                                    ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                        renderTextWithLogoBullets(s.text, false)
+                                    ) : s.key === 'plaats' ? (
+                                        renderTextWithLogoBullets(s.text, true)
+                                    ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                        <span className="text-purple-600 italic">{s.text}</span>
+                                    ) : s.key === 'pow' ? (
+                                        <div>
+                                          {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                          <div className="my-4">
+                                            <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                          </div>
+                                          <p className="text-purple-600 italic text-[10px] mt-4">
+                                            * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                          </p>
+                                        </div>
                                     ) : (
-                                        <>
-                                            {renderFormattedText(s.text)}
-                                            {s.key === "plaats" && (
-                                                <p className="text-sm italic text-gray-600 mt-4">
-                                                    Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                                </p>
-                                            )}
-                                        </>
+                                        renderFormattedText(s.text)
                                     )}
                                 </div>
                             </div>
@@ -1343,17 +1402,24 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                                     bodyText={s.text} 
                                                     className=""
                                                 />
-                                            ) : s.key === 'vlb' ? (
-                                                renderVisieLoopbaanadviseurText(s.text)
+                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                renderTextWithLogoBullets(s.text, false)
+                                            ) : s.key === 'plaats' ? (
+                                                renderTextWithLogoBullets(s.text, true)
+                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                <span className="text-purple-600 italic">{s.text}</span>
+                                            ) : s.key === 'pow' ? (
+                                                <div>
+                                                  {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                                  <div className="my-4">
+                                                    <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                                  </div>
+                                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                  </p>
+                                                </div>
                                             ) : (
-                                                <>
-                                                    {renderFormattedText(s.text)}
-                                                    {s.key === "plaats" && (
-                                                        <p className="text-sm italic text-gray-600 mt-4">
-                                                            Dit is geen limitatieve opsomming. De genoemde functies zijn allen alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.
-                                                        </p>
-                                                    )}
-                                                </>
+                                                renderFormattedText(s.text)
                                             )}
                                         </div>
                                     </>

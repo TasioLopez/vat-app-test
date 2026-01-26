@@ -79,6 +79,7 @@ Vereisten:
 - 1–3 alinea's, scheid alinea's met dubbele newlines (\n\n)
 - Neem alleen op wat expliciet in documenten staat: woon-/thuissituatie en ondersteuning, sociale context/activiteiten, relevante praktische zaken (taal/rijbewijs/vervoer/uren) indien expliciet genoemd
 - Zakelijk en AVG-proof schrijven
+- SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
 
 STRIKT VERBODEN (privacy regels):
 - NOOIT exacte leeftijden van kinderen of familieleden noemen (bijv. "21 jaar", "15 jaar")

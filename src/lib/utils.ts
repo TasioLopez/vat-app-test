@@ -30,8 +30,12 @@ export function formatEmployeeName(
   }
 
   // If we have gender, format with title and initial
-  if (gender === 'Male' || gender === 'Female') {
-    const title = gender === 'Female' ? 'Mevrouw' : 'Meneer';
+  // Support both Dutch (Man/Vrouw) and English (Male/Female) values
+  const isFemale = gender === 'Female' || gender === 'Vrouw' || gender?.toLowerCase() === 'vrouw';
+  const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
+  
+  if (isFemale || isMale) {
+    const title = isFemale ? 'Mevrouw' : 'Meneer';
     const initial = firstName.charAt(0).toUpperCase();
     return `${title} ${initial}. ${lastName} (${firstName})`;
   }
@@ -66,7 +70,11 @@ export function formatEmployeeNameWithoutPrefix(
   }
 
   // If we have gender, format with initial (no title)
-  if (gender === 'Male' || gender === 'Female') {
+  // Support both Dutch (Man/Vrouw) and English (Male/Female) values
+  const isFemale = gender === 'Female' || gender === 'Vrouw' || gender?.toLowerCase() === 'vrouw';
+  const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
+  
+  if (isFemale || isMale) {
     const initial = firstName.charAt(0).toUpperCase();
     return `${initial}. ${lastName} (${firstName})`;
   }

@@ -38,13 +38,14 @@ Extract ALLEEN deze TP metadata velden als je ze vindt:
 4. ad_report_date: "Datum rapport:" (YYYY-MM-DD format)
 5. fml_izp_lab_date: "Datum FML:" or "Datum FML/IZP/LAB:" (YYYY-MM-DD format)
 6. occupational_doctor_name: "Arbeidsdeskundige:" - Extract name AND company in format "Name, Company"
-7. occupational_doctor_org: "Bedrijfsarts:" - Extract full description including supervision if present
+7. occupational_doctor_org: "Bedrijfsarts:" - Extract name and supervision info. VERWIJDER: BIG nummers en "- Bedrijfsarts" suffix (overbodig).
 
 Voorbeelden:
 - "Datum ziekmelding: 26-04-2024" → first_sick_day: "2024-04-26"
 - "Aanmeld: 12-06-2025" → registration_date: "2025-06-12"
 - "Arbeidsdeskundige: Marc Arendsen van Buro werk wijzer" → occupational_doctor_name: "Marc Arendsen, Buro werk wijzer"
-- "Bedrijfsarts: Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas."
+- "Bedrijfsarts: Arts L. Bollen werkend onder supervisie van arts T. de Haas - BIG nr. 12345678901 - Bedrijfsarts" → occupational_doctor_org: "Arts L. Bollen, werkend onder supervisie van: arts T. de Haas"
+- "Arts L Heydanus, Werkend onder supervisie van: M.E. Lindeboom - BIG nr. 39045796801 - Bedrijfsarts" → occupational_doctor_org: "Arts L Heydanus, Werkend onder supervisie van: M.E. Lindeboom"
 - "Dr. Smith" → occupational_doctor_org: "Dr. Smith"
 
 Return ONLY a JSON object with the fields you find.`,
@@ -142,6 +143,20 @@ Return ONLY a JSON object with the fields you find.`,
         
         const extractedData = JSON.parse(cleanedResponse);
         console.log('✅ Parsed extracted data:', extractedData);
+        
+        // Post-process: Clean up occupational_doctor_org (remove BIG numbers and "- Bedrijfsarts" suffix)
+        if (extractedData.occupational_doctor_org) {
+          let cleaned = extractedData.occupational_doctor_org;
+          // Remove BIG number pattern: " - BIG nr. XXXXXXXXXXX" or similar
+          cleaned = cleaned.replace(/\s*-?\s*BIG\s*(nr\.?|nummer)?\s*[\d\s]+/gi, '');
+          // Remove trailing "- Bedrijfsarts" or " Bedrijfsarts"
+          cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
+          // Clean up any double spaces or trailing punctuation
+          cleaned = cleaned.replace(/\s+/g, ' ').trim();
+          cleaned = cleaned.replace(/[,\-]\s*$/, '').trim();
+          extractedData.occupational_doctor_org = cleaned;
+          console.log('🧹 Cleaned occupational_doctor_org:', cleaned);
+        }
         
         // Cleanup
         await openai.beta.assistants.delete(assistant.id);
