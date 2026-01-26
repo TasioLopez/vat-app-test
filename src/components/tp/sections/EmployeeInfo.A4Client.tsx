@@ -336,35 +336,37 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
   const MeasureTree = () => (
     <div style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} className="invisible">
       {/* first page header */}
-      <div className={page} style={{ width: PAGE_W, height: PAGE_H, padding: PAD }}>
+      <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
         <div ref={headerFirstRef}>
           <LogoBar />
           <h1 className={heading}>Trajectplan re-integratie tweede spoor</h1>
         </div>
-        {blocks
-          .filter((b) => !b.key.startsWith("__header"))
-          .map((b, i) => (
-            <div
-              key={`m-${b.key}`}
-              ref={(el) => {
-                blockRefs.current[i] = el;
-              }}
-              className="mb-3"
-            >
-              {b.variant === "subtle" ? (
-                <div className={subtle}>{(b as any).node}</div>
-              ) : (
-                <>
-                  {("title" in b && b.title) ? <div className={blockTitle}>{(b as any).title}</div> : null}
-                  <div className={paperText}>{(b as any).node}</div>
-                </>
-              )}
-            </div>
-          ))}
+        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+          {blocks
+            .filter((b) => !b.key.startsWith("__header"))
+            .map((b, i) => (
+              <div
+                key={`m-${b.key}`}
+                ref={(el) => {
+                  blockRefs.current[i] = el;
+                }}
+                className="mb-3"
+              >
+                {b.variant === "subtle" ? (
+                  <div className={subtle}>{(b as any).node}</div>
+                ) : (
+                  <>
+                    {("title" in b && b.title) ? <div className={blockTitle}>{(b as any).title}</div> : null}
+                    <div className={paperText}>{(b as any).node}</div>
+                  </>
+                )}
+              </div>
+            ))}
+        </div>
       </div>
 
       {/* rest header */}
-      <div className={page} style={{ width: PAGE_W, height: PAGE_H, padding: PAD }}>
+      <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
         <div ref={headerRestRef}>
           <LogoBar />
         </div>
@@ -373,63 +375,75 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
   );
 
   useLayoutEffect(() => {
-    // Use requestAnimationFrame to ensure DOM is fully laid out before measuring
+    // Wait for all images to load before measuring
     const measureAndPaginate = () => {
-      const firstH = headerFirstRef.current?.offsetHeight ?? 0;
-      const restH = headerRestRef.current?.offsetHeight ?? 0;
-
-      // measure all blocks (excluding the special header markers)
-      const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
-      const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-
-      const limitFirst = CONTENT_H - firstH;
-      const limitRest = CONTENT_H - restH;
-      const SAFETY_MARGIN = 40; // Increased safety margin to prevent overflow
-      const maxLimitFirst = limitFirst - SAFETY_MARGIN;
-      const maxLimitRest = limitRest - SAFETY_MARGIN;
-
-      const out: number[][] = [];
-      let cur: number[] = [];
-      let used = 0;
-      let limit = maxLimitFirst;
-
-      heights.forEach((h, idx) => {
-        // If a single block is taller than the current limit, it needs its own page
-        const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
-        if (h > currentMaxLimit) {
-          // Finalize current page if it has content
-          if (cur.length) {
-            out.push(cur);
-            cur = [];
-            used = 0;
-          }
-          // Place oversized block on its own page
-          out.push([idx]);
-          used = 0;
-          limit = maxLimitRest; // Next pages use rest header
-        } else {
-          const add = (cur.length ? BLOCK_SPACING : 0) + h;
-          // Use >= instead of > to be more conservative - if it would equal or exceed, start new page
-          if (used + add >= limit) {
-            if (cur.length) out.push(cur);
-            cur = [idx];
-            used = h;
-            limit = maxLimitRest;
-          } else {
-            used += add;
-            cur.push(idx);
-          }
-        }
+      // Check if all images are loaded
+      const images = document.querySelectorAll('img');
+      const imagePromises = Array.from(images).map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // Continue even if image fails
+        });
       });
-      if (cur.length) out.push(cur);
-      setPages(out);
+
+      Promise.all(imagePromises).then(() => {
+        // Small delay to ensure layout is stable
+        requestAnimationFrame(() => {
+          const firstH = headerFirstRef.current?.offsetHeight ?? 0;
+          const restH = headerRestRef.current?.offsetHeight ?? 0;
+
+          // measure all blocks (excluding the special header markers)
+          const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
+          const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+
+          const limitFirst = CONTENT_H - firstH;
+          const limitRest = CONTENT_H - restH;
+          const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
+          const maxLimitFirst = limitFirst - SAFETY_MARGIN;
+          const maxLimitRest = limitRest - SAFETY_MARGIN;
+
+          const out: number[][] = [];
+          let cur: number[] = [];
+          let used = 0;
+          let limit = maxLimitFirst;
+
+          heights.forEach((h, idx) => {
+            // If a single block is taller than the current limit, it needs its own page
+            const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
+            if (h > currentMaxLimit) {
+              // Finalize current page if it has content
+              if (cur.length) {
+                out.push(cur);
+                cur = [];
+                used = 0;
+              }
+              // Place oversized block on its own page
+              out.push([idx]);
+              used = 0;
+              limit = maxLimitRest; // Next pages use rest header
+            } else {
+              const add = (cur.length ? BLOCK_SPACING : 0) + h;
+              // Be very conservative - if adding would get close to limit, start new page
+              if (used + add >= limit) {
+                if (cur.length) out.push(cur);
+                cur = [idx];
+                used = h;
+                limit = maxLimitRest;
+              } else {
+                used += add;
+                cur.push(idx);
+              }
+            }
+          });
+          if (cur.length) out.push(cur);
+          setPages(out);
+        });
+      });
     };
 
-    // Delay measurement to ensure DOM is fully rendered
-    const timeoutId = setTimeout(() => {
-      requestAnimationFrame(measureAndPaginate);
-    }, 0);
-
+    // Increased delay to ensure everything is rendered
+    const timeoutId = setTimeout(measureAndPaginate, 100);
     return () => clearTimeout(timeoutId);
   }, [JSON.stringify(blocks.map((b) => [b.key, "title" in b ? b.title : "", b.variant]))]);
 

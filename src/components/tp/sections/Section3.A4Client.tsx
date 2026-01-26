@@ -508,110 +508,124 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
     const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
     const [pages, setPages] = useState<number[][]>([]);
 
-    // Hidden measurement tree (must mirror real rendering)
+    // Hidden measurement tree (must mirror real rendering exactly)
     const MeasureTree = () => (
         <div style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} className="invisible">
-            <div className={page} style={{ width: PAGE_W, height: PAGE_H, padding: PAD }}>
+            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
                 <LogoBar ref={headerRef} />
-                {sections.map((s, i) => (
-                    <div
-                        key={`m-${s.key}`}
-                        ref={(el) => {
-                            blockRefs.current[i] = el;
-                        }}
-                        className="mb-3"
-                    >
-                        {s.variant === "subtle" && s.text ? (
-                            <div className={subtle}>{s.text}</div>
-                        ) : s.variant === "block" && s.text ? (
-                            <div>
-                                <div className={blockTitle}>{s.title}</div>
-                                {s.key.startsWith('act-') ? (
-                                    <ActivityBody 
-                                        activityId={s.key.replace('act-', '')} 
-                                        bodyText={s.text} 
-                                        className={paperText}
-                                    />
-                                ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                    <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
-                                ) : s.key === 'plaats' ? (
-                                    <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
-                                ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                    <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
-                                ) : s.key === 'pow' ? (
-                                    <div className={paperText}>
-                                      {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
-                                      <div className="my-4">
-                                        <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
-                                      </div>
-                                      <p className="text-purple-600 italic text-[10px] mt-4">
-                                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                      </p>
-                                    </div>
-                                ) : (
-                                    <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
-                                )}
-                            </div>
-                        ) : (
-                            <div>{s.node}</div>
-                        )}
-                    </div>
-                ))}
+                <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                    {sections.map((s, i) => (
+                        <div
+                            key={`m-${s.key}`}
+                            ref={(el) => {
+                                blockRefs.current[i] = el;
+                            }}
+                            className="mb-3"
+                        >
+                            {s.variant === "subtle" && s.text ? (
+                                <div className={subtle}>{s.text}</div>
+                            ) : s.variant === "block" && s.text ? (
+                                <>
+                                    <div className={blockTitle}>{s.title}</div>
+                                    {s.key.startsWith('act-') ? (
+                                        <ActivityBody 
+                                            activityId={s.key.replace('act-', '')} 
+                                            bodyText={s.text} 
+                                            className={paperText}
+                                        />
+                                    ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                    ) : s.key === 'plaats' ? (
+                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                    ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                        <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
+                                    ) : s.key === 'pow' ? (
+                                        <div className={paperText}>
+                                          {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                          <div className="my-4">
+                                            <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                          </div>
+                                          <p className="text-purple-600 italic text-[10px] mt-4">
+                                            * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                          </p>
+                                        </div>
+                                    ) : (
+                                        <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
+                                    )}
+                                </>
+                            ) : (
+                                <div>{s.node}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
 
     useLayoutEffect(() => {
-        // Use requestAnimationFrame to ensure DOM is fully laid out before measuring
+        // Wait for all images to load before measuring
         const measureAndPaginate = () => {
-            const headerH = headerRef.current?.offsetHeight ?? 0;
-            const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-
-            const usable = CONTENT_H - headerH;
-            const SAFETY_MARGIN = 40; // Increased safety margin to prevent overflow
-            const maxUsable = usable - SAFETY_MARGIN;
-            
-            const out: number[][] = [];
-            let cur: number[] = [];
-            let used = 0;
-
-            heights.forEach((h, idx) => {
-                // If a single block is taller than the usable space, it needs its own page
-                if (h > maxUsable) {
-                    // Finalize current page if it has content
-                    if (cur.length) {
-                        out.push(cur);
-                        cur = [];
-                        used = 0;
-                    }
-                    // Place oversized block on its own page
-                    out.push([idx]);
-                    used = 0;
-                } else {
-                    const add = (cur.length ? BLOCK_SPACING : 0) + h;
-                    // Use >= instead of > to be more conservative - if it would equal or exceed, start new page
-                    if (used + add >= maxUsable) {
-                        // Start new page
-                        if (cur.length) out.push(cur);
-                        cur = [idx];
-                        used = h;
-                    } else {
-                        // Add to current page
-                        used += add;
-                        cur.push(idx);
-                    }
-                }
+            // Check if all images are loaded
+            const images = document.querySelectorAll('img');
+            const imagePromises = Array.from(images).map((img) => {
+                if (img.complete) return Promise.resolve();
+                return new Promise<void>((resolve) => {
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve(); // Continue even if image fails
+                });
             });
 
-            if (cur.length) out.push(cur);
-            setPages(out);
+            Promise.all(imagePromises).then(() => {
+                // Small delay to ensure layout is stable
+                requestAnimationFrame(() => {
+                    const headerH = headerRef.current?.offsetHeight ?? 0;
+                    const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+
+                    const usable = CONTENT_H - headerH;
+                    const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
+                    const maxUsable = usable - SAFETY_MARGIN;
+                    
+                    const out: number[][] = [];
+                    let cur: number[] = [];
+                    let used = 0;
+
+                    heights.forEach((h, idx) => {
+                        // If a single block is taller than the usable space, it needs its own page
+                        if (h > maxUsable) {
+                            // Finalize current page if it has content
+                            if (cur.length) {
+                                out.push(cur);
+                                cur = [];
+                                used = 0;
+                            }
+                            // Place oversized block on its own page
+                            out.push([idx]);
+                            used = 0;
+                        } else {
+                            const add = (cur.length ? BLOCK_SPACING : 0) + h;
+                            // Be very conservative - if adding would get close to limit, start new page
+                            if (used + add >= maxUsable) {
+                                // Start new page
+                                if (cur.length) out.push(cur);
+                                cur = [idx];
+                                used = h;
+                            } else {
+                                // Add to current page
+                                used += add;
+                                cur.push(idx);
+                            }
+                        }
+                    });
+
+                    if (cur.length) out.push(cur);
+                    setPages(out);
+                });
+            });
         };
 
-        // Delay measurement to ensure DOM is fully rendered
-        const timeoutId = setTimeout(() => {
-            requestAnimationFrame(measureAndPaginate);
-        }, 0);
-
+        // Increased delay to ensure everything is rendered
+        const timeoutId = setTimeout(measureAndPaginate, 100);
         return () => clearTimeout(timeoutId);
     }, [
         sections.length,
