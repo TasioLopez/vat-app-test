@@ -1401,9 +1401,10 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
         <>
             <MeasureTree />
             {pages.map((idxs, p) => (
-                <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H }}>
+                <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <PageHeader />
-                    {idxs.map(i => {
+                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        {idxs.map(i => {
                         const s = sections[i];
                         if (!s) return null; // Safety check for undefined sections
                         return (
@@ -1447,6 +1448,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                             </div>
                         );
                     })}
+                    </div>
                 </div>
             ))}
         </>

@@ -427,7 +427,7 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
       <MeasureTree />
       {pages.map((idxs, p) => (
         <section key={`p-${p}`} className="print-page">
-          <div className={page} style={{ width: PAGE_W, height: PAGE_H }}>
+          <div className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             {p === 0 ? (
               <>
                 <LogoBar />
@@ -438,8 +438,8 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
                 <LogoBar />
               </>
             )}
-
-            {idxs.map((i) => {
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {idxs.map((i) => {
               const b = blocks.filter((x) => !x.key.startsWith("__header"))[i];
               return (
                 <div key={b.key} className="mb-3">
@@ -454,6 +454,7 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
                 </div>
               );
             })}
+            </div>
           </div>
         </section>
       ))}

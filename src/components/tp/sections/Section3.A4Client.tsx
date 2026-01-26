@@ -589,9 +589,10 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
 
             {pages.map((idxs, p) => (
                 <section key={`p-${p}`} className="print-page">
-                    <div className={page} style={{ width: PAGE_W, height: PAGE_H }}>
+                    <div className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                         <LogoBar />
-                        {idxs.map((i) => {
+                        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            {idxs.map((i) => {
                             const s = sections[i];
                             return (
                                 <div key={s.key} className="mb-3">
@@ -632,6 +633,7 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
                                 </div>
                             );
                         })}
+                        </div>
                     </div>
                 </section>
             ))}
