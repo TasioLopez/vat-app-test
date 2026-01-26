@@ -31,7 +31,7 @@ type Row = { label: React.ReactNode; value: React.ReactNode };
 function Table({ rows }: { rows: Row[] }) {
   return (
     <table className="w-full border-collapse">
-      <tbody>
+      <tbody className="bg-[#e7e6e6]">
         {rows.map((r, i) => (
           <tr key={i}>
             <td className={tdLabel}>{r.label}</td>
