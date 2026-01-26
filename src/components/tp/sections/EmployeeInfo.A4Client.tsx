@@ -382,22 +382,40 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
 
     const limitFirst = CONTENT_H - firstH;
     const limitRest = CONTENT_H - restH;
+    const SAFETY_MARGIN = 20; // Add safety margin to prevent overflow
+    const maxLimitFirst = limitFirst - SAFETY_MARGIN;
+    const maxLimitRest = limitRest - SAFETY_MARGIN;
 
     const out: number[][] = [];
     let cur: number[] = [];
     let used = 0;
-    let limit = limitFirst;
+    let limit = maxLimitFirst;
 
     heights.forEach((h, idx) => {
-      const add = (cur.length ? BLOCK_SPACING : 0) + h;
-      if (used + add > limit) {
-        if (cur.length) out.push(cur);
-        cur = [idx];
-        used = h;
-        limit = limitRest;
+      // If a single block is taller than the current limit, it needs its own page
+      const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
+      if (h > currentMaxLimit) {
+        // Finalize current page if it has content
+        if (cur.length) {
+          out.push(cur);
+          cur = [];
+          used = 0;
+        }
+        // Place oversized block on its own page
+        out.push([idx]);
+        used = 0;
+        limit = maxLimitRest; // Next pages use rest header
       } else {
-        used += add;
-        cur.push(idx);
+        const add = (cur.length ? BLOCK_SPACING : 0) + h;
+        if (used + add > limit) {
+          if (cur.length) out.push(cur);
+          cur = [idx];
+          used = h;
+          limit = maxLimitRest;
+        } else {
+          used += add;
+          cur.push(idx);
+        }
       }
     });
     if (cur.length) out.push(cur);

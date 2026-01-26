@@ -542,19 +542,37 @@ function PaginatedA4({ sections }: { sections: PreviewItem[] }) {
         const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
         const usable = CONTENT_H - headerH;
+        const SAFETY_MARGIN = 20; // Add safety margin to prevent overflow
+        const maxUsable = usable - SAFETY_MARGIN;
+        
         const out: number[][] = [];
         let cur: number[] = [];
         let used = 0;
 
         heights.forEach((h, idx) => {
-            const add = (cur.length ? BLOCK_SPACING : 0) + h;
-            if (used + add > usable) {
-                if (cur.length) out.push(cur);
-                cur = [idx];
-                used = h;
+            // If a single block is taller than the usable space, it needs its own page
+            if (h > maxUsable) {
+                // Finalize current page if it has content
+                if (cur.length) {
+                    out.push(cur);
+                    cur = [];
+                    used = 0;
+                }
+                // Place oversized block on its own page
+                out.push([idx]);
+                used = 0;
             } else {
-                used += add;
-                cur.push(idx);
+                const add = (cur.length ? BLOCK_SPACING : 0) + h;
+                if (used + add > maxUsable) {
+                    // Start new page
+                    if (cur.length) out.push(cur);
+                    cur = [idx];
+                    used = h;
+                } else {
+                    // Add to current page
+                    used += add;
+                    cur.push(idx);
+                }
             }
         });
 
