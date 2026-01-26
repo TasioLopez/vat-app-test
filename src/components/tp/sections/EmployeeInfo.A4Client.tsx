@@ -427,7 +427,7 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
       <MeasureTree />
       {pages.map((idxs, p) => (
         <section key={`p-${p}`} className="print-page">
-          <div className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
             {p === 0 ? (
               <>
                 <LogoBar />

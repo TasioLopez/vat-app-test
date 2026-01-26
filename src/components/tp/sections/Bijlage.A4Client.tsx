@@ -223,7 +223,7 @@ function PaginatedA4({
       <MeasureTree />
       {pages.map((idxs, p) => (
         <section key={`p-${p}`} className="print-page">
-          <div className={page} style={{ width: PAGE_W, height: PAGE_H, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
             <PageHeader headingText={p === 0 ? headingFirst : headingRest} showTitle={p === 0 && !!headingFirst} />
             <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
               {idxs.map((i) => {
