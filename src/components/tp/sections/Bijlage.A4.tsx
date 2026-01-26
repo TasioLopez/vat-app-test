@@ -41,7 +41,7 @@ export default function BijlageA4({ data }: { data: TPData }) {
 
   return (
     <section className="print-page">
-      <div className={page}>
+      <div className={page} style={{ display: 'flex', flexDirection: 'column' }}>
         <LogoBar />
         <h1 className={heading}>Bijlage – Voortgang en planning</h1>
 
@@ -106,6 +106,20 @@ export default function BijlageA4({ data }: { data: TPData }) {
         <div className={`${avoidBreak} ${subtle}`}>
           *Het solliciteren geschiedt conform planning, aanvang sollicitatiefase
           wordt vervroegd indien werknemer daar eerder klaar voor is.
+        </div>
+
+        {/* Footer for subsequent pages - positioned at bottom */}
+        <div 
+          className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+          style={{ 
+            marginTop: 'auto',
+            paddingTop: '16px',
+            pageBreakInside: 'avoid',
+          }}
+        >
+          <div>{data.last_name && data.first_name ? `Naam: ${data.last_name} (${data.first_name})` : data.last_name ? `Naam: ${data.last_name}` : ""}</div>
+          <div className="text-center flex-1"></div>
+          <div>{data.date_of_birth ? formatDutchDate(data.date_of_birth) : ""}</div>
         </div>
       </div>
     </section>

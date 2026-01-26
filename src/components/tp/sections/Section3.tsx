@@ -1311,7 +1311,46 @@ function SectionHeader({
     );
 }
 
+// Helper to format Dutch date
+function formatDutchDate(dateStr?: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// Page footer component
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth, 
+  pageNumber 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+  pageNumber: number;
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+
+  return (
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+      <div>{nameText}</div>
+      <div className="text-center flex-1">{pageNumber}</div>
+      <div>{birthText}</div>
+    </div>
+  );
+}
+
 function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }) {
+    const { tpData } = useTP();
     const PAGE_W = 794;
     const PAGE_H = 1123;
     const PAD = 40;
@@ -1447,57 +1486,70 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
     return (
         <>
             <MeasureTree />
-            {pages.map((idxs, p) => (
-                <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
-                    <PageHeader />
-                    <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
-                        {idxs.map(i => {
-                        const s = sections[i];
-                        if (!s) return null; // Safety check for undefined sections
-                        return (
-                            <div key={s.key} className="mb-3">
-                                {s.variant === "subtle" && s.text ? (
-                                    <div className={subtle}>{renderFormattedText(s.text)}</div>
-                                ) : s.variant === "block" && s.text ? (
-                                    <>
-                                        <div className={blockTitle}>{s.title}</div>
-                                        <div className={paperText}>
-                                            {s.key.startsWith('act-') ? (
-                                                <ActivityBody 
-                                                    activityId={s.key.replace('act-', '')} 
-                                                    bodyText={s.text} 
-                                                    className=""
-                                                />
-                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                                renderTextWithLogoBullets(s.text, false)
-                                            ) : s.key === 'plaats' ? (
-                                                renderTextWithLogoBullets(s.text, true)
-                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                <span className="text-purple-600 italic">{s.text}</span>
-                                            ) : s.key === 'pow' ? (
-                                                <div>
-                                                  {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
-                                                  <div className="my-4">
-                                                    <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
-                                                  </div>
-                                                  <p className="text-purple-600 italic text-[10px] mt-4">
-                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                                  </p>
-                                                </div>
-                                            ) : (
-                                                renderFormattedText(s.text)
-                                            )}
-                                        </div>
-                                    </>
-                                ) : (
-                                    s.node
-                                )}
-                            </div>
-                        );
-                    })}
+            {pages.map((idxs, p) => {
+                const isFirstPage = p === 0;
+                const pageNumber = p + 1;
+                
+                return (
+                    <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+                        <PageHeader />
+                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                            {idxs.map(i => {
+                            const s = sections[i];
+                            if (!s) return null; // Safety check for undefined sections
+                            return (
+                                <div key={s.key} className="mb-3">
+                                    {s.variant === "subtle" && s.text ? (
+                                        <div className={subtle}>{renderFormattedText(s.text)}</div>
+                                    ) : s.variant === "block" && s.text ? (
+                                        <>
+                                            <div className={blockTitle}>{s.title}</div>
+                                            <div className={paperText}>
+                                                {s.key.startsWith('act-') ? (
+                                                    <ActivityBody 
+                                                        activityId={s.key.replace('act-', '')} 
+                                                        bodyText={s.text} 
+                                                        className=""
+                                                    />
+                                                ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                    renderTextWithLogoBullets(s.text, false)
+                                                ) : s.key === 'plaats' ? (
+                                                    renderTextWithLogoBullets(s.text, true)
+                                                ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                    <span className="text-purple-600 italic">{s.text}</span>
+                                                ) : s.key === 'pow' ? (
+                                                    <div>
+                                                      {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                                      <div className="my-4">
+                                                        <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                                      </div>
+                                                      <p className="text-purple-600 italic text-[10px] mt-4">
+                                                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                      </p>
+                                                    </div>
+                                                ) : (
+                                                    renderFormattedText(s.text)
+                                                )}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        s.node
+                                    )}
+                                </div>
+                            );
+                        })}
+                        </div>
+                        {!isFirstPage && (
+                            <PageFooter
+                                lastName={tpData.last_name}
+                                firstName={tpData.first_name}
+                                dateOfBirth={tpData.date_of_birth}
+                                pageNumber={pageNumber}
+                            />
+                        )}
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </>
     );
 }

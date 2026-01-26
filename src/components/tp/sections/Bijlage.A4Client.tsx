@@ -15,6 +15,44 @@ const blockTitle = "font-bold text-[#660066] px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
 const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
+// Helper to format Dutch date
+function formatDutchDate(dateStr?: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// Page footer component
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth, 
+  pageNumber 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+  pageNumber: number;
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+
+  return (
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+      <div>{nameText}</div>
+      <div className="text-center flex-1">{pageNumber}</div>
+      <div>{birthText}</div>
+    </div>
+  );
+}
+
 type Aktiviteit = { name: string; status: string };
 type Periode = { from?: string; to?: string };
 type Fase = { title?: string; periode?: Periode; activiteiten: Aktiviteit[] };
@@ -106,6 +144,7 @@ export default function BijlageA4Client({ employeeId }: { employeeId: string }) 
       sections={sections}
       headingFirst="Bijlage – Voortgang en planning"
       headingRest=""
+      tpData={tpData}
     />
   );
 }
@@ -116,10 +155,12 @@ function PaginatedA4({
   sections,
   headingFirst,
   headingRest,
+  tpData,
 }: {
   sections: PreviewItem[];
   headingFirst: string;
   headingRest: string;
+  tpData: any;
 }) {
   const PAGE_W = 794;
   const PAGE_H = 1123;
@@ -246,30 +287,43 @@ function PaginatedA4({
   return (
     <>
       <MeasureTree />
-      {pages.map((idxs, p) => (
-        <section key={`p-${p}`} className="print-page">
-          <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
-            <PageHeader headingText={p === 0 ? headingFirst : headingRest} showTitle={p === 0 && !!headingFirst} />
-            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
-              {idxs.map((i) => {
-              const s = sections[i];
-              return (
-                <div key={s.key} className="mb-3">
-                  {s.variant === "subtle" ? (
-                    <div className={subtle}>{s.node}</div>
-                  ) : (
-                    <>
-                      <div className={blockTitle}>{s.title}</div>
-                      <div className={paperText}>{s.node}</div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+      {pages.map((idxs, p) => {
+        const isFirstPage = p === 0;
+        const pageNumber = p + 1;
+        
+        return (
+          <section key={`p-${p}`} className="print-page">
+            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+              <PageHeader headingText={isFirstPage ? headingFirst : headingRest} showTitle={isFirstPage && !!headingFirst} />
+              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                {idxs.map((i) => {
+                const s = sections[i];
+                return (
+                  <div key={s.key} className="mb-3">
+                    {s.variant === "subtle" ? (
+                      <div className={subtle}>{s.node}</div>
+                    ) : (
+                      <>
+                        <div className={blockTitle}>{s.title}</div>
+                        <div className={paperText}>{s.node}</div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              </div>
+              {!isFirstPage && (
+                <PageFooter
+                  lastName={tpData.last_name}
+                  firstName={tpData.first_name}
+                  dateOfBirth={tpData.date_of_birth}
+                  pageNumber={pageNumber}
+                />
+              )}
             </div>
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
     </>
   );
 }

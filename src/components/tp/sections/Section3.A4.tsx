@@ -17,6 +17,50 @@ const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed itali
 // keep blocks together across page breaks
 const avoidBreak = "mb-3 [break-inside:avoid] print:[break-inside:avoid]";
 
+// Helper to format Dutch date
+function formatDutchDate(dateStr?: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// Page footer component (for CSS pagination, this will be positioned at bottom)
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+
+  return (
+    <div 
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 print:fixed print:bottom-0 print:left-0 print:right-0 print:px-10 print:pb-4"
+      style={{
+        // Hide on first page using CSS
+        pageBreakInside: 'avoid',
+      }}
+    >
+      <div>{nameText}</div>
+      <div className="text-center flex-1 print:counter-increment page">{
+        // Page number will be handled by CSS counter
+      }</div>
+      <div>{birthText}</div>
+    </div>
+  );
+}
+
 /* ------------ helpers ------------ */
 const safe = (v: string | null | undefined, fallback = "—") => v ?? fallback;
 const toStringArray = (v: unknown): string[] =>
@@ -455,11 +499,66 @@ export default function Section3A4({ data }: { data: TPData }) {
   ];
 
   // CSS page-breaks handle splitting; avoidBreak keeps each title with its text.
+  // For server-side, we add footer after first block to appear on subsequent pages
+  const firstBlock = blocks[0];
+  const restBlocks = blocks.slice(1);
+  
   return (
     <section className="print-page">
-      <div className={page}>
+      <div className={page} style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
         <LogoBar />
-        {blocks.map((b) => {
+        {firstBlock && (
+          <>
+            {("custom" in firstBlock) ? (
+              firstBlock.custom === "agreement" ? (
+                <AgreementBlock key={firstBlock.key} />
+              ) : (
+                <SignatureBlock
+                  key={firstBlock.key}
+                  employeeName={employeeName}
+                  advisorName={advisorName}
+                  employerContact={employerContact}
+                />
+              )
+            ) : (
+              <div key={firstBlock.key} className={avoidBreak}>
+                {firstBlock.variant === "subtle" ? (
+                  <div className={subtle}>{firstBlock.text}</div>
+                ) : (
+                  <>
+                    <div className={blockTitle}>{firstBlock.title}</div>
+                    {firstBlock.key.startsWith('act-') ? (
+                      <ActivityBody 
+                        activityId={firstBlock.key.replace('act-', '')} 
+                        bodyText={firstBlock.text} 
+                        className={paperText}
+                      />
+                    ) : firstBlock.key === 'vlb' || firstBlock.key === 'wk' ? (
+                      <div className={paperText}>{renderTextWithLogoBullets(firstBlock.text, false)}</div>
+                    ) : firstBlock.key === 'plaats' ? (
+                      <div className={paperText}>{renderTextWithLogoBullets(firstBlock.text, true)}</div>
+                    ) : firstBlock.key === 'ad' && firstBlock.text.startsWith('N.B.') ? (
+                      <div className={`${paperText} text-purple-600 italic`}>{firstBlock.text}</div>
+                    ) : firstBlock.key === 'pow' ? (
+                      <div className={paperText}>
+                        {firstBlock.text && firstBlock.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(firstBlock.text)}</p>}
+                        <div className="my-4">
+                          <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                        </div>
+                        <p className="text-purple-600 italic text-[10px] mt-4">
+                          * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className={paperText}>{formatTextWithParagraphs(firstBlock.text)}</div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+        {restBlocks.map((b) => {
           if ("custom" in b) {
             return b.custom === "agreement" ? (
               <AgreementBlock key={b.key} />
@@ -509,6 +608,19 @@ export default function Section3A4({ data }: { data: TPData }) {
             </div>
           );
         })}
+        {/* Footer for subsequent pages - positioned at bottom */}
+        <div 
+          className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+          style={{ 
+            marginTop: 'auto',
+            paddingTop: '16px',
+            pageBreakInside: 'avoid',
+          }}
+        >
+          <div>{data.last_name && data.first_name ? `Naam: ${data.last_name} (${data.first_name})` : data.last_name ? `Naam: ${data.last_name}` : ""}</div>
+          <div className="text-center flex-1"></div>
+          <div>{data.date_of_birth ? formatDutchDate(data.date_of_birth) : ""}</div>
+        </div>
       </div>
     </section>
   );

@@ -20,6 +20,44 @@ import { useTP } from "@/context/TPContext";
 
 const STATUS_OPTIONS = ["G", "P", "N"] as const;
 
+// Helper to format Dutch date
+function formatDutchDate(dateStr?: string) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// Page footer component
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth, 
+  pageNumber 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+  pageNumber: number;
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+
+  return (
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+      <div>{nameText}</div>
+      <div className="text-center flex-1">{pageNumber}</div>
+      <div>{birthText}</div>
+    </div>
+  );
+}
+
 const ACTIVITIES = [
   "Verwerking verlies en acceptatie",
   "Empowerment",
@@ -680,18 +718,22 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                     position: "absolute",
                     left: 0,
                     top: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   {/* header */}
                   <div className="w-full flex justify-end mb-3">
                     <Image src={Logo2} alt="Valentinez Logo" width={180} height={90} />
                   </div>
-                  <h1 className="text-center font-semibold text-[22px] mb-8">
-                    Bijlage – Voortgang en planning
-                  </h1>
+                  {pi === 0 && (
+                    <h1 className="text-center font-semibold text-[22px] mb-8">
+                      Bijlage – Voortgang en planning
+                    </h1>
+                  )}
 
                   {/* page content */}
-                  <div className="text-[18px] leading-tight">
+                  <div className="text-[18px] leading-tight" style={{ flex: 1 }}>
                     {page.sections.map((fase, i) => (
                       <div key={`${pi}-${i}`} className="mb-4">
                         <div className="font-bold py-[2px] px-2 flex justify-between text-[18px] text-[#660066]">
@@ -729,6 +771,14 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                       </>
                     )}
                   </div>
+                  {pi > 0 && (
+                    <PageFooter
+                      lastName={tpData.last_name}
+                      firstName={tpData.first_name}
+                      dateOfBirth={tpData.date_of_birth}
+                      pageNumber={pi + 1}
+                    />
+                  )}
                 </div>
               </div>
             );

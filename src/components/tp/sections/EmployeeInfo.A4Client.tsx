@@ -65,6 +65,34 @@ const LogoBar = React.forwardRef<HTMLDivElement>((_props, ref) => (
 ));
 LogoBar.displayName = "LogoBar";
 
+// Page footer component
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth, 
+  pageNumber 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+  pageNumber: number;
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+
+  return (
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+      <div>{nameText}</div>
+      <div className="text-center flex-1">{pageNumber}</div>
+      <div>{birthText}</div>
+    </div>
+  );
+}
+
 export default function EmployeeInfoA4Client({ employeeId }: { employeeId: string }) {
   const { tpData } = useTP();
 
@@ -316,12 +344,12 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
     tpData.tp_end_date,
   ]);
 
-  return <PaginatedA4 blocks={blocks} />;
+  return <PaginatedA4 blocks={blocks} tpData={tpData} />;
 }
 
 /* ---------- measurement-based pagination ---------- */
 
-function PaginatedA4({ blocks }: { blocks: Block[] }) {
+function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
   const PAGE_W = 794;
   const PAGE_H = 1123;
   const PAD = 40;
@@ -450,39 +478,52 @@ function PaginatedA4({ blocks }: { blocks: Block[] }) {
   return (
     <>
       <MeasureTree />
-      {pages.map((idxs, p) => (
-        <section key={`p-${p}`} className="print-page">
-          <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
-            {p === 0 ? (
-              <>
-                <LogoBar />
-                <h1 className={heading}>Trajectplan re-integratie tweede spoor</h1>
-              </>
-            ) : (
-              <>
-                <LogoBar />
-              </>
-            )}
-            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
-              {idxs.map((i) => {
-              const b = blocks.filter((x) => !x.key.startsWith("__header"))[i];
-              return (
-                <div key={b.key} className="mb-3">
-                  {b.variant === "subtle" ? (
-                    <div className={subtle}>{(b as any).node}</div>
-                  ) : (
-                    <>
-                      {("title" in b && b.title) ? <div className={blockTitle}>{(b as any).title}</div> : null}
-                      <div className={paperText}>{(b as any).node}</div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+      {pages.map((idxs, p) => {
+        const isFirstPage = p === 0;
+        const pageNumber = p + 1;
+        
+        return (
+          <section key={`p-${p}`} className="print-page">
+            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+              {isFirstPage ? (
+                <>
+                  <LogoBar />
+                  <h1 className={heading}>Trajectplan re-integratie tweede spoor</h1>
+                </>
+              ) : (
+                <>
+                  <LogoBar />
+                </>
+              )}
+              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                {idxs.map((i) => {
+                const b = blocks.filter((x) => !x.key.startsWith("__header"))[i];
+                return (
+                  <div key={b.key} className="mb-3">
+                    {b.variant === "subtle" ? (
+                      <div className={subtle}>{(b as any).node}</div>
+                    ) : (
+                      <>
+                        {("title" in b && b.title) ? <div className={blockTitle}>{(b as any).title}</div> : null}
+                        <div className={paperText}>{(b as any).node}</div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              </div>
+              {!isFirstPage && (
+                <PageFooter
+                  lastName={tpData.last_name}
+                  firstName={tpData.first_name}
+                  dateOfBirth={tpData.date_of_birth}
+                  pageNumber={pageNumber}
+                />
+              )}
             </div>
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
     </>
   );
 }

@@ -277,8 +277,21 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
       {/* We render a continuous flow across pages. DO NOT wrap this component
           with an extra .print-page in the registry. */}
       <section className="print-page">
-        <div className={page}>
+        <div className={page} style={{ display: 'flex', flexDirection: 'column' }}>
           {blocks}
+          {/* Footer for subsequent pages - positioned at bottom */}
+          <div 
+            className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+            style={{ 
+              marginTop: 'auto',
+              paddingTop: '16px',
+              pageBreakInside: 'avoid',
+            }}
+          >
+            <div>{data.last_name && data.first_name ? `Naam: ${data.last_name} (${data.first_name})` : data.last_name ? `Naam: ${data.last_name}` : ""}</div>
+            <div className="text-center flex-1"></div>
+            <div>{data.date_of_birth ? formatDutchDate(data.date_of_birth) : ""}</div>
+          </div>
         </div>
       </section>
     </>
