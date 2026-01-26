@@ -198,11 +198,11 @@ export function formatComputerSkills(
   
   const level = String(skillLevel);
   const skillMap: Record<string, string> = {
-    '1': '1 - Geen',
-    '2': '2 - Basis (e-mail, browsen)',
-    '3': '3 - Gemiddeld (Word, Excel)',
-    '4': '4 - Geavanceerd (meerdere programma\'s)',
-    '5': '5 - Expert (IT-gerelateerde vaardigheden)'
+    '1': 'Geen',
+    '2': 'Basis (e-mail, browsen)',
+    '3': 'Gemiddeld (Word, Excel)',
+    '4': 'Geavanceerd (meerdere programma\'s)',
+    '5': 'Expert (IT-gerelateerde vaardigheden)'
   };
 
   return skillMap[level] || level;
