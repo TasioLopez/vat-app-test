@@ -704,33 +704,26 @@ function mapAndValidateData(extractedData: any): any {
             return;
           }
           
-    // Special handling for contract_hours - convert to number
-<<<<<<< HEAD
-          if (mappedKey === 'contract_hours') {
-            if (typeof value === 'string') {
-              const numValue = parseFloat(value);
-=======
-    // Handle European decimal format (15,5 → 15.5)
+          // Handle European decimal format (15,5 → 15.5)
           if (mappedKey === 'contract_hours') {
             if (typeof value === 'string') {
               // Replace comma with dot for European decimal format
               const normalizedValue = value.replace(',', '.');
               const numValue = parseFloat(normalizedValue);
->>>>>>> ab05792f96971edddcba5331999b0afa973c8848
               if (!isNaN(numValue)) {
-          mappedData[mappedKey] = numValue;
+                mappedData[mappedKey] = numValue;
                 console.log(`✅ Converted contract_hours from "${value}" to ${mappedData[mappedKey]}`);
               } else {
                 console.log(`⚠️ Skipping invalid contract_hours value: "${value}"`);
                 return;
               }
             } else if (typeof value === 'number') {
-        mappedData[mappedKey] = value;
+              mappedData[mappedKey] = value;
             } else {
               console.log(`⚠️ Skipping non-numeric contract_hours value: ${value}`);
               return;
             }
-    } 
+          } 
     // Special handling for transport_type - ensure it's an array
     else if (mappedKey === 'transport_type') {
       if (Array.isArray(value)) {
