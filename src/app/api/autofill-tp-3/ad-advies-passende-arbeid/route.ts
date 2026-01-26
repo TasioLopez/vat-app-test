@@ -34,11 +34,12 @@ async function listEmployeeDocumentPaths(employeeId: string): Promise<string[]> 
     .order("uploaded_at", { ascending: false });
   if (!docs?.length) return [];
   
-  // Filter for AD rapport, FML, IZP only
-  const allowedTypes = ['ad_rapport', 'fml', 'izp'];
+  // Filter for AD rapport, FML, IZP only - use the actual stored type names
+  const allowedTypes = ['ad_rapportage', 'fml_izp'];
   const paths: string[] = [];
   for (const d of docs) {
-    if (allowedTypes.includes(d.type as string)) {
+    const docType = (d.type as string)?.toLowerCase();
+    if (allowedTypes.includes(docType)) {
       const path = extractStoragePath(d.url as string);
       if (path) paths.push(path);
     }
