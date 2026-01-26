@@ -858,23 +858,8 @@ Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw"}`
       ...tableData  // Mammoth-extracted table fields override
     };
     
-<<<<<<< HEAD
-    if (response.type === 'text') {
-      console.log('📄 Raw intake form response (first 500 chars):', response.text.value.substring(0, 500));
-      const extractedData = parseAssistantResponse(response.text.value);
-      const mappedData = mapAndValidateData(extractedData);
-        
-        // Cleanup
-        await openai.beta.assistants.delete(assistant.id);
-      await openai.files.delete(uploadedFile.id);
-      
-      console.log(`✅ Intake form processing completed:`, Object.keys(mappedData).length, 'fields');
-      return mappedData;
-    }
-=======
     console.log('✅ Intake form processing completed with merged data:', Object.keys(mergedData).length, 'fields');
     console.log('📊 Final merged data:', JSON.stringify(mergedData, null, 2));
->>>>>>> ab05792f96971edddcba5331999b0afa973c8848
     
     return mergedData;
     
