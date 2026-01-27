@@ -1,49 +1,78 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
 import { makePreviewNodes } from "@/components/tp/sections/registry";
 import { formatEmployeeName } from "@/lib/utils";
 
 export default function TPPreview({ employeeId }: { employeeId: string }) {
-  const { tpData, updateField } = useTP();
+  const { tpData, updateField, setTPData } = useTP();
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const nodes = makePreviewNodes(employeeId);
 
   // Load TP data if not already loaded (e.g., when navigating directly to review page)
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadTPData() {
-      // Only load if context is empty or missing essential fields
-      if (Object.keys(tpData).length === 0 || !tpData.first_name) {
+      // Check if we need to load data - check for essential fields
+      const needsData = Object.keys(tpData).length === 0 || !tpData.first_name || !tpData.last_name;
+      
+      if (needsData) {
+        console.log('📥 TPPreview: Loading TP data...');
         try {
-          const { data: employee } = await supabase
-            .from('employees')
-            .select('email, first_name, last_name, client_id')
-            .eq('id', employeeId)
-            .single();
+          const [employeeResult, detailsResult, metaResult] = await Promise.all([
+            supabase
+              .from('employees')
+              .select('email, first_name, last_name, client_id')
+              .eq('id', employeeId)
+              .single(),
+            supabase
+              .from('employee_details')
+              .select('*')
+              .eq('employee_id', employeeId)
+              .single(),
+            supabase
+              .from('tp_meta')
+              .select('*')
+              .eq('employee_id', employeeId)
+              .single()
+          ]);
 
-          const { data: details } = await supabase
-            .from('employee_details')
-            .select('*')
-            .eq('employee_id', employeeId)
-            .single();
+          if (!isMounted) return;
 
-          const { data: meta } = await supabase
-            .from('tp_meta')
-            .select('*')
-            .eq('employee_id', employeeId)
-            .single();
+          const { data: employee } = employeeResult;
+          const { data: details } = detailsResult;
+          const { data: meta } = metaResult;
+
+          if (!isMounted) return;
+
+          // Build merged data object
+          const mergedData: any = { ...tpData };
 
           if (employee) {
-            Object.entries(employee).forEach(([key, value]) => updateField(key, value));
+            Object.entries(employee).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                mergedData[key] = value;
+              }
+            });
           }
 
           if (details) {
-            Object.entries(details).forEach(([key, value]) => updateField(key, value));
+            Object.entries(details).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                mergedData[key] = value;
+              }
+            });
           }
 
           if (meta) {
-            Object.entries(meta).forEach(([key, value]) => updateField(key, value));
+            Object.entries(meta).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                mergedData[key] = value;
+              }
+            });
           }
 
           // Fetch client info
@@ -54,40 +83,64 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
               .eq('id', employee.client_id)
               .single();
 
-            if (client) {
-              updateField('client_name', client.name);
-              updateField('employer_name', client.name);
+            if (client && isMounted) {
+              if (client.name) {
+                mergedData.client_name = client.name;
+                mergedData.employer_name = client.name;
+              }
               const referentFull = [client.referent_first_name, client.referent_last_name]
                 .filter(Boolean).join(' ').trim();
               if (referentFull) {
-                updateField('client_referent_name', referentFull);
+                mergedData.client_referent_name = referentFull;
               }
               if (client.referent_phone) {
-                updateField('client_referent_phone', client.referent_phone);
+                mergedData.client_referent_phone = client.referent_phone;
               }
               if (client.referent_email) {
-                updateField('client_referent_email', client.referent_email);
+                mergedData.client_referent_email = client.referent_email;
               }
             }
           }
 
           // Format employee name
-          if (employee?.first_name && employee?.last_name && details?.gender) {
+          if (employee?.first_name && employee?.last_name && details?.gender && isMounted) {
             const formattedName = formatEmployeeName(
               employee.first_name,
               employee.last_name,
               details.gender
             );
-            updateField('employee_name', formattedName);
+            mergedData.employee_name = formattedName;
+          }
+
+          // Update all data at once
+          if (isMounted) {
+            setTPData(mergedData);
+          }
+
+          if (isMounted) {
+            console.log('✅ TPPreview: TP data loaded', { 
+              hasEmployee: !!employee, 
+              hasDetails: !!details, 
+              hasMeta: !!meta 
+            });
+            setHasLoadedData(true);
           }
         } catch (err) {
-          console.error('Failed to load TP data in preview:', err);
+          console.error('❌ Failed to load TP data in preview:', err);
         }
+      } else {
+        // Data already exists
+        console.log('✅ TPPreview: TP data already loaded');
+        setHasLoadedData(true);
       }
     }
 
     loadTPData();
-  }, [employeeId, tpData, updateField]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [employeeId, updateField]); // Removed tpData from dependencies to avoid infinite loops
 
   return (
     <div
