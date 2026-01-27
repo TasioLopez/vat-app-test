@@ -179,39 +179,117 @@ export default function RichTextEditor({
       .replace(/\n/g, '<br>');
   };
 
-  // Use a ref to avoid cursor jumping
+  // Use refs to avoid cursor jumping and unnecessary re-renders
   const editorRef = React.useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  const [lastExternalValue, setLastExternalValue] = React.useState(value);
-  const [isUserTyping, setIsUserTyping] = React.useState(false);
+  const lastExternalValueRef = React.useRef(value);
+  const isUserTypingRef = React.useRef(false);
+  const cursorPositionRef = React.useRef<{ start: number; end: number } | null>(null);
+
+  // Save cursor position
+  const saveCursorPosition = () => {
+    if (!editorRef.current) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editorRef.current);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    
+    const start = preCaretRange.toString().length;
+    const end = start + range.toString().length;
+    
+    cursorPositionRef.current = { start, end };
+  };
+
+  // Restore cursor position
+  const restoreCursorPosition = () => {
+    if (!editorRef.current || !cursorPositionRef.current) return;
+    
+    const { start, end } = cursorPositionRef.current;
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let currentPos = 0;
+    let startNode: Node | null = null;
+    let startOffset = 0;
+    let endNode: Node | null = null;
+    let endOffset = 0;
+    
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const nodeLength = node.textContent?.length || 0;
+      
+      if (!startNode && currentPos + nodeLength >= start) {
+        startNode = node;
+        startOffset = start - currentPos;
+      }
+      
+      if (!endNode && currentPos + nodeLength >= end) {
+        endNode = node;
+        endOffset = end - currentPos;
+        break;
+      }
+      
+      currentPos += nodeLength;
+    }
+    
+    if (startNode && endNode) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.setStart(startNode, startOffset);
+      range.setEnd(endNode, endOffset);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
 
   // Initialize content only once
   React.useEffect(() => {
     if (editorRef.current && !isInitialized && value) {
       editorRef.current.innerHTML = markdownToHtml(value);
       setIsInitialized(true);
-      setLastExternalValue(value);
+      lastExternalValueRef.current = value;
     }
   }, [value, isInitialized]);
 
-  // Handle external value changes (from autofill)
+  // Handle external value changes (from autofill) - but NOT from user typing
   React.useEffect(() => {
-    if (editorRef.current && isInitialized && value !== lastExternalValue && !isUserTyping) {
+    if (editorRef.current && isInitialized && value !== lastExternalValueRef.current && !isUserTypingRef.current) {
       // External change detected - update editor content
-      editorRef.current.innerHTML = markdownToHtml(value);
-      setLastExternalValue(value);
+      const currentContent = htmlToMarkdown(editorRef.current.innerHTML);
+      
+      // Only update if the content is actually different (avoid unnecessary updates)
+      if (currentContent !== value) {
+        editorRef.current.innerHTML = markdownToHtml(value);
+        lastExternalValueRef.current = value;
+      }
     }
-  }, [value, lastExternalValue, isInitialized, isUserTyping]);
+  }, [value, isInitialized]);
 
   const handleContentChange = (e: React.FormEvent<HTMLDivElement>) => {
-    setIsUserTyping(true);
+    // Save cursor position before any updates
+    saveCursorPosition();
+    
+    isUserTypingRef.current = true;
     const content = e.currentTarget.innerHTML;
     // Convert HTML back to markdown for storage
     const markdown = htmlToMarkdown(content);
+    
+    // Update lastExternalValueRef to prevent useEffect from triggering
+    lastExternalValueRef.current = markdown;
+    
     onChange(markdown);
     
-    // Reset user typing flag after a short delay
-    setTimeout(() => setIsUserTyping(false), 100);
+    // Restore cursor position after state update
+    setTimeout(() => {
+      restoreCursorPosition();
+      isUserTypingRef.current = false;
+    }, 0);
   };
 
   return (
