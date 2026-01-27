@@ -223,6 +223,9 @@ function PaginatedA4({
   );
 
   useLayoutEffect(() => {
+    // Reset refs array when sections change
+    blockRefs.current = new Array(sections.length).fill(null);
+    
     // Wait for all images to load before measuring
     const measureAndPaginate = () => {
       // Check if all images are loaded
@@ -301,12 +304,7 @@ function PaginatedA4({
     // Increased delay to ensure everything is rendered
     const timeoutId = setTimeout(measureAndPaginate, 100);
     return () => clearTimeout(timeoutId);
-  }, [
-    sections.length,
-    JSON.stringify(
-      sections.map((s) => (s.variant === "subtle" ? ["s", s.key] : ["b", s.key, s.title]))
-    ),
-  ]);
+  }, [sections]);
 
   console.log('📄 BijlageA4Client: Rendering pages', { pagesCount: pages.length, pages });
   

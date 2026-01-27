@@ -427,6 +427,10 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
   );
 
   useLayoutEffect(() => {
+    // Reset refs array when blocks change
+    const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
+    blockRefs.current = new Array(measurables.length).fill(null);
+    
     // Wait for all images to load before measuring
     const measureAndPaginate = () => {
       // Check if all images are loaded
@@ -446,7 +450,6 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
           const restH = headerRestRef.current?.offsetHeight ?? 0;
 
           // measure all blocks (excluding the special header markers)
-          const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
           const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
           const FOOTER_HEIGHT = 50; // Account for footer on non-first pages
@@ -506,7 +509,7 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
     // Increased delay to ensure everything is rendered
     const timeoutId = setTimeout(measureAndPaginate, 100);
     return () => clearTimeout(timeoutId);
-  }, [JSON.stringify(blocks.map((b) => [b.key, "title" in b ? b.title : "", b.variant]))]);
+  }, [blocks]);
 
   console.log('📄 EmployeeInfoA4Client: Rendering pages', { pagesCount: pages.length, pages });
   

@@ -636,6 +636,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
     );
 
     useLayoutEffect(() => {
+        // Reset refs array when sections change
+        blockRefs.current = new Array(sections.length).fill(null);
+        
         // Wait for all images to load before measuring
         const measureAndPaginate = () => {
             // Check if all images are loaded
@@ -716,10 +719,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         // Increased delay to ensure everything is rendered
         const timeoutId = setTimeout(measureAndPaginate, 100);
         return () => clearTimeout(timeoutId);
-    }, [
-        sections.length,
-        JSON.stringify(sections.map((s) => [s.key, s.title ?? "", s.text?.length ?? 0, s.variant])),
-    ]);
+    }, [sections]);
 
     console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages });
     
