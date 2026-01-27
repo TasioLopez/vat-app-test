@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTP } from "@/context/TPContext";
 import { 
   formatEmployeeName,
@@ -90,12 +90,21 @@ function PageFooter({
     ? `Naam: ${lastName}` 
     : "";
   const birthText = formatDutchDate(dateOfBirth);
+  
+  // Debug logging to see what's being passed
+  console.log(`EmployeeInfo Footer page ${pageNumber}:`, { 
+    lastName, 
+    firstName, 
+    dateOfBirth, 
+    birthText,
+    formatted: formatDutchDate(dateOfBirth)
+  });
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" style={{ minHeight: '40px', flexShrink: 0 }}>
       <div>{nameText}</div>
       <div className="text-center flex-1">{pageNumber}</div>
-      <div>{birthText}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right' }}>{birthText || "(geen geboortedatum)"}</div>
     </div>
   );
 }
@@ -368,6 +377,18 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
   const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [pages, setPages] = useState<number[][]>([]);
 
+  // Debug logging to see what tpData contains
+  useEffect(() => {
+    if (pages.length > 0) {
+      console.log("EmployeeInfo tpData for footer:", {
+        last_name: tpData.last_name,
+        first_name: tpData.first_name,
+        date_of_birth: tpData.date_of_birth,
+        pagesCount: pages.length
+      });
+    }
+  }, [pages.length, tpData.last_name, tpData.first_name, tpData.date_of_birth]);
+
   const MeasureTree = () => (
     <div style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} className="invisible">
       {/* first page header */}
@@ -492,7 +513,7 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
         
         return (
           <section key={`p-${p}`} className="print-page">
-            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
               {isFirstPage ? (
                 <>
                   <LogoBar />
@@ -503,7 +524,7 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
                   <LogoBar />
                 </>
               )}
-              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {idxs.map((i) => {
                 const b = blocks.filter((x) => !x.key.startsWith("__header"))[i];
                 return (

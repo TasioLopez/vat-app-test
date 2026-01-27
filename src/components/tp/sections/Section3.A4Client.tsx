@@ -52,18 +52,25 @@ function PageFooter({
     : lastName 
     ? `Naam: ${lastName}` 
     : "";
-  const birthText = formatDutchDate(dateOfBirth);
   
-  // Debug logging (remove in production if needed)
-  if (pageNumber === 2) {
-    console.log("Footer debug:", { lastName, firstName, dateOfBirth, birthText });
-  }
+  // Use the same approach as EmployeeInfo table - format with fallback
+  const birthText = formatDutchDate(dateOfBirth) || "";
+  
+  // Debug logging
+  console.log(`Section3 Footer page ${pageNumber}:`, { 
+    lastName, 
+    firstName, 
+    dateOfBirth, 
+    birthText,
+    rawDate: dateOfBirth,
+    formatted: formatDutchDate(dateOfBirth)
+  });
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" style={{ minHeight: '40px', flexShrink: 0 }}>
       <div>{nameText}</div>
       <div className="text-center flex-1">{pageNumber}</div>
-      <div>{birthText}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right' }}>{birthText || "(geen geboortedatum)"}</div>
     </div>
   );
 }
@@ -701,9 +708,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 
                 return (
                     <section key={`p-${p}`} className="print-page">
-                        <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+                        <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
                             <LogoBar />
-                            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 return (

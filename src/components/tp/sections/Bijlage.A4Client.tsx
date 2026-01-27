@@ -49,13 +49,23 @@ function PageFooter({
     : lastName 
     ? `Naam: ${lastName}` 
     : "";
-  const birthText = formatDutchDate(dateOfBirth);
+  const birthText = formatDutchDate(dateOfBirth) || "";
+  
+  // Debug logging
+  console.log(`Bijlage Footer page ${pageNumber}:`, { 
+    lastName, 
+    firstName, 
+    dateOfBirth, 
+    birthText,
+    rawDate: dateOfBirth,
+    formatted: formatDutchDate(dateOfBirth)
+  });
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" style={{ minHeight: '40px', flexShrink: 0 }}>
       <div>{nameText}</div>
       <div className="text-center flex-1">{pageNumber}</div>
-      <div>{birthText}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right' }}>{birthText || "(geen geboortedatum)"}</div>
     </div>
   );
 }
@@ -301,9 +311,9 @@ function PaginatedA4({
         
         return (
           <section key={`p-${p}`} className="print-page">
-            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
               <PageHeader headingText={isFirstPage ? headingFirst : headingRest} showTitle={isFirstPage && !!headingFirst} />
-              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {idxs.map((i) => {
                 const s = sections[i];
                 return (
