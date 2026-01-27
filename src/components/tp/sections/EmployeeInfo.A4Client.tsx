@@ -91,17 +91,8 @@ function PageFooter({
     : "";
   const birthText = formatDutchDate(dateOfBirth);
   
-  // Debug logging to see what's being passed
-  console.log(`EmployeeInfo Footer page ${pageNumber}:`, { 
-    lastName, 
-    firstName, 
-    dateOfBirth, 
-    birthText,
-    formatted: formatDutchDate(dateOfBirth)
-  });
-
-  // Always log - this should appear in console
-  console.log(`[EmployeeInfo Footer] Page ${pageNumber} - Rendering footer:`, {
+  // DIRECT LOG IN RENDER (like activities length)
+  console.log(`🔍 [EmployeeInfo Footer] Page ${pageNumber} RENDER:`, {
     nameText,
     birthText,
     dateOfBirth,
@@ -525,18 +516,17 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
     return () => clearTimeout(timeoutId);
   }, [JSON.stringify(blocks.map((b) => [b.key, "title" in b ? b.title : "", b.variant]))]);
 
-  // Debug: Log pages and data
-  useEffect(() => {
-    console.log("EmployeeInfo PaginatedA4 - Pages generated:", pages.length, "pages");
-    pages.forEach((pageIdxs, idx) => {
-      console.log(`  Page ${idx + 1}:`, pageIdxs.length, "blocks");
-    });
-    console.log("EmployeeInfo PaginatedA4 - tpData:", {
+  // Debug: Log pages and data - DIRECTLY IN RENDER (like activities length log)
+  console.log("🔍 EmployeeInfo PaginatedA4 RENDER:", {
+    pagesCount: pages.length,
+    pages: pages.map((p, i) => ({ page: i + 1, blocks: p.length })),
+    tpData: {
       last_name: tpData?.last_name,
       first_name: tpData?.first_name,
       date_of_birth: tpData?.date_of_birth,
-    });
-  }, [pages, tpData?.last_name, tpData?.first_name, tpData?.date_of_birth]);
+    },
+    hasTpData: !!tpData
+  });
 
   return (
     <>
@@ -545,10 +535,11 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
         const isFirstPage = p === 0;
         const pageNumber = p + 1;
         
-        // Debug each page render
-        if (typeof window !== 'undefined') {
-          console.log(`EmployeeInfo: Rendering page ${pageNumber}, isFirstPage: ${isFirstPage}, blocks: ${idxs.length}`);
-        }
+        console.log(`🔍 EmployeeInfo PAGE ${pageNumber}:`, {
+          isFirstPage,
+          blocks: idxs.length,
+          willRenderFooter: !isFirstPage
+        });
         
         return (
           <section key={`p-${p}`} className="print-page">
@@ -581,12 +572,19 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
               })}
               </div>
               {!isFirstPage && (
-                <PageFooter
-                  lastName={tpData.last_name}
-                  firstName={tpData.first_name}
-                  dateOfBirth={tpData.date_of_birth}
-                  pageNumber={pageNumber}
-                />
+                <>
+                  {console.log(`🔍 EmployeeInfo FOOTER RENDER page ${pageNumber}:`, {
+                    lastName: tpData?.last_name,
+                    firstName: tpData?.first_name,
+                    dateOfBirth: tpData?.date_of_birth
+                  })}
+                  <PageFooter
+                    lastName={tpData?.last_name}
+                    firstName={tpData?.first_name}
+                    dateOfBirth={tpData?.date_of_birth}
+                    pageNumber={pageNumber}
+                  />
+                </>
               )}
             </div>
           </section>
