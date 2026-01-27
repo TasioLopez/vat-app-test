@@ -598,6 +598,14 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                 </tbody>
               </table>
               </div>
+
+              {/* Footer on page 1 */}
+              <PageFooter
+                lastName={tpData.last_name}
+                firstName={tpData.first_name}
+                dateOfBirth={tpData.date_of_birth}
+                pageNumber={1}
+              />
             </div>
 
             {/* Page 2 */}

@@ -1564,14 +1564,12 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                             );
                         })}
                         </div>
-                        {!isFirstPage && (
-                            <PageFooter
-                                lastName={tpData.last_name}
-                                firstName={tpData.first_name}
-                                dateOfBirth={tpData.date_of_birth}
-                                pageNumber={pageNumber}
-                            />
-                        )}
+                        <PageFooter
+                            lastName={tpData.last_name}
+                            firstName={tpData.first_name}
+                            dateOfBirth={tpData.date_of_birth}
+                            pageNumber={pageNumber}
+                        />
                     </div>
                 );
             })}
