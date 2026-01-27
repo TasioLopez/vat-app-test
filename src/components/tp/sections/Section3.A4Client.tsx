@@ -605,6 +605,15 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                             * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
                                           </p>
                                         </div>
+                                    ) : s.key === 'inl' ? (
+                                        <div className={paperText}>
+                                            {formatTextWithParagraphs(s.text)}
+                                            {tpData.has_ad_report === false && (
+                                                <p className="mt-4 font-bold text-black">
+                                                    N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                                </p>
+                                            )}
+                                        </div>
                                     ) : (
                                         <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
                                     )}
@@ -742,6 +751,15 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                       <p className="text-purple-600 italic text-[10px] mt-4">
                                                         * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
                                                       </p>
+                                                    </div>
+                                                ) : s.key === 'inl' ? (
+                                                    <div className={paperText}>
+                                                        {formatTextWithParagraphs(s.text)}
+                                                        {tpData.has_ad_report === false && (
+                                                            <p className="mt-4 font-bold text-black">
+                                                                N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
