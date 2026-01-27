@@ -5,6 +5,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import { Map, Compass } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
+import { parseWorkExperience } from '@/lib/utils';
 
 type Employee = {
     id: string;
@@ -116,7 +117,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
 
         if (data) {
-            setEmployeeDetails(data);
+            // Parse work_experience if it's a JSON array string
+            const parsedData = {
+                ...data,
+                work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience
+            };
+            setEmployeeDetails(parsedData);
             if (data.autofilled_fields) {
                 setAutofilledFields(new Set(data.autofilled_fields));
             }
@@ -225,9 +231,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         setUpdating(true);
         try {
+            // Normalize work_experience to plain string (not JSON array)
+            const normalizedWorkExperience = employeeDetails.work_experience 
+                ? parseWorkExperience(employeeDetails.work_experience)
+                : employeeDetails.work_experience;
+
             // Ensure transport_type is saved as array
             const payload = {
                 ...employeeDetails,
+                work_experience: normalizedWorkExperience,
                 transport_type: Array.isArray(employeeDetails.transport_type) 
                     ? employeeDetails.transport_type 
                     : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
@@ -271,10 +283,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
+            // Normalize work_experience to plain string (not JSON array)
+            const normalizedWorkExperience = employeeDetails.work_experience 
+                ? parseWorkExperience(employeeDetails.work_experience)
+                : employeeDetails.work_experience;
+
             // Save employee details (including gender)
             // Ensure transport_type is saved as array
             const detailsPayload = {
                 ...employeeDetails,
+                work_experience: normalizedWorkExperience,
                 transport_type: Array.isArray(employeeDetails.transport_type) 
                     ? employeeDetails.transport_type 
                     : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
