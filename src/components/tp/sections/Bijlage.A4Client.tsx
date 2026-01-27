@@ -71,8 +71,15 @@ type PreviewItem =
 export default function BijlageA4Client({ employeeId }: { employeeId: string }) {
   const { tpData, setSectionPageCount, getPageOffset } = useTP();
   const fases: Fase[] = (tpData.bijlage_fases as Fase[] | undefined) ?? [];
+  
+  console.log('🔄 BijlageA4Client: Rendering', {
+    hasTpData: !!tpData,
+    fasesCount: fases.length,
+    keys: tpData ? Object.keys(tpData).length : 0
+  });
 
   const sections = useMemo<PreviewItem[]>(() => {
+    console.log('📦 BijlageA4Client: Creating sections');
     const items: PreviewItem[] = [];
 
     if (!fases.length) {

@@ -110,8 +110,15 @@ function PageFooter({
 
 export default function EmployeeInfoA4Client({ employeeId }: { employeeId: string }) {
   const { tpData, setSectionPageCount, getPageOffset } = useTP();
+  
+  console.log('🔄 EmployeeInfoA4Client: Rendering', {
+    hasTpData: !!tpData,
+    hasFirstName: !!tpData?.first_name,
+    keys: tpData ? Object.keys(tpData).length : 0
+  });
 
   const blocks = useMemo<Block[]>(() => {
+    console.log('📦 EmployeeInfoA4Client: Creating blocks');
     const out: Block[] = [];
 
     // Header for first page

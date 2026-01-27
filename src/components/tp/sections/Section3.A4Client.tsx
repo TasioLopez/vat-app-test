@@ -378,6 +378,12 @@ function SignatureBlock({
 
 export default function Section3A4Client({ employeeId }: { employeeId: string }) {
     const { tpData } = useTP();
+    
+    console.log('🔄 Section3A4Client: Rendering', {
+      hasTpData: !!tpData,
+      hasInleiding: !!tpData?.inleiding,
+      keys: tpData ? Object.keys(tpData).length : 0
+    });
 
     // pull selected activities for this employee (saved by the builder)
     // pull selected activities for this employee (saved by the builder)
@@ -408,6 +414,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
     );
 
     const sections = useMemo<PreviewItem[]>(() => {
+        console.log('📦 Section3A4Client: Creating sections');
         const list: PreviewItem[] = [
             { key: "inl", title: "Inleiding", text: tpData.inleiding || "—", variant: "block" },
         ];
