@@ -19,7 +19,7 @@ const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-
 const heading = "text-lg font-semibold text-center mb-6";
 const blockTitle = "font-bold text-[#660066] px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
-const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic text-[#660066]";
 const tdLabel = "py-1 px-2 border-collapse align-top w-[40%] font-bold";
 const tdValue = "py-1 px-2 border-collapse align-top";
 

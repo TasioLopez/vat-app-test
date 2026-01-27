@@ -594,7 +594,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     ) : s.key === 'plaats' ? (
                                         <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
                                     ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                        <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
+                                        <div className={`${paperText} font-bold text-black`}>{s.text}</div>
                                     ) : s.key === 'pow' ? (
                                         <div className={paperText}>
                                           {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
@@ -732,7 +732,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                 ) : s.key === 'plaats' ? (
                                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
                                                 ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                    <div className={`${paperText} text-purple-600 italic`}>{s.text}</div>
+                                                    <div className={`${paperText} font-bold text-black`}>{s.text}</div>
                                                 ) : s.key === 'pow' ? (
                                                     <div className={paperText}>
                                                       {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}

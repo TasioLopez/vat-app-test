@@ -650,7 +650,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                 </tbody>
               </table>
 
-              <p className="italic text-[10px] text-gray-600 mb-4">
+              <p className="italic text-[10px] text-[#660066] mb-4">
                 NB: in het kader van de algemene verordening gegevensbescherming (AVG) worden in deze rapportage geen medische termen en diagnoses vermeld. Voor meer informatie over ons privacyreglement en het klachtenreglement verwijzen wij u naar onze website.
               </p>
 
