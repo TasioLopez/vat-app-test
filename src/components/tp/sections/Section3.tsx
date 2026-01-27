@@ -1312,13 +1312,19 @@ function SectionHeader({
 }
 
 // Helper to format Dutch date
-function formatDutchDate(dateStr?: string) {
+function formatDutchDate(dateStr?: string | null): string {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
 }
 
 // Page footer component
@@ -1338,13 +1344,32 @@ function PageFooter({
     : lastName 
     ? `Naam: ${lastName}` 
     : "";
-  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+  
+  // Use the same robust formatting
+  const birthText = formatDutchDate(dateOfBirth) || "";
+
+  // Debug log
+  console.log(`🔍 Section3.tsx Footer page ${pageNumber}:`, {
+    nameText,
+    birthText,
+    dateOfBirth,
+    formatted: formatDutchDate(dateOfBirth)
+  });
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
-      <div>{nameText}</div>
-      <div className="text-center flex-1">{pageNumber}</div>
-      <div>{birthText}</div>
+    <div 
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+      style={{ 
+        minHeight: '40px', 
+        flexShrink: 0,
+        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary debug
+      }}
+    >
+      <div style={{ backgroundColor: 'rgba(0, 255, 0, 0.2)' }}>{nameText || "(no name)"}</div>
+      <div className="text-center flex-1" style={{ backgroundColor: 'rgba(0, 0, 255, 0.2)' }}>{pageNumber}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right', backgroundColor: 'rgba(255, 255, 0, 0.2)' }}>
+        {birthText || "(geen geboortedatum)"}
+      </div>
     </div>
   );
 }
@@ -1491,9 +1516,9 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                 const pageNumber = p + 1;
                 
                 return (
-                    <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
+                    <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
                         <PageHeader />
-                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                             {idxs.map(i => {
                             const s = sections[i];
                             if (!s) return null; // Safety check for undefined sections

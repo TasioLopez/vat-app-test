@@ -527,7 +527,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       <TPPreviewWrapper>
           <div className="space-y-8">
             {/* Page 1 */}
-          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
+          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="w-full flex justify-end mb-6">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
               </div>
@@ -535,6 +535,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                 Trajectplan re-integratie tweede spoor
               </h1>
 
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {/* Gegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody className="bg-[#e7e6e6]">
@@ -596,14 +597,16 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr><td className={tdLabel}>Email</td><td className={tdValue}>{tpData.consultant_email}</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Page 2 */}
-          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto">
+          <div className="bg-white w-[794px] h-[1123px] shadow-lg border border-border p-10 text-[12px] font-sans mx-auto" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="w-full flex justify-end mb-12">
                 <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
               </div>
 
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {/* Basisgegevens werknemer */}
               <table className="w-full border-collapse mb-4">
                 <tbody className="bg-[#e7e6e6]">
@@ -655,6 +658,15 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr><td className={tdLabel}>VGR</td><td className={tdValue}>Voortgangsrapportage</td></tr>
                 </tbody>
               </table>
+              </div>
+
+              {/* Footer on page 2 */}
+              <PageFooter
+                lastName={tpData.last_name}
+                firstName={tpData.first_name}
+                dateOfBirth={tpData.date_of_birth}
+                pageNumber={2}
+              />
             </div>
           </div>
       </TPPreviewWrapper>
@@ -781,11 +793,61 @@ function Field({
   );
 }
 
-function formatDutchDate(dateStr: string) {
+function formatDutchDate(dateStr?: string | null): string {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+// Page footer component
+function PageFooter({ 
+  lastName, 
+  firstName, 
+  dateOfBirth, 
+  pageNumber 
+}: { 
+  lastName?: string | null; 
+  firstName?: string | null; 
+  dateOfBirth?: string | null; 
+  pageNumber: number;
+}) {
+  const nameText = lastName && firstName 
+    ? `Naam: ${lastName} (${firstName})` 
+    : lastName 
+    ? `Naam: ${lastName}` 
+    : "";
+  const birthText = formatDutchDate(dateOfBirth) || "";
+
+  console.log(`🔍 EmployeeInfo.tsx Footer page ${pageNumber}:`, {
+    nameText,
+    birthText,
+    dateOfBirth,
+    formatted: formatDutchDate(dateOfBirth)
   });
+
+  return (
+    <div 
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+      style={{ 
+        minHeight: '40px', 
+        flexShrink: 0,
+        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary debug
+      }}
+    >
+      <div style={{ backgroundColor: 'rgba(0, 255, 0, 0.2)' }}>{nameText || "(no name)"}</div>
+      <div className="text-center flex-1" style={{ backgroundColor: 'rgba(0, 0, 255, 0.2)' }}>{pageNumber}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right', backgroundColor: 'rgba(255, 255, 0, 0.2)' }}>
+        {birthText || "(geen geboortedatum)"}
+      </div>
+    </div>
+  );
 }
