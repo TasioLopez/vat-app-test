@@ -1519,64 +1519,118 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
     useLayoutEffect(() => {
         // Wait for all images to load before measuring
         const measureAndPaginate = () => {
-            // Check if all images are loaded
-            const images = document.querySelectorAll('img');
-            const imagePromises = Array.from(images).map((img) => {
-                if (img.complete) return Promise.resolve();
-                return new Promise<void>((resolve) => {
-                    img.onload = () => resolve();
-                    img.onerror = () => resolve(); // Continue even if image fails
+            try {
+                // Check if all images are loaded
+                const images = document.querySelectorAll('img');
+                const imagePromises = Array.from(images).map((img) => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise<void>((resolve) => {
+                        img.onload = () => resolve();
+                        img.onerror = () => resolve(); // Continue even if image fails
+                        // Add timeout to prevent hanging
+                        setTimeout(() => resolve(), 5000);
+                    });
                 });
-            });
 
-            Promise.all(imagePromises).then(() => {
-                // Small delay to ensure layout is stable
-                requestAnimationFrame(() => {
-                    const headerH = headerRef.current?.offsetHeight ?? 0;
-                    measuredHeights.current = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                // Add timeout for the entire measurement process
+                const measurementTimeout = setTimeout(() => {
+                    console.warn("Measurement timeout, using fallback pagination");
+                    // Fallback: put all sections on one page
+                    if (sections.length > 0) {
+                        setPages([sections.map((_, i) => i)]);
+                        setSectionPageCount('part3', 1);
+                    }
+                }, 10000);
 
-                    const usable = CONTENT_H - headerH;
-                    const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
-                    const maxUsable = usable - SAFETY_MARGIN;
-                    
-                    const newPages: number[][] = [];
-                    let cur: number[] = [];
-                    let used = 0;
+                Promise.all(imagePromises).then(() => {
+                    // Small delay to ensure layout is stable
+                    requestAnimationFrame(() => {
+                        try {
+                            const headerH = headerRef.current?.offsetHeight ?? 0;
+                            measuredHeights.current = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
-                    measuredHeights.current.forEach((h, idx) => {
-                        // If a single block is taller than the usable space, it needs its own page
-                        if (h > maxUsable) {
-                            // Finalize current page if it has content
-                            if (cur.length) {
-                                newPages.push(cur);
-                                cur = [];
-                                used = 0;
+                            // If no heights were measured, use fallback
+                            if (measuredHeights.current.every(h => h === 0) && sections.length > 0) {
+                                console.warn("No heights measured, using fallback pagination");
+                                setPages([sections.map((_, i) => i)]);
+                                setSectionPageCount('part3', 1);
+                                clearTimeout(measurementTimeout);
+                                return;
                             }
-                            // Place oversized block on its own page
-                            newPages.push([idx]);
-                            used = 0;
-                        } else {
-                            const add = (cur.length ? BLOCK_SPACING : 0) + h;
-                            // Be very conservative - if adding would get close to limit, start new page
-                            if (used + add >= maxUsable) {
-                                // Start new page
-                                if (cur.length) newPages.push(cur);
-                                cur = [idx];
-                                used = h;
-                            } else {
-                                // Add to current page
-                                used += add;
-                                cur.push(idx);
+
+                            const usable = CONTENT_H - headerH;
+                            const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
+                            const maxUsable = usable - SAFETY_MARGIN;
+                            
+                            const newPages: number[][] = [];
+                            let cur: number[] = [];
+                            let used = 0;
+
+                            measuredHeights.current.forEach((h, idx) => {
+                                // If a single block is taller than the usable space, it needs its own page
+                                if (h > maxUsable) {
+                                    // Finalize current page if it has content
+                                    if (cur.length) {
+                                        newPages.push(cur);
+                                        cur = [];
+                                        used = 0;
+                                    }
+                                    // Place oversized block on its own page
+                                    newPages.push([idx]);
+                                    used = 0;
+                                } else {
+                                    const add = (cur.length ? BLOCK_SPACING : 0) + h;
+                                    // Be very conservative - if adding would get close to limit, start new page
+                                    if (used + add >= maxUsable) {
+                                        // Start new page
+                                        if (cur.length) newPages.push(cur);
+                                        cur = [idx];
+                                        used = h;
+                                    } else {
+                                        // Add to current page
+                                        used += add;
+                                        cur.push(idx);
+                                    }
+                                }
+                            });
+
+                            if (cur.length) newPages.push(cur);
+                            
+                            // Ensure we have at least one page if there are sections
+                            if (newPages.length === 0 && sections.length > 0) {
+                                newPages.push(sections.map((_, i) => i));
                             }
+                            
+                            setPages(newPages);
+                            // Report page count to context
+                            setSectionPageCount('part3', newPages.length || 1);
+                            clearTimeout(measurementTimeout);
+                        } catch (err) {
+                            console.error("Error during pagination calculation:", err);
+                            // Fallback: put all sections on one page
+                            if (sections.length > 0) {
+                                setPages([sections.map((_, i) => i)]);
+                                setSectionPageCount('part3', 1);
+                            }
+                            clearTimeout(measurementTimeout);
                         }
                     });
-
-                    if (cur.length) newPages.push(cur);
-                    setPages(newPages);
-                    // Report page count to context
-                    setSectionPageCount('part3', newPages.length);
+                }).catch((err) => {
+                    console.error("Error waiting for images:", err);
+                    // Fallback: put all sections on one page
+                    if (sections.length > 0) {
+                        setPages([sections.map((_, i) => i)]);
+                        setSectionPageCount('part3', 1);
+                    }
                 });
-            });
+            } catch (err) {
+                console.error("Error in measureAndPaginate:", err);
+                // Fallback: put all sections on one page
+                if (sections.length > 0) {
+                    setPages([sections.map((_, i) => i)]);
+                    setSectionPageCount('part3', 1);
+                }
+            }
         };
 
         // Increased delay to ensure everything is rendered
@@ -1589,80 +1643,98 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
         ),
     ]);
 
+    // Helper function to render a section (used in both paginated and fallback rendering)
+    const renderSection = (s: PreviewItem) => {
+        if (!s) return null;
+        return (
+            <div key={s.key} className="mb-3">
+                {s.variant === "subtle" && s.text ? (
+                    <div className={subtle}>{renderFormattedText(s.text)}</div>
+                ) : s.variant === "block" && s.text ? (
+                    <>
+                        <div className={blockTitle}>{s.title}</div>
+                        <div className={paperText}>
+                            {s.key.startsWith('act-') ? (
+                                <ActivityBody 
+                                    activityId={s.key.replace('act-', '')} 
+                                    bodyText={s.text} 
+                                    className=""
+                                />
+                            ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                renderTextWithLogoBullets(s.text, false)
+                            ) : s.key === 'plaats' ? (
+                                renderTextWithLogoBullets(s.text, true)
+                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                <span className="font-bold text-black">{s.text}</span>
+                            ) : s.key === 'pow' ? (
+                                <div>
+                                  {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                  <div className="my-4">
+                                    <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                  </div>
+                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                  </p>
+                                </div>
+                            ) : s.key === 'inl' ? (
+                                <div>
+                                    {renderFormattedText(s.text)}
+                                    {tpData.has_ad_report === false && (
+                                        <p className="mt-4 font-bold text-black">
+                                            N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                renderFormattedText(s.text)
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    s.node
+                )}
+            </div>
+        );
+    };
+
     return (
         <>
             <MeasureTree />
-            {pages.map((idxs, p) => {
-                const pageOffset = getPageOffset('part3');
-                const pageNumber = pageOffset + p;
-                
-                return (
-                    <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
-                        <PageHeader />
-                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                            {idxs.map(i => {
-                            const s = sections[i];
-                            if (!s) return null; // Safety check for undefined sections
-                            return (
-                                <div key={s.key} className="mb-3">
-                                    {s.variant === "subtle" && s.text ? (
-                                        <div className={subtle}>{renderFormattedText(s.text)}</div>
-                                    ) : s.variant === "block" && s.text ? (
-                                        <>
-                                            <div className={blockTitle}>{s.title}</div>
-                                            <div className={paperText}>
-                                                {s.key.startsWith('act-') ? (
-                                                    <ActivityBody 
-                                                        activityId={s.key.replace('act-', '')} 
-                                                        bodyText={s.text} 
-                                                        className=""
-                                                    />
-                                                ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                                    renderTextWithLogoBullets(s.text, false)
-                                                ) : s.key === 'plaats' ? (
-                                                    renderTextWithLogoBullets(s.text, true)
-                                                ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                    <span className="font-bold text-black">{s.text}</span>
-                                                ) : s.key === 'pow' ? (
-                                                    <div>
-                                                      {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
-                                                      <div className="my-4">
-                                                        <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
-                                                      </div>
-                                                      <p className="text-purple-600 italic text-[10px] mt-4">
-                                                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                                      </p>
-                                                    </div>
-                                                ) : s.key === 'inl' ? (
-                                                    <div>
-                                                        {renderFormattedText(s.text)}
-                                                        {tpData.has_ad_report === false && (
-                                                            <p className="mt-4 font-bold text-black">
-                                                                N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    renderFormattedText(s.text)
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        s.node
-                                    )}
-                                </div>
-                            );
-                        })}
+            {pages.length > 0 ? (
+                pages.map((idxs, p) => {
+                    const pageOffset = getPageOffset('part3');
+                    const pageNumber = pageOffset + p;
+                    
+                    return (
+                        <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                            <PageHeader />
+                            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                {idxs.map(i => renderSection(sections[i]))}
+                            </div>
+                            <PageFooter
+                                lastName={tpData.last_name}
+                                firstName={tpData.first_name}
+                                dateOfBirth={tpData.date_of_birth}
+                                pageNumber={pageNumber}
+                            />
                         </div>
-                        <PageFooter
-                            lastName={tpData.last_name}
-                            firstName={tpData.first_name}
-                            dateOfBirth={tpData.date_of_birth}
-                            pageNumber={pageNumber}
-                        />
+                    );
+                })
+            ) : sections.length > 0 ? (
+                // Fallback: render all sections on one page if pagination hasn't completed yet
+                <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                    <PageHeader />
+                    <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                        {sections.map(s => renderSection(s))}
                     </div>
-                );
-            })}
+                    <PageFooter
+                        lastName={tpData.last_name}
+                        firstName={tpData.first_name}
+                        dateOfBirth={tpData.date_of_birth}
+                        pageNumber={getPageOffset('part3')}
+                    />
+                </div>
+            ) : null}
         </>
     );
 }
