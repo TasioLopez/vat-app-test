@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { parseWorkExperience } from "@/lib/utils";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,7 +98,10 @@ function buildInstructions(employeeData: any, fmlDate: string): string {
   
   // Format job titles - use exact values from database
   const currentJob = employeeData.current_job || '';
-  const workExperience = employeeData.work_experience || '';
+  const workExperienceRaw = employeeData.work_experience || '';
+  
+  // Parse work_experience to handle JSON arrays
+  const workExperience = parseWorkExperience(workExperienceRaw);
   
   // Combine job titles for display
   let jobTitles = currentJob;

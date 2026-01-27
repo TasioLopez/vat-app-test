@@ -84,8 +84,34 @@ export function formatEmployeeNameWithoutPrefix(
 }
 
 /**
+ * Parses work_experience field that may be stored as JSON array or plain string
+ * Returns a clean comma-separated string of job titles
+ * 
+ * @param text - Work experience text (may be JSON array string or plain string)
+ * @returns Parsed work experience as comma-separated string
+ */
+export function parseWorkExperience(text: string | null | undefined): string {
+  if (!text) return '';
+  
+  // Try to parse as JSON array first
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      // It's a JSON array, join with commas
+      return parsed.filter(Boolean).join(', ');
+    }
+  } catch {
+    // Not a JSON array, treat as plain string
+  }
+  
+  // Return as-is if it's already a plain string
+  return text;
+}
+
+/**
  * Formats work experience to extract only job titles/functions
  * Removes dates, years, and connecting words
+ * Handles both JSON array strings and plain strings
  * 
  * @param text - Work experience text
  * @param onlyFunctions - If true, extract only job titles (default: true)
@@ -97,10 +123,14 @@ export function formatWorkExperience(
 ): string {
   if (!text) return "—";
 
-  if (!onlyFunctions) return text;
+  // First parse to handle JSON arrays
+  const parsed = parseWorkExperience(text);
+  if (!parsed) return "—";
+
+  if (!onlyFunctions) return parsed;
 
   // Remove common date patterns
-  let cleaned = text
+  let cleaned = parsed
     // Remove "Sinds YYYY" patterns
     .replace(/sinds\s+\d{4}/gi, '')
     // Remove year ranges like "1995-2020" or "1995 - 2020"
@@ -115,6 +145,9 @@ export function formatWorkExperience(
     .replace(/bij\s+[\w\s]+(?=\s+als|\s*$)/gi, '')
     // Remove standalone "als"
     .replace(/\bals\b/gi, '')
+    // Remove JSON array brackets and quotes if still present
+    .replace(/^\[|\]$/g, '')
+    .replace(/"/g, '')
     // Remove extra whitespace and punctuation
     .replace(/\s+/g, ' ')
     .replace(/^[\s,.-]+|[\s,.-]+$/g, '')
