@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
 import { makePreviewNodes } from "@/components/tp/sections/registry";
@@ -9,7 +9,15 @@ import { formatEmployeeName } from "@/lib/utils";
 export default function TPPreview({ employeeId }: { employeeId: string }) {
   const { tpData, setTPData } = useTP();
   const [isLoading, setIsLoading] = useState(true);
-  const nodes = makePreviewNodes(employeeId);
+  
+  // Recreate nodes when tpData changes to force re-render
+  const nodes = useMemo(() => {
+    console.log('🔄 TPPreview: Creating preview nodes', {
+      hasData: Object.keys(tpData).length > 0,
+      hasFirstName: !!tpData.first_name
+    });
+    return makePreviewNodes(employeeId);
+  }, [employeeId, tpData.first_name, tpData.last_name]); // Recreate when key data changes
 
   // Always load TP data when component mounts (review page)
   useEffect(() => {
@@ -122,7 +130,8 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
           console.log('✅ TPPreview: Setting TP data', { 
             keys: Object.keys(mergedData).length,
             hasInleiding: !!mergedData.inleiding,
-            hasZoekprofiel: !!mergedData.zoekprofiel
+            hasZoekprofiel: !!mergedData.zoekprofiel,
+            hasFirstLastName: !!(mergedData.first_name && mergedData.last_name)
           });
           setTPData(mergedData);
           setIsLoading(false);
