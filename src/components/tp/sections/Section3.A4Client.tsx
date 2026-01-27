@@ -639,6 +639,57 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         // Reset refs array when sections change
         blockRefs.current = new Array(sections.length).fill(null);
         
+        function calculatePages(heights: number[], headerH: number) {
+            const FOOTER_HEIGHT = 50;
+            const SAFETY_MARGIN = 50;
+            const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN;
+            const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
+            
+            const out: number[][] = [];
+            let cur: number[] = [];
+            let used = 0;
+            let isFirstPage = true;
+
+            heights.forEach((h, idx) => {
+                const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
+                
+                if (h > maxUsable) {
+                    if (cur.length) {
+                        out.push(cur);
+                        cur = [];
+                        used = 0;
+                        isFirstPage = false;
+                    }
+                    out.push([idx]);
+                    used = 0;
+                    isFirstPage = false;
+                } else {
+                    const add = (cur.length ? BLOCK_SPACING : 0) + h;
+                    if (used + add >= maxUsable) {
+                        if (cur.length) {
+                            out.push(cur);
+                            isFirstPage = false;
+                        }
+                        cur = [idx];
+                        used = h;
+                    } else {
+                        used += add;
+                        cur.push(idx);
+                    }
+                }
+            });
+
+            if (cur.length) out.push(cur);
+            console.log('📄 Section3A4Client: Pages calculated', { 
+              pageCount: out.length,
+              pages: out,
+              sectionsCount: sections.length,
+              heights: heights
+            });
+            setPages(out);
+            setSectionPageCount('part3', out.length);
+        }
+        
         // Wait for all images to load before measuring
         const measureAndPaginate = () => {
             // Check if all images are loaded
@@ -647,73 +698,63 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 if (img.complete) return Promise.resolve();
                 return new Promise<void>((resolve) => {
                     img.onload = () => resolve();
-                    img.onerror = () => resolve(); // Continue even if image fails
+                    img.onerror = () => resolve();
+                    // Add timeout to prevent hanging
+                    setTimeout(() => resolve(), 1000);
                 });
             });
 
-            Promise.all(imagePromises).then(() => {
-                // Small delay to ensure layout is stable
-                requestAnimationFrame(() => {
-                    const headerH = headerRef.current?.offsetHeight ?? 0;
-                    const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+            // If no images, resolve immediately
+            const imagePromise = imagePromises.length > 0 
+                ? Promise.all(imagePromises) 
+                : Promise.resolve();
 
-                    const FOOTER_HEIGHT = 50; // Account for footer on non-first pages
-                    const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
-                    const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN; // First page: no footer
-                    const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN; // Other pages: with footer
-                    
-                    const out: number[][] = [];
-                    let cur: number[] = [];
-                    let used = 0;
-                    let isFirstPage = true;
-
-                    heights.forEach((h, idx) => {
-                        const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
-                        
-                        // If a single block is taller than the usable space, it needs its own page
-                        if (h > maxUsable) {
-                            // Finalize current page if it has content
-                            if (cur.length) {
-                                out.push(cur);
-                                cur = [];
-                                used = 0;
-                                isFirstPage = false;
-                            }
-                            // Place oversized block on its own page
-                            out.push([idx]);
-                            used = 0;
-                            isFirstPage = false;
-                        } else {
-                            const add = (cur.length ? BLOCK_SPACING : 0) + h;
-                            // Be very conservative - if adding would get close to limit, start new page
-                            if (used + add >= maxUsable) {
-                                // Start new page
-                                if (cur.length) {
-                                    out.push(cur);
-                                    isFirstPage = false;
+            imagePromise
+                .then(() => {
+                    // Use double requestAnimationFrame to ensure layout is complete
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            const headerH = headerRef.current?.offsetHeight ?? 0;
+                            const heights = sections.map((_, i) => {
+                                const el = blockRefs.current[i];
+                                const height = el?.offsetHeight ?? 0;
+                                if (height === 0 && el) {
+                                    console.warn(`⚠️ Section3A4Client: Section ${i} has height 0`, {
+                                        element: el,
+                                        computedStyle: window.getComputedStyle(el),
+                                        innerHTML: el.innerHTML.substring(0, 100)
+                                    });
                                 }
-                                cur = [idx];
-                                used = h;
-                            } else {
-                                // Add to current page
-                                used += add;
-                                cur.push(idx);
-                            }
-                        }
-                    });
+                                return height;
+                            });
 
-                    if (cur.length) out.push(cur);
-                    console.log('📄 Section3A4Client: Pages calculated', { 
-                      pageCount: out.length,
-                      pages: out,
-                      sectionsCount: sections.length,
-                      heights: heights
+                            // If all heights are 0, wait a bit more and retry once
+                            if (heights.every(h => h === 0) && sections.length > 0) {
+                                console.warn('⚠️ Section3A4Client: All heights are 0, retrying...');
+                                setTimeout(() => {
+                                    const retryHeights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                                    if (retryHeights.some(h => h > 0)) {
+                                        calculatePages(retryHeights, headerH);
+                                    } else {
+                                        console.error('❌ Section3A4Client: Still all heights 0 after retry');
+                                        setPages([]);
+                                    }
+                                }, 200);
+                                return;
+                            }
+
+                            calculatePages(heights, headerH);
+                        });
                     });
-                    setPages(out);
-                    // Report page count to context
-                    setSectionPageCount('part3', out.length);
+                })
+                .catch((err) => {
+                    console.error('❌ Section3A4Client: Measurement failed', err);
+                    // Still try to measure with whatever we have
+                    requestAnimationFrame(() => {
+                        const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                        calculatePages(heights, headerRef.current?.offsetHeight ?? 0);
+                    });
                 });
-            });
         };
 
         // Increased delay to ensure everything is rendered

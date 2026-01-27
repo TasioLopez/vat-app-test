@@ -226,6 +226,55 @@ function PaginatedA4({
     // Reset refs array when sections change
     blockRefs.current = new Array(sections.length).fill(null);
     
+    function calculatePages(heights: number[], firstH: number, restH: number) {
+      const FOOTER_HEIGHT = 50;
+      const limitFirst = CONTENT_H - firstH;
+      const limitRest = CONTENT_H - restH - FOOTER_HEIGHT;
+      const SAFETY_MARGIN = 50;
+      const maxLimitFirst = limitFirst - SAFETY_MARGIN;
+      const maxLimitRest = limitRest - SAFETY_MARGIN;
+
+      const out: number[][] = [];
+      let cur: number[] = [];
+      let used = 0;
+      let limit = maxLimitFirst;
+
+      heights.forEach((h, idx) => {
+        const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
+        if (h > currentMaxLimit) {
+          if (cur.length) {
+            out.push(cur);
+            cur = [];
+            used = 0;
+          }
+          out.push([idx]);
+          used = 0;
+          limit = maxLimitRest;
+        } else {
+          const add = (cur.length ? BLOCK_SPACING : 0) + h;
+          if (used + add >= limit) {
+            if (cur.length) out.push(cur);
+            cur = [idx];
+            used = h;
+            limit = maxLimitRest;
+          } else {
+            used += add;
+            cur.push(idx);
+          }
+        }
+      });
+
+      if (cur.length) out.push(cur);
+      console.log('📄 BijlageA4Client: Pages calculated', { 
+        pageCount: out.length,
+        pages: out,
+        sectionsCount: sections.length,
+        heights: heights
+      });
+      setPages(out);
+      setSectionPageCount('bijlage', out.length);
+    }
+    
     // Wait for all images to load before measuring
     const measureAndPaginate = () => {
       // Check if all images are loaded
@@ -234,71 +283,65 @@ function PaginatedA4({
         if (img.complete) return Promise.resolve();
         return new Promise<void>((resolve) => {
           img.onload = () => resolve();
-          img.onerror = () => resolve(); // Continue even if image fails
+          img.onerror = () => resolve();
+          // Add timeout to prevent hanging
+          setTimeout(() => resolve(), 1000);
         });
       });
 
-      Promise.all(imagePromises).then(() => {
-        // Small delay to ensure layout is stable
-        requestAnimationFrame(() => {
-          const firstH = headerFirstRef.current?.offsetHeight ?? 0;
-          const restH = headerRestRef.current?.offsetHeight ?? 0;
+      // If no images, resolve immediately
+      const imagePromise = imagePromises.length > 0 
+        ? Promise.all(imagePromises) 
+        : Promise.resolve();
 
-          const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+      imagePromise
+        .then(() => {
+          // Use double requestAnimationFrame to ensure layout is complete
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const firstH = headerFirstRef.current?.offsetHeight ?? 0;
+              const restH = headerRestRef.current?.offsetHeight ?? 0;
 
-          const FOOTER_HEIGHT = 50; // Account for footer on non-first pages
-          const limitFirst = CONTENT_H - firstH;
-          const limitRest = CONTENT_H - restH - FOOTER_HEIGHT; // Subtract footer height for non-first pages
-          const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
-          const maxLimitFirst = limitFirst - SAFETY_MARGIN;
-          const maxLimitRest = limitRest - SAFETY_MARGIN;
+              const heights = sections.map((_, i) => {
+                const el = blockRefs.current[i];
+                const height = el?.offsetHeight ?? 0;
+                if (height === 0 && el) {
+                  console.warn(`⚠️ BijlageA4Client: Section ${i} has height 0`, {
+                    element: el,
+                    computedStyle: window.getComputedStyle(el),
+                    innerHTML: el.innerHTML.substring(0, 100)
+                  });
+                }
+                return height;
+              });
 
-          const out: number[][] = [];
-          let cur: number[] = [];
-          let used = 0;
-          let limit = maxLimitFirst;
-
-          heights.forEach((h, idx) => {
-            // If a single block is taller than the current limit, it needs its own page
-            const currentMaxLimit = limit === maxLimitFirst ? maxLimitFirst : maxLimitRest;
-            if (h > currentMaxLimit) {
-              // Finalize current page if it has content
-              if (cur.length) {
-                out.push(cur);
-                cur = [];
-                used = 0;
+              // If all heights are 0, wait a bit more and retry once
+              if (heights.every(h => h === 0) && sections.length > 0) {
+                console.warn('⚠️ BijlageA4Client: All heights are 0, retrying...');
+                setTimeout(() => {
+                  const retryHeights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                  if (retryHeights.some(h => h > 0)) {
+                    calculatePages(retryHeights, firstH, restH);
+                  } else {
+                    console.error('❌ BijlageA4Client: Still all heights 0 after retry');
+                    setPages([]);
+                  }
+                }, 200);
+                return;
               }
-              // Place oversized block on its own page
-              out.push([idx]);
-              used = 0;
-              limit = maxLimitRest; // Next pages use rest header
-            } else {
-              const add = (cur.length ? BLOCK_SPACING : 0) + h;
-              // Be very conservative - if adding would get close to limit, start new page
-              if (used + add >= limit) {
-                if (cur.length) out.push(cur);
-                cur = [idx];
-                used = h;
-                limit = maxLimitRest;
-              } else {
-                used += add;
-                cur.push(idx);
-              }
-            }
-          });
 
-          if (cur.length) out.push(cur);
-          console.log('📄 BijlageA4Client: Pages calculated', { 
-            pageCount: out.length,
-            pages: out,
-            sectionsCount: sections.length,
-            heights: heights
+              calculatePages(heights, firstH, restH);
+            });
           });
-          setPages(out);
-          // Report page count to context
-          setSectionPageCount('bijlage', out.length);
+        })
+        .catch((err) => {
+          console.error('❌ BijlageA4Client: Measurement failed', err);
+          // Still try to measure with whatever we have
+          requestAnimationFrame(() => {
+            const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+            calculatePages(heights, headerFirstRef.current?.offsetHeight ?? 0, headerRestRef.current?.offsetHeight ?? 0);
+          });
         });
-      });
     };
 
     // Increased delay to ensure everything is rendered
