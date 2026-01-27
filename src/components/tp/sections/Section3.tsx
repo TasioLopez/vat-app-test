@@ -1348,26 +1348,17 @@ function PageFooter({
   // Use the same robust formatting
   const birthText = formatDutchDate(dateOfBirth) || "";
 
-  // Debug log
-  console.log(`🔍 Section3.tsx Footer page ${pageNumber}:`, {
-    nameText,
-    birthText,
-    dateOfBirth,
-    formatted: formatDutchDate(dateOfBirth)
-  });
-
   return (
     <div 
       className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
       style={{ 
         minHeight: '40px', 
-        flexShrink: 0,
-        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary debug
+        flexShrink: 0
       }}
     >
-      <div style={{ backgroundColor: 'rgba(0, 255, 0, 0.2)' }}>{nameText || "(no name)"}</div>
-      <div className="text-center flex-1" style={{ backgroundColor: 'rgba(0, 0, 255, 0.2)' }}>{pageNumber}</div>
-      <div style={{ minWidth: '120px', textAlign: 'right', backgroundColor: 'rgba(255, 255, 0, 0.2)' }}>
+      <div>{nameText || "(no name)"}</div>
+      <div className="text-center flex-1">{pageNumber}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right' }}>
         {birthText || "(geen geboortedatum)"}
       </div>
     </div>

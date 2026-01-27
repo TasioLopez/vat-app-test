@@ -771,14 +771,12 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                       </>
                     )}
                   </div>
-                  {pi > 0 && (
-                    <PageFooter
-                      lastName={tpData.last_name}
-                      firstName={tpData.first_name}
-                      dateOfBirth={tpData.date_of_birth}
-                      pageNumber={pi + 1}
-                    />
-                  )}
+                  <PageFooter
+                    lastName={tpData.last_name}
+                    firstName={tpData.first_name}
+                    dateOfBirth={tpData.date_of_birth}
+                    pageNumber={pi + 1}
+                  />
                 </div>
               </div>
             );
