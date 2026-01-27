@@ -50,19 +50,9 @@ function PageFooter({
     ? `Naam: ${lastName}` 
     : "";
   const birthText = formatDutchDate(dateOfBirth) || "";
-  
-  // Debug logging
-  console.log(`Bijlage Footer page ${pageNumber}:`, { 
-    lastName, 
-    firstName, 
-    dateOfBirth, 
-    birthText,
-    rawDate: dateOfBirth,
-    formatted: formatDutchDate(dateOfBirth)
-  });
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" style={{ minHeight: '40px', flexShrink: 0 }}>
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 bg-transparent" style={{ minHeight: '40px', flexShrink: 0 }}>
       <div>{nameText}</div>
       <div className="text-center flex-1">{pageNumber}</div>
       <div style={{ minWidth: '120px', textAlign: 'right' }}>{birthText || "(geen geboortedatum)"}</div>
@@ -79,7 +69,7 @@ type PreviewItem =
   | { key: string; variant: "block"; title: string; node: React.ReactNode };
 
 export default function BijlageA4Client({ employeeId }: { employeeId: string }) {
-  const { tpData } = useTP();
+  const { tpData, setSectionPageCount, getPageOffset } = useTP();
   const fases: Fase[] = (tpData.bijlage_fases as Fase[] | undefined) ?? [];
 
   const sections = useMemo<PreviewItem[]>(() => {
@@ -288,6 +278,8 @@ function PaginatedA4({
 
           if (cur.length) out.push(cur);
           setPages(out);
+          // Report page count to context
+          setSectionPageCount('bijlage', out.length);
         });
       });
     };
@@ -306,13 +298,13 @@ function PaginatedA4({
     <>
       <MeasureTree />
       {pages.map((idxs, p) => {
-        const isFirstPage = p === 0;
-        const pageNumber = p + 1;
+        const pageOffset = getPageOffset('bijlage');
+        const pageNumber = pageOffset + p;
         
         return (
           <section key={`p-${p}`} className="print-page">
             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
-              <PageHeader headingText={isFirstPage ? headingFirst : headingRest} showTitle={isFirstPage && !!headingFirst} />
+              <PageHeader headingText={p === 0 ? headingFirst : headingRest} showTitle={p === 0 && !!headingFirst} />
               <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {idxs.map((i) => {
                 const s = sections[i];
@@ -330,14 +322,12 @@ function PaginatedA4({
                 );
               })}
               </div>
-              {!isFirstPage && (
-                <PageFooter
-                  lastName={tpData.last_name}
-                  firstName={tpData.first_name}
-                  dateOfBirth={tpData.date_of_birth}
-                  pageNumber={pageNumber}
-                />
-              )}
+              <PageFooter
+                lastName={tpData.last_name}
+                firstName={tpData.first_name}
+                dateOfBirth={tpData.date_of_birth}
+                pageNumber={pageNumber}
+              />
             </div>
           </section>
         );

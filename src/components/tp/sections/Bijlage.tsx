@@ -50,7 +50,7 @@ function PageFooter({
   const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
 
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
+    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 bg-transparent">
       <div>{nameText}</div>
       <div className="text-center flex-1">{pageNumber}</div>
       <div>{birthText}</div>
@@ -317,7 +317,7 @@ function useFitScale(ref: React.RefObject<HTMLElement>, baseWidth: number, baseH
 const PREVIEW_ZOOM = 0.65; // 65% of the fit size
 
 export default function Bijlage({ employeeId }: { employeeId: string }) {
-  const { updateField, tpData } = useTP();
+  const { updateField, tpData, setSectionPageCount, getPageOffset } = useTP();
 
   // --- local state
   const [fases, setFases] = useState<Fase[]>([
@@ -775,7 +775,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                     lastName={tpData.last_name}
                     firstName={tpData.first_name}
                     dateOfBirth={tpData.date_of_birth}
-                    pageNumber={pi + 1}
+                    pageNumber={getPageOffset('bijlage') + pi}
                   />
                 </div>
               </div>

@@ -93,7 +93,7 @@ function PageFooter({
   
   return (
     <div 
-      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" 
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 bg-transparent" 
       style={{ 
         minHeight: '40px', 
         flexShrink: 0
@@ -109,7 +109,7 @@ function PageFooter({
 }
 
 export default function EmployeeInfoA4Client({ employeeId }: { employeeId: string }) {
-  const { tpData } = useTP();
+  const { tpData, setSectionPageCount, getPageOffset } = useTP();
 
   const blocks = useMemo<Block[]>(() => {
     const out: Block[] = [];
@@ -365,6 +365,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
 /* ---------- measurement-based pagination ---------- */
 
 function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
+  const { setSectionPageCount, getPageOffset } = useTP();
   const PAGE_W = 794;
   const PAGE_H = 1123;
   const PAD = 40;
@@ -483,6 +484,8 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
           });
           if (cur.length) out.push(cur);
           setPages(out);
+          // Report page count to context
+          setSectionPageCount('empinfo', out.length);
         });
       });
     };
@@ -496,13 +499,13 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
     <>
       <MeasureTree />
       {pages.map((idxs, p) => {
-        const isFirstPage = p === 0;
-        const pageNumber = p + 1;
+        const pageOffset = getPageOffset('empinfo');
+        const pageNumber = pageOffset + p;
         
         return (
           <section key={`p-${p}`} className="print-page">
             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
-              {isFirstPage ? (
+              {p === 0 ? (
                 <>
                   <LogoBar />
                   <h1 className={heading}>Trajectplan re-integratie tweede spoor</h1>
@@ -529,14 +532,12 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
                 );
               })}
               </div>
-              {!isFirstPage && (
-                <PageFooter
-                  lastName={tpData?.last_name}
-                  firstName={tpData?.first_name}
-                  dateOfBirth={tpData?.date_of_birth}
-                  pageNumber={pageNumber}
-                />
-              )}
+              <PageFooter
+                lastName={tpData?.last_name}
+                firstName={tpData?.first_name}
+                dateOfBirth={tpData?.date_of_birth}
+                pageNumber={pageNumber}
+              />
             </div>
           </section>
         );

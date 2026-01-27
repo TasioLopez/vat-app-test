@@ -135,7 +135,7 @@ function SignatureBlock({ employeeName, advisorName, employerContact }: {
 }
 
 export default function Section3({ employeeId }: { employeeId: string }) {
-    const { tpData, updateField } = useTP();
+    const { tpData, updateField, setSectionPageCount, getPageOffset } = useTP();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState<{ [k: string]: boolean }>({});
@@ -1350,7 +1350,7 @@ function PageFooter({
 
   return (
     <div 
-      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 bg-transparent"
       style={{ 
         minHeight: '40px', 
         flexShrink: 0
@@ -1366,7 +1366,7 @@ function PageFooter({
 }
 
 function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }) {
-    const { tpData } = useTP();
+    const { tpData, setSectionPageCount, getPageOffset } = useTP();
     const PAGE_W = 794;
     const PAGE_H = 1123;
     const PAD = 40;
@@ -1485,6 +1485,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
 
                     if (cur.length) newPages.push(cur);
                     setPages(newPages);
+                    // Report page count to context
+                    setSectionPageCount('part3', newPages.length);
                 });
             });
         };
@@ -1503,8 +1505,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
         <>
             <MeasureTree />
             {pages.map((idxs, p) => {
-                const isFirstPage = p === 0;
-                const pageNumber = p + 1;
+                const pageOffset = getPageOffset('part3');
+                const pageNumber = pageOffset + p;
                 
                 return (
                     <div key={`p-${p}`} className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>

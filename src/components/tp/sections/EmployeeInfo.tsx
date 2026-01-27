@@ -68,7 +68,7 @@ const DATE_FIELDS = [
 
 
 export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
-  const { tpData, updateField } = useTP();
+  const { tpData, updateField, setSectionPageCount, getPageOffset } = useTP();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
@@ -163,7 +163,12 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     }
 
     fetchData();
-  }, [employeeId]);
+  }, [employeeId, updateField]);
+
+  // Report page count for EmployeeInfo (always 2 pages)
+  useEffect(() => {
+    setSectionPageCount('empinfo', 2);
+  }, [setSectionPageCount]);
 
   const handleChange = (field: string, value: any) => {
     // if it's a date field, coerce to YYYY-MM-DD
@@ -523,7 +528,6 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
 
       </div>
 
-
       <TPPreviewWrapper>
           <div className="space-y-8">
             {/* Page 1 */}
@@ -673,7 +677,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                 lastName={tpData.last_name}
                 firstName={tpData.first_name}
                 dateOfBirth={tpData.date_of_birth}
-                pageNumber={2}
+                pageNumber={getPageOffset('empinfo') + 1}
               />
             </div>
           </div>
@@ -837,7 +841,7 @@ function PageFooter({
 
   return (
     <div 
-      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700"
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700 bg-transparent"
       style={{ 
         minHeight: '40px', 
         flexShrink: 0
