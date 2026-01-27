@@ -92,7 +92,7 @@
      ============================================ */
   
   /* Font Families */
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-montserrat), 'Montserrat', system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), 'Courier New', monospace;
   
   /* Font Sizes */
