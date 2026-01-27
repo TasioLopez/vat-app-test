@@ -26,29 +26,64 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-async function listEmployeeDocumentPaths(employeeId: string): Promise<string[]> {
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("url")
-    .eq("employee_id", employeeId)
-    .order("uploaded_at", { ascending: false });
-  if (!docs?.length) return [];
-  const paths: string[] = [];
-  for (const d of docs) {
-    const path = extractStoragePath(d.url as string);
-    if (path) paths.push(path);
-  }
-  return paths;
+function nlDate(iso?: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
 }
 
-async function uploadDocsToOpenAI(paths: string[]) {
+async function listEmployeeDocumentsByPriority(employeeId: string): Promise<Array<{ type: string; url: string; path: string }>> {
+  const { data: docs } = await supabase
+    .from("documents")
+    .select("type, url")
+    .eq("employee_id", employeeId)
+    .order("uploaded_at", { ascending: false });
+  
+  if (!docs?.length) return [];
+
+  // Document priority: FML/IZP > AD rapport > intake > others
+  const priorityOrder: { [key: string]: number } = {
+    'fml_izp': 1,
+    'ad_rapportage': 2,
+    'ad_rapport': 2,
+    'intakeformulier': 3,
+  };
+
+  // Sort by priority, then by uploaded_at (newest first within same priority)
+  const sortedDocs = docs
+    .map(doc => ({
+      ...doc,
+      priority: priorityOrder[(doc.type || '').toLowerCase()] || 99,
+    }))
+    .sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return 0; // Keep original order (newest first from query)
+    });
+
+  const result: Array<{ type: string; url: string; path: string }> = [];
+  for (const doc of sortedDocs) {
+    const path = extractStoragePath(doc.url as string);
+    if (path) {
+      result.push({
+        type: doc.type as string,
+        url: doc.url as string,
+        path,
+      });
+    }
+  }
+
+  return result;
+}
+
+async function uploadDocsToOpenAI(docs: Array<{ type: string; path: string }>): Promise<string[]> {
   const fileIds: string[] = [];
-  for (const p of paths) {
-    const { data: file } = await supabase.storage.from("documents").download(p);
+  for (const doc of docs) {
+    const { data: file } = await supabase.storage.from("documents").download(doc.path);
     if (!file) continue;
     const buf = Buffer.from(await file.arrayBuffer());
     const uploaded = await openai.files.create({
-      file: new File([buf], p.split('/').pop() || 'doc.pdf', { type: 'application/pdf' }),
+      file: new File([buf], doc.path.split('/').pop() || 'doc.pdf', { type: 'application/pdf' }),
       purpose: "assistants",
     });
     fileIds.push(uploaded.id);
@@ -56,27 +91,9 @@ async function uploadDocsToOpenAI(paths: string[]) {
   return fileIds;
 }
 
-function buildInstructions(employeeData: any): string {
-  // Format education level - use exact value from database
+function buildInstructions(employeeData: any, fmlDate: string): string {
   const educationLevel = employeeData.education_level || null;
   const educationName = employeeData.education_name || '';
-  
-  // Build education phrase based on what's available
-  let educationPhrase = '';
-  let educationForStructure = '';
-  if (educationLevel && educationName) {
-    educationPhrase = `${educationLevel} ${educationName}`;
-    educationForStructure = `${educationLevel} niveau`;
-  } else if (educationLevel) {
-    educationPhrase = educationLevel;
-    educationForStructure = `${educationLevel} niveau`;
-  } else if (educationName) {
-    educationPhrase = educationName;
-    educationForStructure = 'functies passend bij haar opleiding en ervaring';
-  } else {
-    educationPhrase = 'niet gespecificeerd';
-    educationForStructure = 'functies passend bij haar opleiding en ervaring';
-  }
   
   // Format job titles - use exact values from database
   const currentJob = employeeData.current_job || '';
@@ -85,73 +102,111 @@ function buildInstructions(employeeData: any): string {
   // Combine job titles for display
   let jobTitles = currentJob;
   if (workExperience && workExperience !== currentJob) {
-    // Work experience may contain multiple titles separated by comma
     jobTitles = currentJob ? `${currentJob}, ${workExperience}` : workExperience;
   }
-  
-  // Determine if education level is known for instruction
-  const hasEducationLevel = !!educationLevel;
-  
-  return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
-Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "zoekprofiel".
 
-VERPLICHTE BASISGEGEVENS (GEBRUIK DEZE EXACTE WAARDEN):
-- Opleidingsniveau: ${educationPhrase}
-- Huidige/vorige functie(s): ${jobTitles || 'onbekend'}
-- Geslacht: ${employeeData.gender || 'onbekend'}
+  // Build education phrase for first paragraph
+  let educationPhrase = '';
+  if (educationLevel) {
+    educationPhrase = `${educationLevel} niveau`;
+  } else {
+    educationPhrase = '... niveau (...)';
+  }
 
-Vereisten voor de output:
-- Schrijf in verhaalvorm, twee aparte alinea's
-- Gebruik dubbele newlines tussen de alinea's
-- Gebruik de schrijfstijl van de voorbeelden
-- GEBRUIK DE EXACTE FUNCTIETITELS ZOALS HIERBOVEN VERMELD
-- DATUMS ALTIJD IN FORMAAT: "23 oktober 2025" (dag maand jaar, maand voluit in het Nederlands)
+  // Build work experience phrase
+  let workExperiencePhrase = '';
+  if (jobTitles) {
+    workExperiencePhrase = `Zij kan voornamelijk steunen op haar ervaring als ${jobTitles}.`;
+  } else {
+    workExperiencePhrase = `Zij kan voornamelijk steunen op haar ervaring als ...`;
+  }
 
-STRUCTUUR - Twee alinea's:
+  // Build date phrase
+  let datePhrase = '';
+  if (fmlDate) {
+    datePhrase = fmlDate;
+  }
 
-ALINEA 1: Kwalificaties & Ervaring
-${hasEducationLevel 
-  ? `- Geschikt voor ${educationLevel} niveau functies op basis van kennis en ervaring` 
-  : `- Geschikt voor functies passend bij haar opleiding en ervaring`}
-- Kan voornamelijk steunen op ervaring als ${jobTitles || '[functietitels uit profiel]'}
-- Zoektocht houdt rekening met wensen, profiel en beperkingen/voorwaarden zoals beschreven in de FML van [datum uit documenten in formaat "23 oktober 2025"]
+  return `Schrijf een professioneel Zoekprofiel in zakelijk Nederlands, geschikt voor gebruik binnen een UWV-arbeidsdeskundige rapportage. De tekst moet volledig AVG/GDPR-proof zijn en uitsluitend gebaseerd zijn op het aangeleverde belastbaarheidsdocument.
 
-ALINEA 2: Gewenste Werkomstandigheden (haal uit FML/documenten)
-- Focus op zittende functies met beperkte fysieke belasting
-- Mogelijkheid tot afwisseling van houding
-- Rustig werktempo zonder tijdsdruk
-- Meest geschikt binnen een stabiel team, in een ondersteunende werkomgeving met weinig emotionele prikkels
-- Kan steunen op leidinggevende of collega indien nodig
-- Werk moet goed bereikbaar zijn met openbaar vervoer of uitvoerbaar vanuit huis
-- Werkuren kunnen geleidelijk worden uitgebreid naarmate het herstel vordert
-- Bouwt capaciteit stap voor stap op en blijft duurzaam inzetbaar
+## Documentherkenning (verplicht):
 
-BELANGRIJKE REGELS:
-${hasEducationLevel 
-  ? `- GEBRUIK ALTIJD DE EXACTE OPLEIDINGSNIVEAU: "${educationLevel}" (niet afkorten of wijzigen)` 
-  : `- Opleidingsniveau is niet bekend, zeg NIET "onbekend niveau" maar gebruik: "functies passend bij haar opleiding en ervaring"`}
-- GEBRUIK ALTIJD DE EXACTE FUNCTIETITELS: "${jobTitles}" (niet parafraseren)
-- DATUMS ALTIJD VOLLEDIG UITGESCHREVEN: "23 oktober 2025" (NOOIT "23-10-2025")
-- Gebruik verhaalvorm, geen opsommingen of bullet points
-- Focus op voorwaarden/beperkingen uit documenten
-- Vermeld FML referentie met datum (haal uit documenten)
-- Twee duidelijke alinea's met dubbele newlines ertussen
+Herken automatisch of het aangeleverde document een Functionele Mogelijkhedenlijst (FML) of een Inzetbaarheidsprofiel (IZP) betreft.
 
-VOORBEELD STIJL:
-${hasEducationLevel 
-  ? `"Werknemer is geschikt voor ${educationLevel} niveau functies op basis van kennis en ervaring.` 
-  : `"Werknemer is geschikt voor functies passend bij haar opleiding en ervaring.`} Zij kan voornamelijk steunen op haar ervaring als ${jobTitles || 'woonbegeleider en planner/roostermaker'}. De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel en de beperkingen/voorwaarden zoals beschreven in de FML van 25 april 2025.
+Gebruik in de tekst uitsluitend de benaming die in het aangeleverde document wordt gebruikt (FML of IZP).
 
-De focus ligt op zittende functies met beperkte fysieke belasting en de mogelijkheid tot afwisseling van houding. Een rustig werktempo zonder tijdsdruk is gewenst. Het meest geschikt is een functie binnen een stabiel team, in een ondersteunende werkomgeving met weinig emotionele prikkels, waar de werknemer kan steunen op een leidinggevende of collega indien nodig. Het werk moet goed bereikbaar zijn met openbaar vervoer of uitvoerbaar vanuit huis. Haar werkuren kunnen geleidelijk worden uitgebreid naarmate het herstel vordert, waardoor zij haar capaciteit stap voor stap kan opbouwen en duurzaam inzetbaar blijft."
+Voeg geen andere documenttypen toe en combineer de benamingen niet.
 
-GEEN citations of bronvermeldingen.
+## Datumregel (verplicht):
+
+Indien een datum wordt genoemd, schrijf deze altijd voluit met de maand in woorden in het Nederlands (bijvoorbeeld: 7 oktober 2025, niet 7-10-2025 of 07-10-2025).
+
+Indien geen datum is aangeleverd, laat de datum leeg.
+
+## Startinstructie (verplicht):
+
+Zodra het belastbaarheidsdocument (FML of IZP) wordt aangeleverd, genereer je direct het Zoekprofiel. Geef uitsluitend de definitieve tekst en geen toelichting, uitleg of kopjes.
+
+## Vormvereisten (strikt):
+
+Gebruik geen kopjes, titels, labels of opsommingen.
+
+Schrijf in twee doorlopende alinea's, gescheiden door één witregel.
+
+Gebruik geen exacte getallen, geen hoeveelheden, geen tijdsduren, geen frequenties, geen kg's, geen Newton (N).
+
+Gebruik geen benoeming van lichaamsdelen, medische lokalisaties of anatomische termen.
+
+Gebruik uitsluitend kwalitatieve, functiegerichte formuleringen zoals: licht, beperkt, afwisselend, ondersteunend, binnen vastgestelde grenzen, incidenteel onderdeel van het werk.
+
+## Eerste alinea – vaste volgorde (verplicht):
+
+Hoogst genoten scholing: ${educationLevel 
+    ? `Werknemer is geschikt voor ${educationLevel} niveau functies op basis van kennis en ervaring.` 
+    : `Werknemer is geschikt voor functies op ... niveau (...) op basis van kennis en ervaring.`}
+
+Werkervaring: ${workExperiencePhrase}
+
+Sluit deze alinea altijd af met exact de volgende zin, met gebruik van de juiste documentnaam (FML of IZP) en correcte datumweergave:
+${datePhrase 
+    ? `"De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel en de beperkingen/voorwaarden zoals beschreven in de [FML/IZP] van ${datePhrase}."`
+    : `"De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel en de beperkingen/voorwaarden zoals beschreven in de [FML/IZP]."`}
+
+## Tweede alinea – gecombineerd en strikt functiegericht arbeidsbeeld:
+
+Begin direct functiegericht, bijvoorbeeld met "De focus ligt op functies ...".
+
+Beschrijf de inzetbaarheid uitsluitend in termen van functiekenmerken.
+
+Handelingen die volgens het aangeleverde document slechts in beperkte mate zijn toegestaan worden niet afzonderlijk benoemd, maar gecombineerd verwerkt als onderdeel van een licht en afwisselend werkpatroon.
+
+Benoem uitsluitend wat structureel en duurzaam passend is binnen arbeid.
+
+## Strikte documentafbakening (verplicht):
+
+Voeg geen contextuele, organisatorische, cognitieve of omgevingskenmerken toe die niet expliciet of functioneel uit het aangeleverde document volgen.
+
+Vermijd termen zoals (niet-limitatief): overzichtelijk, stabiel, rustig, voorspelbaar, gestructureerd, weinig prikkels, laag tempo, eenvoudige werkomgeving.
+
+Indien een kenmerk niet direct herleidbaar is tot het aangeleverde document, mag het niet worden benoemd.
+
+Bij twijfel: niet opnemen.
+
+## Zelfcontrole vóór output (verplicht):
+
+Controleer of elke zin functioneel herleidbaar is tot het aangeleverde document (FML of IZP).
+
+Verwijder automatisch gegenereerde contextzinnen die niet strikt noodzakelijk zijn voor de arbeidskundige beoordeling.
+
+BELANGRIJK: Gebruik ALLEEN informatie die expliciet of functioneel uit de aangeleverde documenten volgt. Voeg GEEN kenmerken toe die niet in de documenten staan.
+
 Output uitsluitend JSON: { "zoekprofiel": string }`;
 }
 
-async function runAssistant(files: string[], employeeData: any) {
+async function runAssistant(files: string[], employeeData: any, fmlDate: string) {
   const assistant = await openai.beta.assistants.create({
     name: "TP Zoekprofiel",
-    instructions: buildInstructions(employeeData),
+    instructions: buildInstructions(employeeData, fmlDate),
     model: "gpt-4o",
     tools: [{ type: "file_search" }],
   });
@@ -160,13 +215,12 @@ async function runAssistant(files: string[], employeeData: any) {
     messages: [
       {
         role: "user",
-        content: "Genereer de JSON voor zoekprofiel.",
+        content: "Genereer het Zoekprofiel op basis van de aangeleverde documenten.",
         attachments: files.map((id) => ({ file_id: id, tools: [{ type: "file_search" }] })),
       },
     ],
   });
 
-  // Use createAndPoll like the working inleiding route
   const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
     assistant_id: assistant.id
   });
@@ -184,7 +238,25 @@ async function runAssistant(files: string[], employeeData: any) {
   const match = text.match(/\{[\s\S]*\}/);
   const jsonStr = match ? match[0] : text;
   let parsed: any = {};
-  try { parsed = JSON.parse(jsonStr); } catch { parsed = { zoekprofiel: text }; }
+  try { 
+    parsed = JSON.parse(jsonStr); 
+  } catch { 
+    parsed = { zoekprofiel: text }; 
+  }
+
+  // Clean up assistant and files
+  try {
+    await openai.beta.assistants.delete(assistant.id);
+    for (const fileId of files) {
+      try {
+        await openai.files.delete(fileId);
+      } catch (e) {
+        console.warn('Failed to delete file:', fileId);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to clean up assistant resources:', e);
+  }
 
   return parsed;
 }
@@ -204,19 +276,37 @@ export async function GET(req: NextRequest) {
 
     const employeeData: any = details || {};
 
+    // Fetch FML date from tp_meta
+    const { data: meta } = await supabase
+      .from("tp_meta")
+      .select("fml_izp_lab_date")
+      .eq("employee_id", employeeId)
+      .single();
+
+    const fmlDate = nlDate(meta?.fml_izp_lab_date);
+
     console.log("📋 Using employee details for zoekprofiel:", {
       education_level: employeeData.education_level,
       education_name: employeeData.education_name,
       current_job: employeeData.current_job,
       work_experience: employeeData.work_experience,
+      fml_date: fmlDate,
     });
 
-    const docPaths = await listEmployeeDocumentPaths(employeeId);
-    if (docPaths.length === 0) {
+    // Get documents by priority: FML/IZP > AD rapport > intake > others
+    const docs = await listEmployeeDocumentsByPriority(employeeId);
+    if (docs.length === 0) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
-    const fileIds = await uploadDocsToOpenAI(docPaths);
-    const parsed = await runAssistant(fileIds, employeeData);
+
+    console.log("📄 Documents by priority:", docs.map(d => d.type));
+
+    const fileIds = await uploadDocsToOpenAI(docs);
+    if (fileIds.length === 0) {
+      return NextResponse.json({ error: "Kon documenten niet uploaden" }, { status: 500 });
+    }
+
+    const parsed = await runAssistant(fileIds, employeeData, fmlDate);
     const zoekprofiel = stripCitations((parsed?.zoekprofiel || '').trim());
 
     await supabase.from("tp_meta").upsert(
