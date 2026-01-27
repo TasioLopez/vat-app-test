@@ -66,11 +66,32 @@ function PageFooter({
     formatted: formatDutchDate(dateOfBirth)
   });
 
+  // Always log - this should appear in console
+  console.log(`[Section3 Footer] Page ${pageNumber} - Rendering footer:`, {
+    nameText,
+    birthText,
+    dateOfBirth,
+    formatted: formatDutchDate(dateOfBirth),
+    hasName: !!nameText,
+    hasBirth: !!birthText
+  });
+
   return (
-    <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" style={{ minHeight: '40px', flexShrink: 0 }}>
-      <div>{nameText}</div>
-      <div className="text-center flex-1">{pageNumber}</div>
-      <div style={{ minWidth: '120px', textAlign: 'right' }}>{birthText || "(geen geboortedatum)"}</div>
+    <div 
+      className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700" 
+      style={{ 
+        minHeight: '40px', 
+        flexShrink: 0,
+        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary red tint to see if footer is rendering
+        position: 'relative',
+        zIndex: 10
+      }}
+    >
+      <div style={{ backgroundColor: 'rgba(0, 255, 0, 0.2)' }}>{nameText || "(no name)"}</div>
+      <div className="text-center flex-1" style={{ backgroundColor: 'rgba(0, 0, 255, 0.2)' }}>{pageNumber}</div>
+      <div style={{ minWidth: '120px', textAlign: 'right', backgroundColor: 'rgba(255, 255, 0, 0.2)' }}>
+        {birthText || "(geen geboortedatum)"}
+      </div>
     </div>
   );
 }
@@ -698,6 +719,19 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         JSON.stringify(sections.map((s) => [s.key, s.title ?? "", s.text?.length ?? 0, s.variant])),
     ]);
 
+    // Debug: Log pages and data
+    useEffect(() => {
+        console.log("Section3 PaginatedA4 - Pages generated:", pages.length, "pages");
+        pages.forEach((pageIdxs, idx) => {
+            console.log(`  Page ${idx + 1}:`, pageIdxs.length, "sections");
+        });
+        console.log("Section3 PaginatedA4 - tpData:", {
+            last_name: tpData?.last_name,
+            first_name: tpData?.first_name,
+            date_of_birth: tpData?.date_of_birth,
+        });
+    }, [pages, tpData?.last_name, tpData?.first_name, tpData?.date_of_birth]);
+
     return (
         <>
             <MeasureTree />
@@ -705,6 +739,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
             {pages.map((idxs, p) => {
                 const isFirstPage = p === 0;
                 const pageNumber = p + 1;
+                
+                // Debug each page render
+                console.log(`Section3: Rendering page ${pageNumber}, isFirstPage: ${isFirstPage}, sections: ${idxs.length}`);
                 
                 return (
                     <section key={`p-${p}`} className="print-page">
