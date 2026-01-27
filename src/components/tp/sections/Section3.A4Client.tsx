@@ -19,13 +19,20 @@ const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
 const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
 
 // Helper to format Dutch date
-function formatDutchDate(dateStr?: string) {
+function formatDutchDate(dateStr?: string | null) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch (e) {
+    console.warn("Failed to format date:", dateStr, e);
+    return "";
+  }
 }
 
 // Page footer component
@@ -45,7 +52,12 @@ function PageFooter({
     : lastName 
     ? `Naam: ${lastName}` 
     : "";
-  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+  const birthText = formatDutchDate(dateOfBirth);
+  
+  // Debug logging (remove in production if needed)
+  if (pageNumber === 2) {
+    console.log("Footer debug:", { lastName, firstName, dateOfBirth, birthText });
+  }
 
   return (
     <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
@@ -620,15 +632,19 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     const headerH = headerRef.current?.offsetHeight ?? 0;
                     const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
-                    const usable = CONTENT_H - headerH;
+                    const FOOTER_HEIGHT = 50; // Account for footer on non-first pages
                     const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
-                    const maxUsable = usable - SAFETY_MARGIN;
+                    const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN; // First page: no footer
+                    const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN; // Other pages: with footer
                     
                     const out: number[][] = [];
                     let cur: number[] = [];
                     let used = 0;
+                    let isFirstPage = true;
 
                     heights.forEach((h, idx) => {
+                        const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
+                        
                         // If a single block is taller than the usable space, it needs its own page
                         if (h > maxUsable) {
                             // Finalize current page if it has content
@@ -636,16 +652,21 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 out.push(cur);
                                 cur = [];
                                 used = 0;
+                                isFirstPage = false;
                             }
                             // Place oversized block on its own page
                             out.push([idx]);
                             used = 0;
+                            isFirstPage = false;
                         } else {
                             const add = (cur.length ? BLOCK_SPACING : 0) + h;
                             // Be very conservative - if adding would get close to limit, start new page
                             if (used + add >= maxUsable) {
                                 // Start new page
-                                if (cur.length) out.push(cur);
+                                if (cur.length) {
+                                    out.push(cur);
+                                    isFirstPage = false;
+                                }
                                 cur = [idx];
                                 used = h;
                             } else {

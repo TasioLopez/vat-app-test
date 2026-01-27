@@ -82,7 +82,7 @@ function PageFooter({
     : lastName 
     ? `Naam: ${lastName}` 
     : "";
-  const birthText = dateOfBirth ? formatDutchDate(dateOfBirth) : "";
+  const birthText = formatDutchDate(dateOfBirth);
 
   return (
     <div className="mt-auto pt-4 border-t border-gray-300 flex justify-between items-center text-[10px] text-gray-700">
@@ -425,8 +425,9 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
           const measurables = blocks.filter((b) => !b.key.startsWith("__header"));
           const heights = measurables.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
 
+          const FOOTER_HEIGHT = 50; // Account for footer on non-first pages
           const limitFirst = CONTENT_H - firstH;
-          const limitRest = CONTENT_H - restH;
+          const limitRest = CONTENT_H - restH - FOOTER_HEIGHT; // Subtract footer height for non-first pages
           const SAFETY_MARGIN = 50; // Increased even more to prevent overflow
           const maxLimitFirst = limitFirst - SAFETY_MARGIN;
           const maxLimitRest = limitRest - SAFETY_MARGIN;
