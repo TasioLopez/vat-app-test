@@ -490,6 +490,12 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
             }
           });
           if (cur.length) out.push(cur);
+          console.log('📄 EmployeeInfoA4Client: Pages calculated', { 
+            pageCount: out.length,
+            pages: out,
+            blocksCount: measurables.length,
+            heights: heights
+          });
           setPages(out);
           // Report page count to context
           setSectionPageCount('empinfo', out.length);
@@ -502,6 +508,8 @@ function PaginatedA4({ blocks, tpData }: { blocks: Block[]; tpData: any }) {
     return () => clearTimeout(timeoutId);
   }, [JSON.stringify(blocks.map((b) => [b.key, "title" in b ? b.title : "", b.variant]))]);
 
+  console.log('📄 EmployeeInfoA4Client: Rendering pages', { pagesCount: pages.length, pages });
+  
   return (
     <>
       <MeasureTree />

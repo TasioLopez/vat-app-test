@@ -700,6 +700,12 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     });
 
                     if (cur.length) out.push(cur);
+                    console.log('📄 Section3A4Client: Pages calculated', { 
+                      pageCount: out.length,
+                      pages: out,
+                      sectionsCount: sections.length,
+                      heights: heights
+                    });
                     setPages(out);
                     // Report page count to context
                     setSectionPageCount('part3', out.length);
@@ -715,6 +721,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         JSON.stringify(sections.map((s) => [s.key, s.title ?? "", s.text?.length ?? 0, s.variant])),
     ]);
 
+    console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages });
+    
     return (
         <>
             <MeasureTree />

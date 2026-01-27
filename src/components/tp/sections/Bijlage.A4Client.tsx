@@ -285,6 +285,12 @@ function PaginatedA4({
           });
 
           if (cur.length) out.push(cur);
+          console.log('📄 BijlageA4Client: Pages calculated', { 
+            pageCount: out.length,
+            pages: out,
+            sectionsCount: sections.length,
+            heights: heights
+          });
           setPages(out);
           // Report page count to context
           setSectionPageCount('bijlage', out.length);
@@ -302,6 +308,8 @@ function PaginatedA4({
     ),
   ]);
 
+  console.log('📄 BijlageA4Client: Rendering pages', { pagesCount: pages.length, pages });
+  
   return (
     <>
       <MeasureTree />
