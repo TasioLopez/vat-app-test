@@ -285,6 +285,85 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         loadData();
     }, [employeeId]);
 
+    // Load TP data if not already loaded (e.g., if user navigates directly to step 3)
+    useEffect(() => {
+        async function fetchTPData() {
+            // Only load if context is empty or missing essential fields
+            if (Object.keys(tpData).length === 0 || !tpData.first_name) {
+                try {
+                    const { data: employee } = await supabase
+                        .from('employees')
+                        .select('email, first_name, last_name, client_id')
+                        .eq('id', employeeId)
+                        .single();
+
+                    const { data: details } = await supabase
+                        .from('employee_details')
+                        .select('*')
+                        .eq('employee_id', employeeId)
+                        .single();
+
+                    const { data: meta } = await supabase
+                        .from('tp_meta')
+                        .select('*')
+                        .eq('employee_id', employeeId)
+                        .single();
+
+                    if (employee) {
+                        Object.entries(employee).forEach(([key, value]) => updateField(key, value));
+                    }
+
+                    if (details) {
+                        Object.entries(details).forEach(([key, value]) => updateField(key, value));
+                    }
+
+                    if (meta) {
+                        Object.entries(meta).forEach(([key, value]) => updateField(key, value));
+                    }
+
+                    // Fetch client info
+                    if (employee?.client_id) {
+                        const { data: client } = await supabase
+                            .from('clients')
+                            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email')
+                            .eq('id', employee.client_id)
+                            .single();
+
+                        if (client) {
+                            updateField('client_name', client.name);
+                            updateField('client_referent_name', `${client.referent_first_name} ${client.referent_last_name}`);
+                            updateField('client_referent_phone', client.referent_phone);
+                            updateField('client_referent_email', client.referent_email);
+                        }
+                    }
+
+                    // Fetch current user info (consultant)
+                    const {
+                        data: { user },
+                    } = await supabase.auth.getUser();
+
+                    if (user) {
+                        const { data: profile } = await supabase
+                            .from('users')
+                            .select('first_name, last_name, phone, email')
+                            .eq('id', user.id)
+                            .single();
+
+                        if (profile) {
+                            updateField('consultant_name', `${profile.first_name} ${profile.last_name}`);
+                            updateField('consultant_phone', profile.phone);
+                            updateField('consultant_email', profile.email);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to load TP data in Section3:", err);
+                }
+            }
+        }
+
+        fetchTPData();
+    }, [employeeId, tpData, updateField]);
+
     const saveAll = async () => {
         setSaving(true);
         try {
