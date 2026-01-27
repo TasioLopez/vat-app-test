@@ -49,13 +49,20 @@ function yesNo(val?: boolean) {
 function safe<T>(v: T | null | undefined, fallback = "—"): T | string {
   return v ?? fallback;
 }
-function formatDutchDate(dateStr?: string) {
+function formatDutchDate(dateStr?: string | null) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("nl-NL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch (e) {
+    console.warn("Failed to format date:", dateStr, e);
+    return "";
+  }
 }
 
 const LogoBar = React.forwardRef<HTMLDivElement>((_props, ref) => (
