@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID } from "@/lib/api-utils";
-import { OpenAIService } from "@/lib/openai-service";
 import { SupabaseService } from "@/lib/supabase-service";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // ---- Citation Stripping ----
 function stripCitations(text: string): string {
@@ -23,29 +25,8 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
-// Simple PDF text extraction
-async function readPdfFromStorage(path: string): Promise<string> {
-  const supabaseService = SupabaseService.getInstance();
-  const supabase = supabaseService.getClient();
-  const { data: file } = await supabase.storage.from("documents").download(path);
-  if (!file) return "";
-  const buf = Buffer.from(await file.arrayBuffer());
-  
-  try {
-    const bufferString = buf.toString('utf8');
-    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
-    if (readableText && readableText.length > 0) {
-      return readableText.join(' ');
-    }
-    return "";
-  } catch (error: any) {
-    console.error('PDF extraction failed:', error.message);
-    return "";
-  }
-}
-
-// Get document text by type with priority order
-async function getDocTextByPriority(employeeId: string): Promise<{ text: string; source: string }> {
+// Get documents by priority order (same pattern as zoekprofiel)
+async function listEmployeeDocumentsByPriority(employeeId: string): Promise<Array<{ type: string; url: string; path: string }>> {
   const supabaseService = SupabaseService.getInstance();
   const supabase = supabaseService.getClient();
   const { data: docs } = await supabase
@@ -54,293 +35,230 @@ async function getDocTextByPriority(employeeId: string): Promise<{ text: string;
     .eq("employee_id", employeeId)
     .order("uploaded_at", { ascending: false });
   
-  if (!docs?.length) return { text: "", source: "" };
+  if (!docs?.length) return [];
 
-  // Priority 1: AD rapport
-  const adDoc = docs.find(d => {
-    const type = (d.type || "").toLowerCase();
-    return type.includes("ad") || type.includes("arbeidsdeskundig");
-  });
-  if (adDoc?.url) {
-    const path = extractStoragePath(adDoc.url);
-    if (path) {
-      const txt = await readPdfFromStorage(path);
-      if (txt && txt.length > 50) {
-        return { text: txt, source: "AD rapport" };
-      }
-    }
-  }
+  // Document priority: AD rapport > FML/IZP > Intake > Others
+  const priorityOrder: { [key: string]: number } = {
+    'ad_rapportage': 1,
+    'ad_rapport': 1,
+    'arbeidsdeskundig': 1,
+    'fml': 2,
+    'izp': 2,
+    'lab': 2,
+    'functiemogelijkhedenlijst': 2,
+    'inzetbaarheidsprofiel': 2,
+    'lijst arbeidsmogelijkheden': 2,
+    'intakeformulier': 3,
+    'intake': 3,
+  };
 
-  // Priority 2: FML/IZP
-  const fmlDoc = docs.find(d => {
-    const type = (d.type || "").toLowerCase();
-    return type === "fml" || type === "izp" || type === "lab" || 
-           type.includes("functiemogelijkhedenlijst") || 
-           type.includes("inzetbaarheidsprofiel") ||
-           type.includes("lijst arbeidsmogelijkheden");
-  });
-  if (fmlDoc?.url) {
-    const path = extractStoragePath(fmlDoc.url);
-    if (path) {
-      const txt = await readPdfFromStorage(path);
-      if (txt && txt.length > 50) {
-        return { text: txt, source: "FML/IZP" };
-      }
-    }
-  }
-
-  // Priority 3: Intake form
-  const intakeDoc = docs.find(d => {
-    const type = (d.type || "").toLowerCase();
-    return type.includes("intake");
-  });
-  if (intakeDoc?.url) {
-    const path = extractStoragePath(intakeDoc.url);
-    if (path) {
-      const txt = await readPdfFromStorage(path);
-      if (txt && txt.length > 50) {
-        return { text: txt, source: "Intake formulier" };
-      }
-    }
-  }
-
-  // Priority 4: Other documents
-  for (const doc of docs) {
-    const type = (doc.type || "").toLowerCase();
-    if (!type.includes("ad") && !type.includes("arbeidsdeskundig") &&
-        type !== "fml" && type !== "izp" && type !== "lab" &&
-        !type.includes("intake") &&
-        !type.includes("functiemogelijkhedenlijst") &&
-        !type.includes("inzetbaarheidsprofiel")) {
-      const path = extractStoragePath(doc.url);
-      if (path) {
-        const txt = await readPdfFromStorage(path);
-        if (txt && txt.length > 50) {
-          return { text: txt, source: "Overig document" };
+  const sortedDocs = docs
+    .map(doc => {
+      const type = (doc.type || "").toLowerCase();
+      let priority = 99;
+      for (const [key, value] of Object.entries(priorityOrder)) {
+        if (type.includes(key)) {
+          priority = value;
+          break;
         }
       }
+      return { ...doc, priority };
+    })
+    .sort((a, b) => a.priority - b.priority);
+
+  const result: Array<{ type: string; url: string; path: string }> = [];
+  for (const doc of sortedDocs) {
+    const path = extractStoragePath(doc.url as string);
+    if (path) {
+      result.push({
+        type: doc.type as string,
+        url: doc.url as string,
+        path,
+      });
     }
   }
 
-  return { text: "", source: "" };
+  return result;
 }
 
-// Trede definitions based on the flowchart
+async function uploadDocsToOpenAI(docs: Array<{ type: string; path: string }>): Promise<string[]> {
+  const supabaseService = SupabaseService.getInstance();
+  const supabase = supabaseService.getClient();
+  const fileIds: string[] = [];
+  
+  for (const doc of docs) {
+    try {
+      const { data: file } = await supabase.storage.from("documents").download(doc.path);
+      if (!file) continue;
+      
+      const buf = Buffer.from(await file.arrayBuffer());
+      const fileName = doc.path.split('/').pop() || 'doc.pdf';
+      const mimeType = fileName.endsWith('.docx') 
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+        : 'application/pdf';
+      
+      const uploaded = await openai.files.create({
+        file: new File([buf], fileName, { type: mimeType }),
+        purpose: "assistants",
+      });
+      fileIds.push(uploaded.id);
+      console.log(`✅ Uploaded ${doc.type}: ${uploaded.id}`);
+    } catch (error: any) {
+      console.error(`⚠️ Failed to upload ${doc.type}:`, error.message);
+    }
+  }
+  
+  return fileIds;
+}
+
+// Trede definitions
 const TREDE_INFO = {
   1: {
     name: "Trede 1",
     description: "Geïsoleerd (< 2 uur actief binnenshuis) of Deelname aan een activiteit buitenshuis (< 2 uur)",
-    doel: "Empowerment, Dagstructuur, Zelfkennis",
-    doelUren: "> 2 uur per week actief (ook bij eigen werkgever) en/of traject on hold"
   },
   2: {
     name: "Trede 2",
     description: "Deelname aan een activiteit buitenshuis (< 4 uur)",
-    doel: "Empowerment, Dagstructuur, Solliciteren, Beroepskeuze",
-    doelUren: "> 4 uur per week actief (ook bij eigen werkgever)"
   },
   3: {
     name: "Trede 3",
     description: "Activering of spoor 1 (< 10 uur)",
-    doel: "Empowerment, Dagstructuur, Solliciteren, Beroepskeuze",
-    doelUren: "> 10 uur per week een activeringsplek (ook eigen werkgever)"
   },
   4: {
     name: "Trede 4",
     description: "Stage/WEP/Re-integratie spoor 1 (< 20 uur of < 50%)",
-    doel: "Solliciteren, Beroepskeuze",
-    doelUren: "> 20 uur per week of 50% van de contracturen"
   },
   5: {
     name: "Trede 5",
     description: "Parttime betaald werk, detachering, voorziening of eigen werkgever",
-    doel: "Solliciteren, Beroepskeuze",
-    doelUren: "> 50% van de contracturen (minimaal 11 uur)"
   },
   6: {
     name: "Trede 6",
     description: "Weer volledig werkzaam binnen of buiten de organisatie",
-    doel: "",
-    doelUren: ""
   }
 };
 
-// Sequential question evaluation
-async function evaluateQuestion(
-  questionNumber: number,
-  question: string,
-  context: string,
-  previousAnswers: Array<{ question: number; answer: boolean; validated: boolean }>
-): Promise<{ answer: boolean; validated: boolean; reasoning: string }> {
-  const openaiService = OpenAIService.getInstance();
-  
-  const previousContext = previousAnswers.length > 0
-    ? `Eerdere antwoorden:\n${previousAnswers.map(a => 
-        `Vraag ${a.question}: ${a.answer ? 'JA' : 'NEE'} (${a.validated ? 'gevalideerd' : 'niet gevalideerd'})`
-      ).join('\n')}\n\n`
-    : '';
+function buildInstructions(): string {
+  return `Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
 
-  const systemPrompt = `Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
+Je moet de PoW-meter beslissingsboom STRICT sequentieel doorlopen. Gebruik file_search om ALLE documenten te doorzoeken voor elke vraag.
 
-BELANGRIJK: Je moet STRICT sequentieel werken. Je kunt ALLEEN naar de volgende vraag als de huidige vraag met zekerheid beantwoord kan worden op basis van de documenten.
+BESLISSINGSBOOM (volgorde is cruciaal):
 
-VRAAG ${questionNumber}:
-${question}
+VRAAG 1: Zijn er benutbare mogelijkheden (zie advies/ conclusie BA)?
+- Zoek in documenten naar: advies bedrijfsarts, conclusie BA, benutbare mogelijkheden
+- Als NEE → STOP, antwoord: Trede 1
+- Als JA → ga naar Vraag 2
 
-INSTRUCTIES:
-1. Analyseer ALLEEN de aangeleverde documenttekst
-2. Beantwoord de vraag met JA of NEE
-3. Je mag ALLEEN "gevalideerd" antwoorden als je 100% zeker bent op basis van expliciete informatie in de documenten
-4. Als de informatie ontbreekt, ambigu is, of niet duidelijk genoeg is, antwoord dan "niet gevalideerd"
-5. Bij twijfel: antwoord "niet gevalideerd" en geef NEE als antwoord (veilige default)
+VRAAG 2: Komt men regelmatig het huis uit (2x per week)?
+- Zoek naar: activiteiten buitenshuis, contact buitenshuis, bezoeken, uitgaan
+- Uitzondering: functionele contacten zoals huisarts/fysiotherapeut tellen NIET mee
+- Als NEE → STOP, antwoord: Trede 1
+- Als JA → ga naar Vraag 3
 
-Geef je antwoord via function call met:
-- answer: boolean (true = JA, false = NEE)
-- validated: boolean (true = zeker op basis van documenten, false = niet zeker genoeg)
-- reasoning: string (korte uitleg waarom, verwijzend naar specifieke tekst in documenten)`;
+VRAAG 3: Heeft men minimaal 2x per week activiteiten/ sociale contacten buitenshuis?
+- Zoek naar: sociale activiteiten, koffieochtend, cursus, taallessen, wekelijks contact
+- Als NEE → STOP, antwoord: Trede 2
+- Als JA → ga naar Vraag 4
 
-  const userPrompt = `${previousContext}DOCUMENTTEKST:
-${context.slice(0, 22000)}
+VRAAG 4: Is men gemotiveerd om aan het werk te gaan?
+- Zoek naar: motivatie, bereidheid, open staan, willen vs kunnen, demotivatie factoren
+- Als NEE → STOP, antwoord: Trede 3
+- Als JA → ga naar Vraag 5
 
-Analyseer vraag ${questionNumber} en bepaal of deze met zekerheid beantwoord kan worden.`;
+VRAAG 5: Kan men op het moment van de intake minimaal 12 uur per week werken?
+- Zoek naar: uren per week, belastbaarheid, werkdruk, verantwoordelijkheid, zelfstandigheid
+- Als NEE → STOP, antwoord: Trede 3
+- Als JA → ga naar Vraag 6
 
-  const toolSchema = {
-    type: "function" as const,
-    function: {
-      name: `evaluate_question_${questionNumber}`,
-      description: `Evalueer vraag ${questionNumber} van de PoW-meter`,
-      parameters: {
-        type: "object" as const,
-        properties: {
-          answer: { type: "boolean" as const, description: "true = JA, false = NEE" },
-          validated: { type: "boolean" as const, description: "true = zeker op basis van documenten, false = niet zeker" },
-          reasoning: { type: "string" as const, description: "Korte uitleg" }
-        },
-        required: ["answer", "validated", "reasoning"]
-      }
-    }
-  };
+VRAAG 6: Kan men zonder opleiding direct aan het werk?
+- Zoek naar: onbetaald werk, zelfstandig taken, verantwoordelijkheid, economische waarde, beroepsopleiding
+- Als NEE → STOP, antwoord: Trede 4
+- Als JA → ga naar Vraag 7
 
-  try {
-    const result = await openaiService.generateContent(
-      systemPrompt,
-      userPrompt,
-      toolSchema,
-      { temperature: 0.1, model: 'gpt-4o' }
-    );
+VRAAG 7: Kan een functie zonder aanpassingen/voorzieningen uitgevoerd worden?
+- Zoek naar: 65% hersteld, loonwaarde, aanpassingen, voorzieningen, werkplek, taakaanpassing
+- Als NEE → STOP, antwoord: Trede 5
+- Als JA → antwoord: Trede 6
 
-    return {
-      answer: result.answer === true,
-      validated: result.validated === true,
-      reasoning: result.reasoning || ""
-    };
-  } catch (error) {
-    console.error(`Error evaluating question ${questionNumber}:`, error);
-    // On error, default to not validated and NO answer (safest)
-    return { answer: false, validated: false, reasoning: "Fout bij evaluatie" };
-  }
+BELANGRIJK:
+- Doorzoek ALLE documenten met file_search voor elke vraag
+- Stop bij de eerste NEE antwoord
+- Maak redelijke inferenties op basis van beschikbare informatie
+- Als informatie ontbreekt voor een vraag, geef dan een redelijke inschatting op basis van wat wel beschikbaar is
+- Wees niet te strikt - als je redelijk zeker bent op basis van de documenten, geef dan een antwoord
+
+Geef je antwoord als JSON:
+{
+  "trede": number (1-6),
+  "reasoning": "string met uitleg welke vragen je hebt geëvalueerd en waarom je op deze trede uitkomt"
+}`;
 }
 
-// Main function to determine trede
-async function determineTrede(docText: string, source: string): Promise<{ trede: number; text: string }> {
-  const questions = [
-    {
-      number: 1,
-      text: "Zijn er benutbare mogelijkheden (zie advies/ conclusie BA)?",
-      noTrede: 1,
-      yesNext: 2
-    },
-    {
-      number: 2,
-      text: "Komt men regelmatig het huis uit (2x per week)? Denk aan: geen contact buitenshuis, behalve functionele contacten zoals een bezoek aan de huisarts of fysiotherapeut",
-      noTrede: 1,
-      yesNext: 3
-    },
-    {
-      number: 3,
-      text: "Heeft men minimaal 2x per week activiteiten/ sociale contacten buitenshuis? Denk aan: wekelijks contact met anderen buitenshuis, zoals het deelnemen aan een koffieochtend of het volgen van een cursus of taallessen.",
-      noTrede: 2,
-      yesNext: 4
-    },
-    {
-      number: 4,
-      text: "Is men gemotiveerd om aan het werk te gaan? Staat men hiervoor open, is het een kwestie van niet willen of niet kunnen, zijn er factoren waar werknemer gedemotiveerd van raakt?",
-      noTrede: 3,
-      yesNext: 5
-    },
-    {
-      number: 5,
-      text: "Kan men op het moment van de intake minimaal 12 uur per week werken? (geen urenbeperking) Denk aan: deelname aan activiteiten met uitvoering van taken met een lage werkdruk en/of met weinig eigen verantwoordelijkheid en/of zelfstandigheid.",
-      noTrede: 3,
-      yesNext: 6
-    },
-    {
-      number: 6,
-      text: "Kan men zonder opleiding direct aan het werk? Denk aan: onbetaald werk, gericht op werk. Voert zelfstandig taken uit en/of draagt verantwoordelijkheid en/of opbrengst heeft economische waarde; en/of volgt een beroepsopleiding richting passend arbeid?",
-      noTrede: 4,
-      yesNext: 7
-    },
-    {
-      number: 7,
-      text: "Kan een functie zonder aanpassingen, aanvulling inkomen/uitkering) of voorzieningen (werkplek, taakaanpassing) etc. uitgevoerd worden? Is werknemer voor minimaal 65% hersteld gemeld in eigen of andere functie in spoor 1 of kan men minimaal 65% loonwaarde ergens anders in een passende functie genereren?",
-      noTrede: 5,
-      yesNext: 6
-    }
-  ];
+async function runAssistant(files: string[]): Promise<{ trede: number; reasoning: string }> {
+  const assistant = await openai.beta.assistants.create({
+    name: "PoW-meter Evaluator",
+    instructions: buildInstructions(),
+    model: "gpt-4o",
+    tools: [{ type: "file_search" }],
+  });
 
-  const previousAnswers: Array<{ question: number; answer: boolean; validated: boolean }> = [];
+  const thread = await openai.beta.threads.create({
+    messages: [
+      {
+        role: "user",
+        content: "Analyseer alle documenten en bepaal de PoW-meter trede door de beslissingsboom sequentieel door te lopen. Gebruik file_search om alle documenten te doorzoeken.",
+        attachments: files.map((id) => ({ file_id: id, tools: [{ type: "file_search" }] })),
+      },
+    ],
+  });
 
-  // Evaluate questions sequentially
-  for (const q of questions) {
-    const evaluation = await evaluateQuestion(q.number, q.text, docText, previousAnswers);
-    
-    previousAnswers.push({
-      question: q.number,
-      answer: evaluation.answer,
-      validated: evaluation.validated
-    });
+  const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+    assistant_id: assistant.id
+  });
 
-    // If question cannot be validated, stop and default to Trede 1
-    if (!evaluation.validated) {
-      console.log(`Question ${q.number} not validated, defaulting to Trede 1`);
-      const tredeInfo = TREDE_INFO[1 as keyof typeof TREDE_INFO];
-      return {
-        trede: 1,
-        text: `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. De verwachting is dat werknemer binnen nu en [X] maanden de stap naar een hogere trede zal maken.`
-      };
-    }
+  console.log('✅ Assistant run completed with status:', run.status);
 
-    // If answer is NO, return the corresponding trede
-    if (!evaluation.answer) {
-      const tredeKey = q.noTrede as keyof typeof TREDE_INFO;
-      const tredeInfo = TREDE_INFO[tredeKey];
-      const nextTrede = q.noTrede < 6 ? q.noTrede + 1 : 6;
-      const nextTredeKey = nextTrede as keyof typeof TREDE_INFO;
-      const nextTredeInfo = TREDE_INFO[nextTredeKey];
-      
-      let expectationText = "";
-      if (q.noTrede === 6) {
-        expectationText = "Werknemer is volledig werkzaam binnen of buiten de organisatie.";
-      } else {
-        expectationText = `De verwachting is dat werknemer binnen nu en [X] maanden de stap naar ${nextTredeInfo.name} (${nextTredeInfo.description}) zal maken.`;
-      }
-
-      return {
-        trede: q.noTrede,
-        text: `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. ${expectationText}`
-      };
-    }
-
-    // If answer is YES, continue to next question
-    // (loop continues)
+  if (run.status !== 'completed') {
+    throw new Error(`Assistant run failed: ${run.status}`);
   }
 
-  // If all questions answered YES, it's Trede 6
-  const tredeInfo = TREDE_INFO[6 as keyof typeof TREDE_INFO];
-  return {
-    trede: 6,
-    text: `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. Werknemer is volledig werkzaam binnen of buiten de organisatie.`
-  };
+  const msgs = await openai.beta.threads.messages.list(thread.id);
+  const text = msgs.data[0]?.content?.[0]?.type === 'text' ? msgs.data[0].content[0].text.value : '';
+  
+  // Extract JSON from response
+  const match = text.match(/\{[\s\S]*\}/);
+  const jsonStr = match ? match[0] : text;
+  let parsed: any = {};
+  try { 
+    parsed = JSON.parse(jsonStr); 
+  } catch { 
+    // Fallback: try to extract trede number from text
+    const tredeMatch = text.match(/trede\s*[1-6]|trede\s*[1-6]/i);
+    if (tredeMatch) {
+      const tredeNum = parseInt(tredeMatch[0].replace(/trede\s*/i, ''));
+      parsed = { trede: tredeNum, reasoning: text };
+    } else {
+      parsed = { trede: 1, reasoning: "Kon trede niet bepalen uit response" };
+    }
+  }
+
+  // Cleanup
+  try {
+    await openai.beta.assistants.delete(assistant.id);
+    for (const fileId of files) {
+      try {
+        await openai.files.delete(fileId);
+      } catch (e) {
+        console.warn('Failed to delete file:', fileId);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to clean up assistant resources:', e);
+  }
+
+  return parsed;
 }
 
 export async function GET(req: NextRequest) {
@@ -351,34 +269,58 @@ export async function GET(req: NextRequest) {
     validateRequiredFields({ employeeId }, ['employeeId']);
     validateUUID(employeeId!, 'Employee ID');
 
-    // Get document text with priority order
-    const { text: docText, source } = await getDocTextByPriority(employeeId!);
+    // Get documents by priority (same pattern as other routes)
+    const docs = await listEmployeeDocumentsByPriority(employeeId!);
     
-    if (!docText || docText.length < 50) {
+    if (docs.length === 0) {
       return createSuccessResponse(
         { pow_meter: "" },
-        "Geen documenten gevonden of documenten bevatten onvoldoende tekst"
+        "Geen documenten gevonden"
       );
     }
 
-    console.log(`📄 Analyzing PoW-meter using ${source}`);
+    console.log(`📄 Found ${docs.length} documents for PoW-meter analysis:`, docs.map(d => d.type));
 
-    // Determine trede through sequential evaluation
-    const { trede, text } = await determineTrede(docText, source);
+    // Upload ALL documents to OpenAI (same pattern as other routes)
+    const fileIds = await uploadDocsToOpenAI(docs);
+    
+    if (fileIds.length === 0) {
+      return createSuccessResponse(
+        { pow_meter: "" },
+        "Kon documenten niet uploaden naar OpenAI"
+      );
+    }
 
-    const pow_meter = stripCitations(text);
+    console.log(`📤 Uploaded ${fileIds.length} files to OpenAI`);
+
+    // Single assistant call that evaluates the entire decision tree
+    const { trede, reasoning } = await runAssistant(fileIds);
+
+    console.log(`✅ Determined Trede ${trede}: ${reasoning.slice(0, 100)}`);
+
+    const tredeKey = trede as 1 | 2 | 3 | 4 | 5 | 6;
+    const tredeInfo = TREDE_INFO[tredeKey];
+    const nextTrede = trede < 6 ? trede + 1 : 6;
+    const nextTredeInfo = TREDE_INFO[nextTrede as keyof typeof TREDE_INFO];
+    
+    let expectationText = "";
+    if (trede === 6) {
+      expectationText = "Werknemer is volledig werkzaam binnen of buiten de organisatie.";
+    } else {
+      expectationText = `De verwachting is dat werknemer binnen nu en [X] maanden de stap naar ${nextTredeInfo.name} (${nextTredeInfo.description}) zal maken.`;
+    }
+
+    const pow_meter = `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. ${expectationText}`;
 
     // Persist to database
     const supabaseService = SupabaseService.getInstance();
-    await supabaseService.upsertTPMeta(employeeId!, { pow_meter });
+    await supabaseService.upsertTPMeta(employeeId!, { pow_meter: stripCitations(pow_meter) });
 
-    const tredeKey = trede as 1 | 2 | 3 | 4 | 5 | 6;
     return createSuccessResponse(
-      { pow_meter },
-      `PoW-meter successfully determined: ${TREDE_INFO[tredeKey].name}`
+      { pow_meter: stripCitations(pow_meter) },
+      `PoW-meter successfully determined: ${tredeInfo.name}`
     );
   } catch (error: any) {
     return handleAPIError(error);
   }
 }
-
