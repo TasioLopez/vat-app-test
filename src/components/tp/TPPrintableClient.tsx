@@ -28,7 +28,7 @@ export default function TPPrintableClient({ employeeId, data }: Props) {
         // Additional delay to ensure pagination measurement is complete
         setTimeout(() => {
           root.setAttribute("data-ready", "1");
-        }, 500);
+        }, 1000);
       } else {
         // Retry after a short delay
         setTimeout(checkReady, 200);

@@ -779,32 +779,42 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
     if (pages.length === 0 && sections.length > 0) {
         console.warn('⚠️ Section3A4Client: pages array is empty, using estimated pagination');
         
-        // Estimate page breaks based on content length (fallback pagination)
-        const ESTIMATED_SECTION_HEIGHT = 200; // Rough estimate per section
+        // Use more conservative estimates that match the actual calculation
         const headerH = headerRef.current?.offsetHeight ?? 100;
         const FOOTER_HEIGHT = 50;
         const SAFETY_MARGIN = 50;
         const ESTIMATED_FIRST_PAGE_CAPACITY = CONTENT_H - headerH - SAFETY_MARGIN;
         const ESTIMATED_REST_PAGE_CAPACITY = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
         
+        // More accurate section height estimates based on content type
+        const getEstimatedHeight = (s: PreviewItem): number => {
+            if (s.variant === 'subtle') return 30;
+            if (s.key === 'pow') return 350; // POW section with image is taller
+            if (s.key.startsWith('act-')) return 150; // Activity sections
+            if (s.text && s.text.length > 500) return 300; // Long text sections
+            if (s.text && s.text.length > 200) return 200; // Medium text sections
+            return 150; // Default for shorter sections
+        };
+        
         const fallbackPages: number[][] = [];
         let currentPage: number[] = [];
         let currentHeight = 0;
         let isFirstPage = true;
         
-        sections.forEach((_, idx) => {
-            const sectionHeight = ESTIMATED_SECTION_HEIGHT;
+        sections.forEach((s, idx) => {
+            const sectionHeight = getEstimatedHeight(s);
             const pageCapacity = isFirstPage ? ESTIMATED_FIRST_PAGE_CAPACITY : ESTIMATED_REST_PAGE_CAPACITY;
             const spacing = currentPage.length > 0 ? BLOCK_SPACING : 0;
+            const totalNeeded = currentHeight + spacing + sectionHeight;
             
-            if (currentHeight + spacing + sectionHeight > pageCapacity && currentPage.length > 0) {
+            if (totalNeeded > pageCapacity && currentPage.length > 0) {
                 fallbackPages.push(currentPage);
                 currentPage = [idx];
                 currentHeight = sectionHeight;
                 isFirstPage = false;
             } else {
                 currentPage.push(idx);
-                currentHeight += spacing + sectionHeight;
+                currentHeight = totalNeeded;
             }
         });
         
@@ -822,9 +832,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     
                     return (
                         <section key={`p-${p}`} className="print-page">
-                            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                                 <LogoBar />
-                                <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: CONTENT_H }}>
                                     {idxs.map((i) => {
                                         const s = sections[i];
                                         return (
@@ -900,9 +910,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 
                 return (
                     <section key={`p-${p}`} className="print-page">
-                        <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                        <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                             <LogoBar />
-                            <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: CONTENT_H }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 return (
