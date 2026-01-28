@@ -303,7 +303,7 @@ async function determineTrede(docText: string, source: string): Promise<{ trede:
     // If question cannot be validated, stop and default to Trede 1
     if (!evaluation.validated) {
       console.log(`Question ${q.number} not validated, defaulting to Trede 1`);
-      const tredeInfo = TREDE_INFO[1];
+      const tredeInfo = TREDE_INFO[1 as keyof typeof TREDE_INFO];
       return {
         trede: 1,
         text: `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. De verwachting is dat werknemer binnen nu en [X] maanden de stap naar een hogere trede zal maken.`
@@ -312,9 +312,11 @@ async function determineTrede(docText: string, source: string): Promise<{ trede:
 
     // If answer is NO, return the corresponding trede
     if (!evaluation.answer) {
-      const tredeInfo = TREDE_INFO[q.noTrede];
+      const tredeKey = q.noTrede as keyof typeof TREDE_INFO;
+      const tredeInfo = TREDE_INFO[tredeKey];
       const nextTrede = q.noTrede < 6 ? q.noTrede + 1 : 6;
-      const nextTredeInfo = TREDE_INFO[nextTrede];
+      const nextTredeKey = nextTrede as keyof typeof TREDE_INFO;
+      const nextTredeInfo = TREDE_INFO[nextTredeKey];
       
       let expectationText = "";
       if (q.noTrede === 6) {
@@ -334,7 +336,7 @@ async function determineTrede(docText: string, source: string): Promise<{ trede:
   }
 
   // If all questions answered YES, it's Trede 6
-  const tredeInfo = TREDE_INFO[6];
+  const tredeInfo = TREDE_INFO[6 as keyof typeof TREDE_INFO];
   return {
     trede: 6,
     text: `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. Werknemer is volledig werkzaam binnen of buiten de organisatie.`
@@ -370,9 +372,10 @@ export async function GET(req: NextRequest) {
     const supabaseService = SupabaseService.getInstance();
     await supabaseService.upsertTPMeta(employeeId!, { pow_meter });
 
+    const tredeKey = trede as 1 | 2 | 3 | 4 | 5 | 6;
     return createSuccessResponse(
       { pow_meter },
-      `PoW-meter successfully determined: ${TREDE_INFO[trede as keyof typeof TREDE_INFO].name}`
+      `PoW-meter successfully determined: ${TREDE_INFO[tredeKey].name}`
     );
   } catch (error: any) {
     return handleAPIError(error);
