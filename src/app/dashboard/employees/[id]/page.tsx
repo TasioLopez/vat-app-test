@@ -2,10 +2,13 @@
 
 import { useState, useEffect, use } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { Map, Compass } from 'lucide-react';
+import { Map, Compass, Sparkles, Save, Briefcase, GraduationCap, Car, Languages, Computer, Clock, Building2, FileText } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 type Employee = {
     id: string;
@@ -376,7 +379,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     };
 
     const fieldClass = (field: keyof EmployeeDetails) =>
-        `w-full border border-gray-500/30 p-2 rounded ${autofilledFields.has(field) ? 'border-yellow-500' : ''}`;
+        `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${autofilledFields.has(field) ? 'border-yellow-400 bg-yellow-50/30' : ''}`;
 
     return (
         <div className="p-4 space-y-6">
@@ -405,9 +408,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <button onClick={() => window.location.href = `/dashboard/tp/${employeeId}`} className="flex border-2 border-indigo-600 font-semibold text-indigo-600 px-4 py-2 rounded items-center gap-2 hover:bg-indigo-600 hover:text-white hover:cursor-pointer transition"><Map className="w-4 h-4" />Trajectplan</button>
                                     <button onClick={() => window.location.href = `/dashboard/vgr/${employeeId}`} className="flex border-2 border-purple-600 font-semibold text-purple-600 px-4 py-2 rounded items-center gap-2 hover:bg-purple-600 hover:text-white hover:cursor-pointer transition"><Compass className="w-4 h-4" />VGR</button>
                                 </div>
-                                <button onClick={saveAllInfo} className="mt-4 bg-blue-600 font-semibold text-white px-4 py-2 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer transition" disabled={updating}>
+                                <Button 
+                                    onClick={saveAllInfo} 
+                                    disabled={updating}
+                                    className="mt-4 w-full"
+                                >
+                                    <Save className="w-4 h-4 mr-2" />
                                     {updating ? 'Opslaan...' : 'Opslaan informatie'}
-                                </button>
+                                </Button>
                             </div>
 
                             <div className="flex flex-col gap-2 w-2/5">
@@ -446,68 +454,146 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             )}
 
             {/* Worker Profile Section */}
-            <div className="bg-white p-4 rounded shadow space-y-4">
-                <div className="flex justify-between">
-                    <h2 className="text-lg font-semibold">Werknemersprofiel</h2>
-                    <button onClick={autofillWithAI} disabled={aiLoading} className={`bg-green-600 text-white font-semibold px-4 py-2 rounded hover:bg-green-700 hover:cursor-pointer transition ${aiLoading ? 'opacity-50' : ''}`}>
-                        {aiLoading ? 'AI uitvoeren...': 'Invullen met AI'}
-                    </button>
+            <div className="bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
+                <div className="flex justify-between items-center pb-4 border-b border-purple-200">
+                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        Werknemersprofiel
+                    </h2>
+                    <Button 
+                        onClick={autofillWithAI} 
+                        disabled={aiLoading}
+                        variant="secondary"
+                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        <Sparkles className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
+                        {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
+                    </Button>
                 </div>
 
-                <input className={fieldClass('current_job')} placeholder="Huidig ​​werk" value={employeeDetails?.current_job || ''} onChange={e => handleDetailChange('current_job', e.target.value)} />
-                <textarea className={fieldClass('work_experience')} placeholder="Werkervaring" value={employeeDetails?.work_experience || ''} onChange={e => handleDetailChange('work_experience', e.target.value)} />
-                
-                <div className="flex gap-2">
-                    <select className={fieldClass('education_level')} value={employeeDetails?.education_level || ''} onChange={e => handleDetailChange('education_level', e.target.value)}>
-                        <option value="">Selecteer opleidingsniveau</option>
-                        {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
-                            <option key={level} value={level}>{level}</option>
-                        ))}
-                    </select>
-                    <input 
-                        className={fieldClass('education_name')} 
-                        placeholder="Specialisatie (bijv. Agogisch werk)" 
-                        value={employeeDetails?.education_name || ''} 
-                        onChange={e => handleDetailChange('education_name', e.target.value)} 
+                {/* Current Job */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-purple-600" />
+                        Huidig werk
+                    </label>
+                    <Input 
+                        className={fieldClass('current_job')} 
+                        placeholder="Bijv. Jobcoach/stagebegeleider" 
+                        value={employeeDetails?.current_job || ''} 
+                        onChange={e => handleDetailChange('current_job', e.target.value)} 
                     />
                 </div>
 
+                {/* Work Experience */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-purple-600" />
+                        Werkervaring
+                    </label>
+                    <Textarea 
+                        className={fieldClass('work_experience') + ' min-h-[100px]'} 
+                        placeholder="Beschrijf de werkervaring..." 
+                        value={employeeDetails?.work_experience || ''} 
+                        onChange={e => handleDetailChange('work_experience', e.target.value)} 
+                    />
+                </div>
+                
+                {/* Education */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 group">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-purple-600" />
+                            Opleidingsniveau
+                        </label>
+                        <select 
+                            className={fieldClass('education_level')} 
+                            value={employeeDetails?.education_level || ''} 
+                            onChange={e => handleDetailChange('education_level', e.target.value)}
+                        >
+                            <option value="">Selecteer opleidingsniveau</option>
+                            {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
+                                <option key={level} value={level}>{level}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2 group">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-purple-600" />
+                            Specialisatie
+                        </label>
+                        <Input 
+                            className={fieldClass('education_name')} 
+                            placeholder="Bijv. Kappersopleiding" 
+                            value={employeeDetails?.education_name || ''} 
+                            onChange={e => handleDetailChange('education_name', e.target.value)} 
+                        />
+                    </div>
+                </div>
+
                 {/* Checkboxes for drivers_license and has_computer */}
-                <div className='flex p-2'>
-                    {[['drivers_license', 'Rijbewijs'], ['has_computer', 'Heeft PC']].map(([key, label]) => (
-                        <label key={key} className="flex items-center space-x-2 w-1/2">
-                            <input type="checkbox" checked={Boolean(employeeDetails?.[key as keyof EmployeeDetails])} onChange={e => handleDetailChange(key as keyof EmployeeDetails, e.target.checked)} />
-                            <span className={autofilledFields.has(key) ? 'text-yellow-500' : ''}>{label}</span>
+                <div className='flex gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
+                    {[['drivers_license', 'Rijbewijs', Car], ['has_computer', 'Heeft PC', Computer]].map(([key, label, Icon]) => (
+                        <label 
+                            key={key} 
+                            className="flex items-center space-x-3 cursor-pointer group/checkbox p-3 rounded-lg hover:bg-white transition-colors duration-200 flex-1"
+                        >
+                            <input 
+                                type="checkbox" 
+                                checked={Boolean(employeeDetails?.[key as keyof EmployeeDetails])} 
+                                onChange={e => handleDetailChange(key as keyof EmployeeDetails, e.target.checked)}
+                                className="w-5 h-5 rounded border-2 border-purple-300 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 cursor-pointer transition-all checked:bg-purple-600 checked:border-purple-600"
+                            />
+                            <div className="flex items-center gap-2">
+                                <Icon className={`w-4 h-4 ${autofilledFields.has(key) ? 'text-yellow-500' : 'text-purple-600'}`} />
+                                <span className={`font-medium ${autofilledFields.has(key) ? 'text-yellow-600' : 'text-gray-700'}`}>{label}</span>
+                            </div>
                         </label>
                     ))}
                 </div>
 
                 {/* Conditional input for license type */}
                 {employeeDetails?.drivers_license && (
-                    <select 
-                        className={fieldClass('drivers_license_type')} 
-                        value={employeeDetails?.drivers_license_type || ''} 
-                        onChange={e => handleDetailChange('drivers_license_type', e.target.value)}
-                    >
-                        <option value="">Selecteer rijbewijstype</option>
-                        <option value="B">B (Auto)</option>
-                        <option value="C">C (Vrachtwagen)</option>
-                        <option value="D">D (Bus)</option>
-                        <option value="E">E (Aanhangwagen)</option>
-                        <option value="A">A (Motor)</option>
-                    </select>
+                    <div className="space-y-2 group transition-all duration-300">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Car className="w-4 h-4 text-purple-600" />
+                            Rijbewijstype
+                        </label>
+                        <select 
+                            className={fieldClass('drivers_license_type')} 
+                            value={employeeDetails?.drivers_license_type || ''} 
+                            onChange={e => handleDetailChange('drivers_license_type', e.target.value)}
+                        >
+                            <option value="">Selecteer rijbewijstype</option>
+                            <option value="B">B (Auto)</option>
+                            <option value="C">C (Vrachtwagen)</option>
+                            <option value="D">D (Bus)</option>
+                            <option value="E">E (Aanhangwagen)</option>
+                            <option value="A">A (Motor)</option>
+                        </select>
+                    </div>
                 )}
 
                 {/* Multi-select transport */}
-                <div>
-                    <label className="block text-sm font-semibold mb-2">Eigen vervoer</label>
-                    <div className="space-y-2">
+                <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
+                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2 text-gray-700">
+                        <Car className="w-4 h-4 text-purple-600" />
+                        Eigen vervoer
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'].map((option) => {
                             const selected = Array.isArray(employeeDetails?.transport_type) 
                                 ? employeeDetails.transport_type.includes(option)
                                 : false;
                             return (
-                                <label key={option} className="flex items-center space-x-2 cursor-pointer">
+                                <label 
+                                    key={option} 
+                                    className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
+                                        selected 
+                                            ? 'border-purple-500 bg-purple-100 shadow-md' 
+                                            : 'border-purple-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+                                    }`}
+                                >
                                     <input
                                         type="checkbox"
                                         checked={selected}
@@ -523,76 +609,128 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                 handleDetailChange('transport_type', current.filter(v => v !== option));
                                             }
                                         }}
-                                        className="rounded border-border text-accent focus:ring-accent"
+                                        className="rounded border-border text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                     />
-                                    <span className={autofilledFields.has('transport_type') ? 'text-yellow-500' : ''}>{option}</span>
+                                    <span className={`text-sm font-medium ${selected ? 'text-purple-700' : 'text-gray-600'} ${autofilledFields.has('transport_type') ? 'text-yellow-600' : ''}`}>
+                                        {option}
+                                    </span>
                                 </label>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* Language proficiency dropdowns */}
-                <div className="space-y-2">
-                    <label className="block text-sm font-semibold">Nederlandse taalvaardigheid</label>
+                {/* Language proficiency dropdowns - Side by side */}
+                <div className="space-y-3">
+                    <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
+                        <Languages className="w-4 h-4 text-purple-600" />
+                        Nederlandse taalvaardigheid
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2 group">
+                            <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
+                            <select 
+                                className={fieldClass('dutch_speaking')} 
+                                value={employeeDetails?.dutch_speaking || ''} 
+                                onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
+                            >
+                                <option value="">Selecteer...</option>
+                                <option value="Niet goed">Niet goed</option>
+                                <option value="Gemiddeld">Gemiddeld</option>
+                                <option value="Goed">Goed</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2 group">
+                            <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
+                            <select 
+                                className={fieldClass('dutch_writing')} 
+                                value={employeeDetails?.dutch_writing || ''} 
+                                onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
+                            >
+                                <option value="">Selecteer...</option>
+                                <option value="Niet goed">Niet goed</option>
+                                <option value="Gemiddeld">Gemiddeld</option>
+                                <option value="Goed">Goed</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2 group">
+                            <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
+                            <select 
+                                className={fieldClass('dutch_reading')} 
+                                value={employeeDetails?.dutch_reading || ''} 
+                                onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
+                            >
+                                <option value="">Selecteer...</option>
+                                <option value="Niet goed">Niet goed</option>
+                                <option value="Gemiddeld">Gemiddeld</option>
+                                <option value="Goed">Goed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Computer Skills */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Computer className="w-4 h-4 text-purple-600" />
+                        Computervaardigheden
+                    </label>
                     <select 
-                        className={fieldClass('dutch_speaking')} 
-                        value={employeeDetails?.dutch_speaking || ''} 
-                        onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
+                        className={fieldClass('computer_skills')} 
+                        value={employeeDetails?.computer_skills || ''} 
+                        onChange={e => handleDetailChange('computer_skills', e.target.value)}
                     >
-                        <option value="">Selecteer spreekvaardigheid</option>
-                        <option value="Niet goed">Niet goed</option>
-                        <option value="Gemiddeld">Gemiddeld</option>
-                        <option value="Goed">Goed</option>
-                    </select>
-                    <select 
-                        className={fieldClass('dutch_writing')} 
-                        value={employeeDetails?.dutch_writing || ''} 
-                        onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
-                    >
-                        <option value="">Selecteer schrijfvaardigheid</option>
-                        <option value="Niet goed">Niet goed</option>
-                        <option value="Gemiddeld">Gemiddeld</option>
-                        <option value="Goed">Goed</option>
-                    </select>
-                    <select 
-                        className={fieldClass('dutch_reading')} 
-                        value={employeeDetails?.dutch_reading || ''} 
-                        onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
-                    >
-                        <option value="">Selecteer leesvaardigheid</option>
-                        <option value="Niet goed">Niet goed</option>
-                        <option value="Gemiddeld">Gemiddeld</option>
-                        <option value="Goed">Goed</option>
+                        <option value="">Selecteer computervaardigheden</option>
+                        <option value="1">1 - Geen</option>
+                        <option value="2">2 - Basis (e-mail, browsen)</option>
+                        <option value="3">3 - Gemiddeld (Word, Excel)</option>
+                        <option value="4">4 - Geavanceerd (meerdere programma's)</option>
+                        <option value="5">5 - Expert (IT-gerelateerde vaardigheden)</option>
                     </select>
                 </div>
 
-                <select className={fieldClass('computer_skills')} value={employeeDetails?.computer_skills || ''} onChange={e => handleDetailChange('computer_skills', e.target.value)}>
-                    <option value="">Selecteer computervaardigheden</option>
-                    <option value="1">1 - Geen</option>
-                    <option value="2">2 - Basis (e-mail, browsen)</option>
-                    <option value="3">3 - Gemiddeld (Word, Excel)</option>
-                    <option value="4">4 - Geavanceerd (meerdere programma's)</option>
-                    <option value="5">5 - Expert (IT-gerelateerde vaardigheden)</option>
-                </select>
-
-                <input className={fieldClass('contract_hours')} type="number" placeholder="Contracturen" value={employeeDetails?.contract_hours || ''} onChange={e => handleDetailChange('contract_hours', Number(e.target.value))} />
+                {/* Contract Hours */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        Contracturen
+                    </label>
+                    <Input 
+                        className={fieldClass('contract_hours')} 
+                        type="number" 
+                        placeholder="Bijv. 40" 
+                        value={employeeDetails?.contract_hours || ''} 
+                        onChange={e => handleDetailChange('contract_hours', Number(e.target.value))} 
+                    />
+                </div>
                 
-                <div>
-                    <textarea 
-                        className={fieldClass('other_employers')} 
-                        placeholder="Vorige werkgevers (niet de huidige werkgever)" 
+                {/* Previous Employers */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-purple-600" />
+                        Vorige werkgevers
+                    </label>
+                    <Textarea 
+                        className={fieldClass('other_employers') + ' min-h-[100px]'} 
+                        placeholder="Vul hier alleen vorige werkgevers in, niet de huidige werkgever..." 
                         value={employeeDetails?.other_employers || ''} 
                         onChange={e => handleDetailChange('other_employers', e.target.value)} 
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <span className="text-purple-500">ℹ️</span>
                         Vul hier alleen vorige werkgevers in, niet de huidige werkgever ({clientName})
                     </p>
                 </div>
 
-                <button onClick={saveDetails} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700 hover:text-white hover:cursor-pointer transition" disabled={updating}>
+                <Button 
+                    onClick={saveDetails} 
+                    disabled={updating}
+                    className="w-full md:w-auto"
+                    size="lg"
+                >
+                    <Save className="w-4 h-4 mr-2" />
                     {updating ? 'Opslaan...' : 'Profiel Opslaan'}
-                </button>
+                </Button>
             </div>
 
             {activeDocType && (
