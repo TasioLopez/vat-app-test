@@ -630,6 +630,57 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
+    const genPowMeter = async () => {
+        if (busy.powMeter) return;
+        setBusy(prev => ({ ...prev, powMeter: true }));
+        setAutofillMessage(null);
+        
+        try {
+            const res = await fetch(`/api/autofill-tp-3/pow-meter?employeeId=${employeeId}`);
+            const json = await res.json();
+            
+            if (json.error) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Fout',
+                    content: json.error
+                });
+                throw new Error(json.error);
+            }
+            
+            if (json.data && json.data.pow_meter) {
+                updateField("pow_meter", json.data.pow_meter || "");
+                
+                setAutofillMessage({
+                    type: 'success',
+                    title: '✅ Succesvol Ingevuld',
+                    content: `De PoW-meter sectie is ingevuld met AI op basis van documentanalyse.`
+                });
+                
+                setTimeout(() => setAutofillMessage(null), 3000);
+            } else if (json.message) {
+                // Handle case where no documents found but API returned success
+                setAutofillMessage({
+                    type: 'warning',
+                    title: '⚠️ Geen documenten',
+                    content: json.message
+                });
+                setTimeout(() => setAutofillMessage(null), 3000);
+            }
+        } catch (err) {
+            console.error("❌ Autofill failed for pow-meter:", err);
+            if (!autofillMessage) {
+                setAutofillMessage({
+                    type: 'error',
+                    title: '❌ Systeem Fout',
+                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
+                });
+            }
+        } finally {
+            setBusy(prev => ({ ...prev, powMeter: false }));
+        }
+    };
+
     const genPersoonlijkProfiel = async () => {
         if (busy.persoonlijkProfiel) return;
         setBusy(prev => ({ ...prev, persoonlijkProfiel: true }));
@@ -1101,7 +1152,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 title="Perspectief op Werk (PoW-meter)"
                 value={tpData.pow_meter || ''}
                 onChange={(v) => updateField('pow_meter', v)}
-                placeholder="Laat de werknemer dit invullen"
+                onAutofill={genPowMeter}
+                onRewrite={() => rewriteInMyStyle('pow_meter', tpData.pow_meter || '')}
+                isAutofilling={busy.powMeter}
+                isRewriting={rewriting.pow_meter}
+                placeholder="Laat AI dit genereren uit AD rapport, FML/IZP en intakeformulier — of pas handmatig aan."
             />
             
             <SectionEditorModal
