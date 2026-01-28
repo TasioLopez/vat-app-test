@@ -533,7 +533,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Checkboxes for drivers_license and has_computer */}
                 <div className='flex gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
-                    {[['drivers_license', 'Rijbewijs', Car], ['has_computer', 'Heeft PC', Computer]].map(([key, label, Icon]) => (
+                    {([
+                        { key: 'drivers_license', label: 'Rijbewijs', Icon: Car },
+                        { key: 'has_computer', label: 'Heeft PC', Icon: Computer }
+                    ] as const).map(({ key, label, Icon }) => (
                         <label 
                             key={key} 
                             className="flex items-center space-x-3 cursor-pointer group/checkbox p-3 rounded-lg hover:bg-white transition-colors duration-200 flex-1"
