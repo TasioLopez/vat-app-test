@@ -554,7 +554,18 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         selectedActivities,
     ]);
 
-    return <PaginatedA4 sections={sections} tpData={tpData} />;
+    // Add safety check
+    if (!sections || sections.length === 0) {
+        console.error('❌ Section3A4Client: sections array is empty!', { tpData, selectedActivities });
+        return null;
+    }
+
+    try {
+        return <PaginatedA4 sections={sections} tpData={tpData} />;
+    } catch (error) {
+        console.error('❌ Section3A4Client: Error rendering:', error);
+        return null;
+    }
 }
 
 /* ---------- Pagination for on-screen preview ---------- */
@@ -762,7 +773,78 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         return () => clearTimeout(timeoutId);
     }, [sections]);
 
-    console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages });
+    console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages, sectionsCount: sections.length });
+    
+    // Fallback: if pages is empty but sections exist, render all sections on one page
+    if (pages.length === 0 && sections.length > 0) {
+        console.warn('⚠️ Section3A4Client: pages array is empty, rendering fallback with all sections');
+        const pageOffset = getPageOffset('part3');
+        return (
+            <>
+                <MeasureTree />
+                <section className="print-page">
+                    <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                        <LogoBar />
+                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                            {sections.map((s) => (
+                                <div key={s.key} className="mb-3">
+                                    {s.variant === "subtle" && s.text ? (
+                                        <div className={subtle}>{s.text}</div>
+                                    ) : s.variant === "block" && s.text ? (
+                                        <>
+                                            <div className={blockTitle}>{s.title}</div>
+                                            {s.key.startsWith('act-') ? (
+                                                <ActivityBody 
+                                                    activityId={s.key.replace('act-', '')} 
+                                                    bodyText={s.text} 
+                                                    className={paperText}
+                                                />
+                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                            ) : s.key === 'plaats' ? (
+                                                <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                <div className={`${paperText} font-bold text-black`}>{s.text}</div>
+                                            ) : s.key === 'pow' ? (
+                                                <div className={paperText}>
+                                                  {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                                  <div className="my-4">
+                                                    <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                                  </div>
+                                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                  </p>
+                                                </div>
+                                            ) : s.key === 'inl' ? (
+                                                <div className={paperText}>
+                                                    {formatTextWithParagraphs(s.text)}
+                                                    {tpData.has_ad_report === false && (
+                                                        <p className="mt-4 font-bold text-black">
+                                                            N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        s.node
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <PageFooter
+                            lastName={tpData?.last_name}
+                            firstName={tpData?.first_name}
+                            dateOfBirth={tpData?.date_of_birth}
+                            pageNumber={pageOffset + 1}
+                        />
+                    </div>
+                </section>
+            </>
+        );
+    }
     
     return (
         <>
