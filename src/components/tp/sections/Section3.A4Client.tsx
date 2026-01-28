@@ -652,8 +652,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         
         function calculatePages(heights: number[], headerH: number) {
             const FOOTER_HEIGHT = 50;
-            const SAFETY_MARGIN = 30; // Reduced from 50 to allow better space utilization
-            const TOLERANCE = 20; // Small tolerance to allow fitting when very close to limit
+            const SAFETY_MARGIN = 20; // Further reduced to allow better space utilization
+            const TOLERANCE = 50; // Increased to allow more aggressive fitting
             const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN;
             const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
             
@@ -681,14 +681,15 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     const add = spacing + h;
                     const wouldExceed = used + add;
                     
-                    // Use > instead of >= and add tolerance for better space utilization
-                    // Also check if next section would fit better on current page
+                    // Check if next section exists and would fit on current page
                     const nextIdx = idx + 1;
                     const nextH = nextIdx < heights.length ? heights[nextIdx] : 0;
-                    const nextWouldFit = nextH > 0 && nextH <= maxUsable && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
+                    const nextWouldFit = nextH > 0 && nextH <= maxUsable;
+                    const bothWouldFit = nextWouldFit && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
                     
-                    if (wouldExceed > maxUsable + TOLERANCE && !nextWouldFit) {
-                        // Only break if we'd significantly exceed AND next section won't fit
+                    // Only break if we'd significantly exceed AND (no next section OR next won't fit on same page)
+                    // This allows fitting current section if next would also fit
+                    if (wouldExceed > maxUsable + TOLERANCE && !bothWouldFit) {
                         if (cur.length) {
                             out.push(cur);
                             isFirstPage = false;
@@ -696,7 +697,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                         cur = [idx];
                         used = h;
                     } else {
-                        // Try to fit current section
+                        // Try to fit current section (it fits or both current+next fit)
                         used += add;
                         cur.push(idx);
                     }
@@ -708,7 +709,10 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
               pageCount: out.length,
               pages: out,
               sectionsCount: sections.length,
-              heights: heights
+              heights: heights,
+              maxUsableFirst,
+              maxUsableRest,
+              headerH
             });
             setPages(out);
             setSectionPageCount('part3', out.length);
