@@ -16,10 +16,31 @@ export default function TPPrintableClient({ employeeId, data }: Props) {
   // Tell Puppeteer "pagination is done" after the client paginators have measured and split.
   useEffect(() => {
     const root = document.getElementById("tp-print-root");
-    // two rAFs lets layout + pagination state settle
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => root?.setAttribute("data-ready", "1"))
-    );
+    if (!root) return;
+    
+    // Wait longer for pagination to complete, especially for sections with images
+    const checkReady = () => {
+      // Check if all sections have rendered their print-page elements
+      const printPages = root.querySelectorAll('.print-page');
+      const expectedSections = 4; // cover, empinfo, part3, bijlage
+      
+      if (printPages.length >= expectedSections) {
+        // Additional delay to ensure pagination measurement is complete
+        setTimeout(() => {
+          root.setAttribute("data-ready", "1");
+        }, 500);
+      } else {
+        // Retry after a short delay
+        setTimeout(checkReady, 200);
+      }
+    };
+    
+    // Start checking after initial render
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        checkReady();
+      });
+    });
   }, [employeeId, data]);
 
   return (

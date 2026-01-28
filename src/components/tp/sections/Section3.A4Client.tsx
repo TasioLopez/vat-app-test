@@ -768,80 +768,124 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 });
         };
 
-        // Increased delay to ensure everything is rendered
-        const timeoutId = setTimeout(measureAndPaginate, 100);
+        // Increased delay to ensure everything is rendered, especially for PDF export
+        const timeoutId = setTimeout(measureAndPaginate, 300);
         return () => clearTimeout(timeoutId);
     }, [sections]);
 
     console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages, sectionsCount: sections.length });
     
-    // Fallback: if pages is empty but sections exist, render all sections on one page
+    // Fallback: if pages is empty but sections exist, use estimated pagination
     if (pages.length === 0 && sections.length > 0) {
-        console.warn('⚠️ Section3A4Client: pages array is empty, rendering fallback with all sections');
-        const pageOffset = getPageOffset('part3');
+        console.warn('⚠️ Section3A4Client: pages array is empty, using estimated pagination');
+        
+        // Estimate page breaks based on content length (fallback pagination)
+        const ESTIMATED_SECTION_HEIGHT = 200; // Rough estimate per section
+        const headerH = headerRef.current?.offsetHeight ?? 100;
+        const FOOTER_HEIGHT = 50;
+        const SAFETY_MARGIN = 50;
+        const ESTIMATED_FIRST_PAGE_CAPACITY = CONTENT_H - headerH - SAFETY_MARGIN;
+        const ESTIMATED_REST_PAGE_CAPACITY = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
+        
+        const fallbackPages: number[][] = [];
+        let currentPage: number[] = [];
+        let currentHeight = 0;
+        let isFirstPage = true;
+        
+        sections.forEach((_, idx) => {
+            const sectionHeight = ESTIMATED_SECTION_HEIGHT;
+            const pageCapacity = isFirstPage ? ESTIMATED_FIRST_PAGE_CAPACITY : ESTIMATED_REST_PAGE_CAPACITY;
+            const spacing = currentPage.length > 0 ? BLOCK_SPACING : 0;
+            
+            if (currentHeight + spacing + sectionHeight > pageCapacity && currentPage.length > 0) {
+                fallbackPages.push(currentPage);
+                currentPage = [idx];
+                currentHeight = sectionHeight;
+                isFirstPage = false;
+            } else {
+                currentPage.push(idx);
+                currentHeight += spacing + sectionHeight;
+            }
+        });
+        
+        if (currentPage.length > 0) {
+            fallbackPages.push(currentPage);
+        }
+        
+        // Use the fallback pages with proper pagination
         return (
             <>
                 <MeasureTree />
-                <section className="print-page">
-                    <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
-                        <LogoBar />
-                        <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                            {sections.map((s) => (
-                                <div key={s.key} className="mb-3">
-                                    {s.variant === "subtle" && s.text ? (
-                                        <div className={subtle}>{s.text}</div>
-                                    ) : s.variant === "block" && s.text ? (
-                                        <>
-                                            <div className={blockTitle}>{s.title}</div>
-                                            {s.key.startsWith('act-') ? (
-                                                <ActivityBody 
-                                                    activityId={s.key.replace('act-', '')} 
-                                                    bodyText={s.text} 
-                                                    className={paperText}
-                                                />
-                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                                <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
-                                            ) : s.key === 'plaats' ? (
-                                                <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
-                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                <div className={`${paperText} font-bold text-black`}>{s.text}</div>
-                                            ) : s.key === 'pow' ? (
-                                                <div className={paperText}>
-                                                  {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
-                                                  <div className="my-4">
-                                                    <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
-                                                  </div>
-                                                  <p className="text-purple-600 italic text-[10px] mt-4">
-                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                                  </p>
-                                                </div>
-                                            ) : s.key === 'inl' ? (
-                                                <div className={paperText}>
-                                                    {formatTextWithParagraphs(s.text)}
-                                                    {tpData.has_ad_report === false && (
-                                                        <p className="mt-4 font-bold text-black">
-                                                            N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        s.node
-                                    )}
+                {fallbackPages.map((idxs, p) => {
+                    const pageOffset = getPageOffset('part3');
+                    const pageNumber = pageOffset + p;
+                    
+                    return (
+                        <section key={`p-${p}`} className="print-page">
+                            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+                                <LogoBar />
+                                <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                    {idxs.map((i) => {
+                                        const s = sections[i];
+                                        return (
+                                            <div key={s.key} className="mb-3">
+                                                {s.variant === "subtle" && s.text ? (
+                                                    <div className={subtle}>{s.text}</div>
+                                                ) : s.variant === "block" && s.text ? (
+                                                    <>
+                                                        <div className={blockTitle}>{s.title}</div>
+                                                        {s.key.startsWith('act-') ? (
+                                                            <ActivityBody 
+                                                                activityId={s.key.replace('act-', '')} 
+                                                                bodyText={s.text} 
+                                                                className={paperText}
+                                                            />
+                                                        ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                            <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                                        ) : s.key === 'plaats' ? (
+                                                            <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                                        ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                            <div className={`${paperText} font-bold text-black`}>{s.text}</div>
+                                                        ) : s.key === 'pow' ? (
+                                                            <div className={paperText}>
+                                                              {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                                              <div className="my-4">
+                                                                <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                                              </div>
+                                                              <p className="text-purple-600 italic text-[10px] mt-4">
+                                                                * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                              </p>
+                                                            </div>
+                                                        ) : s.key === 'inl' ? (
+                                                            <div className={paperText}>
+                                                                {formatTextWithParagraphs(s.text)}
+                                                                {tpData.has_ad_report === false && (
+                                                                    <p className="mt-4 font-bold text-black">
+                                                                        N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    s.node
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            ))}
-                        </div>
-                        <PageFooter
-                            lastName={tpData?.last_name}
-                            firstName={tpData?.first_name}
-                            dateOfBirth={tpData?.date_of_birth}
-                            pageNumber={pageOffset + 1}
-                        />
-                    </div>
-                </section>
+                                <PageFooter
+                                    lastName={tpData?.last_name}
+                                    firstName={tpData?.first_name}
+                                    dateOfBirth={tpData?.date_of_birth}
+                                    pageNumber={pageNumber}
+                                />
+                            </div>
+                        </section>
+                    );
+                })}
             </>
         );
     }
