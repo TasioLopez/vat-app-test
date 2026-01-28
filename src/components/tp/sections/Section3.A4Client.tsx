@@ -851,12 +851,18 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 {fallbackPages.map((idxs, p) => {
                     const pageOffset = getPageOffset('part3');
                     const pageNumber = pageOffset + p;
+                    const headerH = headerRef.current?.offsetHeight ?? 100;
+                    const FOOTER_HEIGHT = 50;
+                    const isFirstPage = p === 0;
+                    const maxContentHeight = isFirstPage 
+                        ? CONTENT_H - headerH - 20 
+                        : CONTENT_H - headerH - FOOTER_HEIGHT - 20;
                     
                     return (
                         <section key={`p-${p}`} className="print-page">
                             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                                 <LogoBar />
-                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: maxContentHeight }}>
                                     {idxs.map((i) => {
                                         const s = sections[i];
                                         return (
@@ -929,12 +935,18 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
             {pages.map((idxs, p) => {
                 const pageOffset = getPageOffset('part3');
                 const pageNumber = pageOffset + p;
+                const headerH = headerRef.current?.offsetHeight ?? 100;
+                const FOOTER_HEIGHT = 50;
+                const isFirstPage = p === 0;
+                const maxContentHeight = isFirstPage 
+                    ? CONTENT_H - headerH - 20 
+                    : CONTENT_H - headerH - FOOTER_HEIGHT - 20;
                 
                 return (
                     <section key={`p-${p}`} className="print-page">
                         <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                             <LogoBar />
-                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: maxContentHeight }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 return (
