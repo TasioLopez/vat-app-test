@@ -652,7 +652,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         
         function calculatePages(heights: number[], headerH: number) {
             const FOOTER_HEIGHT = 50;
-            const SAFETY_MARGIN = 50;
+            const SAFETY_MARGIN = 30; // Reduced from 50 to allow better space utilization
+            const TOLERANCE = 20; // Small tolerance to allow fitting when very close to limit
             const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN;
             const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
             
@@ -664,6 +665,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
             heights.forEach((h, idx) => {
                 const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
                 
+                // If section is too large for a single page, it gets its own page
                 if (h > maxUsable) {
                     if (cur.length) {
                         out.push(cur);
@@ -675,8 +677,18 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     used = 0;
                     isFirstPage = false;
                 } else {
-                    const add = (cur.length ? BLOCK_SPACING : 0) + h;
-                    if (used + add >= maxUsable) {
+                    const spacing = cur.length ? BLOCK_SPACING : 0;
+                    const add = spacing + h;
+                    const wouldExceed = used + add;
+                    
+                    // Use > instead of >= and add tolerance for better space utilization
+                    // Also check if next section would fit better on current page
+                    const nextIdx = idx + 1;
+                    const nextH = nextIdx < heights.length ? heights[nextIdx] : 0;
+                    const nextWouldFit = nextH > 0 && nextH <= maxUsable && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
+                    
+                    if (wouldExceed > maxUsable + TOLERANCE && !nextWouldFit) {
+                        // Only break if we'd significantly exceed AND next section won't fit
                         if (cur.length) {
                             out.push(cur);
                             isFirstPage = false;
@@ -684,6 +696,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                         cur = [idx];
                         used = h;
                     } else {
+                        // Try to fit current section
                         used += add;
                         cur.push(idx);
                     }
@@ -834,7 +847,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                         <section key={`p-${p}`} className="print-page">
                             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                                 <LogoBar />
-                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: CONTENT_H }}>
+                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                     {idxs.map((i) => {
                                         const s = sections[i];
                                         return (
@@ -912,7 +925,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     <section key={`p-${p}`} className="print-page">
                         <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
                             <LogoBar />
-                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: CONTENT_H }}>
+                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 return (
