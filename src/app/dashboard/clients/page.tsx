@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Trash2, Pencil } from 'lucide-react';
+import { trackAccess } from '@/lib/tracking';
 
 
 type Client = Database['public']['Tables']['clients']['Row'];
@@ -87,6 +88,8 @@ export default function ClientsPage() {
     if (userRole !== 'admin') return;
     setSelectedClient(client);
     await fetchEmployees(client.id);
+    // Track when client is opened
+    await trackAccess('client', client.id, false);
   };
 
   const handleDeleteClick = (client: Client) => {
@@ -121,6 +124,8 @@ export default function ClientsPage() {
       .eq('id', selectedClient.id);
 
     if (!error) {
+      // Track modification
+      await trackAccess('client', selectedClient.id, true);
       await fetchClients();
       setSelectedClient(null);
     }

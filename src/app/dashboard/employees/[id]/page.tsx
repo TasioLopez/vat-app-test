@@ -9,6 +9,7 @@ import { parseWorkExperience } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { trackAccess } from '@/lib/tracking';
 
 type Employee = {
     id: string;
@@ -87,6 +88,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         fetchClients();
         fetchUserRole();
         fetchDocuments();
+        // Track when employee page is opened
+        if (employeeId) {
+            trackAccess('employee', employeeId, false);
+        }
     }, [employeeId]);
 
     const fetchEmployee = async () => {
@@ -260,6 +265,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
+            // Track modification
+            await trackAccess('employee', employeeId, true);
             showSuccess('Profiel opgeslagen!');
         } catch (err) {
             console.error('Error saving details:', err);
@@ -313,6 +320,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
+            // Track modification
+            await trackAccess('employee', employeeId, true);
             showSuccess('Werknemer informatie opgeslagen!');
         } catch (err) {
             console.error('Error saving all info:', err);
