@@ -687,19 +687,24 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     const nextWouldFit = nextH > 0 && nextH <= maxUsable;
                     const bothWouldFit = nextWouldFit && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
                     
-                    // Only break if we'd significantly exceed AND (no next section OR next won't fit on same page)
-                    // This allows fitting current section if next would also fit
-                    if (wouldExceed > maxUsable + TOLERANCE && !bothWouldFit) {
+                    // Try to fit if:
+                    // 1. Current section fits within tolerance, OR
+                    // 2. Both current and next sections would fit together
+                    // Only break if it would significantly exceed AND next won't fit
+                    const fitsWithinTolerance = wouldExceed <= maxUsable + TOLERANCE;
+                    
+                    if (fitsWithinTolerance || bothWouldFit) {
+                        // Fit current section
+                        used += add;
+                        cur.push(idx);
+                    } else {
+                        // Break to new page
                         if (cur.length) {
                             out.push(cur);
                             isFirstPage = false;
                         }
                         cur = [idx];
                         used = h;
-                    } else {
-                        // Try to fit current section (it fits or both current+next fit)
-                        used += add;
-                        cur.push(idx);
                     }
                 }
             });
