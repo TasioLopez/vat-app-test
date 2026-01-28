@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { shouldUseLogo } from "@/lib/tp/tp_activities";
 
 interface ActivityBodyProps {
@@ -26,7 +25,7 @@ export function ActivityBody({ activityId, bodyText, className = "" }: ActivityB
         if (trimmed.startsWith('Werknemer')) {
           return (
             <div key={idx} className="flex items-start gap-2 mt-2">
-              <Image 
+              <img 
                 src="/val-logo.jpg" 
                 alt="" 
                 width={14} 

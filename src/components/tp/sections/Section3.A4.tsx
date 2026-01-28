@@ -173,7 +173,7 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
                       const description = content.substring(colonIndex + 1).trim();
                       return (
                           <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
-                              <Image 
+                              <img 
                                   src="/val-logo.jpg" 
                                   alt="" 
                                   width={14} 
@@ -190,7 +190,7 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
               
               return (
                 <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
-                  <Image 
+                  <img 
                     src="/val-logo.jpg" 
                     alt="" 
                     width={14} 
@@ -277,7 +277,7 @@ function AgreementBlock() {
         <div className="ml-4 space-y-2">
           {AGREEMENT_POINTS.map((t, i) => (
             <div key={i} className="flex items-start gap-2">
-              <Image 
+              <img 
                 src="/val-logo.jpg" 
                 alt="" 
                 width={14} 
@@ -543,7 +543,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                       <div className={paperText}>
                         {firstBlock.text && firstBlock.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(firstBlock.text)}</p>}
                         <div className="my-4">
-                          <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                          <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
                         </div>
                         <p className="text-purple-600 italic text-[10px] mt-4">
                           * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
@@ -603,7 +603,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                     <div className={paperText}>
                       {b.text && b.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(b.text)}</p>}
                       <div className="my-4">
-                        <Image src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                        <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
                       </div>
                       <p className="text-purple-600 italic text-[10px] mt-4">
                         * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
