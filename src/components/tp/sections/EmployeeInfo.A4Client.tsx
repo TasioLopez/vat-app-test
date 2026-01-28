@@ -147,8 +147,9 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
               label: "Geslacht",
               value: (
                 <>
-                  <span className="mr-4">{(tpData.gender === "Male" || tpData.gender === "Man") ? "☑ Man" : "☐ Man"}</span>
-                  <span>{(tpData.gender === "Female" || tpData.gender === "Vrouw") ? "☑ Vrouw" : "☐ Vrouw"}</span>
+                  {(tpData.gender === "Male" || tpData.gender === "Man") ? "Man" : 
+                   (tpData.gender === "Female" || tpData.gender === "Vrouw") ? "Vrouw" : 
+                   "—"}
                 </>
               ),
             },

@@ -119,8 +119,9 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
               label: "Geslacht",
               value: (
                 <>
-                  <span className="mr-4">{(data.gender === "Male" || data.gender === "Man") ? "☑ Man" : "☐ Man"}</span>
-                  <span>{(data.gender === "Female" || data.gender === "Vrouw") ? "☑ Vrouw" : "☐ Vrouw"}</span>
+                  {(data.gender === "Male" || data.gender === "Man") ? "Man" : 
+                   (data.gender === "Female" || data.gender === "Vrouw") ? "Vrouw" : 
+                   "—"}
                 </>
               ),
             },

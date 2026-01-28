@@ -548,8 +548,9 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr>
                     <td className={tdLabel}>Geslacht</td>
                     <td className={tdValue}>
-                      <span className="mr-4">{(tpData.gender === 'Male' || tpData.gender === 'Man') ? '☑ Man' : '☐ Man'}</span>
-                      <span>{(tpData.gender === 'Female' || tpData.gender === 'Vrouw') ? '☑ Vrouw' : '☐ Vrouw'}</span>
+                      {(tpData.gender === 'Male' || tpData.gender === 'Man') ? 'Man' : 
+                       (tpData.gender === 'Female' || tpData.gender === 'Vrouw') ? 'Vrouw' : 
+                       '—'}
                     </td>
                   </tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.phone}</td></tr>
