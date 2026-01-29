@@ -637,7 +637,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     )}
                                 </>
                             ) : (
-                                <div>{s.node}</div>
+                                <div className={s.key === 'agree' ? "[break-inside:avoid] [page-break-inside:avoid]" : ""}>{s.node}</div>
                             )}
                         </div>
                     ))}
@@ -666,19 +666,16 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
                 const s = sections[idx];
                 
-                // Special handling for AgreementBlock - ensure it starts on a new page if it doesn't fit
+                // ALWAYS force a page break before AgreementBlock (unless it's the first item)
                 if (s.key === 'agree') {
-                    if (cur.length && used + BLOCK_SPACING + h > maxUsable) {
-                        // Current page has content and agreement doesn't fit - start new page
+                    // If we have content on current page, start AgreementBlock on new page
+                    if (cur.length > 0) {
                         out.push(cur);
                         cur = [];
                         used = 0;
                         isFirstPage = false;
-                    } else if (cur.length === 0 && h > maxUsable) {
-                        // Agreement is too large for a single page (shouldn't happen, but handle it)
-                        console.warn('⚠️ AgreementBlock is too large for a single page');
                     }
-                    // Always add agreement to current page (which should be empty or have enough space)
+                    // AgreementBlock always gets its own page (or starts a new one)
                     cur.push(idx);
                     used = h;
                     isFirstPage = false;
@@ -706,29 +703,51 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     const nextH = nextIdx < heights.length ? heights[nextIdx] : 0;
                     const nextS = nextIdx < sections.length ? sections[nextIdx] : null;
                     
-                    // If next section is AgreementBlock, be more conservative
+                    // If next section is AgreementBlock, we need to leave room for it on a new page
                     const isNextAgreement = nextS?.key === 'agree';
-                    const nextWouldFit = nextH > 0 && nextH <= maxUsable;
-                    const bothWouldFit = nextWouldFit && !isNextAgreement && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
                     
-                    // Try to fit if:
-                    // 1. Current section fits within tolerance, OR
-                    // 2. Both current and next sections would fit together (and next is not agreement)
-                    // Only break if it would significantly exceed AND next won't fit (or next is agreement)
+                    // For better space utilization: be more aggressive about fitting sections
+                    // Only break if we would significantly exceed AND the next section won't fit
                     const fitsWithinTolerance = wouldExceed <= maxUsable + TOLERANCE;
                     
-                    if (fitsWithinTolerance || (bothWouldFit && !isNextAgreement)) {
-                        // Fit current section
+                    // If next is AgreementBlock, we should try to fit current section if it fits within tolerance
+                    // because AgreementBlock will get its own page anyway
+                    if (fitsWithinTolerance) {
+                        // Current section fits - add it
                         used += add;
                         cur.push(idx);
-                    } else {
-                        // Break to new page
-                        if (cur.length) {
-                            out.push(cur);
-                            isFirstPage = false;
+                    } else if (isNextAgreement) {
+                        // Next is AgreementBlock - fit current if it fits, AgreementBlock will get new page
+                        if (wouldExceed <= maxUsable + TOLERANCE * 1.5) {
+                            used += add;
+                            cur.push(idx);
+                        } else {
+                            // Current doesn't fit well, break to new page
+                            if (cur.length) {
+                                out.push(cur);
+                                isFirstPage = false;
+                            }
+                            cur = [idx];
+                            used = h;
                         }
-                        cur = [idx];
-                        used = h;
+                    } else {
+                        // Check if both current and next would fit together
+                        const nextWouldFit = nextH > 0 && nextH <= maxUsable;
+                        const bothWouldFit = nextWouldFit && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
+                        
+                        if (bothWouldFit) {
+                            // Both fit - add current
+                            used += add;
+                            cur.push(idx);
+                        } else {
+                            // Break to new page
+                            if (cur.length) {
+                                out.push(cur);
+                                isFirstPage = false;
+                            }
+                            cur = [idx];
+                            used = h;
+                        }
                     }
                 }
             });
@@ -889,8 +908,13 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: maxContentHeight }}>
                                     {idxs.map((i) => {
                                         const s = sections[i];
+                                        const isAgreement = s.key === 'agree';
                                         return (
-                                            <div key={s.key} className={s.key === 'agree' ? "mb-3 [break-inside:avoid] [page-break-inside:avoid]" : "mb-3"}>
+                                            <div 
+                                                key={s.key} 
+                                                className={isAgreement ? "mb-3 [break-inside:avoid] [page-break-inside:avoid] [break-before:page] [page-break-before:always]" : "mb-3"}
+                                                style={isAgreement && p > 0 && i === idxs[0] ? { pageBreakBefore: 'always' } : undefined}
+                                            >
                                                 {s.variant === "subtle" && s.text ? (
                                                     <div className={subtle}>{s.text}</div>
                                                 ) : s.variant === "block" && s.text ? (
@@ -973,8 +997,13 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: maxContentHeight }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
+                                const isAgreement = s.key === 'agree';
                                 return (
-                                    <div key={s.key} className={s.key === 'agree' ? "mb-3 [break-inside:avoid] [page-break-inside:avoid]" : "mb-3"}>
+                                    <div 
+                                        key={s.key} 
+                                        className={isAgreement ? "mb-3 [break-inside:avoid] [page-break-inside:avoid] [break-before:page] [page-break-before:always]" : "mb-3"}
+                                        style={isAgreement && p > 0 && i === idxs[0] ? { pageBreakBefore: 'always' } : undefined}
+                                    >
                                         {s.variant === "subtle" && s.text ? (
                                             <div className={subtle}>{s.text}</div>
                                         ) : s.variant === "block" && s.text ? (
