@@ -102,6 +102,41 @@ export default function NewEmployeePage() {
         setLoading(true);
         setError('');
 
+        // DEBUG: Verify authentication
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('Auth check:', { user: user?.id, email: user?.email, authError });
+        
+        if (!user) {
+            setError('Not authenticated. Please log in again.');
+            setLoading(false);
+            return;
+        }
+
+        // DEBUG: Verify user has client access
+        if (form.client_id) {
+            const { data: clientCheck, error: clientCheckError } = await supabase
+                .from('user_clients')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('client_id', form.client_id)
+                .single();
+            console.log('Client access check:', { clientCheck, clientCheckError });
+            
+            if (!clientCheck) {
+                setError('You do not have access to this client.');
+                setLoading(false);
+                return;
+            }
+        }
+
+        console.log('Attempting to insert employee with:', {
+            first_name: form.first_name,
+            last_name: form.last_name,
+            email: form.email,
+            client_id: form.client_id,
+            user_id: user.id
+        });
+
         const { data: newEmployees, error: employeeError } = await supabase
             .from('employees')
             .insert([
@@ -113,6 +148,8 @@ export default function NewEmployeePage() {
                 },
             ])
             .select();
+
+        console.log('Insert result:', { newEmployees, employeeError });
 
         if (employeeError || !newEmployees || newEmployees.length === 0) {
             setError(employeeError?.message || 'Failed to create employee');
