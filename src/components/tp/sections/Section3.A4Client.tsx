@@ -385,7 +385,15 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
       keys: tpData ? Object.keys(tpData).length : 0
     });
 
-    // pull selected activities for this employee (saved by the builder)
+    // Check if tpData is ready (has essential fields)
+    const isDataReady = useMemo(() => {
+        // Check if we have at least some essential data
+        // If tpData is empty or only has a few keys, it's likely not loaded yet
+        const hasEssentialData = tpData && Object.keys(tpData).length > 5;
+        const hasContent = tpData?.inleiding !== undefined || tpData?.wettelijke_kaders !== undefined;
+        return hasEssentialData || hasContent;
+    }, [tpData]);
+
     // pull selected activities for this employee (saved by the builder)
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -414,6 +422,12 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
     );
 
     const sections = useMemo<PreviewItem[]>(() => {
+        // Don't create sections if data isn't ready
+        if (!isDataReady) {
+            console.log('⏳ Section3A4Client: Data not ready, returning empty sections');
+            return [];
+        }
+        
         console.log('📦 Section3A4Client: Creating sections');
         const list: PreviewItem[] = [
             { key: "inl", title: "Inleiding", text: tpData.inleiding || "—", variant: "block" },
@@ -537,6 +551,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
 
         return list;
     }, [
+        isDataReady,
         tpData.inleiding,
         tpData.inleiding_sub,
         tpData.has_ad_report,
@@ -554,10 +569,14 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         selectedActivities,
     ]);
 
-    // Add safety check
-    if (!sections || sections.length === 0) {
-        console.error('❌ Section3A4Client: sections array is empty!', { tpData, selectedActivities });
-        return null;
+    // Don't render if data isn't ready or sections are empty
+    if (!isDataReady || !sections || sections.length === 0) {
+        console.log('⏳ Section3A4Client: Waiting for data...', { isDataReady, sectionsCount: sections?.length });
+        return (
+            <div className="flex items-center justify-center p-8">
+                <p className="text-muted-foreground">Laden...</p>
+            </div>
+        );
     }
 
     try {
@@ -581,6 +600,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
     const headerRef = useRef<HTMLDivElement | null>(null);
     const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
     const [pages, setPages] = useState<number[][]>([]);
+    const [isMeasuring, setIsMeasuring] = useState(false);
 
     // Hidden measurement tree (must mirror real rendering exactly)
     const MeasureTree = () => (
@@ -647,8 +667,17 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
     );
 
     useLayoutEffect(() => {
+        // Don't measure if sections are empty
+        if (!sections || sections.length === 0) {
+            console.log('⏳ PaginatedA4: No sections to measure');
+            setPages([]);
+            setIsMeasuring(false);
+            return;
+        }
+
         // Reset refs array when sections change
         blockRefs.current = new Array(sections.length).fill(null);
+        setIsMeasuring(true);
         
         function calculatePages(heights: number[], headerH: number) {
             const FOOTER_HEIGHT = 50;
@@ -733,7 +762,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     img.onload = () => resolve();
                     img.onerror = () => resolve();
                     // Add timeout to prevent hanging
-                    setTimeout(() => resolve(), 1000);
+                    setTimeout(() => resolve(), 2000);
                 });
             });
 
@@ -744,58 +773,81 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
 
             imagePromise
                 .then(() => {
-                    // Use double requestAnimationFrame to ensure layout is complete
+                    // Use triple requestAnimationFrame to ensure layout is complete
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
-                            const headerH = headerRef.current?.offsetHeight ?? 0;
-                            const heights = sections.map((_, i) => {
-                                const el = blockRefs.current[i];
-                                const height = el?.offsetHeight ?? 0;
-                                if (height === 0 && el) {
-                                    console.warn(`⚠️ Section3A4Client: Section ${i} has height 0`, {
-                                        element: el,
-                                        computedStyle: window.getComputedStyle(el),
-                                        innerHTML: el.innerHTML.substring(0, 100)
-                                    });
-                                }
-                                return height;
-                            });
-
-                            // If all heights are 0, wait a bit more and retry once
-                            if (heights.every(h => h === 0) && sections.length > 0) {
-                                console.warn('⚠️ Section3A4Client: All heights are 0, retrying...');
-                                setTimeout(() => {
-                                    const retryHeights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-                                    if (retryHeights.some(h => h > 0)) {
-                                        calculatePages(retryHeights, headerH);
-                                    } else {
-                                        console.error('❌ Section3A4Client: Still all heights 0 after retry');
-                                        setPages([]);
+                            requestAnimationFrame(() => {
+                                const headerH = headerRef.current?.offsetHeight ?? 0;
+                                const heights = sections.map((_, i) => {
+                                    const el = blockRefs.current[i];
+                                    const height = el?.offsetHeight ?? 0;
+                                    if (height === 0 && el) {
+                                        console.warn(`⚠️ Section3A4Client: Section ${i} has height 0`, {
+                                            element: el,
+                                            computedStyle: window.getComputedStyle(el),
+                                            innerHTML: el.innerHTML.substring(0, 100)
+                                        });
                                     }
-                                }, 200);
-                                return;
-                            }
+                                    return height;
+                                });
 
-                            calculatePages(heights, headerH);
+                                // If all heights are 0, wait a bit more and retry once
+                                if (heights.every(h => h === 0) && sections.length > 0) {
+                                    console.warn('⚠️ Section3A4Client: All heights are 0, retrying...');
+                                    setTimeout(() => {
+                                        const retryHeights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                                        if (retryHeights.some(h => h > 0)) {
+                                            calculatePages(retryHeights, headerH);
+                                            setIsMeasuring(false);
+                                        } else {
+                                            console.error('❌ Section3A4Client: Still all heights 0 after retry');
+                                            setPages([]);
+                                            setIsMeasuring(false);
+                                        }
+                                    }, 500);
+                                    return;
+                                }
+
+                                calculatePages(heights, headerH);
+                                setIsMeasuring(false);
+                            });
                         });
                     });
                 })
                 .catch((err) => {
                     console.error('❌ Section3A4Client: Measurement failed', err);
+                    setIsMeasuring(false);
                     // Still try to measure with whatever we have
                     requestAnimationFrame(() => {
-                        const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-                        calculatePages(heights, headerRef.current?.offsetHeight ?? 0);
+                        requestAnimationFrame(() => {
+                            const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
+                            calculatePages(heights, headerRef.current?.offsetHeight ?? 0);
+                        });
                     });
                 });
         };
 
-        // Increased delay to ensure everything is rendered, especially for PDF export
-        const timeoutId = setTimeout(measureAndPaginate, 300);
-        return () => clearTimeout(timeoutId);
+        // Increased delay to ensure everything is rendered, especially when navigating quickly
+        const timeoutId = setTimeout(measureAndPaginate, 500);
+        return () => {
+            clearTimeout(timeoutId);
+            setIsMeasuring(false);
+        };
     }, [sections]);
 
-    console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages, sectionsCount: sections.length });
+    console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages, sectionsCount: sections.length, isMeasuring });
+    
+    // Show loading state while measuring
+    if (isMeasuring && pages.length === 0) {
+        return (
+            <>
+                <MeasureTree />
+                <div className="flex items-center justify-center p-8">
+                    <p className="text-muted-foreground">Pagineren...</p>
+                </div>
+            </>
+        );
+    }
     
     // Fallback: if pages is empty but sections exist, use estimated pagination
     if (pages.length === 0 && sections.length > 0) {
