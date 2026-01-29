@@ -278,7 +278,7 @@ LogoBar.displayName = "LogoBar";
 // Reusable blocks for custom rendering
 function AgreementBlock() {
     return (
-        <div>
+        <div className="[break-inside:avoid] [page-break-inside:avoid]">
             <div className={blockTitle}>Akkoordverklaring</div>
             <div className={paperText}>
                 <p className="mb-2">{AGREEMENT_INTRO}</p>
@@ -664,6 +664,26 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
 
             heights.forEach((h, idx) => {
                 const maxUsable = isFirstPage ? maxUsableFirst : maxUsableRest;
+                const s = sections[idx];
+                
+                // Special handling for AgreementBlock - ensure it starts on a new page if it doesn't fit
+                if (s.key === 'agree') {
+                    if (cur.length && used + BLOCK_SPACING + h > maxUsable) {
+                        // Current page has content and agreement doesn't fit - start new page
+                        out.push(cur);
+                        cur = [];
+                        used = 0;
+                        isFirstPage = false;
+                    } else if (cur.length === 0 && h > maxUsable) {
+                        // Agreement is too large for a single page (shouldn't happen, but handle it)
+                        console.warn('⚠️ AgreementBlock is too large for a single page');
+                    }
+                    // Always add agreement to current page (which should be empty or have enough space)
+                    cur.push(idx);
+                    used = h;
+                    isFirstPage = false;
+                    return;
+                }
                 
                 // If section is too large for a single page, it gets its own page
                 if (h > maxUsable) {
@@ -684,16 +704,20 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     // Check if next section exists and would fit on current page
                     const nextIdx = idx + 1;
                     const nextH = nextIdx < heights.length ? heights[nextIdx] : 0;
+                    const nextS = nextIdx < sections.length ? sections[nextIdx] : null;
+                    
+                    // If next section is AgreementBlock, be more conservative
+                    const isNextAgreement = nextS?.key === 'agree';
                     const nextWouldFit = nextH > 0 && nextH <= maxUsable;
-                    const bothWouldFit = nextWouldFit && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
+                    const bothWouldFit = nextWouldFit && !isNextAgreement && (wouldExceed + BLOCK_SPACING + nextH) <= maxUsable + TOLERANCE;
                     
                     // Try to fit if:
                     // 1. Current section fits within tolerance, OR
-                    // 2. Both current and next sections would fit together
-                    // Only break if it would significantly exceed AND next won't fit
+                    // 2. Both current and next sections would fit together (and next is not agreement)
+                    // Only break if it would significantly exceed AND next won't fit (or next is agreement)
                     const fitsWithinTolerance = wouldExceed <= maxUsable + TOLERANCE;
                     
-                    if (fitsWithinTolerance || bothWouldFit) {
+                    if (fitsWithinTolerance || (bothWouldFit && !isNextAgreement)) {
                         // Fit current section
                         used += add;
                         cur.push(idx);
@@ -866,7 +890,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     {idxs.map((i) => {
                                         const s = sections[i];
                                         return (
-                                            <div key={s.key} className="mb-3">
+                                            <div key={s.key} className={s.key === 'agree' ? "mb-3 [break-inside:avoid] [page-break-inside:avoid]" : "mb-3"}>
                                                 {s.variant === "subtle" && s.text ? (
                                                     <div className={subtle}>{s.text}</div>
                                                 ) : s.variant === "block" && s.text ? (
@@ -950,7 +974,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 return (
-                                    <div key={s.key} className="mb-3">
+                                    <div key={s.key} className={s.key === 'agree' ? "mb-3 [break-inside:avoid] [page-break-inside:avoid]" : "mb-3"}>
                                         {s.variant === "subtle" && s.text ? (
                                             <div className={subtle}>{s.text}</div>
                                         ) : s.variant === "block" && s.text ? (
