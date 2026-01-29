@@ -132,7 +132,7 @@ function formatTextWithParagraphs(text: string): React.ReactNode {
 }
 
 // Render text with Z-logo bullets for list items
-function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = false): React.ReactNode {
+function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = false, eagerLoading: boolean = false): React.ReactNode {
     if (!text) return text;
     
     const paragraphs = text.split(/\n\n+/);
@@ -182,6 +182,7 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
                                                 width={14} 
                                                 height={14}
                                                 style={{ marginTop: '3px', flexShrink: 0 }}
+                                                loading={eagerLoading ? "eager" : undefined}
                                             />
                                             <span>
                                                 <strong>{jobTitle}:</strong> {formatInlineText(description)}
@@ -199,6 +200,7 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
                                         width={14} 
                                         height={14}
                                         style={{ marginTop: '3px', flexShrink: 0 }}
+                                        loading={eagerLoading ? "eager" : undefined}
                                     />
                                     <span>{formatInlineText(content)}</span>
                                 </div>
@@ -599,12 +601,17 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
 
     const headerRef = useRef<HTMLDivElement | null>(null);
     const blockRefs = useRef<Array<HTMLDivElement | null>>([]);
+    const measureTreeRef = useRef<HTMLDivElement | null>(null);
     const [pages, setPages] = useState<number[][]>([]);
     const [isMeasuring, setIsMeasuring] = useState(false);
 
     // Hidden measurement tree (must mirror real rendering exactly)
     const MeasureTree = () => (
-        <div style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} className="invisible">
+        <div 
+            ref={measureTreeRef}
+            style={{ position: "absolute", left: -99999, top: 0, width: PAGE_W }} 
+            className="invisible"
+        >
             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column' }}>
                 <LogoBar ref={headerRef} />
                 <div style={{ flex: 1, overflow: 'visible', display: 'flex', flexDirection: 'column' }}>
@@ -628,16 +635,16 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                             className={paperText}
                                         />
                                     ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, false, true)}</div>
                                     ) : s.key === 'plaats' ? (
-                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
+                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, true, true)}</div>
                                     ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                         <div className={`${paperText} font-bold text-black`}>{s.text}</div>
                                     ) : s.key === 'pow' ? (
                                         <div className={paperText}>
                                           {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
                                           <div className="my-4">
-                                            <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                            <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" loading="eager" />
                                           </div>
                                           <p className="text-purple-600 italic text-[10px] mt-4">
                                             * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
@@ -752,79 +759,121 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
             setSectionPageCount('part3', out.length);
         }
         
-        // Wait for all images to load before measuring
-        const measureAndPaginate = () => {
-            // Check if all images are loaded
-            const images = document.querySelectorAll('img');
-            const imagePromises = Array.from(images).map((img) => {
-                if (img.complete) return Promise.resolve();
+        // Preload images before measuring
+        const preloadImages = (): Promise<void> => {
+            const imageUrls = ['/val-logo.jpg', '/pow-meter.png'];
+            const preloadPromises = imageUrls.map((url) => {
                 return new Promise<void>((resolve) => {
+                    const img = document.createElement('img');
                     img.onload = () => resolve();
-                    img.onerror = () => resolve();
-                    // Add timeout to prevent hanging
-                    setTimeout(() => resolve(), 2000);
+                    img.onerror = () => resolve(); // Resolve even on error to not block
+                    img.src = url;
+                    // Timeout after 3 seconds
+                    setTimeout(() => resolve(), 3000);
                 });
             });
-
-            // If no images, resolve immediately
-            const imagePromise = imagePromises.length > 0 
-                ? Promise.all(imagePromises) 
-                : Promise.resolve();
-
-            imagePromise
-                .then(() => {
-                    // Use triple requestAnimationFrame to ensure layout is complete
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                const headerH = headerRef.current?.offsetHeight ?? 0;
-                                const heights = sections.map((_, i) => {
-                                    const el = blockRefs.current[i];
-                                    const height = el?.offsetHeight ?? 0;
-                                    if (height === 0 && el) {
-                                        console.warn(`⚠️ Section3A4Client: Section ${i} has height 0`, {
-                                            element: el,
-                                            computedStyle: window.getComputedStyle(el),
-                                            innerHTML: el.innerHTML.substring(0, 100)
-                                        });
-                                    }
-                                    return height;
-                                });
-
-                                // If all heights are 0, wait a bit more and retry once
-                                if (heights.every(h => h === 0) && sections.length > 0) {
-                                    console.warn('⚠️ Section3A4Client: All heights are 0, retrying...');
-                                    setTimeout(() => {
-                                        const retryHeights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-                                        if (retryHeights.some(h => h > 0)) {
-                                            calculatePages(retryHeights, headerH);
-                                            setIsMeasuring(false);
-                                        } else {
-                                            console.error('❌ Section3A4Client: Still all heights 0 after retry');
-                                            setPages([]);
-                                            setIsMeasuring(false);
-                                        }
-                                    }, 500);
-                                    return;
-                                }
-
-                                calculatePages(heights, headerH);
-                                setIsMeasuring(false);
-                            });
-                        });
-                    });
-                })
-                .catch((err) => {
-                    console.error('❌ Section3A4Client: Measurement failed', err);
-                    setIsMeasuring(false);
-                    // Still try to measure with whatever we have
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            const heights = sections.map((_, i) => blockRefs.current[i]?.offsetHeight ?? 0);
-                            calculatePages(heights, headerRef.current?.offsetHeight ?? 0);
-                        });
+            return Promise.all(preloadPromises).then(() => {});
+        };
+        
+        // Wait for all images to load before measuring
+        const measureAndPaginate = () => {
+            // First preload images
+            preloadImages().then(() => {
+                // Wait for measurement tree to be in DOM
+                if (!measureTreeRef.current) {
+                    console.warn('⚠️ Section3A4Client: Measurement tree not in DOM yet');
+                    setTimeout(measureAndPaginate, 100);
+                    return;
+                }
+                
+                // Check if all images WITHIN the measurement tree are loaded
+                const measureTree = measureTreeRef.current;
+                const images = measureTree.querySelectorAll('img');
+                
+                if (images.length === 0) {
+                    // No images, proceed immediately
+                    performMeasurement();
+                    return;
+                }
+                
+                const imagePromises = Array.from(images).map((img) => {
+                    if (img.complete && img.naturalHeight > 0) {
+                        return Promise.resolve();
+                    }
+                    return new Promise<void>((resolve) => {
+                        const timeout = setTimeout(() => {
+                            console.warn('⚠️ Image load timeout:', img.src);
+                            resolve();
+                        }, 3000);
+                        
+                        img.onload = () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            clearTimeout(timeout);
+                            resolve(); // Resolve even on error
+                        };
                     });
                 });
+
+                Promise.all(imagePromises).then(() => {
+                    // Additional small delay to ensure layout is settled after images load
+                    setTimeout(() => {
+                        performMeasurement();
+                    }, 100);
+                });
+            });
+        };
+        
+        const performMeasurement = () => {
+            // Use triple requestAnimationFrame to ensure layout is complete
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const headerH = headerRef.current?.offsetHeight ?? 0;
+                        const heights = sections.map((_, i) => {
+                            const el = blockRefs.current[i];
+                            if (!el) {
+                                console.warn(`⚠️ Section3A4Client: Section ${i} ref is null`);
+                                return 0;
+                            }
+                            const height = el.offsetHeight;
+                            if (height === 0) {
+                                console.warn(`⚠️ Section3A4Client: Section ${i} has height 0`, {
+                                    element: el,
+                                    computedStyle: window.getComputedStyle(el),
+                                    innerHTML: el.innerHTML.substring(0, 100)
+                                });
+                            }
+                            return height;
+                        });
+
+                        // If all heights are 0, wait a bit more and retry once
+                        if (heights.every(h => h === 0) && sections.length > 0) {
+                            console.warn('⚠️ Section3A4Client: All heights are 0, retrying...');
+                            setTimeout(() => {
+                                const retryHeights = sections.map((_, i) => {
+                                    const el = blockRefs.current[i];
+                                    return el?.offsetHeight ?? 0;
+                                });
+                                if (retryHeights.some(h => h > 0)) {
+                                    calculatePages(retryHeights, headerH);
+                                    setIsMeasuring(false);
+                                } else {
+                                    console.error('❌ Section3A4Client: Still all heights 0 after retry');
+                                    setPages([]);
+                                    setIsMeasuring(false);
+                                }
+                            }, 500);
+                            return;
+                        }
+
+                        calculatePages(heights, headerH);
+                        setIsMeasuring(false);
+                    });
+                });
+            });
         };
 
         // Increased delay to ensure everything is rendered, especially when navigating quickly
