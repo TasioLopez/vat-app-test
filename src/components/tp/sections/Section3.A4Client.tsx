@@ -398,9 +398,11 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
 
     // pull selected activities for this employee (saved by the builder)
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedIdsLoaded, setSelectedIdsLoaded] = useState(false);
 
     useEffect(() => {
         (async () => {
+            setSelectedIdsLoaded(false);
             const { data, error } = await supabase
                 .from("tp_meta")
                 .select("tp3_activities")
@@ -414,6 +416,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             const loadedIds = !error ? toStringArray((data as any)?.tp3_activities) : [];
             console.log("🔍 Review page loaded activities:", loadedIds);
             setSelectedIds(loadedIds);
+            setSelectedIdsLoaded(true);
         })();
     }, [employeeId]);
 
@@ -423,14 +426,21 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         [selectedIds]
     );
 
+    // Wait for BOTH tpData AND selectedIds to be ready before creating sections
+    const isEverythingReady = isDataReady && selectedIdsLoaded;
+
     const sections = useMemo<PreviewItem[]>(() => {
-        // Don't create sections if data isn't ready
-        if (!isDataReady) {
-            console.log('⏳ Section3A4Client: Data not ready, returning empty sections');
+        // Don't create sections if data isn't ready OR selectedIds aren't loaded yet
+        if (!isEverythingReady) {
+            console.log('⏳ Section3A4Client: Data not ready', { 
+                isDataReady, 
+                selectedIdsLoaded,
+                selectedIdsCount: selectedIds.length 
+            });
             return [];
         }
         
-        console.log('📦 Section3A4Client: Creating sections');
+        console.log('📦 Section3A4Client: Creating sections', { selectedIdsCount: selectedIds.length });
         const list: PreviewItem[] = [
             { key: "inl", title: "Inleiding", text: tpData.inleiding || "—", variant: "block" },
         ];
@@ -553,7 +563,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
 
         return list;
     }, [
-        isDataReady,
+        isEverythingReady,
         tpData.inleiding,
         tpData.inleiding_sub,
         tpData.has_ad_report,
@@ -572,8 +582,12 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
     ]);
 
     // Don't render if data isn't ready or sections are empty
-    if (!isDataReady || !sections || sections.length === 0) {
-        console.log('⏳ Section3A4Client: Waiting for data...', { isDataReady, sectionsCount: sections?.length });
+    if (!isEverythingReady || !sections || sections.length === 0) {
+        console.log('⏳ Section3A4Client: Waiting for data...', { 
+            isDataReady, 
+            selectedIdsLoaded,
+            sectionsCount: sections?.length 
+        });
         return (
             <div className="flex items-center justify-center p-8">
                 <p className="text-muted-foreground">Laden...</p>
@@ -779,50 +793,70 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         const measureAndPaginate = () => {
             // First preload images
             preloadImages().then(() => {
-                // Wait for measurement tree to be in DOM
-                if (!measureTreeRef.current) {
-                    console.warn('⚠️ Section3A4Client: Measurement tree not in DOM yet');
-                    setTimeout(measureAndPaginate, 100);
-                    return;
-                }
-                
-                // Check if all images WITHIN the measurement tree are loaded
-                const measureTree = measureTreeRef.current;
-                const images = measureTree.querySelectorAll('img');
-                
-                if (images.length === 0) {
-                    // No images, proceed immediately
-                    performMeasurement();
-                    return;
-                }
-                
-                const imagePromises = Array.from(images).map((img) => {
-                    if (img.complete && img.naturalHeight > 0) {
-                        return Promise.resolve();
+                // Wait for measurement tree to be in DOM AND all refs to be populated
+                const checkReady = () => {
+                    if (!measureTreeRef.current) {
+                        console.warn('⚠️ Section3A4Client: Measurement tree not in DOM yet');
+                        setTimeout(checkReady, 50);
+                        return;
                     }
-                    return new Promise<void>((resolve) => {
-                        const timeout = setTimeout(() => {
-                            console.warn('⚠️ Image load timeout:', img.src);
-                            resolve();
-                        }, 3000);
-                        
-                        img.onload = () => {
-                            clearTimeout(timeout);
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            clearTimeout(timeout);
-                            resolve(); // Resolve even on error
-                        };
+                    
+                    // Check if all block refs are populated
+                    const allRefsReady = blockRefs.current.every((ref, idx) => {
+                        if (ref === null) {
+                            console.warn(`⚠️ Section3A4Client: Block ref ${idx} not ready`);
+                            return false;
+                        }
+                        return true;
                     });
-                });
-
-                Promise.all(imagePromises).then(() => {
-                    // Additional small delay to ensure layout is settled after images load
-                    setTimeout(() => {
+                    
+                    if (!allRefsReady) {
+                        console.warn('⚠️ Section3A4Client: Not all block refs are ready');
+                        setTimeout(checkReady, 50);
+                        return;
+                    }
+                    
+                    // All refs ready, proceed with image checking
+                    const measureTree = measureTreeRef.current;
+                    const images = measureTree.querySelectorAll('img');
+                    
+                    if (images.length === 0) {
+                        // No images, proceed immediately
                         performMeasurement();
-                    }, 100);
-                });
+                        return;
+                    }
+                    
+                    const imagePromises = Array.from(images).map((img) => {
+                        if (img.complete && img.naturalHeight > 0) {
+                            return Promise.resolve();
+                        }
+                        return new Promise<void>((resolve) => {
+                            const timeout = setTimeout(() => {
+                                console.warn('⚠️ Image load timeout:', img.src);
+                                resolve();
+                            }, 3000);
+                            
+                            img.onload = () => {
+                                clearTimeout(timeout);
+                                resolve();
+                            };
+                            img.onerror = () => {
+                                clearTimeout(timeout);
+                                resolve(); // Resolve even on error
+                            };
+                        });
+                    });
+
+                    Promise.all(imagePromises).then(() => {
+                        // Additional delay to ensure layout is settled after images load
+                        setTimeout(() => {
+                            performMeasurement();
+                        }, 150);
+                    });
+                };
+                
+                // Start checking after a small delay to let DOM settle
+                setTimeout(checkReady, 100);
             });
         };
         
@@ -876,8 +910,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
             });
         };
 
-        // Increased delay to ensure everything is rendered, especially when navigating quickly
-        const timeoutId = setTimeout(measureAndPaginate, 500);
+        // Start measurement after ensuring DOM is ready
+        const timeoutId = setTimeout(measureAndPaginate, 300);
         return () => {
             clearTimeout(timeoutId);
             setIsMeasuring(false);
@@ -886,8 +920,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
 
     console.log('📄 Section3A4Client: Rendering pages', { pagesCount: pages.length, pages, sectionsCount: sections.length, isMeasuring });
     
-    // Show loading state while measuring
-    if (isMeasuring && pages.length === 0) {
+    // Show loading state while measuring - DON'T show fallback pagination
+    if (isMeasuring || pages.length === 0) {
         return (
             <>
                 <MeasureTree />
@@ -898,136 +932,6 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         );
     }
     
-    // Fallback: if pages is empty but sections exist, use estimated pagination
-    if (pages.length === 0 && sections.length > 0) {
-        console.warn('⚠️ Section3A4Client: pages array is empty, using estimated pagination');
-        
-        // Use more conservative estimates that match the actual calculation
-        const headerH = headerRef.current?.offsetHeight ?? 100;
-        const FOOTER_HEIGHT = 50;
-        const SAFETY_MARGIN = 50;
-        const ESTIMATED_FIRST_PAGE_CAPACITY = CONTENT_H - headerH - SAFETY_MARGIN;
-        const ESTIMATED_REST_PAGE_CAPACITY = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
-        
-        // More accurate section height estimates based on content type
-        const getEstimatedHeight = (s: PreviewItem): number => {
-            if (s.variant === 'subtle') return 30;
-            if (s.key === 'pow') return 350; // POW section with image is taller
-            if (s.key.startsWith('act-')) return 150; // Activity sections
-            if (s.text && s.text.length > 500) return 300; // Long text sections
-            if (s.text && s.text.length > 200) return 200; // Medium text sections
-            return 150; // Default for shorter sections
-        };
-        
-        const fallbackPages: number[][] = [];
-        let currentPage: number[] = [];
-        let currentHeight = 0;
-        let isFirstPage = true;
-        
-        sections.forEach((s, idx) => {
-            const sectionHeight = getEstimatedHeight(s);
-            const pageCapacity = isFirstPage ? ESTIMATED_FIRST_PAGE_CAPACITY : ESTIMATED_REST_PAGE_CAPACITY;
-            const spacing = currentPage.length > 0 ? BLOCK_SPACING : 0;
-            const totalNeeded = currentHeight + spacing + sectionHeight;
-            
-            if (totalNeeded > pageCapacity && currentPage.length > 0) {
-                fallbackPages.push(currentPage);
-                currentPage = [idx];
-                currentHeight = sectionHeight;
-                isFirstPage = false;
-            } else {
-                currentPage.push(idx);
-                currentHeight = totalNeeded;
-            }
-        });
-        
-        if (currentPage.length > 0) {
-            fallbackPages.push(currentPage);
-        }
-        
-        // Use the fallback pages with proper pagination
-        return (
-            <>
-                <MeasureTree />
-                {fallbackPages.map((idxs, p) => {
-                    const pageOffset = getPageOffset('part3');
-                    const pageNumber = pageOffset + p;
-                    const headerH = headerRef.current?.offsetHeight ?? 100;
-                    const FOOTER_HEIGHT = 50;
-                    const isFirstPage = p === 0;
-                    const maxContentHeight = isFirstPage 
-                        ? CONTENT_H - headerH - 20 
-                        : CONTENT_H - headerH - FOOTER_HEIGHT - 20;
-                    
-                    return (
-                        <section key={`p-${p}`} className="print-page">
-                            <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-                                <LogoBar />
-                                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: maxContentHeight }}>
-                                    {idxs.map((i) => {
-                                        const s = sections[i];
-                                        return (
-                                            <div key={s.key} className="mb-3">
-                                                {s.variant === "subtle" && s.text ? (
-                                                    <div className={subtle}>{s.text}</div>
-                                                ) : s.variant === "block" && s.text ? (
-                                                    <>
-                                                        <div className={blockTitle}>{s.title}</div>
-                                                        {s.key.startsWith('act-') ? (
-                                                            <ActivityBody 
-                                                                activityId={s.key.replace('act-', '')} 
-                                                                bodyText={s.text} 
-                                                                className={paperText}
-                                                            />
-                                                        ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                                            <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
-                                                        ) : s.key === 'plaats' ? (
-                                                            <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
-                                                        ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                            <div className={`${paperText} font-bold text-black`}>{s.text}</div>
-                                                        ) : s.key === 'pow' ? (
-                                                            <div className={paperText}>
-                                                              {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
-                                                              <div className="my-4">
-                                                                <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
-                                                              </div>
-                                                              <p className="text-purple-600 italic text-[10px] mt-4">
-                                                                * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                                              </p>
-                                                            </div>
-                                                        ) : s.key === 'inl' ? (
-                                                            <div className={paperText}>
-                                                                {formatTextWithParagraphs(s.text)}
-                                                                {tpData.has_ad_report === false && (
-                                                                    <p className="mt-4 font-bold text-black">
-                                                                        N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    s.node
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <PageFooter
-                                    lastName={tpData?.last_name}
-                                    firstName={tpData?.first_name}
-                                    dateOfBirth={tpData?.date_of_birth}
-                                    pageNumber={pageNumber}
-                                />
-                            </div>
-                        </section>
-                    );
-                })}
-            </>
-        );
-    }
     
     return (
         <>
