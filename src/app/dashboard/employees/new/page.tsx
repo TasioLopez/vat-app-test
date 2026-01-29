@@ -169,8 +169,7 @@ export default function NewEmployeePage() {
             return;
         }
 
-        // Assign the employee to the user who created it
-        const { data: { user } } = await supabase.auth.getUser();
+        // Assign the employee to the user who created it (user is already defined above)
         if (user) {
             const { error: assignmentError } = await supabase.from('employee_users').insert([
                 { 
