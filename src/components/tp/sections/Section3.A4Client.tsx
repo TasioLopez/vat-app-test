@@ -989,9 +989,6 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 maxHeight: isFirstPage 
                                     ? CONTENT_H - headerH - 20
                                     : CONTENT_H - headerH - FOOTER_HEIGHT - 20
-                                maxHeight: isFirstPage 
-                                    ? CONTENT_H - headerH - 20
-                                    : CONTENT_H - headerH - FOOTER_HEIGHT - 20
                             }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
