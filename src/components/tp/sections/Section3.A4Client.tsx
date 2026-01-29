@@ -652,8 +652,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         
         function calculatePages(heights: number[], headerH: number) {
             const FOOTER_HEIGHT = 50;
-            const SAFETY_MARGIN = 10; // Reduced further
-            const TOLERANCE = 30; // Reduced for tighter fitting
+            const SAFETY_MARGIN = 20;
+            const TOLERANCE = 30;
             const maxUsableFirst = CONTENT_H - headerH - SAFETY_MARGIN;
             const maxUsableRest = CONTENT_H - headerH - FOOTER_HEIGHT - SAFETY_MARGIN;
             
@@ -668,15 +668,13 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 
                 // ALWAYS force a page break before AgreementBlock (unless it's the first item)
                 if (s.key === 'agree') {
-                    // If we have content on current page, start AgreementBlock on new page
                     if (cur.length > 0) {
                         out.push(cur);
                         cur = [];
                         used = 0;
                         isFirstPage = false;
                     }
-                    // AgreementBlock always gets its own page (or starts a new one)
-                    // Note: If AgreementBlock is too large, it will overflow but won't be cut off
+                    // AgreementBlock gets its own page
                     cur.push(idx);
                     used = h;
                     isFirstPage = false;
@@ -701,41 +699,52 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                     
                     // More aggressive fitting - try to use all available space
                     if (wouldExceed <= maxUsable + TOLERANCE) {
-                        // Current section fits - add it
                         used += add;
                         cur.push(idx);
                     } else {
-                        // Check if next section is AgreementBlock - if so, be more aggressive about fitting current
-                        const nextIdx = idx + 1;
-                        const nextS = nextIdx < sections.length ? sections[nextIdx] : null;
-                        const isNextAgreement = nextS?.key === 'agree';
-                        
-                        if (isNextAgreement && wouldExceed <= maxUsable + TOLERANCE * 2) {
-                            // Next is AgreementBlock - fit current section more aggressively
-                            used += add;
-                            cur.push(idx);
-                        } else {
-                            // Break to new page
-                            if (cur.length) {
-                                out.push(cur);
-                                isFirstPage = false;
-                            }
-                            cur = [idx];
-                            used = h;
+                        // Break to new page
+                        if (cur.length) {
+                            out.push(cur);
+                            isFirstPage = false;
                         }
+                        cur = [idx];
+                        used = h;
                     }
                 }
             });
 
             if (cur.length) out.push(cur);
+            
+            // Safety check: ensure AgreementBlock and SignatureBlock are included
+            const agreementIdx = sections.findIndex(s => s.key === 'agree');
+            const signatureIdx = sections.findIndex(s => s.key === 'sign');
+            
+            if (agreementIdx >= 0 && !out.some(page => page.includes(agreementIdx))) {
+                console.warn('⚠️ AgreementBlock missing, adding to pages');
+                if (out.length > 0 && out[out.length - 1].length === 0) {
+                    out[out.length - 1] = [agreementIdx];
+                } else {
+                    out.push([agreementIdx]);
+                }
+            }
+            
+            if (signatureIdx >= 0 && !out.some(page => page.includes(signatureIdx))) {
+                console.warn('⚠️ SignatureBlock missing, adding to pages');
+                const lastPage = out[out.length - 1];
+                if (lastPage && !lastPage.includes(agreementIdx)) {
+                    lastPage.push(signatureIdx);
+                } else {
+                    out.push([signatureIdx]);
+                }
+            }
+            
             console.log('📄 Section3A4Client: Pages calculated', { 
               pageCount: out.length,
               pages: out,
               sectionsCount: sections.length,
               heights: heights,
-              maxUsableFirst,
-              maxUsableRest,
-              headerH
+              agreementIdx,
+              signatureIdx
             });
             setPages(out);
             setSectionPageCount('part3', out.length);
@@ -876,7 +885,16 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                         <section key={`p-${p}`} className="print-page">
                             <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                                 <LogoBar />
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                <div style={{ 
+                                    flex: 1, 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    minHeight: 0,
+                                    overflow: 'hidden',
+                                    maxHeight: isFirstPage 
+                                        ? CONTENT_H - headerH - 20
+                                        : CONTENT_H - headerH - FOOTER_HEIGHT - 20
+                                }}>
                                     {idxs.map((i) => {
                                         const s = sections[i];
                                         const isAgreement = s.key === 'agree';
@@ -957,11 +975,24 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                 const pageNumber = pageOffset + p;
                 const headerH = headerRef.current?.offsetHeight ?? 100;
                 const FOOTER_HEIGHT = 50;
+                const isFirstPage = p === 0;
                 return (
                     <section key={`p-${p}`} className="print-page">
                         <div className={page} style={{ width: PAGE_W, height: PAGE_H, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                             <LogoBar />
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                            <div style={{ 
+                                flex: 1, 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                minHeight: 0,
+                                overflow: 'hidden',
+                                maxHeight: isFirstPage 
+                                    ? CONTENT_H - headerH - 20
+                                    : CONTENT_H - headerH - FOOTER_HEIGHT - 20
+                                maxHeight: isFirstPage 
+                                    ? CONTENT_H - headerH - 20
+                                    : CONTENT_H - headerH - FOOTER_HEIGHT - 20
+                            }}>
                                 {idxs.map((i) => {
                                 const s = sections[i];
                                 const isAgreement = s.key === 'agree';
