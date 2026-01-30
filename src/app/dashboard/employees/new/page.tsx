@@ -102,40 +102,45 @@ export default function NewEmployeePage() {
         setLoading(true);
         setError('');
 
-        // DEBUG: Verify authentication
+        // Verify authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('Auth check:', { user: user?.id, email: user?.email, authError });
-        
+
         if (!user) {
             setError('Not authenticated. Please log in again.');
             setLoading(false);
             return;
         }
 
-        // DEBUG: Verify user has client access
-        if (form.client_id) {
+        // Fetch user role to check if admin
+        const { data: userRecord, error: roleError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (roleError || !userRecord) {
+            setError('Failed to verify user role.');
+            setLoading(false);
+            return;
+        }
+
+        const isAdmin = userRecord.role === 'admin';
+
+        // Verify user has client access (skip for admins - they have access to all clients)
+        if (form.client_id && !isAdmin) {
             const { data: clientCheck, error: clientCheckError } = await supabase
                 .from('user_clients')
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('client_id', form.client_id)
                 .single();
-            console.log('Client access check:', { clientCheck, clientCheckError });
-            
+
             if (!clientCheck) {
                 setError('You do not have access to this client.');
                 setLoading(false);
                 return;
             }
         }
-
-        console.log('Attempting to insert employee with:', {
-            first_name: form.first_name,
-            last_name: form.last_name,
-            email: form.email,
-            client_id: form.client_id,
-            user_id: user.id
-        });
 
         const { data: newEmployees, error: employeeError } = await supabase
             .from('employees')
@@ -148,8 +153,6 @@ export default function NewEmployeePage() {
                 },
             ])
             .select();
-
-        console.log('Insert result:', { newEmployees, employeeError });
 
         if (employeeError || !newEmployees || newEmployees.length === 0) {
             setError(employeeError?.message || 'Failed to create employee');
