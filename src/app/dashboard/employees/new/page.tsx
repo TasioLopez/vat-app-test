@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
+import { 
+    FaUserTie, 
+    FaUser, 
+    FaEnvelope, 
+    FaBriefcase,
+    FaSpinner,
+    FaCheckCircle,
+    FaExclamationCircle
+} from 'react-icons/fa';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 
@@ -17,6 +26,7 @@ export default function NewEmployeePage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -95,6 +105,7 @@ export default function NewEmployeePage() {
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        setError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -193,59 +204,189 @@ export default function NewEmployeePage() {
     };
 
     return (
-        <div className="p-6 max-w-md mx-auto">
-            <h1 className="text-2xl font-semibold mb-4">Nieuwe werknemer</h1>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                    name="first_name"
-                    value={form.first_name}
-                    onChange={handleChange}
-                    placeholder="Voornaam"
-                    required
-                    className="w-full border border-gray-500/30 p-2 rounded"
-                />
-                <input
-                    name="last_name"
-                    value={form.last_name}
-                    onChange={handleChange}
-                    placeholder="Achternaam"
-                    required
-                    className="w-full border border-gray-500/30 p-2 rounded"
-                />
-                <input
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="Email"
-                    className="w-full border border-gray-500/30 p-2 rounded"
-                />
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/30 p-6 animate-in fade-in duration-500">
+            <div className="max-w-2xl mx-auto">
+                {/* Header Section */}
+                <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white shadow-lg shadow-purple-500/30">
+                            <FaUserTie className="text-2xl" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Nieuwe werknemer</h1>
+                            <p className="text-gray-600 mt-1">Voeg een nieuwe werknemer toe aan het systeem</p>
+                        </div>
+                    </div>
+                </div>
 
-                <select
-                    name="client_id"
-                    value={form.client_id}
-                    onChange={handleChange}
-                    className="w-full border border-gray-500/30 p-2 rounded"
-                    required
-                >
-                    <option value="">Selecteer werkgever</option>
-                    {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                            {client.name}
-                        </option>
-                    ))}
-                </select>
+                {/* Form Card */}
+                <div className="bg-white rounded-2xl shadow-xl shadow-purple-500/10 border border-purple-200/50 p-8 animate-in slide-in-from-bottom-4 duration-700">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* First Name Field */}
+                        <div className="group">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <FaUser className="text-purple-600" />
+                                Voornaam
+                                <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    name="first_name"
+                                    value={form.first_name}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('first_name')}
+                                    onBlur={() => setFocusedField(null)}
+                                    placeholder="Voer voornaam in"
+                                    required
+                                    className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                        focusedField === 'first_name'
+                                            ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                    } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                />
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                    focusedField === 'first_name' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                }`}>
+                                    <FaUser />
+                                </div>
+                            </div>
+                        </div>
 
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                        {/* Last Name Field */}
+                        <div className="group">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <FaUser className="text-purple-600" />
+                                Achternaam
+                                <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    name="last_name"
+                                    value={form.last_name}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('last_name')}
+                                    onBlur={() => setFocusedField(null)}
+                                    placeholder="Voer achternaam in"
+                                    required
+                                    className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                        focusedField === 'last_name'
+                                            ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                    } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                />
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                    focusedField === 'last_name' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                }`}>
+                                    <FaUser />
+                                </div>
+                            </div>
+                        </div>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-green-600 text-white px-4 py-2 rounded w-full"
-                >
-                    {loading ? 'Opslaan...' : 'Opslaan werknemer'}
-                </button>
-            </form>
+                        {/* Email Field */}
+                        <div className="group">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <FaEnvelope className="text-purple-600" />
+                                Email
+                            </label>
+                            <div className="relative">
+                                <input
+                                    name="email"
+                                    type="email"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('email')}
+                                    onBlur={() => setFocusedField(null)}
+                                    placeholder="voorbeeld@email.com"
+                                    className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                        focusedField === 'email'
+                                            ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                    } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                />
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                    focusedField === 'email' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                }`}>
+                                    <FaEnvelope />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Employer Selection Field */}
+                        <div className="group">
+                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <FaBriefcase className="text-purple-600" />
+                                Selecteer werkgever
+                                <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <select
+                                    name="client_id"
+                                    value={form.client_id}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocusedField('client_id')}
+                                    onBlur={() => setFocusedField(null)}
+                                    className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 appearance-none cursor-pointer ${
+                                        focusedField === 'client_id'
+                                            ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                    } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900`}
+                                    required
+                                >
+                                    <option value="">Kies een werkgever...</option>
+                                    {clients.map((client) => (
+                                        <option key={client.id} value={client.id}>
+                                            {client.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 pointer-events-none ${
+                                    focusedField === 'client_id' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                }`}>
+                                    <FaBriefcase />
+                                </div>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-center gap-3 animate-in slide-in-from-top-2 duration-300">
+                                <FaExclamationCircle className="text-red-600 flex-shrink-0" />
+                                <p className="text-red-700 text-sm font-medium">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Submit Button */}
+                        <div className="pt-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-lg transition-all duration-300 flex items-center justify-center gap-3 ${
+                                    loading
+                                        ? 'bg-purple-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:shadow-xl hover:shadow-purple-500/30 hover:scale-[1.02] active:scale-[0.98]'
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <FaSpinner className="animate-spin" />
+                                        <span>Opslaan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaCheckCircle />
+                                        <span>Opslaan werknemer</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     );
 }
