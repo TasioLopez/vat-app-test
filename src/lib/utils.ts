@@ -189,6 +189,18 @@ export function formatDriversLicense(
     return `Ja (${licenseType.join(', ')})`;
   }
   
+  // Handle stringified array (e.g., '["B","D","C","AM"]')
+  if (typeof licenseType === 'string' && licenseType.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(licenseType);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return `Ja (${parsed.join(', ')})`;
+      }
+    } catch (e) {
+      // If parsing fails, fall through to regular string handling
+    }
+  }
+  
   // Handle string (legacy format)
   if (typeof licenseType === 'string' && licenseType) {
     return `Ja (${licenseType})`;

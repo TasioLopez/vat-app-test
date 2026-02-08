@@ -593,7 +593,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             {[
                                 { value: 'B', label: 'B (Auto)' },
                                 { value: 'C', label: 'C (Vrachtwagen)' },
+                                { value: 'C1', label: 'C1 (Middelgrote vrachtwagen)' },
                                 { value: 'D', label: 'D (Bus)' },
+                                { value: 'D1', label: 'D1 (Kleine bus)' },
                                 { value: 'E', label: 'E (Aanhangwagen)' },
                                 { value: 'A', label: 'A (Motor)' },
                                 { value: 'AM', label: 'AM (Bromfiets)' },
@@ -602,6 +604,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 { value: 'BE', label: 'BE (Auto + Aanhangwagen)' },
                                 { value: 'CE', label: 'CE (Vrachtwagen + Aanhangwagen)' },
                                 { value: 'DE', label: 'DE (Bus + Aanhangwagen)' },
+                                { value: 'T', label: 'T (Trekker)' },
                             ].map((option) => {
                                 const selected = Array.isArray(employeeDetails?.drivers_license_type) 
                                     ? employeeDetails.drivers_license_type.includes(option.value)

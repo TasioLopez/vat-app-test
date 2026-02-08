@@ -125,7 +125,7 @@ function parseRawTextForTableData(rawText: string, result: ExtractedTableData) {
         result.vervoer.rijbewijs = true;
         // Look for all license types
         const licenseTypes: string[] = [];
-        const licensePattern = /\b(AM|A1|A2|BE|CE|DE|[A-E])\b/gi;
+        const licensePattern = /\b(AM|A1|A2|BE|CE|DE|C1|D1|T|[A-E])\b/gi;
         let match;
         while ((match = licensePattern.exec(combinedLine)) !== null) {
           const type = match[1].toUpperCase();
@@ -381,9 +381,9 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
       const welkCell = cellContents[1] || '';
       const rowText = cellContents.join(' ');
       
-      // Match all license types (A, B, C, D, E, AM, A1, A2, BE, CE, DE)
+      // Match all license types (A, B, C, C1, D, D1, E, AM, A1, A2, BE, CE, DE, T)
       const licenseTypes: string[] = [];
-      const licensePattern = /\b(AM|A1|A2|BE|CE|DE|[A-E])\b/gi;
+      const licensePattern = /\b(AM|A1|A2|BE|CE|DE|C1|D1|T|[A-E])\b/gi;
       let match;
       
       // Find all matches in the cell

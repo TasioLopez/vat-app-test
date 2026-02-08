@@ -26,5 +26,5 @@ ALTER TABLE employee_details
   RENAME COLUMN drivers_license_type_new TO drivers_license_type;
 
 -- Step 5: Update column comment
-COMMENT ON COLUMN employee_details.drivers_license_type IS 'Driver license types as array (e.g., ["B", "C", "A"]). Can contain multiple values like B (Auto), C (Vrachtwagen), D (Bus), E (Aanhangwagen), A (Motor), AM (Bromfiets), A1, A2, BE, CE, DE.';
+COMMENT ON COLUMN employee_details.drivers_license_type IS 'Driver license types as array (e.g., ["B", "C", "A"]). Can contain multiple values like B (Auto), C (Vrachtwagen), C1 (Middelgrote vrachtwagen), D (Bus), D1 (Kleine bus), E (Aanhangwagen), A (Motor), AM (Bromfiets), A1, A2, BE, CE, DE, T (Trekker).';
 
