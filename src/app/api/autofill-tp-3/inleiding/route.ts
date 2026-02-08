@@ -253,17 +253,18 @@ ${adQuoteText ? `
 - Gebruik DEZE exacte tekst uit het intake formulier (sectie "7. Arbeidsdeskundige rapport", onder "Conclusie/advies:"):
 ${adQuoteText}
 
-- Output ALLEEN deze exacte structuur (GEEN extra quotes, GEEN bold, alleen markdown asterisken voor italic):
+- Output ALLEEN deze exacte structuur:
 
-In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: *${adQuoteText}*
+[NORMAAL TEKST - GEEN MARKDOWN] In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: [ITALIC MARKDOWN] *${adQuoteText}* [EINDE ITALIC]
 
-- BELANGRIJK FORMATTING: 
-  * De tekst "In het Arbeidsdeskundige rapport... staat het volgende:" moet NORMAAL zijn (GEEN markdown, GEEN italic, GEEN bold)
-  * Alleen de citaat tekst na de dubbele punt moet italic zijn met markdown *tekst*
-  * GEEN quotes rondom de citaat, alleen asterisken voor italic
-  * Format: [normale tekst]: *[italic citaat]*
+- KRITIEKE FORMATTING REGELS:
+  * De tekst vanaf "In het Arbeidsdeskundige rapport" tot en met "staat het volgende:" is NORMAAL TEKST - GEEN asterisken, GEEN markdown
+  * Alleen de citaat tekst na "staat het volgende:" krijgt markdown asterisken voor italic: *tekst*
+  * GEEN quotes rondom de citaat
   * Output ALLEEN EEN KEER - geen duplicatie
-  * VOORBEELD: "In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende: *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*"
+  
+- VOORBEELD VAN CORRECTE OUTPUT (zonder quotes rondom):
+In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende: *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
 ` : hasAD || hasFML ? `
 - Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
