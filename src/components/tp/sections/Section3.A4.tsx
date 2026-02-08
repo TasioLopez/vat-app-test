@@ -70,33 +70,66 @@ const fullName = (full?: string | null, first?: string | null, last?: string | n
     || `${first ?? ""} ${last ?? ""}`.trim()
     || fallback;
 
-// Helper to format markdown (bold and italic)
+// Helper to format markdown (bold and italic) and quoted text
 function formatInlineText(text: string): React.ReactNode {
   if (!text) return text;
   
   const parts: React.ReactNode[] = [];
   let currentIdx = 0;
   
-  // Regex to match **bold** or *italic*
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
-  let match;
+  // First, process quoted text (text between double quotes)
+  // Regex to match "quoted text" but not markdown *italic* or **bold**
+  const quoteRegex = /"([^"]+)"/g;
+  const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
   
-  while ((match = regex.exec(text)) !== null) {
+  // Collect all matches (quotes and markdown)
+  const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
+  
+  let match;
+  while ((match = quoteRegex.exec(text)) !== null) {
+    allMatches.push({
+      index: match.index,
+      length: match[0].length,
+      type: 'quote',
+      content: match[1]
+    });
+  }
+  
+  while ((match = markdownRegex.exec(text)) !== null) {
+    allMatches.push({
+      index: match.index,
+      length: match[0].length,
+      type: 'markdown',
+      content: match[0]
+    });
+  }
+  
+  // Sort by index
+  allMatches.sort((a, b) => a.index - b.index);
+  
+  // Process matches in order
+  for (const match of allMatches) {
     // Add text before the match
     if (match.index > currentIdx) {
       parts.push(text.slice(currentIdx, match.index));
     }
     
-    const matched = match[0];
-    if (matched.startsWith('**') && matched.endsWith('**')) {
-      // Bold
-      parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
-    } else if (matched.startsWith('*') && matched.endsWith('*')) {
-      // Italic - wrap in quotes
-      parts.push(<span key={match.index}>"<em>{matched.slice(1, -1)}</em>"</span>);
+    if (match.type === 'quote') {
+      // Quoted text - make italic
+      parts.push(<span key={match.index}><em>"{match.content}"</em></span>);
+    } else if (match.type === 'markdown') {
+      // Markdown formatting
+      const matched = match.content;
+      if (matched.startsWith('**') && matched.endsWith('**')) {
+        // Bold
+        parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
+      } else if (matched.startsWith('*') && matched.endsWith('*')) {
+        // Italic - wrap in quotes
+        parts.push(<span key={match.index}>"<em>{matched.slice(1, -1)}</em>"</span>);
+      }
     }
     
-    currentIdx = match.index + match[0].length;
+    currentIdx = match.index + match.length;
   }
   
   // Add remaining text
