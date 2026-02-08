@@ -52,11 +52,98 @@ function getInitials(firstName?: string): string {
   return firstName.split(' ').map(n => n[0]?.toUpperCase()).filter(Boolean).join('. ') + '.';
 }
 
+// Extract specific section from intake form using AI
+async function extractIntakeSection(employeeId: string, sectionName: string): Promise<string | null> {
+  const { data: docs } = await supabase
+    .from("documents")
+    .select("type, url, uploaded_at")
+    .eq("employee_id", employeeId)
+    .order("uploaded_at", { ascending: false });
+  
+  if (!docs?.length) return null;
+  
+  const variants = ["intakeformulier", "intake-formulier", "intake"];
+  const intakeDoc = docs.find(d => {
+    const type = (d.type || "").toLowerCase();
+    return variants.some(v => type.includes(v));
+  });
+  
+  if (!intakeDoc?.url) return null;
+  
+  const path = extractStoragePath(intakeDoc.url);
+  if (!path) return null;
+  
+  try {
+    // Download and upload to OpenAI
+    const { data: file } = await supabase.storage.from('documents').download(path);
+    if (!file) return null;
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadedFile = await openai.files.create({
+      file: new File([buffer], `intake.pdf`, { type: 'application/pdf' }),
+      purpose: "assistants"
+    });
+    
+    // Use assistant to extract specific section
+    const assistant = await openai.beta.assistants.create({
+      name: "Intake Section Extractor",
+      instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
+      
+Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
+- Geef de VOLLEDIGE tekst van deze sectie terug
+- Behoud de originele structuur en formatting
+- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
+      model: "gpt-4o",
+      tools: [{ type: "file_search" }]
+    });
+    
+    const thread = await openai.beta.threads.create({
+      messages: [{
+        role: "user",
+        content: `Extract de sectie "${sectionName}" uit dit intake formulier.`,
+        attachments: [{ file_id: uploadedFile.id, tools: [{ type: "file_search" }] }]
+      }]
+    });
+    
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id
+    });
+    
+    if (run.status !== 'completed') {
+      await openai.beta.assistants.delete(assistant.id);
+      await openai.files.delete(uploadedFile.id);
+      return null;
+    }
+    
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const response = messages.data[0].content[0];
+    
+    let extractedText = '';
+    if (response.type === 'text') {
+      extractedText = response.text.value.trim();
+    }
+    
+    // Cleanup
+    await openai.beta.assistants.delete(assistant.id);
+    await openai.files.delete(uploadedFile.id);
+    
+    return extractedText && extractedText !== 'NIET_GEVONDEN' ? extractedText : null;
+  } catch (error: any) {
+    console.error(`❌ Error extracting ${sectionName}:`, error.message);
+    return null;
+  }
+}
+
 // ---- Build Detailed Assistant Instructions ----
-function buildInleidingInstructions(context: any): string {
+function buildInleidingInstructions(
+  context: any,
+  medischeSituatieText?: string | null,
+  adRapportText?: string | null
+): string {
   const { employee, details, meta, client } = context;
   
   const gender = details?.gender;
+  const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
   const pronPoss = getGenderPronoun('possessive', gender);
   const pronSubj = getGenderPronoun('subject', gender);
   const pronInf = getGenderPronoun('informal', gender);
@@ -79,6 +166,9 @@ function buildInleidingInstructions(context: any): string {
   const refTitle = getTitlePrefix(client?.referent_gender);
   const companyName = client?.name || '';
   
+  // Fix gender in ALINEA 2 - use isMale variable
+  const genderWord = isMale ? 'man' : 'vrouw';
+  
   return `
 Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
@@ -91,7 +181,7 @@ ALINEA 1 - Datum intake:
 - BELANGRIJK: Gebruik EXACT "(hierna werknemer te noemen)" - GEEN variaties
 
 ALINEA 2 - Introductie met medische situatie (ALGEMEEN):
-- Formaat: "Werknemer is een [leeftijd indien bekend]-jarige ${gender === 'Male' ? 'man' : 'vrouw'} die als gevolg van een medische beperking is uitgevallen voor ${pronPoss} functie als ${currentJob} bij ${companyName}${details?.contract_hours ? `, voor ${details.contract_hours} uur per week` : ''}."
+- Formaat: "Werknemer is een [leeftijd indien bekend]-jarige ${genderWord} die als gevolg van een medische beperking is uitgevallen voor ${pronPoss} functie als ${currentJob} bij ${companyName}${details?.contract_hours ? `, voor ${details.contract_hours} uur per week` : ''}."
 - Voeg toe: "${pronSubj} is sinds ${firstSickDay || '[datum]'} arbeidsongeschikt geraakt."
 - GEBRUIK ALTIJD "medische beperking" (ENKELVOUD en ALGEMEEN) - NOOIT specifieke lichaamsdelen of diagnoses
 - BELANGRIJK: Beschrijf medische beperkingen ALLEEN in algemene termen zoals "fysieke beperking", "medische beperking", "functionele beperking" - NOOIT specifieke lichaamsdelen of details
@@ -111,6 +201,14 @@ ALINEA 4 - Aanmelder/Contactpersoon (controleer Extra Aanmelder):
 - Gebruik correcte geslachtsaanduidingen (meneer/mevrouw) voor contactpersonen
 
 ALINEA 5 - Medische informatie (ALGEMEEN - GEEN SPECIFIEKE DETAILS):
+${medischeSituatieText ? `
+- Gebruik DEZE informatie uit het intake formulier (sectie "Medische situatie") als basis:
+${medischeSituatieText}
+
+- Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding en de daarbij horende gezondheidsproblematiek."
+- Baseer de beschrijving van beperkingen op de FML-beperkingen uit bovenstaande intake informatie
+- Gebruik ALLEEN de algemene categorieën zoals genoemd in de intake (bijv. "Persoonlijk functioneren", "Sociaal Functioneren", "Dynamische handelingen", "Statische houdingen", "aanpassingen fysieke omgevingseisen", "Werktijden")
+` : `
 - Begin: "Werknemer vertelt openhartig over de reden van ${pronPoss} ziekmelding en de daarbij horende gezondheidsproblematiek."
 ${hasFML ? `
 - Vervolg: "${pronSubj} heeft medische beperkingen zoals beschreven in de FML van ${fmlDate}."
@@ -122,6 +220,7 @@ ${hasFML ? `
   * "werktijden"
 ` : `
 - Vervolg: "${pronInf} geeft aan medische beperkingen te hebben op fysiek en/of mentaal vlak."
+`}
 `}
 - STRIKT VERBODEN: Noem NOOIT specifieke lichaamsdelen, diagnoses, of medische details
 - EINDIG ALTIJD MET: "Conform de wetgeving rondom de verwerking van persoonsgegevens wordt medische informatie niet geregistreerd in dit rapport."
@@ -135,8 +234,16 @@ ALINEA 7 - Trajectdoel (VASTE TEKST):
 "Tijdens het gesprek is toegelicht wat het doel is van het 2e spoortraject. Werknemer geeft aan het belang van dit traject te begrijpen en hieraan mee te willen werken. In het 2e spoor zal onder andere worden onderzocht welke passende mogelijkheden er op de arbeidsmarkt beschikbaar zijn."
 
 VOOR inleiding_sub (APARTE OUTPUT FIELD):
-${hasAD || hasFML ? `
-- Begin: "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
+${adRapportText ? `
+- Gebruik DEZE informatie uit het intake formulier (sectie "7. Arbeidsdeskundige rapport"):
+${adRapportText}
+
+- Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit bovenstaande intake informatie] op ${adDate || '[datum uit intake]'}, staat het volgende:"
+- CITEER het VOLLEDIGE advies/conclusie uit bovenstaande intake informatie tussen aanhalingstekens
+- BELANGRIJK: De tekst VOOR de aanhalingstekens moet normaal zijn (niet italic), ALLEEN de tekst TUSSEN aanhalingstekens moet italic zijn
+- Formaat: "In het Arbeidsdeskundige rapport... staat het volgende: "[citaat in italic]"
+` : hasAD || hasFML ? `
+- Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
 - Neem de complete passage over inclusief:
   * Advies over passende arbeid binnen eigen werkgever
@@ -145,7 +252,8 @@ ${hasAD || hasFML ? `
   * Opbouwschema (bijv. "met een opbouw van één uur per dag per twee weken")
   * Reden voor 2e spoor advies
 - BELANGRIJK: Gebruik LETTERLIJKE CITAAT uit document, inclusief exacte getallen en schema's
-- Formaat: Zet het citaat tussen aanhalingstekens zoals in voorbeeld
+- BELANGRIJK: De tekst VOOR de aanhalingstekens moet normaal zijn (niet italic), ALLEEN de tekst TUSSEN aanhalingstekens moet italic zijn
+- Formaat: "In het Arbeidsdeskundige rapport... staat het volgende: "[citaat in italic]"
 ` : `
 - "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
 `}
@@ -190,7 +298,9 @@ function stripCitations(text: string): string {
 // ---- Assistants API Implementation ----
 async function processDocumentsWithAssistant(
   docs: any[],
-  context: any
+  context: any,
+  medischeSituatieText?: string | null,
+  adRapportText?: string | null
 ): Promise<{ inleiding_main: string; inleiding_sub: string }> {
   
   console.log('🚀 Creating OpenAI Assistant for Inleiding generation...');
@@ -198,7 +308,7 @@ async function processDocumentsWithAssistant(
   // Step 1: Create assistant with detailed instructions
   const assistant = await openai.beta.assistants.create({
     name: "TP Inleiding Generator",
-    instructions: buildInleidingInstructions(context),
+    instructions: buildInleidingInstructions(context, medischeSituatieText, adRapportText),
     model: "gpt-4o",
     tools: [{ type: "file_search" }]
   });
@@ -378,13 +488,25 @@ export async function GET(req: NextRequest) {
       return aPriority - bPriority;
     });
 
+    // Extract specific sections from intake form BEFORE processing
+    console.log('📋 Extracting sections from intake form...');
+    const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
+    const adRapportText = await extractIntakeSection(employeeId, "7. Arbeidsdeskundige rapport");
+    
+    if (medischeSituatieText) {
+      console.log('✅ Extracted Medische situatie from intake form');
+    }
+    if (adRapportText) {
+      console.log('✅ Extracted Arbeidsdeskundige rapport from intake form');
+    }
+    
     // Build context object
     const context = { employee, details, meta, client };
     
-    // Process documents with assistant
+    // Process documents with assistant, passing pre-extracted sections
     let extracted;
     try {
-      extracted = await processDocumentsWithAssistant(sortedDocs, context);
+      extracted = await processDocumentsWithAssistant(sortedDocs, context, medischeSituatieText, adRapportText);
     } catch (error) {
       console.error('❌ Assistant processing failed, using fallback:', error);
       // Fallback: return basic structure

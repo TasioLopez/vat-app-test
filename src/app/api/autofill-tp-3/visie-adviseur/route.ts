@@ -56,9 +56,98 @@ async function uploadDocsToOpenAI(paths: string[]) {
   return fileIds;
 }
 
-function buildInstructions(): string {
+// Extract specific section from intake form using AI
+async function extractIntakeSection(employeeId: string, sectionName: string): Promise<string | null> {
+  const { data: docs } = await supabase
+    .from("documents")
+    .select("type, url, uploaded_at")
+    .eq("employee_id", employeeId)
+    .order("uploaded_at", { ascending: false });
+  
+  if (!docs?.length) return null;
+  
+  const variants = ["intakeformulier", "intake-formulier", "intake"];
+  const intakeDoc = docs.find(d => {
+    const type = (d.type || "").toLowerCase();
+    return variants.some(v => type.includes(v));
+  });
+  
+  if (!intakeDoc?.url) return null;
+  
+  const path = extractStoragePath(intakeDoc.url);
+  if (!path) return null;
+  
+  try {
+    // Download and upload to OpenAI
+    const { data: file } = await supabase.storage.from('documents').download(path);
+    if (!file) return null;
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploadedFile = await openai.files.create({
+      file: new File([buffer], `intake.pdf`, { type: 'application/pdf' }),
+      purpose: "assistants"
+    });
+    
+    // Use assistant to extract specific section
+    const assistant = await openai.beta.assistants.create({
+      name: "Intake Section Extractor",
+      instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
+      
+Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
+- Geef de VOLLEDIGE tekst van deze sectie terug
+- Behoud de originele structuur en formatting
+- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
+      model: "gpt-4o",
+      tools: [{ type: "file_search" }]
+    });
+    
+    const thread = await openai.beta.threads.create({
+      messages: [{
+        role: "user",
+        content: `Extract de sectie "${sectionName}" uit dit intake formulier.`,
+        attachments: [{ file_id: uploadedFile.id, tools: [{ type: "file_search" }] }]
+      }]
+    });
+    
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id
+    });
+    
+    if (run.status !== 'completed') {
+      await openai.beta.assistants.delete(assistant.id);
+      await openai.files.delete(uploadedFile.id);
+      return null;
+    }
+    
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const response = messages.data[0].content[0];
+    
+    let extractedText = '';
+    if (response.type === 'text') {
+      extractedText = response.text.value.trim();
+    }
+    
+    // Cleanup
+    await openai.beta.assistants.delete(assistant.id);
+    await openai.files.delete(uploadedFile.id);
+    
+    return extractedText && extractedText !== 'NIET_GEVONDEN' ? extractedText : null;
+  } catch (error: any) {
+    console.error(`❌ Error extracting ${sectionName}:`, error.message);
+    return null;
+  }
+}
+
+function buildInstructions(medischeSituatieText?: string | null): string {
   return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_loopbaanadviseur".
+
+${medischeSituatieText ? `
+BELANGRIJK: Gebruik DEZE informatie uit het intake formulier (sectie "Medische situatie") als primaire bron voor FML-beperkingen:
+${medischeSituatieText}
+
+Baseer de beperkingen ALLEEN op de FML-beperkingen zoals genoemd in bovenstaande intake informatie.
+` : ''}
 
 BELANGRIJKE FORMATTING REGELS:
 - Datum ALTIJD in format: "25 april 2025" (dag maand jaar, volledige maandnaam)
@@ -86,10 +175,10 @@ KRITIEKE REGELS:
 Output uitsluitend JSON: { "visie_loopbaanadviseur": string }`;
 }
 
-async function runAssistant(files: string[]) {
+async function runAssistant(files: string[], medischeSituatieText?: string | null) {
   const assistant = await openai.beta.assistants.create({
     name: "TP Visie Loopbaan Adviseur",
-    instructions: buildInstructions(),
+    instructions: buildInstructions(medischeSituatieText),
     model: "gpt-4o",
     tools: [{ type: "file_search" }],
   });
@@ -124,6 +213,13 @@ async function runAssistant(files: string[]) {
   let parsed: any = {};
   try { parsed = JSON.parse(jsonStr); } catch { parsed = { visie_loopbaanadviseur: text }; }
 
+  // Cleanup
+  await openai.beta.assistants.delete(assistant.id);
+  for (const fileId of files) {
+    await openai.files.delete(fileId);
+  }
+  console.log('✅ Cleaned up assistant and files');
+
   return parsed;
 }
 
@@ -133,12 +229,19 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
+    // Extract medische situatie from intake form
+    console.log('📋 Extracting Medische situatie from intake form...');
+    const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
+    if (medischeSituatieText) {
+      console.log('✅ Extracted Medische situatie from intake form');
+    }
+
     const docPaths = await listEmployeeDocumentPaths(employeeId);
     if (docPaths.length === 0) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
     const fileIds = await uploadDocsToOpenAI(docPaths);
-    const parsed = await runAssistant(fileIds);
+    const parsed = await runAssistant(fileIds, medischeSituatieText);
     const visie_loopbaanadviseur = stripCitations((parsed?.visie_loopbaanadviseur || '').trim());
 
     await supabase.from("tp_meta").upsert(
