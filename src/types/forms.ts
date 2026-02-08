@@ -12,7 +12,7 @@ export const employeeSchema = z.object({
   education_name: z.string().optional(),
   computer_skills: z.string().optional(),
   drivers_license: z.boolean().optional(),
-  drivers_license_type: z.string().optional(),
+  drivers_license_type: z.array(z.string()).optional(),
   transport_type: z.array(z.string()).optional(),
   contract_hours: z.number().min(0).max(40).optional(),
   dutch_speaking: z.string().optional(),

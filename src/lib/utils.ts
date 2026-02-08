@@ -175,16 +175,27 @@ export function formatEducationLevel(
  * Formats driver's license information
  * 
  * @param hasLicense - Boolean indicating if person has license
- * @param licenseType - Type of license (e.g., "B", "C")
+ * @param licenseType - Type(s) of license - can be string (legacy) or string[] (new format)
  * @returns Formatted license string
  */
 export function formatDriversLicense(
   hasLicense: boolean | null | undefined,
-  licenseType?: string | null | undefined
+  licenseType?: string | string[] | null | undefined
 ): string {
   if (!hasLicense) return "Nee";
-  const type = licenseType || "B";
-  return `Ja (${type})`;
+  
+  // Handle array (new format)
+  if (Array.isArray(licenseType) && licenseType.length > 0) {
+    return `Ja (${licenseType.join(', ')})`;
+  }
+  
+  // Handle string (legacy format)
+  if (typeof licenseType === 'string' && licenseType) {
+    return `Ja (${licenseType})`;
+  }
+  
+  // Fallback
+  return "Ja";
 }
 
 /**

@@ -34,7 +34,7 @@ export interface EmployeeDetails {
   education_name?: string;
   computer_skills?: string;
   drivers_license?: boolean;
-  drivers_license_type?: string;
+  drivers_license_type?: string[];
   transport_type?: string[];
   contract_hours?: number;
   dutch_speaking?: string;
@@ -122,7 +122,7 @@ export interface EmployeeFormData {
   education_name?: string;
   computer_skills?: string;
   drivers_license?: boolean;
-  drivers_license_type?: string;
+  drivers_license_type?: string[];
   transport_type?: string[];
   contract_hours?: number;
   dutch_speaking?: string;

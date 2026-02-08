@@ -75,6 +75,10 @@ function buildInstructions(employeeData: any): string {
   const transportTypes = employeeData.transport_type || [];
   const hasDriversLicense = employeeData.drivers_license;
   const driversLicenseType = employeeData.drivers_license_type;
+  // Format license types as string (handle both array and legacy string format)
+  const licenseTypeStr = Array.isArray(driversLicenseType) 
+    ? driversLicenseType.join(', ') 
+    : (typeof driversLicenseType === 'string' ? driversLicenseType : 'onbekend');
   
   return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Schrijf UITSLUITEND de sectie "persoonlijk_profiel" op basis van de VERPLICHTE BASISGEGEVENS hieronder en aanvullende info uit documenten.
@@ -86,7 +90,7 @@ VERPLICHTE BASISGEGEVENS (ALTIJD GEBRUIKEN - dit zijn de officiële gegevens):
 - Werkervaring: ${employeeData.work_experience || 'onbekend'}
 - Opleidingsniveau: ${employeeData.education_level || 'onbekend'}
 - Opleidingsnaam: ${employeeData.education_name || 'onbekend'}
-- Rijbewijs: ${hasDriversLicense ? `Ja, type ${driversLicenseType || 'onbekend'}` : 'Nee'}
+- Rijbewijs: ${hasDriversLicense ? `Ja, type ${licenseTypeStr}` : 'Nee'}
 - Eigen vervoer: ${transportTypes.length > 0 ? transportTypes.join(', ') : 'Geen eigen vervoer'}
 - Spreekvaardigheid NL: ${dutchSpeaking}
 - Schrijfvaardigheid NL: ${dutchWriting}
@@ -104,7 +108,7 @@ Inhoud die MOET worden opgenomen:
 1. Demografie: leeftijd (bereken uit geboortedatum), geslacht, vanaf wanneer in dienst, organisatie, functietitel
 2. Loopbaan: werkervaring (GEEN beschrijving van functie-inhoud)
 3. Opleiding: ${employeeData.education_level || ''} ${employeeData.education_name || ''}
-4. Mobiliteit: ${hasDriversLicense ? `rijbewijs ${driversLicenseType}` : 'geen rijbewijs'}, vervoer: ${transportTypes.join(', ') || 'geen eigen vervoer'}
+4. Mobiliteit: ${hasDriversLicense ? `rijbewijs ${licenseTypeStr}` : 'geen rijbewijs'}, vervoer: ${transportTypes.join(', ') || 'geen eigen vervoer'}
 5. Talen: Spreken ${dutchSpeaking}, Schrijven ${dutchWriting}, Lezen ${dutchReading}
 6. Computervaardigheden: ${employeeData.has_computer ? 'Heeft PC' : 'Geen eigen PC'}, niveau: ${computerSkillsLevel}
 

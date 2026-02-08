@@ -29,7 +29,7 @@ type EmployeeDetails = {
     education_level?: string;
     education_name?: string;
     drivers_license?: boolean;
-    drivers_license_type?: string;
+    drivers_license_type?: string[];
     transport_type?: string[];
     dutch_speaking?: string;
     dutch_writing?: string;
@@ -244,7 +244,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 ? parseWorkExperience(employeeDetails.work_experience)
                 : employeeDetails.work_experience;
 
-            // Ensure transport_type is saved as array
+            // Ensure transport_type and drivers_license_type are saved as arrays
             const payload = {
                 ...employeeDetails,
                 work_experience: normalizedWorkExperience,
@@ -252,6 +252,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     ? employeeDetails.transport_type 
                     : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
                         ? [employeeDetails.transport_type] 
+                        : null),
+                drivers_license_type: Array.isArray(employeeDetails.drivers_license_type) 
+                    ? employeeDetails.drivers_license_type 
+                    : (typeof employeeDetails.drivers_license_type === 'string' && employeeDetails.drivers_license_type 
+                        ? [employeeDetails.drivers_license_type] 
                         : null)
             };
             
@@ -299,7 +304,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 : employeeDetails.work_experience;
 
             // Save employee details (including gender)
-            // Ensure transport_type is saved as array
+            // Ensure transport_type and drivers_license_type are saved as arrays
             const detailsPayload = {
                 ...employeeDetails,
                 work_experience: normalizedWorkExperience,
@@ -307,6 +312,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     ? employeeDetails.transport_type 
                     : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
                         ? [employeeDetails.transport_type] 
+                        : null),
+                drivers_license_type: Array.isArray(employeeDetails.drivers_license_type) 
+                    ? employeeDetails.drivers_license_type 
+                    : (typeof employeeDetails.drivers_license_type === 'string' && employeeDetails.drivers_license_type 
+                        ? [employeeDetails.drivers_license_type] 
                         : null)
             };
             
@@ -346,7 +356,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             if (details && Object.keys(details).length > 0) {
                 const fields = Object.keys(details);
 
-                // Ensure transport_type is handled as array
+                // Ensure transport_type and drivers_license_type are handled as arrays
                 const processedDetails: any = { ...details };
                 if (processedDetails.transport_type) {
                     if (!Array.isArray(processedDetails.transport_type)) {
@@ -354,6 +364,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         processedDetails.transport_type = typeof processedDetails.transport_type === 'string' 
                             ? [processedDetails.transport_type] 
                             : [];
+                    }
+                }
+                // Add similar handling for drivers_license_type
+                if (processedDetails.drivers_license_type) {
+                    if (!Array.isArray(processedDetails.drivers_license_type)) {
+                        processedDetails.drivers_license_type = typeof processedDetails.drivers_license_type === 'string' 
+                            ? [processedDetails.drivers_license_type] 
+                            : null;
                     }
                 }
 
@@ -564,25 +582,61 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     ))}
                 </div>
 
-                {/* Conditional input for license type */}
+                {/* Multi-select driver's license types */}
                 {employeeDetails?.drivers_license && (
-                    <div className="space-y-2 group transition-all duration-300">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
+                        <label className="block text-sm font-semibold mb-3 flex items-center gap-2 text-gray-700">
                             <Car className="w-4 h-4 text-purple-600" />
                             Rijbewijstype
                         </label>
-                        <select 
-                            className={fieldClass('drivers_license_type')} 
-                            value={employeeDetails?.drivers_license_type || ''} 
-                            onChange={e => handleDetailChange('drivers_license_type', e.target.value)}
-                        >
-                            <option value="">Selecteer rijbewijstype</option>
-                            <option value="B">B (Auto)</option>
-                            <option value="C">C (Vrachtwagen)</option>
-                            <option value="D">D (Bus)</option>
-                            <option value="E">E (Aanhangwagen)</option>
-                            <option value="A">A (Motor)</option>
-                        </select>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {[
+                                { value: 'B', label: 'B (Auto)' },
+                                { value: 'C', label: 'C (Vrachtwagen)' },
+                                { value: 'D', label: 'D (Bus)' },
+                                { value: 'E', label: 'E (Aanhangwagen)' },
+                                { value: 'A', label: 'A (Motor)' },
+                                { value: 'AM', label: 'AM (Bromfiets)' },
+                                { value: 'A1', label: 'A1 (Motor beperkt)' },
+                                { value: 'A2', label: 'A2 (Motor beperkt)' },
+                                { value: 'BE', label: 'BE (Auto + Aanhangwagen)' },
+                                { value: 'CE', label: 'CE (Vrachtwagen + Aanhangwagen)' },
+                                { value: 'DE', label: 'DE (Bus + Aanhangwagen)' },
+                            ].map((option) => {
+                                const selected = Array.isArray(employeeDetails?.drivers_license_type) 
+                                    ? employeeDetails.drivers_license_type.includes(option.value)
+                                    : false;
+                                return (
+                                    <label 
+                                        key={option.value} 
+                                        className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
+                                            selected 
+                                                ? 'border-purple-500 bg-purple-100 shadow-md' 
+                                                : 'border-purple-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+                                        }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            onChange={(e) => {
+                                                const currentTypes = Array.isArray(employeeDetails?.drivers_license_type) 
+                                                    ? employeeDetails.drivers_license_type 
+                                                    : [];
+                                                if (e.target.checked) {
+                                                    handleDetailChange('drivers_license_type', [...currentTypes, option.value]);
+                                                } else {
+                                                    handleDetailChange('drivers_license_type', currentTypes.filter(t => t !== option.value));
+                                                }
+                                            }}
+                                            className="sr-only"
+                                        />
+                                        <span className={`text-sm font-medium ${selected ? 'text-purple-700' : 'text-gray-700'}`}>
+                                            {option.label}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 

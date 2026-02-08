@@ -53,7 +53,7 @@ interface ExtractedTableData {
     motor: boolean;
     ov: boolean;
     rijbewijs: boolean;
-    rijbewijsType?: string;
+    rijbewijsType?: string[];
   };
   talen: {
     nederlands: {
@@ -123,10 +123,18 @@ function parseRawTextForTableData(rawText: string, result: ExtractedTableData) {
     if (line.includes('rijbewijs')) {
       if (combinedLine.includes('ja') && !combinedLine.includes('nee')) {
         result.vervoer.rijbewijs = true;
-        // Look for license type
-        const typeMatch = combinedLine.match(/\b([a-e])\b/i);
-        if (typeMatch) {
-          result.vervoer.rijbewijsType = typeMatch[1].toUpperCase();
+        // Look for all license types
+        const licenseTypes: string[] = [];
+        const licensePattern = /\b(AM|A1|A2|BE|CE|DE|[A-E])\b/gi;
+        let match;
+        while ((match = licensePattern.exec(combinedLine)) !== null) {
+          const type = match[1].toUpperCase();
+          if (!licenseTypes.includes(type)) {
+            licenseTypes.push(type);
+          }
+        }
+        if (licenseTypes.length > 0) {
+          result.vervoer.rijbewijsType = licenseTypes;
         }
       }
     }
@@ -369,13 +377,38 @@ function parseVervoerTable(tableHtml: string, vervoer: ExtractedTableData['vervo
     
     if (firstCell.includes('rijbewijs')) {
       vervoer.rijbewijs = isJa && !isNee;
-      // Extract license type from Welk? column (usually column 1)
+      // Extract all license types from Welk? column (usually column 1)
       const welkCell = cellContents[1] || '';
-      const typeMatch = welkCell.match(/\b([a-e])\b/i) || rowText.match(/\b([a-e])\b/i);
-      if (typeMatch) {
-        vervoer.rijbewijsType = typeMatch[1].toUpperCase();
+      const rowText = cellContents.join(' ');
+      
+      // Match all license types (A, B, C, D, E, AM, A1, A2, BE, CE, DE)
+      const licenseTypes: string[] = [];
+      const licensePattern = /\b(AM|A1|A2|BE|CE|DE|[A-E])\b/gi;
+      let match;
+      
+      // Find all matches in the cell
+      while ((match = licensePattern.exec(welkCell)) !== null) {
+        const type = match[1].toUpperCase();
+        if (!licenseTypes.includes(type)) {
+          licenseTypes.push(type);
+        }
       }
-      console.log(`  Rijbewijs: ${vervoer.rijbewijs ? 'Ja' : 'Nee'}, Type: ${vervoer.rijbewijsType || 'N/A'}, cells: [${cellContents.join(', ')}]`);
+      
+      // Also check rowText if nothing found in welkCell
+      if (licenseTypes.length === 0) {
+        while ((match = licensePattern.exec(rowText)) !== null) {
+          const type = match[1].toUpperCase();
+          if (!licenseTypes.includes(type)) {
+            licenseTypes.push(type);
+          }
+        }
+      }
+      
+      if (licenseTypes.length > 0) {
+        vervoer.rijbewijsType = licenseTypes;
+      }
+      
+      console.log(`  Rijbewijs: ${vervoer.rijbewijs ? 'Ja' : 'Nee'}, Types: ${vervoer.rijbewijsType?.join(', ') || 'N/A'}, cells: [${cellContents.join(', ')}]`);
     }
     else if (firstCell.includes('auto') && !firstCell.includes('bromfiets')) {
       vervoer.auto = isJa && !isNee;
@@ -574,8 +607,8 @@ function convertTableDataToEmployeeDetails(tableData: ExtractedTableData): any {
   
   // Convert drivers_license
   result.drivers_license = tableData.vervoer.rijbewijs;
-  if (tableData.vervoer.rijbewijsType) {
-    result.drivers_license_type = tableData.vervoer.rijbewijsType;
+  if (tableData.vervoer.rijbewijsType && tableData.vervoer.rijbewijsType.length > 0) {
+    result.drivers_license_type = tableData.vervoer.rijbewijsType; // Already an array
   }
   
   // Convert language skills
