@@ -545,6 +545,8 @@ export default function Section3A4({ data }: { data: TPData }) {
                       <div className={paperText}>{renderTextWithLogoBullets(firstBlock.text, true)}</div>
                     ) : firstBlock.key === 'ad' && firstBlock.text.startsWith('N.B.') ? (
                       <div className={`${paperText} font-bold text-black`}>{firstBlock.text}</div>
+                    ) : firstBlock.key === 'ad' ? (
+                      <div className={paperText}>{renderTextWithLogoBullets(firstBlock.text, false)}</div>
                     ) : firstBlock.key === 'pow' ? (
                       <div className={paperText}>
                         {firstBlock.text && firstBlock.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(firstBlock.text)}</p>}
@@ -605,6 +607,8 @@ export default function Section3A4({ data }: { data: TPData }) {
                     <div className={paperText}>{renderTextWithLogoBullets(b.text, true)}</div>
                   ) : b.key === 'ad' && b.text.startsWith('N.B.') ? (
                     <div className={`${paperText} font-bold text-black`}>{b.text}</div>
+                  ) : b.key === 'ad' ? (
+                    <div className={paperText}>{renderTextWithLogoBullets(b.text, false)}</div>
                   ) : b.key === 'pow' ? (
                     <div className={paperText}>
                       {b.text && b.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(b.text)}</p>}

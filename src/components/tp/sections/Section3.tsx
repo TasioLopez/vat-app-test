@@ -1544,6 +1544,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                             renderTextWithLogoBullets(s.text, true)
                                         ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                             <span className="font-bold text-black">{s.text}</span>
+                                        ) : s.key === 'ad' ? (
+                                            renderTextWithLogoBullets(s.text, false)
                                         ) : s.key === 'pow' ? (
                                             <div>
                                               {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
@@ -1728,6 +1730,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                 renderTextWithLogoBullets(s.text, true)
                             ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
                                 <span className="font-bold text-black">{s.text}</span>
+                            ) : s.key === 'ad' ? (
+                                renderTextWithLogoBullets(s.text, false)
                             ) : s.key === 'pow' ? (
                                 <div>
                                   {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
