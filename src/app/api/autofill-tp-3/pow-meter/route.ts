@@ -278,9 +278,22 @@ TREDE BEPALING OP BASIS VAN WERKUREN EN CONTEXT:
 - Trede 1: Geïsoleerd (< 2 uur actief binnenshuis) of Deelname aan activiteit buitenshuis (< 2 uur)
 - Trede 2: Deelname aan activiteit buitenshuis (< 4 uur per week)
 - Trede 3: Activering of spoor 1 (< 10 uur per week)
+  * BELANGRIJK: Als de werknemer expliciet "spoor 1" doet met < 10 uur per week, dan is dit ALTIJD Trede 3
+  * Trede 3 is voor de INITIËLE activeringsfase, niet voor stage/WEP
+  * Als er sprake is van "eigen werk" of "eigen functie" in spoor 1 met < 10 uur, dan is dit Trede 3
 - Trede 4: Stage/WEP/Re-integratie spoor 1 (< 20 uur per week of < 50% van contracturen)
+  * BELANGRIJK: Trede 4 is SPECIFIEK voor Stage, WEP (Werkervaringsplek), of formele Re-integratie plaatsingen
+  * Trede 4 is NIET voor gewone "spoor 1" activering met < 10 uur - dat is Trede 3
+  * Als er expliciet "Stage", "WEP", "Werkervaringsplek" of "formele re-integratie plaatsing" staat, dan is dit Trede 4
+  * Als het gewoon "spoor 1" is met < 10 uur zonder stage/WEP, dan is het Trede 3
 - Trede 5: Parttime betaald werk, detachering, voorziening of eigen werkgever
 - Trede 6: Weer volledig werkzaam binnen of buiten de organisatie
+
+BELANGRIJKE REGEL VOOR SPOOR 1:
+- Als sectie 6 of 14 expliciet "spoor 1" vermeldt met < 10 uur per week:
+  * Als het gaat om Stage/WEP/Werkervaringsplek → Trede 4
+  * Als het gaat om activering/eigen werk/eigen functie → Trede 3
+  * Bij twijfel tussen Trede 3 en 4: kies Trede 3 als het < 10 uur is en geen expliciete Stage/WEP is
 
 BELANGRIJK:
 - Wees FLEXIBEL en CONTEXTUEEL - maak redelijke inschattingen op basis van beschikbare informatie
@@ -293,7 +306,7 @@ BELANGRIJK:
 Geef je antwoord als JSON:
 {
   "trede": number (1-6),
-  "reasoning": "string met uitleg: (1) of je de spoor in secties 6/14 of het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, en (3) waarom je op deze trede uitkomt"
+  "reasoning": "string met uitleg: (1) of je de spoor in secties 6/14 of het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, (3) waarom je Trede 3 vs Trede 4 hebt gekozen (indien relevant), en (4) waarom je op deze trede uitkomt"
 }`;
 }
 
