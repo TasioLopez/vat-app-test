@@ -37,19 +37,20 @@ async function listEmployeeDocumentsByPriority(employeeId: string): Promise<Arra
   
   if (!docs?.length) return [];
 
-  // Document priority: AD rapport > FML/IZP > Intake > Others
+  // Document priority: Intake > AD rapport > FML/IZP > Others
+  // Intake is prioritized for PoW-meter because spoor is usually found there
   const priorityOrder: { [key: string]: number } = {
-    'ad_rapportage': 1,
-    'ad_rapport': 1,
-    'arbeidsdeskundig': 1,
-    'fml': 2,
-    'izp': 2,
-    'lab': 2,
-    'functiemogelijkhedenlijst': 2,
-    'inzetbaarheidsprofiel': 2,
-    'lijst arbeidsmogelijkheden': 2,
-    'intakeformulier': 3,
-    'intake': 3,
+    'intakeformulier': 1,
+    'intake': 1,
+    'ad_rapportage': 2,
+    'ad_rapport': 2,
+    'arbeidsdeskundig': 2,
+    'fml': 3,
+    'izp': 3,
+    'lab': 3,
+    'functiemogelijkhedenlijst': 3,
+    'inzetbaarheidsprofiel': 3,
+    'lijst arbeidsmogelijkheden': 3,
   };
 
   const sortedDocs = docs
@@ -142,57 +143,47 @@ const TREDE_INFO = {
 function buildInstructions(): string {
   return `Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
 
-Je moet de PoW-meter beslissingsboom STRICT sequentieel doorlopen. Gebruik file_search om ALLE documenten te doorzoeken voor elke vraag.
+Je moet de PoW-meter trede bepalen op basis van de volgende prioriteitsvolgorde:
 
-BESLISSINGSBOOM (volgorde is cruciaal):
+STAP 1: Zoek eerst in het INTAKEFORMULIER naar de huidige spoor/trede
+- Gebruik file_search om het intakeformulier te vinden (zoek naar documenten met type "intake" of "intakeformulier")
+- Zoek in het intakeformulier naar:
+  * Huidige spoor (spoor 1, spoor 2, etc.)
+  * Huidige trede (Trede 1-6)
+  * PoW-meter niveau
+  * Actuele situatie van de werknemer
+- Als je een duidelijke spoor/trede vindt in het intakeformulier, gebruik die dan DIRECT
+- 99% van de gevallen heeft een intakeformulier en de spoor staat meestal hierin
 
-VRAAG 1: Zijn er benutbare mogelijkheden (zie advies/ conclusie BA)?
-- Zoek in documenten naar: advies bedrijfsarts, conclusie BA, benutbare mogelijkheden
-- Als NEE → STOP, antwoord: Trede 1
-- Als JA → ga naar Vraag 2
+STAP 2: Als spoor/trede NIET duidelijk in intakeformulier staat, bepaal dan op basis van WERKUREN en contextuele informatie
+- Zoek in ALLE documenten naar:
+  * Aantal uren per week dat de werknemer werkt/kan werken
+  * Contracturen
+  * Belastbaarheid (uren per week)
+  * Type werkzaamheden (betaald werk, stage, activering, etc.)
+  * Huidige werkstatus
+- Gebruik deze informatie om de trede te bepalen volgens de volgende richtlijnen:
 
-VRAAG 2: Komt men regelmatig het huis uit (2x per week)?
-- Zoek naar: activiteiten buitenshuis, contact buitenshuis, bezoeken, uitgaan
-- Uitzondering: functionele contacten zoals huisarts/fysiotherapeut tellen NIET mee
-- Als NEE → STOP, antwoord: Trede 1
-- Als JA → ga naar Vraag 3
-
-VRAAG 3: Heeft men minimaal 2x per week activiteiten/ sociale contacten buitenshuis?
-- Zoek naar: sociale activiteiten, koffieochtend, cursus, taallessen, wekelijks contact
-- Als NEE → STOP, antwoord: Trede 2
-- Als JA → ga naar Vraag 4
-
-VRAAG 4: Is men gemotiveerd om aan het werk te gaan?
-- Zoek naar: motivatie, bereidheid, open staan, willen vs kunnen, demotivatie factoren
-- Als NEE → STOP, antwoord: Trede 3
-- Als JA → ga naar Vraag 5
-
-VRAAG 5: Kan men op het moment van de intake minimaal 12 uur per week werken?
-- Zoek naar: uren per week, belastbaarheid, werkdruk, verantwoordelijkheid, zelfstandigheid
-- Als NEE → STOP, antwoord: Trede 3
-- Als JA → ga naar Vraag 6
-
-VRAAG 6: Kan men zonder opleiding direct aan het werk?
-- Zoek naar: onbetaald werk, zelfstandig taken, verantwoordelijkheid, economische waarde, beroepsopleiding
-- Als NEE → STOP, antwoord: Trede 4
-- Als JA → ga naar Vraag 7
-
-VRAAG 7: Kan een functie zonder aanpassingen/voorzieningen uitgevoerd worden?
-- Zoek naar: 65% hersteld, loonwaarde, aanpassingen, voorzieningen, werkplek, taakaanpassing
-- Als NEE → STOP, antwoord: Trede 5
-- Als JA → antwoord: Trede 6
+TREDE BEPALING OP BASIS VAN WERKUREN EN CONTEXT:
+- Trede 1: Geïsoleerd (< 2 uur actief binnenshuis) of Deelname aan activiteit buitenshuis (< 2 uur)
+- Trede 2: Deelname aan activiteit buitenshuis (< 4 uur per week)
+- Trede 3: Activering of spoor 1 (< 10 uur per week)
+- Trede 4: Stage/WEP/Re-integratie spoor 1 (< 20 uur per week of < 50% van contracturen)
+- Trede 5: Parttime betaald werk, detachering, voorziening of eigen werkgever
+- Trede 6: Weer volledig werkzaam binnen of buiten de organisatie
 
 BELANGRIJK:
-- Doorzoek ALLE documenten met file_search voor elke vraag
-- Stop bij de eerste NEE antwoord
-- Maak redelijke inferenties op basis van beschikbare informatie
-- Als informatie ontbreekt voor een vraag, geef dan een redelijke inschatting op basis van wat wel beschikbaar is
-- Wees niet te strikt - als je redelijk zeker bent op basis van de documenten, geef dan een antwoord
+- Wees FLEXIBEL en CONTEXTUEEL - maak redelijke inschattingen op basis van beschikbare informatie
+- Als je twijfelt tussen twee tredes, kies de meest passende op basis van de context
+- Gebruik file_search om alle relevante documenten te doorzoeken
+- Als informatie ontbreekt, maak dan een redelijke inschatting op basis van wat WEL beschikbaar is
+- Wees NIET te strikt - als je redelijk zeker bent op basis van de documenten, geef dan een antwoord
+- Geef de voorkeur aan informatie uit het intakeformulier, maar gebruik andere documenten als aanvulling
 
 Geef je antwoord als JSON:
 {
   "trede": number (1-6),
-  "reasoning": "string met uitleg welke vragen je hebt geëvalueerd en waarom je op deze trede uitkomt"
+  "reasoning": "string met uitleg: (1) of je de spoor in het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, en (3) waarom je op deze trede uitkomt"
 }`;
 }
 
@@ -307,7 +298,7 @@ export async function GET(req: NextRequest) {
     if (trede === 6) {
       expectationText = "Werknemer is volledig werkzaam binnen of buiten de organisatie.";
     } else {
-      expectationText = `De verwachting is dat werknemer binnen nu en [X] maanden de stap naar ${nextTredeInfo.name} (${nextTredeInfo.description}) zal maken.`;
+      expectationText = `De verwachting is dat werknemer binnen nu en 3 maanden de stap naar ${nextTredeInfo.name} (${nextTredeInfo.description}) zal maken.`;
     }
 
     const pow_meter = `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. ${expectationText}`;
