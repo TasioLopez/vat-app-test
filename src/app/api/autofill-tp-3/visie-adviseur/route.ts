@@ -138,7 +138,7 @@ Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
   }
 }
 
-function buildInstructions(medischeSituatieText?: string | null): string {
+function buildInstructions(medischeSituatieText?: string | null, functiebeschrijvingText?: string | null): string {
   return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_loopbaanadviseur".
 
@@ -147,6 +147,13 @@ BELANGRIJK: Gebruik DEZE informatie uit het intake formulier (sectie "Medische s
 ${medischeSituatieText}
 
 Baseer de beperkingen ALLEEN op de FML-beperkingen zoals genoemd in bovenstaande intake informatie.
+` : ''}
+
+${functiebeschrijvingText ? `
+BELANGRIJK: Gebruik DEZE informatie uit het intake formulier (sectie "3. Functiebeschrijving") als basis voor de functiecontext:
+${functiebeschrijvingText}
+
+Houd rekening met de functieomschrijving uit bovenstaande intake informatie bij het beoordelen van de beperkingen en mogelijkheden.
 ` : ''}
 
 BELANGRIJKE FORMATTING REGELS:
@@ -175,10 +182,10 @@ KRITIEKE REGELS:
 Output uitsluitend JSON: { "visie_loopbaanadviseur": string }`;
 }
 
-async function runAssistant(files: string[], medischeSituatieText?: string | null) {
+async function runAssistant(files: string[], medischeSituatieText?: string | null, functiebeschrijvingText?: string | null) {
   const assistant = await openai.beta.assistants.create({
     name: "TP Visie Loopbaan Adviseur",
-    instructions: buildInstructions(medischeSituatieText),
+    instructions: buildInstructions(medischeSituatieText, functiebeschrijvingText),
     model: "gpt-4o",
     tools: [{ type: "file_search" }],
   });
@@ -229,11 +236,16 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
-    // Extract medische situatie from intake form
-    console.log('📋 Extracting Medische situatie from intake form...');
+    // Extract sections from intake form
+    console.log('📋 Extracting sections from intake form...');
     const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
+    const functiebeschrijvingText = await extractIntakeSection(employeeId, "3. Functiebeschrijving");
+    
     if (medischeSituatieText) {
       console.log('✅ Extracted Medische situatie from intake form');
+    }
+    if (functiebeschrijvingText) {
+      console.log('✅ Extracted Functiebeschrijving from intake form');
     }
 
     const docPaths = await listEmployeeDocumentPaths(employeeId);
@@ -241,7 +253,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
     const fileIds = await uploadDocsToOpenAI(docPaths);
-    const parsed = await runAssistant(fileIds, medischeSituatieText);
+    const parsed = await runAssistant(fileIds, medischeSituatieText, functiebeschrijvingText);
     const visie_loopbaanadviseur = stripCitations((parsed?.visie_loopbaanadviseur || '').trim());
 
     await supabase.from("tp_meta").upsert(

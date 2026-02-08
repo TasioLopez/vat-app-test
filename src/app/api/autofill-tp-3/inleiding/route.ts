@@ -138,7 +138,8 @@ Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
 function buildInleidingInstructions(
   context: any,
   medischeSituatieText?: string | null,
-  adRapportText?: string | null
+  adRapportText?: string | null,
+  functiebeschrijvingText?: string | null
 ): string {
   const { employee, details, meta, client } = context;
   
@@ -187,12 +188,23 @@ ALINEA 2 - Introductie met medische situatie (ALGEMEEN):
 - BELANGRIJK: Beschrijf medische beperkingen ALLEEN in algemene termen zoals "fysieke beperking", "medische beperking", "functionele beperking" - NOOIT specifieke lichaamsdelen of details
 
 ALINEA 3 - Functieomschrijving (GEDETAILLEERD):
+${functiebeschrijvingText ? `
+- Gebruik DEZE informatie uit het intake formulier (sectie "3. Functiebeschrijving") als basis:
+${functiebeschrijvingText}
+
 - Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
 - Voeg direct na de dubbele punt een newline toe, zodat de rest van de tekst op een nieuwe regel begint
-- Haal VOLLEDIGE beschrijving uit aangeleverde documenten
+- Gebruik de bovenstaande functiebeschrijving uit het intake formulier
+- Als de beschrijving onvolledig is, vul aan met informatie uit andere documenten (AD rapport, etc.)
+- Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
+` : `
+- Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
+- Voeg direct na de dubbele punt een newline toe, zodat de rest van de tekst op een nieuwe regel begint
+- PRIORITEIT: Zoek EERST in intake formulier (sectie "3. Functiebeschrijving"), dan in AD rapport, dan in andere documenten
 - Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
 - Als niet in documenten: schrijf "..." als placeholder
 - Wees zo specifiek en gedetailleerd mogelijk
+`}
 
 ALINEA 4 - Aanmelder/Contactpersoon (controleer Extra Aanmelder):
 - Check eerst of er een "Extra Aanmelder" is ingevuld in de documenten
@@ -300,7 +312,8 @@ async function processDocumentsWithAssistant(
   docs: any[],
   context: any,
   medischeSituatieText?: string | null,
-  adRapportText?: string | null
+  adRapportText?: string | null,
+  functiebeschrijvingText?: string | null
 ): Promise<{ inleiding_main: string; inleiding_sub: string }> {
   
   console.log('🚀 Creating OpenAI Assistant for Inleiding generation...');
@@ -308,7 +321,7 @@ async function processDocumentsWithAssistant(
   // Step 1: Create assistant with detailed instructions
   const assistant = await openai.beta.assistants.create({
     name: "TP Inleiding Generator",
-    instructions: buildInleidingInstructions(context, medischeSituatieText, adRapportText),
+    instructions: buildInleidingInstructions(context, medischeSituatieText, adRapportText, functiebeschrijvingText),
     model: "gpt-4o",
     tools: [{ type: "file_search" }]
   });
@@ -492,12 +505,16 @@ export async function GET(req: NextRequest) {
     console.log('📋 Extracting sections from intake form...');
     const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
     const adRapportText = await extractIntakeSection(employeeId, "7. Arbeidsdeskundige rapport");
+    const functiebeschrijvingText = await extractIntakeSection(employeeId, "3. Functiebeschrijving");
     
     if (medischeSituatieText) {
       console.log('✅ Extracted Medische situatie from intake form');
     }
     if (adRapportText) {
       console.log('✅ Extracted Arbeidsdeskundige rapport from intake form');
+    }
+    if (functiebeschrijvingText) {
+      console.log('✅ Extracted Functiebeschrijving from intake form');
     }
     
     // Build context object
@@ -506,7 +523,7 @@ export async function GET(req: NextRequest) {
     // Process documents with assistant, passing pre-extracted sections
     let extracted;
     try {
-      extracted = await processDocumentsWithAssistant(sortedDocs, context, medischeSituatieText, adRapportText);
+      extracted = await processDocumentsWithAssistant(sortedDocs, context, medischeSituatieText, adRapportText, functiebeschrijvingText);
     } catch (error) {
       console.error('❌ Assistant processing failed, using fallback:', error);
       // Fallback: return basic structure
