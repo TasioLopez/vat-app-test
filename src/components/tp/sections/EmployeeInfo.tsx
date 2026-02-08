@@ -572,9 +572,9 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr>
                     <td className={tdLabel}>Arbeidsdeskundig rapport aanwezig bij aanmelding</td>
                     <td className={tdValue}>
-                      {tpData.has_ad_report === true ? '☑ Ja    ☐ Nee' : 
-                       tpData.has_ad_report === false ? '☐ Ja    ☑ Nee' : 
-                       '☐ Ja    ☐ Nee'}
+                      {tpData.has_ad_report === true ? 'Ja' : 
+                       tpData.has_ad_report === false ? 'Nee' : 
+                       '—'}
                     </td>
                   </tr>
                   <tr><td className={tdLabel}>Bedrijfsarts</td><td className={tdValue}>{tpData.occupational_doctor_org}</td></tr>

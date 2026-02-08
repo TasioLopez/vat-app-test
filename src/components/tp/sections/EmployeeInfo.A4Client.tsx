@@ -179,8 +179,9 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
               label: "Arbeidsdeskundig rapport aanwezig bij aanmelding",
               value: (
                 <>
-                  <span className="mr-4">{tpData.has_ad_report === true ? "☑ Ja" : "☐ Ja"}</span>
-                  <span>{tpData.has_ad_report === false ? "☑ Nee" : "☐ Nee"}</span>
+                  {tpData.has_ad_report === true ? "Ja" : 
+                   tpData.has_ad_report === false ? "Nee" : 
+                   "—"}
                 </>
               )
             },

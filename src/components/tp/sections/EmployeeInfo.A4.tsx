@@ -149,8 +149,9 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
               label: "Arbeidsdeskundig rapport aanwezig bij aanmelding",
               value: (
                 <>
-                  <span className="mr-4">{data.has_ad_report === true ? "☑ Ja" : "☐ Ja"}</span>
-                  <span>{data.has_ad_report === false ? "☑ Nee" : "☐ Nee"}</span>
+                  {data.has_ad_report === true ? "Ja" : 
+                   data.has_ad_report === false ? "Nee" : 
+                   "—"}
                 </>
               )
             },
