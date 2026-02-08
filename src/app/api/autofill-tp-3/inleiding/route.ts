@@ -251,17 +251,19 @@ ALINEA 7 - Trajectdoel (VASTE TEKST):
 VOOR inleiding_sub (APARTE OUTPUT FIELD):
 ${adQuoteText ? `
 - Gebruik DEZE exacte tekst uit het intake formulier (sectie "7. Arbeidsdeskundige rapport", onder "Conclusie/advies:"):
-"${adQuoteText}"
+${adQuoteText}
 
-- Output ALLEEN deze exacte structuur (gebruik markdown voor italic):
+- Output ALLEEN deze exacte structuur (GEEN extra quotes, GEEN bold, alleen markdown asterisken voor italic):
 
-In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: "*${adQuoteText}*"
+In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: *${adQuoteText}*
 
-- BELANGRIJK: 
-  * Normale tekst voor de dubbele punt (geen markdown)
-  * Markdown *tekst* voor italic tussen aanhalingstekens
-  * Gebruik de bovenstaande tekst EXACT zoals gegeven - zoek NIET in documenten, gebruik ALLEEN deze tekst
-  * Citeer deze tekst ALLEEN EEN KEER
+- BELANGRIJK FORMATTING: 
+  * De tekst "In het Arbeidsdeskundige rapport... staat het volgende:" moet NORMAAL zijn (GEEN markdown, GEEN italic, GEEN bold)
+  * Alleen de citaat tekst na de dubbele punt moet italic zijn met markdown *tekst*
+  * GEEN quotes rondom de citaat, alleen asterisken voor italic
+  * Format: [normale tekst]: *[italic citaat]*
+  * Output ALLEEN EEN KEER - geen duplicatie
+  * VOORBEELD: "In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende: *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*"
 ` : hasAD || hasFML ? `
 - Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
@@ -305,8 +307,73 @@ function extractAdQuote(adRapportText: string | null | undefined): string | null
 
 function removeDuplicateQuotes(text: string): string {
   if (!text) return text;
-  // Remove consecutive duplicate quoted blocks (with asterisks for italic)
-  return text.replace(/(\*[^*]+\*)\s*\1+/g, '$1');
+  
+  // First, fix common formatting issues
+  // Remove bold from quotes: **"text"* -> *text*
+  text = text.replace(/\*\*\"([^\"]+)\"\*/g, '*$1*');
+  // Remove quotes around italic: "*text*" -> *text*
+  text = text.replace(/\"\*([^*]+)\*\"+/g, '*$1*');
+  // Remove quotes that wrap italic: "*text*" -> *text*
+  text = text.replace(/\"+\*([^*]+)\*\"+/g, '*$1*');
+  
+  // Remove duplicate quoted blocks with various patterns:
+  // Pattern 1: *quote* followed by *quote* (markdown italic)
+  text = text.replace(/(\*[^*]+\*)\s*\1+/g, '$1');
+  
+  // Pattern 2: "quote" followed by "quote" (with quotes)
+  text = text.replace(/(\"[^\"]+\")\s*\1+/g, '$1');
+  
+  // Pattern 3: Mixed patterns - find duplicate content regardless of formatting
+  const quotePattern = /(\*[^*]+\*|\"[^\"]+\"|\*\*[^*]+\*\*)/g;
+  const matches = [...text.matchAll(quotePattern)];
+  
+  if (matches.length >= 2) {
+    // Extract content from each match (remove formatting)
+    const contents = matches.map(m => {
+      const content = m[0];
+      return content.replace(/[\*\"\s]+/g, '').trim();
+    });
+    
+    // If first two are identical, remove the second
+    if (contents[0] && contents[0] === contents[1]) {
+      const firstEnd = matches[0].index! + matches[0][0].length;
+      const secondStart = matches[1].index!;
+      const secondEnd = matches[1].index! + matches[1][0].length;
+      
+      // Remove the duplicate
+      text = text.substring(0, secondStart) + text.substring(secondEnd);
+    }
+  }
+  
+  return text;
+}
+
+function fixItalicFormatting(text: string): string {
+  if (!text) return text;
+  
+  // Pattern: "In het Arbeidsdeskundige rapport... staat het volgende:" should NOT be italic
+  // But the quote after should be italic
+  
+  // Find the pattern where intro is italic
+  const introPattern = /(\*In het Arbeidsdeskundige rapport[^*]+staat het volgende:\*)\s*(\*[^*]+\*)/;
+  const match = text.match(introPattern);
+  
+  if (match) {
+    // Remove asterisks from intro, keep them on quote
+    const intro = match[1].replace(/\*/g, '');
+    const quote = match[2];
+    text = text.replace(introPattern, `${intro} ${quote}`);
+  }
+  
+  // Also handle cases where the entire thing is wrapped in asterisks
+  // *In het... volgende: *quote**
+  const fullWrapPattern = /^\*([^*]+staat het volgende:)\s*(\*[^*]+\*)\*$/;
+  const fullMatch = text.match(fullWrapPattern);
+  if (fullMatch) {
+    return `${fullMatch[1]} ${fullMatch[2]}`;
+  }
+  
+  return text;
 }
 
 // ---- Citation Stripping ----
@@ -426,7 +493,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      result.inleiding_sub = removeDuplicateQuotes(stripCitations(result.inleiding_sub || ''));
+      result.inleiding_sub = fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')));
       
       console.log('✅ Parsed result:', result);
       
