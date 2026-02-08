@@ -45,8 +45,8 @@ export function formatEmployeeName(
 }
 
 /**
- * Formats employee name without title prefix: "Initial. LastName (FirstName)"
- * e.g., "K. Baaijens (Kim)"
+ * Formats employee name without title prefix: "LastName (FirstName)"
+ * e.g., "Baaijens (Kim)"
  * Used in EmployeeInfo section (Step 2) where title is not needed
  * 
  * @param firstName - Employee's first name
@@ -69,14 +69,13 @@ export function formatEmployeeNameWithoutPrefix(
     return [firstName, lastName].filter(Boolean).join(' ');
   }
 
-  // If we have gender, format with initial (no title)
+  // If we have gender, format without initial (no title)
   // Support both Dutch (Man/Vrouw) and English (Male/Female) values
   const isFemale = gender === 'Female' || gender === 'Vrouw' || gender?.toLowerCase() === 'vrouw';
   const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
   
   if (isFemale || isMale) {
-    const initial = firstName.charAt(0).toUpperCase();
-    return `${initial}. ${lastName} (${firstName})`;
+    return `${lastName} (${firstName})`;
   }
 
   // Fallback to simple format if gender not specified
