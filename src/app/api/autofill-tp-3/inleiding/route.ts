@@ -295,7 +295,7 @@ Return ONLY a JSON object:
 }
 
 // ---- Helper Functions ----
-function extractAdQuote(adRapportText: string | null): string | null {
+function extractAdQuote(adRapportText: string | null | undefined): string | null {
   if (!adRapportText) return null;
   // Extract content after "Conclusie/advies:"
   const match = adRapportText.match(/Conclusie\/advies:?\s*(.+)/is);
