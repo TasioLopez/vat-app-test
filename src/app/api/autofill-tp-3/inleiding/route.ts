@@ -250,17 +250,18 @@ ALINEA 7 - Trajectdoel (VASTE TEKST):
 
 VOOR inleiding_sub (APARTE OUTPUT FIELD):
 ${adQuoteText ? `
-- Er is informatie beschikbaar uit het intake formulier (sectie "7. Arbeidsdeskundige rapport")
-- Extract de tekst onder "Conclusie/advies:" uit deze sectie
+- Gebruik DEZE exacte tekst uit het intake formulier (sectie "7. Arbeidsdeskundige rapport", onder "Conclusie/advies:"):
+"${adQuoteText}"
+
 - Output ALLEEN deze exacte structuur (gebruik markdown voor italic):
 
-In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: "*[citaat uit Conclusie/advies hier]*"
+In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: "*${adQuoteText}*"
 
 - BELANGRIJK: 
   * Normale tekst voor de dubbele punt (geen markdown)
   * Markdown *tekst* voor italic tussen aanhalingstekens
-  * Citeer ALLEEN de tekst onder "Conclusie/advies:", niet de hele sectie
-  * Gebruik de exacte tekst zoals in het intake formulier
+  * Gebruik de bovenstaande tekst EXACT zoals gegeven - zoek NIET in documenten, gebruik ALLEEN deze tekst
+  * Citeer deze tekst ALLEEN EEN KEER
 ` : hasAD || hasFML ? `
 - Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
