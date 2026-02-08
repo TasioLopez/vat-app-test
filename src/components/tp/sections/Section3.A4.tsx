@@ -310,7 +310,7 @@ function SignatureBlock({
   advisorName: string;
   employerContact: string;
 }) {
-  const row = "grid grid-cols-3 gap-6 mt-3";
+  const row = "grid grid-cols-2 gap-6 mt-3";
   const cell = "border rounded p-3";
   const line = "border-b border-black inline-block min-w-[140px]";
   const label = "text-xs text-muted-foreground font-bold";
@@ -318,55 +318,60 @@ function SignatureBlock({
   return (
     <div className={avoidBreak}>
       <div className={blockTitle}>Ondertekening</div>
-      <div className={`${paperText} ${row}`}>
-        {/* Werknemer */}
-        <div className={cell}>
-          <div className="font-semibold mb-2">Werknemer</div>
-          <div className="mb-1">
-            <span className={label}>Naam: </span>
-            <span className={line}>{employeeName}</span>
+      <div className={paperText}>
+        {/* First row: Werknemer and Loopbaanadviseur */}
+        <div className={row}>
+          {/* Werknemer */}
+          <div className={cell}>
+            <div className="font-semibold mb-2">Werknemer</div>
+            <div className="mb-1">
+              <span className={label}>Naam: </span>
+              <span className={line}>{employeeName}</span>
+            </div>
+            <div className="mb-1">
+              <span className={label}>Datum: </span>
+              <span className={line}></span>
+            </div>
+            <div>
+              <span className={label}>Handtekening: </span>
+              <span className={line}></span>
+            </div>
           </div>
-          <div className="mb-1">
-            <span className={label}>Datum: </span>
-            <span className={line}></span>
-          </div>
-          <div>
-            <span className={label}>Handtekening: </span>
-            <span className={line}></span>
+
+          {/* Loopbaanadviseur */}
+          <div className={cell}>
+            <div className="font-semibold mb-2">Loopbaanadviseur</div>
+            <div className="mb-1">
+              <span className={label}>Naam: </span>
+              <span className={line}>{advisorName}</span>
+            </div>
+            <div className="mb-1">
+              <span className={label}>Datum: </span>
+              <span className={line}></span>
+            </div>
+            <div>
+              <span className={label}>Handtekening: </span>
+              <span className={line}></span>
+            </div>
           </div>
         </div>
 
-        {/* Loopbaanadviseur */}
-        <div className={cell}>
-          <div className="font-semibold mb-2">Loopbaanadviseur</div>
-          <div className="mb-1">
-            <span className={label}>Naam: </span>
-            <span className={line}>{advisorName}</span>
-          </div>
-          <div className="mb-1">
-            <span className={label}>Datum: </span>
-            <span className={line}></span>
-          </div>
-          <div>
-            <span className={label}>Handtekening: </span>
-            <span className={line}></span>
-          </div>
-        </div>
-
-        {/* Opdrachtgever */}
-        <div className={cell}>
-          <div className="font-semibold mb-2">Opdrachtgever</div>
-          <div className="mb-1">
-            <span className={label}>Naam: </span>
-            <span className={line}>{employerContact}</span>
-          </div>
-          <div className="mb-1">
-            <span className={label}>Datum: </span>
-            <span className={line}></span>
-          </div>
-          <div>
-            <span className={label}>Handtekening: </span>
-            <span className={line}></span>
+        {/* Second row: Opdrachtgever */}
+        <div className="mt-3">
+          <div className={cell}>
+            <div className="font-semibold mb-2">Opdrachtgever</div>
+            <div className="mb-1">
+              <span className={label}>Naam: </span>
+              <span className={line}>{employerContact}</span>
+            </div>
+            <div className="mb-1">
+              <span className={label}>Datum: </span>
+              <span className={line}></span>
+            </div>
+            <div>
+              <span className={label}>Handtekening: </span>
+              <span className={line}></span>
+            </div>
           </div>
         </div>
       </div>
