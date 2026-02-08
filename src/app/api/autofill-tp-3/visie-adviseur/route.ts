@@ -150,10 +150,10 @@ Baseer de beperkingen ALLEEN op de FML-beperkingen zoals genoemd in bovenstaande
 ` : ''}
 
 ${functiebeschrijvingText ? `
-BELANGRIJK: Gebruik DEZE informatie uit het intake formulier (sectie "3. Functiebeschrijving") als basis voor de functiecontext:
+BELANGRIJK: Gebruik DEZE informatie uit het intake formulier (sectie "7. Arbeidsdeskundige rapport") als basis voor de functiecontext:
 ${functiebeschrijvingText}
 
-Houd rekening met de functieomschrijving uit bovenstaande intake informatie bij het beoordelen van de beperkingen en mogelijkheden.
+Houd rekening met de informatie uit bovenstaande intake sectie bij het beoordelen van de beperkingen en mogelijkheden.
 ` : ''}
 
 BELANGRIJKE FORMATTING REGELS:
@@ -239,13 +239,14 @@ export async function GET(req: NextRequest) {
     // Extract sections from intake form
     console.log('📋 Extracting sections from intake form...');
     const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
-    const functiebeschrijvingText = await extractIntakeSection(employeeId, "3. Functiebeschrijving");
+    // Use section 7 for functiebeschrijving instead of section 3
+    const functiebeschrijvingText = await extractIntakeSection(employeeId, "7. Arbeidsdeskundige rapport");
     
     if (medischeSituatieText) {
       console.log('✅ Extracted Medische situatie from intake form');
     }
     if (functiebeschrijvingText) {
-      console.log('✅ Extracted Functiebeschrijving from intake form');
+      console.log('✅ Extracted Arbeidsdeskundige rapport from intake form');
     }
 
     const docPaths = await listEmployeeDocumentPaths(employeeId);

@@ -189,18 +189,18 @@ ALINEA 2 - Introductie met medische situatie (ALGEMEEN):
 
 ALINEA 3 - Functieomschrijving (GEDETAILLEERD):
 ${functiebeschrijvingText ? `
-- Gebruik DEZE informatie uit het intake formulier (sectie "3. Functiebeschrijving") als basis:
+- Gebruik DEZE informatie uit het intake formulier (sectie "7. Arbeidsdeskundige rapport") als basis:
 ${functiebeschrijvingText}
 
 - Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
 - Voeg direct na de dubbele punt een newline toe, zodat de rest van de tekst op een nieuwe regel begint
-- Gebruik de bovenstaande functiebeschrijving uit het intake formulier
+- Gebruik de bovenstaande informatie uit het intake formulier EXACT zoals gegeven
+- Neem de tekst onder "Conclusie/advies:" over als functieomschrijving
 - Als de beschrijving onvolledig is, vul aan met informatie uit andere documenten (AD rapport, etc.)
-- Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
 ` : `
 - Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
 - Voeg direct na de dubbele punt een newline toe, zodat de rest van de tekst op een nieuwe regel begint
-- PRIORITEIT: Zoek EERST in intake formulier (sectie "3. Functiebeschrijving"), dan in AD rapport, dan in andere documenten
+- PRIORITEIT: Zoek EERST in intake formulier (sectie "7. Arbeidsdeskundige rapport"), dan in AD rapport, dan in andere documenten
 - Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
 - Als niet in documenten: schrijf "..." als placeholder
 - Wees zo specifiek en gedetailleerd mogelijk
@@ -505,7 +505,8 @@ export async function GET(req: NextRequest) {
     console.log('📋 Extracting sections from intake form...');
     const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
     const adRapportText = await extractIntakeSection(employeeId, "7. Arbeidsdeskundige rapport");
-    const functiebeschrijvingText = await extractIntakeSection(employeeId, "3. Functiebeschrijving");
+    // Use section 7 for functieomschrijving instead of section 3
+    const functiebeschrijvingText = await extractIntakeSection(employeeId, "7. Arbeidsdeskundige rapport");
     
     if (medischeSituatieText) {
       console.log('✅ Extracted Medische situatie from intake form');
@@ -514,7 +515,7 @@ export async function GET(req: NextRequest) {
       console.log('✅ Extracted Arbeidsdeskundige rapport from intake form');
     }
     if (functiebeschrijvingText) {
-      console.log('✅ Extracted Functiebeschrijving from intake form');
+      console.log('✅ Extracted Arbeidsdeskundige rapport (for Functieomschrijving) from intake form');
     }
     
     // Build context object
