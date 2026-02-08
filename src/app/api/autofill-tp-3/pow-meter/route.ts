@@ -25,6 +25,98 @@ function extractStoragePath(url: string): string | null {
   return null;
 }
 
+// Extract specific section from intake form using AI
+async function extractIntakeSection(employeeId: string, sectionName: string): Promise<string | null> {
+  const supabaseService = SupabaseService.getInstance();
+  const supabase = supabaseService.getClient();
+  const { data: docs } = await supabase
+    .from("documents")
+    .select("type, url, uploaded_at")
+    .eq("employee_id", employeeId)
+    .order("uploaded_at", { ascending: false });
+  
+  if (!docs?.length) return null;
+  
+  const variants = ["intakeformulier", "intake-formulier", "intake"];
+  const intakeDoc = docs.find(d => {
+    const type = (d.type || "").toLowerCase();
+    return variants.some(v => type.includes(v));
+  });
+  
+  if (!intakeDoc?.url) return null;
+  
+  const path = extractStoragePath(intakeDoc.url);
+  if (!path) return null;
+  
+  try {
+    // Download and upload to OpenAI
+    const { data: file } = await supabase.storage.from('documents').download(path);
+    if (!file) return null;
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = path.split('/').pop() || 'intake.pdf';
+    const mimeType = fileName.endsWith('.docx') 
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      : 'application/pdf';
+    
+    const uploadedFile = await openai.files.create({
+      file: new File([buffer], fileName, { type: mimeType }),
+      purpose: "assistants"
+    });
+    
+    // Use assistant to extract specific section
+    const assistant = await openai.beta.assistants.create({
+      name: "Intake Section Extractor",
+      instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
+      
+Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
+- Geef de VOLLEDIGE tekst van deze sectie terug
+- Behoud de originele structuur en formatting
+- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
+      model: "gpt-4o",
+      tools: [{ type: "file_search" }]
+    });
+    
+    const thread = await openai.beta.threads.create({
+      messages: [{
+        role: "user",
+        content: `Extract de sectie "${sectionName}" uit dit intake formulier.`,
+        attachments: [{ file_id: uploadedFile.id, tools: [{ type: "file_search" }] }]
+      }]
+    });
+    
+    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+      assistant_id: assistant.id
+    });
+    
+    if (run.status !== 'completed') {
+      await openai.beta.assistants.delete(assistant.id);
+      await openai.files.delete(uploadedFile.id);
+      return null;
+    }
+    
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    const response = messages.data[0]?.content?.[0];
+    
+    let extractedText = null;
+    if (response?.type === 'text') {
+      extractedText = response.text.value;
+      if (extractedText.includes("NIET_GEVONDEN")) {
+        extractedText = null;
+      }
+    }
+    
+    // Cleanup
+    await openai.beta.assistants.delete(assistant.id);
+    await openai.files.delete(uploadedFile.id);
+    
+    return extractedText;
+  } catch (error: any) {
+    console.error(`⚠️ Failed to extract section "${sectionName}":`, error.message);
+    return null;
+  }
+}
+
 // Get documents by priority order (same pattern as zoekprofiel)
 async function listEmployeeDocumentsByPriority(employeeId: string): Promise<Array<{ type: string; url: string; path: string }>> {
   const supabaseService = SupabaseService.getInstance();
@@ -140,12 +232,30 @@ const TREDE_INFO = {
   }
 };
 
-function buildInstructions(): string {
+function buildInstructions(section6Text?: string | null, section14Text?: string | null): string {
+  let intakeSectionsInfo = "";
+  
+  if (section6Text || section14Text) {
+    intakeSectionsInfo = "\n\nBELANGRIJKE INTAKEFORMULIER SECTIES (gebruik deze informatie als primaire bron):\n";
+    
+    if (section6Text) {
+      intakeSectionsInfo += `\nSECTIE 6 - Re-integratie en houding:\n${section6Text}\n`;
+    }
+    
+    if (section14Text) {
+      intakeSectionsInfo += `\nSECTIE 14 - Huidige situatie:\n${section14Text}\n`;
+    }
+    
+    intakeSectionsInfo += "\nDeze secties bevatten de MEEST BETROUWBARE informatie over de huidige spoor en werkuren van de werknemer.\n";
+  }
+  
   return `Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
 
 Je moet de PoW-meter trede bepalen op basis van de volgende prioriteitsvolgorde:
 
-STAP 1: Zoek eerst in het INTAKEFORMULIER naar de huidige spoor/trede
+STAP 1: Gebruik de INTAKEFORMULIER SECTIES 6 en 14 (indien beschikbaar)${intakeSectionsInfo}
+
+STAP 2: Als de secties 6 en 14 niet beschikbaar zijn, zoek dan in het INTAKEFORMULIER naar de huidige spoor/trede
 - Gebruik file_search om het intakeformulier te vinden (zoek naar documenten met type "intake" of "intakeformulier")
 - Zoek in het intakeformulier naar:
   * Huidige spoor (spoor 1, spoor 2, etc.)
@@ -155,7 +265,7 @@ STAP 1: Zoek eerst in het INTAKEFORMULIER naar de huidige spoor/trede
 - Als je een duidelijke spoor/trede vindt in het intakeformulier, gebruik die dan DIRECT
 - 99% van de gevallen heeft een intakeformulier en de spoor staat meestal hierin
 
-STAP 2: Als spoor/trede NIET duidelijk in intakeformulier staat, bepaal dan op basis van WERKUREN en contextuele informatie
+STAP 3: Als spoor/trede NIET duidelijk in intakeformulier staat, bepaal dan op basis van WERKUREN en contextuele informatie
 - Zoek in ALLE documenten naar:
   * Aantal uren per week dat de werknemer werkt/kan werken
   * Contracturen
@@ -178,19 +288,19 @@ BELANGRIJK:
 - Gebruik file_search om alle relevante documenten te doorzoeken
 - Als informatie ontbreekt, maak dan een redelijke inschatting op basis van wat WEL beschikbaar is
 - Wees NIET te strikt - als je redelijk zeker bent op basis van de documenten, geef dan een antwoord
-- Geef de voorkeur aan informatie uit het intakeformulier, maar gebruik andere documenten als aanvulling
+- Geef de voorkeur aan informatie uit secties 6 en 14 van het intakeformulier, daarna andere delen van het intakeformulier, en gebruik andere documenten als aanvulling
 
 Geef je antwoord als JSON:
 {
   "trede": number (1-6),
-  "reasoning": "string met uitleg: (1) of je de spoor in het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, en (3) waarom je op deze trede uitkomt"
+  "reasoning": "string met uitleg: (1) of je de spoor in secties 6/14 of het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, en (3) waarom je op deze trede uitkomt"
 }`;
 }
 
-async function runAssistant(files: string[]): Promise<{ trede: number; reasoning: string }> {
+async function runAssistant(files: string[], section6Text?: string | null, section14Text?: string | null): Promise<{ trede: number; reasoning: string }> {
   const assistant = await openai.beta.assistants.create({
     name: "PoW-meter Evaluator",
-    instructions: buildInstructions(),
+    instructions: buildInstructions(section6Text, section14Text),
     model: "gpt-4o",
     tools: [{ type: "file_search" }],
   });
@@ -199,7 +309,7 @@ async function runAssistant(files: string[]): Promise<{ trede: number; reasoning
     messages: [
       {
         role: "user",
-        content: "Analyseer alle documenten en bepaal de PoW-meter trede door de beslissingsboom sequentieel door te lopen. Gebruik file_search om alle documenten te doorzoeken.",
+        content: "Analyseer alle documenten en bepaal de PoW-meter trede. Gebruik de informatie uit secties 6 en 14 van het intakeformulier als primaire bron indien beschikbaar. Gebruik file_search om alle documenten te doorzoeken.",
         attachments: files.map((id) => ({ file_id: id, tools: [{ type: "file_search" }] })),
       },
     ],
@@ -260,6 +370,18 @@ export async function GET(req: NextRequest) {
     validateRequiredFields({ employeeId }, ['employeeId']);
     validateUUID(employeeId!, 'Employee ID');
 
+    // Extract sections 6 and 14 from intake form BEFORE processing
+    console.log('📋 Extracting sections 6 and 14 from intake form...');
+    const section6Text = await extractIntakeSection(employeeId!, "6. Re-integratie en houding");
+    const section14Text = await extractIntakeSection(employeeId!, "14. Huidige situatie");
+    
+    if (section6Text) {
+      console.log('✅ Extracted Section 6 from intake form');
+    }
+    if (section14Text) {
+      console.log('✅ Extracted Section 14 from intake form');
+    }
+
     // Get documents by priority (same pattern as other routes)
     const docs = await listEmployeeDocumentsByPriority(employeeId!);
     
@@ -284,8 +406,8 @@ export async function GET(req: NextRequest) {
 
     console.log(`📤 Uploaded ${fileIds.length} files to OpenAI`);
 
-    // Single assistant call that evaluates the entire decision tree
-    const { trede, reasoning } = await runAssistant(fileIds);
+    // Single assistant call that evaluates with extracted sections
+    const { trede, reasoning } = await runAssistant(fileIds, section6Text, section14Text);
 
     console.log(`✅ Determined Trede ${trede}: ${reasoning.slice(0, 100)}`);
 
