@@ -81,6 +81,14 @@ Vereisten:
 - Zakelijk en AVG-proof schrijven
 - SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
 
+BELANGRIJK - Vermijd negatie-gerichte zinnen:
+- Focus op wat WEL aanwezig is, niet op wat ONTBREEKT
+- Vermijd onnodige zinnen met "geen", "niet", "ontbreekt" tenzij dit echt relevant is voor de context
+- Schrijf positief: "Werknemer woont met zijn kinderen" in plaats van "Er zijn geen uitwonende kinderen"
+- Schrijf positief: "Werknemer regelt alles zelf" in plaats van "Werknemer ontvangt geen ondersteuning"
+- Schrijf positief: "Werknemer spreekt soms af met vrienden" in plaats van "Werknemer heeft geen regelmatige sociale activiteiten"
+- Alleen negatie gebruiken als het essentieel is voor begrip (bijv. "Werknemer heeft geen rijbewijs" als dit relevant is voor vervoer)
+
 STRIKT VERBODEN (privacy regels):
 - NOOIT exacte leeftijden van kinderen of familieleden noemen (bijv. "21 jaar", "15 jaar")
 - GEBRUIK ALTIJD algemene termen zoals: "meerderjarige zoon/dochter", "minderjarige kinderen", "volwassen kinderen", "tiener"

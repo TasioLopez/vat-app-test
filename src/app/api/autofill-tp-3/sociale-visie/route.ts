@@ -144,6 +144,13 @@ Schrijf twee secties op basis van het INTAKEFORMULIER, in dezelfde stijl/structu
 
 SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
 
+BELANGRIJK - Vermijd negatie-gerichte zinnen:
+- Focus op wat WEL aanwezig is, niet op wat ONTBREEKT
+- Vermijd onnodige zinnen met "geen", "niet", "ontbreekt" tenzij dit echt relevant is voor de context
+- Schrijf positief: "Werknemer woont met zijn kinderen" in plaats van "Er zijn geen uitwonende kinderen"
+- Schrijf positief: "Werknemer regelt alles zelf" in plaats van "Werknemer ontvangt geen ondersteuning"
+- Alleen negatie gebruiken als het essentieel is voor begrip (bijv. "Werknemer heeft geen rijbewijs" als dit relevant is voor vervoer)
+
 Geen hallucinaties: neem alleen op wat expliciet of logisch uit de intake volgt. Als specifieke info ontbreekt, laat het weg (niet invullen met aannames).
 Lever UITSLUITEND een function call met JSON: { sociale_achtergrond: string, visie_werknemer: string }.
 `.trim();
