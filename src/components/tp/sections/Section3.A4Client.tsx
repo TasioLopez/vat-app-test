@@ -321,13 +321,13 @@ function SignatureBlock({
     employerContact: string;
 }) {
     const row = "grid grid-cols-2 gap-6 mt-3";
-    const cell = "border rounded p-3 bg-white";
+    const cell = "border rounded p-3 bg-[#e7e6e6]";
     const line = "border-b border-black inline-block min-w-[140px]";
     const label = "text-xs text-gray-600 font-bold";
     return (
         <div>
             <div className={blockTitle}>Ondertekening</div>
-            <div className={paperText}>
+            <div className="p-2 whitespace-pre-wrap leading-relaxed">
                 {/* First row: Werknemer and Loopbaanadviseur */}
                 <div className={row}>
                     <div className={cell}>
@@ -362,9 +362,9 @@ function SignatureBlock({
                     </div>
                 </div>
 
-                {/* Second row: Opdrachtgever - same width as one box above */}
-                <div className="mt-3">
-                    <div className={`${cell} max-w-[calc(50%-12px)]`}>
+                {/* Second row: Opdrachtgever - using same grid to ensure exact same width */}
+                <div className={row}>
+                    <div className={cell}>
                         <div className="font-semibold mb-2">Opdrachtgever</div>
                         <div className="mb-1">
                             <span className={label}>Naam: </span>
@@ -379,6 +379,7 @@ function SignatureBlock({
                             <span className={line}></span>
                         </div>
                     </div>
+                    <div></div>
                 </div>
             </div>
         </div>
