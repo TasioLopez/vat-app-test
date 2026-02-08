@@ -321,7 +321,7 @@ function SignatureBlock({
     employerContact: string;
 }) {
     const row = "grid grid-cols-2 gap-6 mt-3";
-    const cell = "border rounded p-3";
+    const cell = "border rounded p-3 bg-white";
     const line = "border-b border-black inline-block min-w-[140px]";
     const label = "text-xs text-gray-600 font-bold";
     return (
@@ -362,9 +362,9 @@ function SignatureBlock({
                     </div>
                 </div>
 
-                {/* Second row: Opdrachtgever */}
+                {/* Second row: Opdrachtgever - same width as one box above */}
                 <div className="mt-3">
-                    <div className={cell}>
+                    <div className={`${cell} max-w-[calc(50%-12px)]`}>
                         <div className="font-semibold mb-2">Opdrachtgever</div>
                         <div className="mb-1">
                             <span className={label}>Naam: </span>

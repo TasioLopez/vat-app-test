@@ -108,27 +108,28 @@ function SignatureBlock({ employeeName, advisorName, employerContact }: {
     advisorName: string;
     employerContact: string;
 }) {
+    const cell = "border rounded p-3 bg-white";
     return (
         <div>
             <div className={blockTitle}>Ondertekening</div>
             <div className={paperText}>
                 {/* First row: Werknemer and Loopbaanadviseur */}
                 <div className="grid grid-cols-2 gap-8 text-xs mb-3">
-                    <div>
+                    <div className={cell}>
                         <div className="font-semibold mb-8">Werknemer</div>
                         <div className="border-b border-gray-400 mb-2">{employeeName}</div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
-                    <div>
+                    <div className={cell}>
                         <div className="font-semibold mb-8">Loopbaanadviseur</div>
                         <div className="border-b border-gray-400 mb-2">{advisorName}</div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                 </div>
                 
-                {/* Second row: Opdrachtgever */}
+                {/* Second row: Opdrachtgever - same width as one box above */}
                 <div className="text-xs">
-                    <div>
+                    <div className={`${cell} max-w-[calc(50%-32px)]`}>
                         <div className="font-semibold mb-8">Opdrachtgever</div>
                         <div className="border-b border-gray-400 mb-2">{employerContact}</div>
                         <div className="text-gray-600">Handtekening</div>
