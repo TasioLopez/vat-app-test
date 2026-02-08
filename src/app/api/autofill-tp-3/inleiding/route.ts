@@ -98,6 +98,7 @@ ALINEA 2 - Introductie met medische situatie (ALGEMEEN):
 
 ALINEA 3 - Functieomschrijving (GEDETAILLEERD):
 - Begin met "**Functieomschrijving:**" (met vetgedrukt label via markdown)
+- Voeg direct na de dubbele punt een newline toe, zodat de rest van de tekst op een nieuwe regel begint
 - Haal VOLLEDIGE beschrijving uit aangeleverde documenten
 - Beschrijf taken, verantwoordelijkheden, werkplek, uren per week
 - Als niet in documenten: schrijf "..." als placeholder
