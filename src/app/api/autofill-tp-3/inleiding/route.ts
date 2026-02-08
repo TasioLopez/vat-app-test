@@ -143,6 +143,9 @@ function buildInleidingInstructions(
 ): string {
   const { employee, details, meta, client } = context;
   
+  // Extract only the quote content from AD report
+  const adQuoteText = extractAdQuote(adRapportText);
+  
   const gender = details?.gender;
   const isMale = gender?.toLowerCase() === 'male' || gender?.toLowerCase() === 'man' || gender?.toLowerCase() === 'm';
   const pronPoss = getGenderPronoun('possessive', gender);
@@ -246,14 +249,18 @@ ALINEA 7 - Trajectdoel (VASTE TEKST):
 "Tijdens het gesprek is toegelicht wat het doel is van het 2e spoortraject. Werknemer geeft aan het belang van dit traject te begrijpen en hieraan mee te willen werken. In het 2e spoor zal onder andere worden onderzocht welke passende mogelijkheden er op de arbeidsmarkt beschikbaar zijn."
 
 VOOR inleiding_sub (APARTE OUTPUT FIELD):
-${adRapportText ? `
-- Gebruik DEZE informatie uit het intake formulier (sectie "7. Arbeidsdeskundige rapport"):
-${adRapportText}
+${adQuoteText ? `
+- Er is informatie beschikbaar uit het intake formulier (sectie "7. Arbeidsdeskundige rapport")
+- Extract de tekst onder "Conclusie/advies:" uit deze sectie
+- Output ALLEEN deze exacte structuur (gebruik markdown voor italic):
 
-- Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit bovenstaande intake informatie] op ${adDate || '[datum uit intake]'}, staat het volgende:"
-- CITEER het VOLLEDIGE advies/conclusie uit bovenstaande intake informatie tussen aanhalingstekens
-- BELANGRIJK: De tekst VOOR de aanhalingstekens moet normaal zijn (niet italic), ALLEEN de tekst TUSSEN aanhalingstekens moet italic zijn
-- Formaat: "In het Arbeidsdeskundige rapport... staat het volgende: "[citaat in italic]"
+In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: "*[citaat uit Conclusie/advies hier]*"
+
+- BELANGRIJK: 
+  * Normale tekst voor de dubbele punt (geen markdown)
+  * Markdown *tekst* voor italic tussen aanhalingstekens
+  * Citeer ALLEEN de tekst onder "Conclusie/advies:", niet de hele sectie
+  * Gebruik de exacte tekst zoals in het intake formulier
 ` : hasAD || hasFML ? `
 - Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
@@ -285,6 +292,20 @@ Return ONLY a JSON object:
   "inleiding_sub": "string met AD-rapport citaat of NB tekst"
 }
 `.trim();
+}
+
+// ---- Helper Functions ----
+function extractAdQuote(adRapportText: string | null): string | null {
+  if (!adRapportText) return null;
+  // Extract content after "Conclusie/advies:"
+  const match = adRapportText.match(/Conclusie\/advies:?\s*(.+)/is);
+  return match?.[1]?.trim() || adRapportText.trim();
+}
+
+function removeDuplicateQuotes(text: string): string {
+  if (!text) return text;
+  // Remove consecutive duplicate quoted blocks (with asterisks for italic)
+  return text.replace(/(\*[^*]+\*)\s*\1+/g, '$1');
 }
 
 // ---- Citation Stripping ----
@@ -404,7 +425,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      result.inleiding_sub = stripCitations(result.inleiding_sub || '');
+      result.inleiding_sub = removeDuplicateQuotes(stripCitations(result.inleiding_sub || ''));
       
       console.log('✅ Parsed result:', result);
       
