@@ -185,6 +185,22 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
                               </span>
                           </div>
                       );
+                  } else {
+                      // No colon - make entire content bold (e.g., "En soortgelijk")
+                      return (
+                          <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
+                              <img 
+                                  src="/val-logo.jpg" 
+                                  alt="" 
+                                  width={14} 
+                                  height={14}
+                                  style={{ marginTop: '3px', flexShrink: 0 }}
+                              />
+                              <span>
+                                  <strong>{formatInlineText(content)}</strong>
+                              </span>
+                          </div>
+                      );
                   }
               }
               
