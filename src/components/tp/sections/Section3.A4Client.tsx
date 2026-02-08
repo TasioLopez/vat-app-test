@@ -504,7 +504,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         ];
 
         if (tpData.inleiding_sub) {
-            list.push({ key: "inl_sub", text: tpData.inleiding_sub, variant: "subtle" });
+            list.push({ key: "inl_sub", text: tpData.inleiding_sub, variant: "block" });
         } else if (!tpData.has_ad_report) {
             list.push({
                 key: "inl_nb",
@@ -700,7 +700,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                             ) : s.variant === "block" && s.text ? (
                                 <>
                                     <div className={blockTitle}>{s.title}</div>
-                                    {s.key.startsWith('act-') ? (
+                                    {s.key === 'inl_sub' ? (
+                                        <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
+                                    ) : s.key.startsWith('act-') ? (
                                         <ActivityBody 
                                             activityId={s.key.replace('act-', '')} 
                                             bodyText={s.text} 

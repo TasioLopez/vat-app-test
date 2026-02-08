@@ -253,15 +253,18 @@ ${adQuoteText ? `
 - Gebruik DEZE exacte tekst uit het intake formulier (sectie "7. Arbeidsdeskundige rapport", onder "Conclusie/advies:"):
 ${adQuoteText}
 
-- BELANGRIJK: Output ALLEEN de citaat tekst zelf, ZONDER introductie, ZONDER markdown, ZONDER quotes.
-- Output alleen de tekst die na "Conclusie/advies:" komt, niets anders.
-- GEEN "In het Arbeidsdeskundige rapport..." intro
-- GEEN asterisken of andere markdown
-- GEEN quotes rondom de tekst
-- Alleen de pure tekst zelf
+- Output ALLEEN deze exacte structuur:
 
-VOORBEELD OUTPUT (alleen dit deel):
-Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.
+In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: *${adQuoteText}*
+
+- KRITIEKE FORMATTING REGELS:
+  * De tekst "In het Arbeidsdeskundige rapport, opgesteld door [naam] op [datum], staat het volgende:" heeft GEEN markdown - schrijf het als normale tekst
+  * Alleen de citaat tekst na de dubbele punt krijgt markdown asterisken: *tekst*
+  * GEEN quotes rondom de citaat, alleen asterisken
+  * Output ALLEEN EEN KEER
+  
+- VOORBEELD (kopieer dit format EXACT):
+In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende: *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
 ` : hasAD || hasFML ? `
 - Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
 - CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
@@ -530,38 +533,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      
-      // For inleiding_sub: if we have adQuoteText, construct the formatted output ourselves
-      const adQuoteText = extractAdQuote(adRapportText);
-      if (adQuoteText && result.inleiding_sub) {
-        // Extract the quote text from AI response (remove any intro it might have added)
-        let quoteText = result.inleiding_sub.trim();
-        
-        // Remove any intro text the AI might have added
-        quoteText = quoteText.replace(/^.*?staat het volgende:\s*/i, '');
-        // Remove any markdown formatting
-        quoteText = quoteText.replace(/\*/g, '').replace(/"([^"]+)"/g, '$1');
-        // Clean up whitespace
-        quoteText = quoteText.trim();
-        
-        // If quoteText is empty or doesn't match, use the original adQuoteText
-        if (!quoteText || quoteText.length < 10) {
-          quoteText = adQuoteText;
-        }
-        
-        // Get the date and name from AD report text or use defaults
-        const extractedAdDate = extractAdDate(adRapportText);
-        const extractedAdName = extractAdName(adRapportText);
-        const gender = context?.details?.gender;
-        const titleAbbrev = getTitleAbbrev(gender);
-        const adDate = nlDate(context?.meta?.ad_report_date) || extractedAdDate || '[datum uit intake]';
-        const adName = extractedAdName || '[naam uit intake]';
-        
-        // Construct the final formatted output ourselves
-        result.inleiding_sub = `In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} ${adName} op ${adDate}, staat het volgende: *${quoteText}*`;
-      } else {
-        result.inleiding_sub = fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')));
-      }
+      result.inleiding_sub = fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')));
       
       console.log('✅ Parsed result:', result);
       

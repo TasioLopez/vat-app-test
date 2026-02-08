@@ -459,7 +459,7 @@ export default function Section3A4({ data }: { data: TPData }) {
   const blocks: Block[] = [
     { key: "inl", title: "Inleiding", text: inleiding, variant: "block" },
     ...(inleidingSub
-      ? [{ key: "inl_sub", text: inleidingSub, variant: "subtle" as const }]
+      ? [{ key: "inl_sub", text: inleidingSub, variant: "block" as const }]
       : []),
 
     {
@@ -581,8 +581,10 @@ export default function Section3A4({ data }: { data: TPData }) {
                   <div className={subtle}>{firstBlock.text}</div>
                 ) : (
                   <>
-                    <div className={blockTitle}>{firstBlock.title}</div>
-                    {firstBlock.key.startsWith('act-') ? (
+                    {firstBlock.title && <div className={blockTitle}>{firstBlock.title}</div>}
+                    {firstBlock.key === 'inl_sub' ? (
+                      <div className={paperText}>{formatTextWithParagraphs(firstBlock.text)}</div>
+                    ) : firstBlock.key.startsWith('act-') ? (
                       <ActivityBody 
                         activityId={firstBlock.key.replace('act-', '')} 
                         bodyText={firstBlock.text} 
@@ -643,8 +645,10 @@ export default function Section3A4({ data }: { data: TPData }) {
                 <div className={subtle}>{b.text}</div>
               ) : (
                 <>
-                  <div className={blockTitle}>{b.title}</div>
-                  {b.key.startsWith('act-') ? (
+                  {b.title && <div className={blockTitle}>{b.title}</div>}
+                  {b.key === 'inl_sub' ? (
+                    <div className={paperText}>{formatTextWithParagraphs(b.text)}</div>
+                  ) : b.key.startsWith('act-') ? (
                     <ActivityBody 
                       activityId={b.key.replace('act-', '')} 
                       bodyText={b.text} 

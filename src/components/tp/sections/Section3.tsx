@@ -872,7 +872,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 
     const sectionsArr: PreviewItem[] = [
         B("inl", "Inleiding", tpData.inleiding || "— nog niet ingevuld —"),
-        ...(tpData.inleiding_sub ? [S("inl_sub", tpData.inleiding_sub)] : []),
+        ...(tpData.inleiding_sub ? [{ key: "inl_sub", text: tpData.inleiding_sub, variant: "block" as const }] : []),
 
         B("wk", "Wettelijke kaders en terminologie", WETTELIJKE_KADERS),
         B("soc", "Sociale achtergrond & maatschappelijke context", tpData.sociale_achtergrond || "— nog niet ingevuld —"),
@@ -1579,42 +1579,45 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                 <div className={subtle}>{s.text}</div>
                             ) : s.variant === "block" && s.text ? (
                                 <>
-                                    <div className={blockTitle}>{s.title}</div>
-                                    <div className={paperText}>
-                                        {s.key.startsWith('act-') ? (
-                                            <ActivityBody 
-                                                activityId={s.key.replace('act-', '')} 
-                                                bodyText={s.text} 
-                                                className=""
-                                            />
-                                        ) : s.key === 'vlb' || s.key === 'wk' ? (
-                                            renderTextWithLogoBullets(s.text, false)
-                                        ) : s.key === 'plaats' ? (
-                                            renderTextWithLogoBullets(s.text, true)
-                                        ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                            <span className="font-bold text-black">{s.text}</span>
-                                        ) : s.key === 'ad' ? (
-                                            renderTextWithLogoBullets(s.text, false)
-                                        ) : s.key === 'pow' ? (
-                                            <div>
-                                              {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
-                                              <div className="my-4">
-                                                <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
-                                              </div>
-                                              <p className="text-purple-600 italic text-[10px] mt-4">
-                                                * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                              </p>
-                                            </div>
-                                        ) : s.key === 'inl' ? (
-                                            <div>
-                                                {renderFormattedText(s.text)}
-                                                {tpData.has_ad_report === false && (
-                                                    <p className="mt-4 font-bold text-black">
-                                                        N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ) : (
+                                    {s.title && <div className={blockTitle}>{s.title}</div>}
+                                    {s.key === 'inl_sub' ? (
+                                        <div className={paperText}>{renderFormattedText(s.text)}</div>
+                                    ) : (
+                                        <div className={paperText}>
+                                            {s.key.startsWith('act-') ? (
+                                                <ActivityBody 
+                                                    activityId={s.key.replace('act-', '')} 
+                                                    bodyText={s.text} 
+                                                    className=""
+                                                />
+                                            ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                renderTextWithLogoBullets(s.text, false)
+                                            ) : s.key === 'plaats' ? (
+                                                renderTextWithLogoBullets(s.text, true)
+                                            ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
+                                                <span className="font-bold text-black">{s.text}</span>
+                                            ) : s.key === 'ad' ? (
+                                                renderTextWithLogoBullets(s.text, false)
+                                            ) : s.key === 'pow' ? (
+                                                <div>
+                                                  {s.text && s.text !== '— door werknemer in te vullen —' && <p className="mb-4">{renderFormattedText(s.text)}</p>}
+                                                  <div className="my-4">
+                                                    <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-w-full" style={{ maxHeight: '200px' }} />
+                                                  </div>
+                                                  <p className="text-purple-600 italic text-[10px] mt-4">
+                                                    * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
+                                                  </p>
+                                                </div>
+                                            ) : s.key === 'inl' ? (
+                                                <div>
+                                                    {renderFormattedText(s.text)}
+                                                    {tpData.has_ad_report === false && (
+                                                        <p className="mt-4 font-bold text-black">
+                                                            N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
                                             renderFormattedText(s.text)
                                         )}
                                     </div>
