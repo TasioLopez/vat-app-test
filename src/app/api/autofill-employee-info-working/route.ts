@@ -663,15 +663,21 @@ function convertTableDataToEmployeeDetails(tableData: ExtractedTableData): any {
 
 // Helper function to clean and parse assistant response
 function parseAssistantResponse(responseText: string): any {
-  let cleanedResponse = responseText;
+  if (!responseText || typeof responseText !== 'string') {
+    console.warn('⚠️ Empty or invalid response text');
+    return {};
+  }
+
+  let cleanedResponse = responseText.trim();
         
-        // Remove ```json and ``` markers
-        cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-        
+  // Remove ```json and ``` markers
+  cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  
   // Try to find JSON object - look for first { and matching }
-        const firstBrace = cleanedResponse.indexOf('{');
+  const firstBrace = cleanedResponse.indexOf('{');
   if (firstBrace === -1) {
-    throw new Error('No JSON object found in response');
+    console.warn('⚠️ No JSON object found in response. Response preview:', cleanedResponse.substring(0, 200));
+    return {};
   }
   
   // Find the matching closing brace by counting braces
@@ -689,17 +695,18 @@ function parseAssistantResponse(responseText: string): any {
   }
   
   if (lastBrace === -1) {
-    throw new Error('No matching closing brace found');
+    console.warn('⚠️ No matching closing brace found. Response preview:', cleanedResponse.substring(0, 200));
+    return {};
   }
   
-          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
-  
+  cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+
   try {
     return JSON.parse(cleanedResponse);
   } catch (error: any) {
-    console.error('❌ JSON parsing error:', error.message);
-    console.error('📄 Attempted to parse:', cleanedResponse.substring(0, 200));
-    throw new Error(`Failed to parse JSON: ${error.message}`);
+    console.warn('⚠️ JSON parsing error:', error.message);
+    console.warn('📄 Attempted to parse:', cleanedResponse.substring(0, 200));
+    return {};
   }
 }
 
@@ -1299,6 +1306,15 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
     
     if (response.type === 'text') {
       const extractedData = parseAssistantResponse(response.text.value);
+      
+      // If no data was extracted, log and return empty object
+      if (!extractedData || Object.keys(extractedData).length === 0) {
+        console.log('⚠️ No data extracted from extra document, returning empty object');
+        await openai.beta.assistants.delete(assistant.id);
+        await openai.files.delete(uploadedFile.id);
+        return {};
+      }
+      
       const mappedData = mapAndValidateData(extractedData);
       
       await openai.beta.assistants.delete(assistant.id);
