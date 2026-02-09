@@ -788,21 +788,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     />
                 </div>
                 
-                {/* Previous Employers */}
+                {/* Other Employers */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-purple-600" />
-                        Vorige werkgevers
+                        Andere werkgevers
                     </label>
                     <Textarea 
                         className={fieldClass('other_employers') + ' min-h-[100px]'} 
-                        placeholder="Vul hier alleen vorige werkgevers in, niet de huidige werkgever..." 
+                        placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..." 
                         value={employeeDetails?.other_employers || ''} 
                         onChange={e => handleDetailChange('other_employers', e.target.value)} 
                     />
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                         <span className="text-purple-500">ℹ️</span>
-                        Vul hier alleen vorige werkgevers in, niet de huidige werkgever ({clientName})
+                        Vul hier alleen andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever ({clientName})
                     </p>
                 </div>
 

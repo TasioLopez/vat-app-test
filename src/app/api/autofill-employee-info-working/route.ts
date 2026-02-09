@@ -957,7 +957,7 @@ EXTRACT ALLEEN DEZE VELDEN (uit vrije tekst, NIET uit tabellen):
   Let op: MTS (Middelbare Technische School) is HOGER dan LTS (Lagere Technische School)
   Als meerdere niveaus genoemd worden (bijv. zowel LTS als MTS), selecteer altijd het HOOGSTE niveau.
 - education_name: Naam van de opleiding/cursus (bij voorkeur van het hoogste niveau als meerdere genoemd worden)
-- other_employers: Vorige werkgevers (niet de huidige), komma-gescheiden
+- other_employers: Andere huidige werkgevers (bij meerdere banen), niet de hoofdwerkgever, komma-gescheiden
 
 BELANGRIJK:
 - Zoek ALLEEN in de vrije tekst
