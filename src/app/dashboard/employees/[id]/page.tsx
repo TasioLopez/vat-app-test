@@ -126,9 +126,24 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         if (data) {
             // Parse work_experience if it's a JSON array string
+            // Parse drivers_license_type if it's a JSON array string
+            let parsedLicenseType = data.drivers_license_type;
+            if (parsedLicenseType && typeof parsedLicenseType === 'string') {
+                try {
+                    const parsed = JSON.parse(parsedLicenseType);
+                    if (Array.isArray(parsed)) {
+                        parsedLicenseType = parsed;
+                    }
+                } catch {
+                    // Not a JSON string, keep as is (might be a single string value)
+                    parsedLicenseType = parsedLicenseType ? [parsedLicenseType] : null;
+                }
+            }
+            
             const parsedData = {
                 ...data,
-                work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience
+                work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
+                drivers_license_type: parsedLicenseType
             };
             setEmployeeDetails(parsedData);
             if (data.autofilled_fields) {
@@ -539,7 +554,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             onChange={e => handleDetailChange('education_level', e.target.value)}
                         >
                             <option value="">Selecteer opleidingsniveau</option>
-                            {['Praktijkonderwijs', 'VMBO', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
+                            {['Praktijkonderwijs', 'VMBO', 'LTS', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MTS', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
                                 <option key={level} value={level}>{level}</option>
                             ))}
                         </select>
