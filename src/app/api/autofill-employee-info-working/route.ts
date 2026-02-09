@@ -777,6 +777,105 @@ function mapAndValidateData(extractedData: any): any {
   return mappedData;
 }
 
+// Helper function to extract all education levels from text
+function extractAllEducationLevels(text: string): string[] {
+  if (!text) return [];
+  
+  const levels: string[] = [];
+  const textUpper = text.toUpperCase();
+  
+  // List of education levels to search for (in order of specificity - longer first)
+  const levelPatterns = [
+    'MIDDELBARE TECHNISCHE SCHOOL',
+    'LAGERE TECHNISCHE SCHOOL',
+    'PRAKTIJKONDERWIJS',
+    'MBO 4',
+    'MBO 3',
+    'MBO 2',
+    'MBO 1',
+    'MTS',
+    'LTS',
+    'HBO',
+    'WO',
+    'VWO',
+    'HAVO',
+    'VMBO'
+  ];
+  
+  for (const pattern of levelPatterns) {
+    // Check for exact matches or mentions in context
+    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+    if (regex.test(text)) {
+      // Normalize to standard format
+      let normalized = pattern;
+      if (pattern === 'MIDDELBARE TECHNISCHE SCHOOL') normalized = 'MTS';
+      if (pattern === 'LAGERE TECHNISCHE SCHOOL') normalized = 'LTS';
+      
+      if (!levels.includes(normalized)) {
+        levels.push(normalized);
+      }
+    }
+  }
+  
+  return levels;
+}
+
+// Helper function to rank education levels and select the highest
+function getHighestEducationLevel(levels: string[]): string | null {
+  if (!levels || levels.length === 0) return null;
+  
+  // Education level hierarchy (from lowest to highest)
+  const educationHierarchy: { [key: string]: number } = {
+    'Praktijkonderwijs': 1,
+    'VMBO': 2,
+    'LTS': 3,  // Lagere Technische School (equivalent to VMBO)
+    'HAVO': 4,
+    'VWO': 5,
+    'MBO 1': 6,
+    'MBO 2': 7,
+    'MTS': 8,  // Middelbare Technische School (equivalent to MBO 2-3)
+    'MBO 3': 9,
+    'MBO 4': 10,
+    'HBO': 11,
+    'WO': 12
+  };
+  
+  // Normalize and find highest level
+  let highestLevel: string | null = null;
+  let highestRank = 0;
+  
+  for (const level of levels) {
+    if (!level) continue;
+    
+    // Normalize the level string
+    const normalized = level.trim();
+    
+    // Check for exact match
+    if (educationHierarchy[normalized] !== undefined) {
+      const rank = educationHierarchy[normalized];
+      if (rank > highestRank) {
+        highestRank = rank;
+        highestLevel = normalized;
+      }
+      continue;
+    }
+    
+    // Check for partial matches (e.g., "MBO 2" in "MBO 2 niveau")
+    for (const [key, rank] of Object.entries(educationHierarchy)) {
+      if (normalized.toUpperCase().includes(key.toUpperCase()) || 
+          key.toUpperCase().includes(normalized.toUpperCase())) {
+        if (rank > highestRank) {
+          highestRank = rank;
+          highestLevel = key;
+        }
+        break;
+      }
+    }
+  }
+  
+  return highestLevel;
+}
+
 // Process intake form document (contains TABLES and text)
 // NEW APPROACH: Use mammoth for deterministic table extraction, AI only for text fields
 async function processIntakeForm(doc: any): Promise<any> {
@@ -853,17 +952,21 @@ EXTRACT ALLEEN DEZE VELDEN (uit vrije tekst, NIET uit tabellen):
 - date_of_birth: Geboortedatum in YYYY-MM-DD formaat
 - gender: "Man" of "Vrouw"
 - work_experience: ALLEEN functietitels/beroepen, gescheiden door komma's. Geen datums, geen jaren, geen organisatienamen.
-- education_level: Hoogste opleidingsniveau (Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1, MBO 2, MBO 3, MBO 4, HBO, WO)
-- education_name: Naam van de opleiding/cursus
+- education_level: BELANGRIJK - Zoek ALLE opleidingsniveaus die genoemd worden en selecteer het HOOGSTE niveau.
+  Geldige niveaus (van laag naar hoog): Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1, MBO 2, MTS, MBO 3, MBO 4, HBO, WO
+  Let op: MTS (Middelbare Technische School) is HOGER dan LTS (Lagere Technische School)
+  Als meerdere niveaus genoemd worden (bijv. zowel LTS als MTS), selecteer altijd het HOOGSTE niveau.
+- education_name: Naam van de opleiding/cursus (bij voorkeur van het hoogste niveau als meerdere genoemd worden)
 - other_employers: Vorige werkgevers (niet de huidige), komma-gescheiden
 
 BELANGRIJK:
 - Zoek ALLEEN in de vrije tekst
 - NEGEER tabellen (vervoer, talen, computer - die worden apart verwerkt)
+- Voor education_level: Zoek ALLE genoemde opleidingsniveaus en kies het HOOGSTE
 - Als een veld niet gevonden kan worden, gebruik null
 
 RETURN FORMAT: ALLEEN een JSON object, geen tekst ervoor of erna.
-Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw"}`
+Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw", "education_level": "MTS"}`
           },
           {
             role: "user",
@@ -877,6 +980,19 @@ Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw"}`
       
       try {
         textData = parseAssistantResponse(aiResponse);
+        
+        // Post-process education_level to ensure highest level is selected
+        if (rawText) {
+          const educationLevels = extractAllEducationLevels(rawText);
+          if (educationLevels.length > 0) {
+            const highestLevel = getHighestEducationLevel(educationLevels);
+            if (highestLevel) {
+              console.log(`✅ Selected highest education level: ${highestLevel} from found levels: ${educationLevels.join(', ')}`);
+              textData.education_level = highestLevel;
+            }
+          }
+        }
+        
         textData = mapAndValidateData(textData);
         console.log('✅ AI text extraction completed:', Object.keys(textData).length, 'fields');
       } catch (parseError: any) {
@@ -938,7 +1054,7 @@ VELDEN TE EXTRACTEN (employee_details tabel - ALLEEN uit tekst):
 - date_of_birth: Zoek geboortedatum/leeftijd in tekst (converteer naar YYYY-MM-DD)
 - gender: Zoek "Man" of "Vrouw" in tekst
 - work_experience: Extract functietitels uit beschrijvingen (ALLEEN functietitels, geen datums/jaren/organisaties)
-- education_level: Zoek opleidingsniveau in tekst (Praktijkonderwijs, VMBO, HAVO, VWO, MBO 1-4, HBO, WO)
+- education_level: Zoek ALLE opleidingsniveaus in tekst en selecteer het HOOGSTE niveau (Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1, MBO 2, MTS, MBO 3, MBO 4, HBO, WO). MTS is hoger dan LTS.
 - education_name: Zoek opleiding/cursus naam in tekst
 
 NIET EXTRACTEN (niet beschikbaar in AD rapporten):
@@ -1141,7 +1257,7 @@ VELDEN TE EXTRACTEN (employee_details tabel - ALLEEN uit tekst):
 - date_of_birth: Zoek geboortedatum (YYYY-MM-DD)
 - gender: Zoek "Man" of "Vrouw"
 - work_experience: Extract functietitels uit tekst
-- education_level: Zoek opleidingsniveau in tekst
+- education_level: Zoek ALLE opleidingsniveaus in tekst en selecteer het HOOGSTE niveau (Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1, MBO 2, MTS, MBO 3, MBO 4, HBO, WO). MTS is hoger dan LTS.
 
 BELANGRIJK:
 - Extract ALLEEN uit tekst
