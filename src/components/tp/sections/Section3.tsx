@@ -116,13 +116,13 @@ function SignatureBlock({ employeeName, advisorName, employerContact }: {
                 {/* First row: Werknemer and Loopbaanadviseur */}
                 <div className="grid grid-cols-2 gap-8 text-xs mb-3">
                     <div className={cell}>
-                        <div className="font-semibold mb-8">Werknemer</div>
-                        <div className="border-b border-gray-400 mb-2">{employeeName}</div>
+                        <div className="font-semibold mb-1">Werknemer</div>
+                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{employeeName}</div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div className={cell}>
-                        <div className="font-semibold mb-8">Loopbaanadviseur</div>
-                        <div className="border-b border-gray-400 mb-2">{advisorName}</div>
+                        <div className="font-semibold mb-1">Loopbaanadviseur</div>
+                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{advisorName}</div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                 </div>
@@ -130,8 +130,8 @@ function SignatureBlock({ employeeName, advisorName, employerContact }: {
                 {/* Second row: Opdrachtgever - using same grid to ensure exact same width */}
                 <div className="grid grid-cols-2 gap-8 text-xs">
                     <div className={cell}>
-                        <div className="font-semibold mb-8">Opdrachtgever</div>
-                        <div className="border-b border-gray-400 mb-2">{employerContact}</div>
+                        <div className="font-semibold mb-1">Opdrachtgever</div>
+                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{employerContact}</div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div></div>

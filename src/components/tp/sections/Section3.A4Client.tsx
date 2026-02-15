@@ -381,7 +381,7 @@ function SignatureBlock({
                 {/* First row: Werknemer and Loopbaanadviseur */}
                 <div className={row}>
                     <div className={cell}>
-                        <div className="font-semibold mb-2">Werknemer</div>
+                        <div className="font-semibold mb-1">Werknemer</div>
                         <div className="mb-1">
                             <span className={label}>Naam: </span>
                             <span className={line}>{employeeName}</span>
@@ -390,13 +390,13 @@ function SignatureBlock({
                             <span className={label}>Datum: </span>
                             <span className={line}></span>
                         </div>
-                        <div>
+                        <div className="min-h-[56px] pt-1">
                             <span className={label}>Handtekening: </span>
                             <span className={line}></span>
                         </div>
                     </div>
                     <div className={cell}>
-                        <div className="font-semibold mb-2">Loopbaanadviseur</div>
+                        <div className="font-semibold mb-1">Loopbaanadviseur</div>
                         <div className="mb-1">
                             <span className={label}>Naam: </span>
                             <span className={line}>{advisorName}</span>
@@ -405,7 +405,7 @@ function SignatureBlock({
                             <span className={label}>Datum: </span>
                             <span className={line}></span>
                         </div>
-                        <div>
+                        <div className="min-h-[56px] pt-1">
                             <span className={label}>Handtekening: </span>
                             <span className={line}></span>
                         </div>
@@ -415,7 +415,7 @@ function SignatureBlock({
                 {/* Second row: Opdrachtgever - using same grid to ensure exact same width */}
                 <div className={row}>
                     <div className={cell}>
-                        <div className="font-semibold mb-2">Opdrachtgever</div>
+                        <div className="font-semibold mb-1">Opdrachtgever</div>
                         <div className="mb-1">
                             <span className={label}>Naam: </span>
                             <span className={line}>{employerContact}</span>
@@ -424,7 +424,7 @@ function SignatureBlock({
                             <span className={label}>Datum: </span>
                             <span className={line}></span>
                         </div>
-                        <div>
+                        <div className="min-h-[56px] pt-1">
                             <span className={label}>Handtekening: </span>
                             <span className={line}></span>
                         </div>
