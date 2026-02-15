@@ -118,12 +118,14 @@ function SignatureBlock({ employeeName, advisorName, employerContact, employerFu
                 <div className="grid grid-cols-2 gap-8 text-xs mb-3">
                     <div className={cell}>
                         <div className="font-semibold mb-1">Werknemer</div>
-                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{employeeName}</div>
+                        <div className="border-b border-gray-400 mb-1">{employeeName}</div>
+                        <div className="mb-6 min-h-[56px]"></div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div className={cell}>
                         <div className="font-semibold mb-1">Loopbaanadviseur</div>
-                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{advisorName}</div>
+                        <div className="border-b border-gray-400 mb-1">{advisorName}</div>
+                        <div className="mb-6 min-h-[56px]"></div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                 </div>
