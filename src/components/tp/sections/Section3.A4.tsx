@@ -5,7 +5,8 @@ import React from "react";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
-import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS, cleanInleidingSubMarkdown } from "@/lib/tp/static";
+import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
+import { InleidingSubBlock } from "../InleidingSubBlock";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
 
@@ -439,7 +440,7 @@ export default function Section3A4({ data }: { data: TPData }) {
   const blocks: Block[] = [
     { key: "inl", title: "Inleiding", text: inleiding, variant: "block" },
     ...(inleidingSub
-      ? [{ key: "inl_sub", text: cleanInleidingSubMarkdown(inleidingSub), variant: "block" as const }]
+      ? [{ key: "inl_sub", text: inleidingSub, variant: "block" as const }]
       : []),
 
     {
@@ -564,7 +565,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                   <>
                     {firstBlock.title && <div className={blockTitle}>{firstBlock.title}</div>}
                     {firstBlock.key === 'inl_sub' ? (
-                      <div className={paperText}>{formatTextWithParagraphs(firstBlock.text, { noQuoteWrap: true })}</div>
+                      <div className={paperText}><InleidingSubBlock text={firstBlock.text} /></div>
                     ) : firstBlock.key.startsWith('act-') ? (
                       <ActivityBody 
                         activityId={firstBlock.key.replace('act-', '')} 
@@ -629,7 +630,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                 <>
                   {b.title && <div className={blockTitle}>{b.title}</div>}
                   {b.key === 'inl_sub' ? (
-                    <div className={paperText}>{formatTextWithParagraphs(b.text, { noQuoteWrap: true })}</div>
+                    <div className={paperText}><InleidingSubBlock text={b.text} /></div>
                   ) : b.key.startsWith('act-') ? (
                     <ActivityBody 
                       activityId={b.key.replace('act-', '')} 

@@ -8,7 +8,8 @@ import { useTP } from "@/context/TPContext";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
-import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS, cleanInleidingSubMarkdown } from "@/lib/tp/static";
+import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
+import { InleidingSubBlock } from "../InleidingSubBlock";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
 
@@ -478,7 +479,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         ];
 
         if (tpData.inleiding_sub) {
-            list.push({ key: "inl_sub", text: cleanInleidingSubMarkdown(tpData.inleiding_sub), variant: "block" });
+            list.push({ key: "inl_sub", text: tpData.inleiding_sub, variant: "block" });
         } else if (!tpData.has_ad_report) {
             list.push({
                 key: "inl_nb",
@@ -676,7 +677,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 <>
                                     <div className={blockTitle}>{s.title}</div>
                                     {s.key === 'inl_sub' ? (
-                                        <div className={paperText}>{formatTextWithParagraphs(s.text, { noQuoteWrap: true })}</div>
+                                        <div className={paperText}><InleidingSubBlock text={s.text} /></div>
                                     ) : s.key.startsWith('act-') ? (
                                         <ActivityBody 
                                             activityId={s.key.replace('act-', '')} 
@@ -1023,7 +1024,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                       </p>
                                                     </div>
                                                 ) : s.key === 'inl_sub' ? (
-                                                    <div className={paperText}>{formatTextWithParagraphs(s.text, { noQuoteWrap: true })}</div>
+                                                    <div className={paperText}><InleidingSubBlock text={s.text} /></div>
                                                 ) : s.key === 'inl' ? (
                                                     <div className={paperText}>
                                                         {formatTextWithParagraphs(s.text)}

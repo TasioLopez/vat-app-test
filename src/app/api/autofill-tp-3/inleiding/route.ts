@@ -721,9 +721,19 @@ export async function GET(req: NextRequest) {
     
     let { inleiding_main, inleiding_sub } = extracted;
     
-    // Enforce NB default if no AD
     const hasAD = meta?.has_ad_report || false;
-    if (!hasAD || !inleiding_sub) {
+    
+    // Deterministic construction: when Step 2 has occupational_doctor_name + ad_report_date, build inleiding_sub from stored data (no AI formatting)
+    const adName = meta?.occupational_doctor_name?.trim();
+    const adDateVal = meta?.ad_report_date;
+    const adviesAd = (meta?.advies_ad_passende_arbeid || '').trim();
+    const adQuoteFromIntake = extractAdQuote(adRapportText);
+    const quoteSource = adviesAd || adQuoteFromIntake;
+    
+    if (hasAD && adName && adDateVal && quoteSource) {
+      const cleanQuote = stripCitations(quoteSource);
+      inleiding_sub = `**In het Arbeidsdeskundige rapport, opgesteld door ${adName} op ${nlDate(adDateVal)}, staat het volgende:**\n\n*${cleanQuote}*`;
+    } else if (!hasAD || !inleiding_sub) {
       inleiding_sub = NB_DEFAULT_GEEN_AD;
     }
     
