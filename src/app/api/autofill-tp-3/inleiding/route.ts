@@ -253,18 +253,22 @@ ${adQuoteText ? `
 - Gebruik DEZE exacte tekst uit het intake formulier (sectie "7. Arbeidsdeskundige rapport", onder "Conclusie/advies:"):
 ${adQuoteText}
 
-- Output ALLEEN deze exacte structuur:
+- Output ALLEEN deze exacte structuur (met een lege regel TUSSEN intro en citaat):
 
-**In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende:** *${adQuoteText}*
+**In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende:**
+
+*${adQuoteText}*
 
 - KRITIEKE FORMATTING REGELS:
   * De tekst "In het Arbeidsdeskundige rapport, opgesteld door [naam] op [datum], staat het volgende:" moet ALTIJD vetgedrukt zijn met **tekst**
-  * Alleen de citaat tekst na de dubbele punt krijgt italic markdown: *tekst*
-  * GEEN quotes rondom de citaat, alleen asterisken
+  * VOEG een lege regel toe (dubbele newline) tussen de intro en het citaat
+  * Alleen de citaat tekst krijgt italic markdown: *tekst* - GEEN aanhalingstekens, alleen asterisken
   * Output ALLEEN EEN KEER
   
 - VOORBEELD (kopieer dit format EXACT):
-**In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende:** *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
+**In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende:**
+
+*Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
 ` : hasAD || hasFML ? `
 - Begin met vetgedrukte tekst: **In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:**
 - CITEER het VOLLEDIGE advies uit het AD-rapport met italic markdown: *citaat*
@@ -275,8 +279,8 @@ ${adQuoteText}
   * Opbouwschema (bijv. "met een opbouw van één uur per dag per twee weken")
   * Reden voor 2e spoor advies
 - BELANGRIJK: Gebruik LETTERLIJKE CITAAT uit document, inclusief exacte getallen en schema's
-- BELANGRIJK: De intro "In het Arbeidsdeskundige rapport... staat het volgende:" moet vetgedrukt zijn (**), het citaat daarna italic (*)
-- Formaat: **In het Arbeidsdeskundige rapport... staat het volgende:** *citaat in italic*
+- BELANGRIJK: De intro moet vetgedrukt zijn (**), daarna een LEEGE REGEL, dan het citaat in italic (*) - GEEN aanhalingstekens
+- Formaat: **In het Arbeidsdeskundige rapport... staat het volgende:** (lege regel) *citaat in italic*
 ` : `
 - "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
 `}
@@ -427,20 +431,33 @@ function stripOuterAsterisks(text: string): string {
   if (!text) return text;
   if (text.includes('N.B.:') && text.includes('nog geen AD-rapport')) return text;
 
-  // Leading: * **intro**... -> **intro**... (ensureBoldIntro added ** inside *...*)
-  if (text.startsWith('* ') && text.includes('**In het Arbeidsdeskundige rapport')) {
+  // Leading: strip single * (orphan) but NOT ** (bold)
+  if (text.startsWith('* ') && text.includes('In het Arbeidsdeskundige rapport')) {
     text = text.replace(/^\*\s+/, '');
+  } else if (text.startsWith('*') && !text.startsWith('**') && text.includes('In het Arbeidsdeskundige rapport')) {
+    text = text.replace(/^\*\s*/, '');
   }
-  // Trailing: ..."quote"* or ...*quote* * -> remove orphan trailing *
-  // Only strip if it's an orphan (not part of *quote* at end)
+  // Trailing: ..."quote"* or ...* -> remove orphan trailing *
   if (text.endsWith('*') && !text.endsWith('**')) {
     const beforeLast = text.slice(0, -1);
-    // If we have *quote* at end, the last * closes it - don't strip
     const italicMatch = beforeLast.match(/\*[^*]+\*$/);
     if (!italicMatch) {
       text = beforeLast;
     }
   }
+  return text;
+}
+
+/** Fix stray quotes: " ", "", and malformed quote patterns in AD rapport intro. */
+function fixStrayQuotes(text: string): string {
+  if (!text) return text;
+  if (text.includes('N.B.:') && text.includes('nog geen AD-rapport')) return text;
+
+  // Remove " " (quoted space) first, then orphan quotes after volgende:
+  text = text.replace(/"\s*"/g, '');
+  text = text.replace(/""/g, '');
+  text = text.replace(/volgende:\s*"\s*"/g, 'volgende:');
+  text = text.replace(/volgende:\s*"/g, 'volgende:');
   return text;
 }
 
@@ -572,7 +589,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      result.inleiding_sub = stripOuterAsterisks(ensureBoldIntro(fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')))));
+      result.inleiding_sub = fixStrayQuotes(stripOuterAsterisks(ensureBoldIntro(fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || ''))))));
       
       console.log('✅ Parsed result:', result);
       

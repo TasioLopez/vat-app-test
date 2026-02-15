@@ -11,17 +11,20 @@ export const NB_DEFAULT_GEEN_AD = `NB: in het kader van de algemene verordening 
 
 export const VISIE_LOOPBAANADVISEUR_BASIS = `Als loopbaanadviseur beoordeel ik de mogelijkheden van werknemer om, binnen de resterende belastbaarheid en rekening houdend met de Wet verbetering poortwachter, te komen tot duurzame werkhervatting buiten de eigen werkgever (2e spoor). Ik hanteer een arbeidsmarktgerichte en realistische benadering, waarbij we inzetten op het vergroten van inzetbaarheid, het onderzoeken van passende functies en het geleidelijk toewerken naar plaatsing. Medische informatie wordt niet vastgelegd; ik baseer mij op functionele mogelijkheden zoals door artsen/AD beschreven.`;
 
-/** Strip leftover literal asterisks from inleiding_sub markdown (e.g. * **intro** "quote"* → **intro** *quote*) */
+/** Strip leftover literal asterisks and stray quotes from inleiding_sub markdown. */
 export function cleanInleidingSubMarkdown(text: string): string {
   if (!text || (text.includes('N.B.:') && text.includes('nog geen AD-rapport'))) return text ?? '';
   let t = text;
-  // Leading orphan: * **intro**... or *In het...
-  if (t.startsWith('* ') && t.includes('**In het Arbeidsdeskundige rapport')) {
+  // Leading orphan asterisk: * **intro**... or *In het...
+  if (t.startsWith('* ') && t.includes('In het Arbeidsdeskundige rapport')) {
     t = t.replace(/^\*\s+/, '');
   } else if (t.startsWith('*') && !t.startsWith('**') && t.includes('In het Arbeidsdeskundige rapport')) {
     t = t.replace(/^\*\s*/, '');
   }
-  // Trailing orphan: ..."quote"* or ...* (not part of *quote*)
+  // Stray quotes: " ", volgende: " "
+  t = t.replace(/volgende:\s*"\s*"/g, 'volgende:');
+  t = t.replace(/"\s*"/g, '');
+  // Trailing orphan asterisk
   if (t.endsWith('*') && !t.endsWith('**')) {
     const beforeLast = t.slice(0, -1);
     const lastItalic = beforeLast.match(/\*[^*]+\*$/);

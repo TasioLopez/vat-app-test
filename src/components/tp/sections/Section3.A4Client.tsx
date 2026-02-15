@@ -74,81 +74,47 @@ function PageFooter({
 }
 
 // Helper to format markdown (bold and italic) and quoted text
-function formatInlineText(text: string): React.ReactNode {
+function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
     if (!text) return text;
-    
+    const noQuoteWrap = opts?.noQuoteWrap ?? false;
+
     const parts: React.ReactNode[] = [];
     let currentIdx = 0;
-    
-    // First, process quoted text (text between double quotes)
-    // Regex to match "quoted text" but not markdown *italic* or **bold**
     const quoteRegex = /"([^"]+)"/g;
     const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
-    
-    // Collect all matches (quotes and markdown)
     const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
-    
     let match;
     while ((match = quoteRegex.exec(text)) !== null) {
-        allMatches.push({
-            index: match.index,
-            length: match[0].length,
-            type: 'quote',
-            content: match[1]
-        });
+        allMatches.push({ index: match.index, length: match[0].length, type: 'quote', content: match[1] });
     }
-    
     while ((match = markdownRegex.exec(text)) !== null) {
-        allMatches.push({
-            index: match.index,
-            length: match[0].length,
-            type: 'markdown',
-            content: match[0]
-        });
+        allMatches.push({ index: match.index, length: match[0].length, type: 'markdown', content: match[0] });
     }
-    
-    // Sort by index
     allMatches.sort((a, b) => a.index - b.index);
-    
-    // Process matches in order
-    for (const match of allMatches) {
-        // Add text before the match
-        if (match.index > currentIdx) {
-            parts.push(text.slice(currentIdx, match.index));
-        }
-        
-        if (match.type === 'quote') {
-            // Quoted text - make italic
-            parts.push(<span key={match.index}><em>"{match.content}"</em></span>);
-        } else if (match.type === 'markdown') {
-            // Markdown formatting
-            const matched = match.content;
-            if (matched.startsWith('**') && matched.endsWith('**')) {
-                // Bold
-                parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
-            } else if (matched.startsWith('*') && matched.endsWith('*')) {
-                // Italic - wrap in quotes
-                parts.push(<span key={match.index}>"<em>{matched.slice(1, -1)}</em>"</span>);
+
+    for (const m of allMatches) {
+        if (m.index > currentIdx) parts.push(text.slice(currentIdx, m.index));
+        if (m.type === 'quote') {
+            parts.push(<span key={m.index}><em>"{m.content}"</em></span>);
+        } else if (m.type === 'markdown') {
+            const content = m.content;
+            if (content.startsWith('**') && content.endsWith('**')) {
+                parts.push(<strong key={m.index}>{content.slice(2, -2)}</strong>);
+            } else if (content.startsWith('*') && content.endsWith('*')) {
+                parts.push(<span key={m.index}>{noQuoteWrap ? <em>{content.slice(1, -1)}</em> : <>"<em>{content.slice(1, -1)}</em>"</>}</span>);
             }
         }
-        
-        currentIdx = match.index + match.length;
+        currentIdx = m.index + m.length;
     }
-    
-    // Add remaining text
-    if (currentIdx < text.length) {
-        parts.push(text.slice(currentIdx));
-    }
-    
+    if (currentIdx < text.length) parts.push(text.slice(currentIdx));
     return parts.length > 0 ? parts : text;
 }
 
 // Render text with markdown support for paragraphs
-function formatTextWithParagraphs(text: string): React.ReactNode {
+function formatTextWithParagraphs(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
     if (!text) return text;
-    
+    const formatOpts = opts?.noQuoteWrap ? { noQuoteWrap: true } : undefined;
     const paragraphs = text.split(/\n\n+/);
-    
     return paragraphs.map((para, idx) => {
         const lines = para.trim().split('\n');
         return (
@@ -156,7 +122,7 @@ function formatTextWithParagraphs(text: string): React.ReactNode {
                 {lines.map((line, lineIdx) => (
                     <React.Fragment key={lineIdx}>
                         {lineIdx > 0 && <br/>}
-                        {formatInlineText(line)}
+                        {formatInlineText(line, formatOpts)}
                     </React.Fragment>
                 ))}
             </p>
@@ -710,7 +676,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                 <>
                                     <div className={blockTitle}>{s.title}</div>
                                     {s.key === 'inl_sub' ? (
-                                        <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
+                                        <div className={paperText}>{formatTextWithParagraphs(s.text, { noQuoteWrap: true })}</div>
                                     ) : s.key.startsWith('act-') ? (
                                         <ActivityBody 
                                             activityId={s.key.replace('act-', '')} 
@@ -1056,6 +1022,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                         * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
                                                       </p>
                                                     </div>
+                                                ) : s.key === 'inl_sub' ? (
+                                                    <div className={paperText}>{formatTextWithParagraphs(s.text, { noQuoteWrap: true })}</div>
                                                 ) : s.key === 'inl' ? (
                                                     <div className={paperText}>
                                                         {formatTextWithParagraphs(s.text)}

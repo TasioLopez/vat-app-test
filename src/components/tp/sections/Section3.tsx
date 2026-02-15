@@ -1197,72 +1197,43 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 /* ---------- small helpers (UI) ---------- */
 
 // Helper function to format bold/italic
-function formatInlineText(text: string): React.ReactNode {
+function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
     if (!text) return text;
-    
+    const noQuoteWrap = opts?.noQuoteWrap ?? false;
+
     const parts: React.ReactNode[] = [];
     let currentIdx = 0;
-    
+
     // First, process quoted text (text between double quotes)
-    // Regex to match "quoted text" but not markdown *italic* or **bold**
     const quoteRegex = /"([^"]+)"/g;
     const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
-    
-    // Collect all matches (quotes and markdown)
+
     const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
-    
     let match;
     while ((match = quoteRegex.exec(text)) !== null) {
-        allMatches.push({
-            index: match.index,
-            length: match[0].length,
-            type: 'quote',
-            content: match[1]
-        });
+        allMatches.push({ index: match.index, length: match[0].length, type: 'quote', content: match[1] });
     }
-    
     while ((match = markdownRegex.exec(text)) !== null) {
-        allMatches.push({
-            index: match.index,
-            length: match[0].length,
-            type: 'markdown',
-            content: match[0]
-        });
+        allMatches.push({ index: match.index, length: match[0].length, type: 'markdown', content: match[0] });
     }
-    
-    // Sort by index
     allMatches.sort((a, b) => a.index - b.index);
-    
-    // Process matches in order
-    for (const match of allMatches) {
-        // Add text before the match
-        if (match.index > currentIdx) {
-            parts.push(text.slice(currentIdx, match.index));
-        }
-        
-        if (match.type === 'quote') {
-            // Quoted text - make italic
-            parts.push(<span key={match.index}><em>"{match.content}"</em></span>);
-        } else if (match.type === 'markdown') {
-            // Markdown formatting
-            const matched = match.content;
-            if (matched.startsWith('**') && matched.endsWith('**')) {
-                // Bold
-                parts.push(<strong key={match.index}>{matched.slice(2, -2)}</strong>);
-            } else if (matched.startsWith('*') && matched.endsWith('*')) {
-                // Italic - wrap in quotes
-                parts.push(<span key={match.index}>"<em>{matched.slice(1, -1)}</em>"</span>);
+
+    for (const m of allMatches) {
+        if (m.index > currentIdx) parts.push(text.slice(currentIdx, m.index));
+        if (m.type === 'quote') {
+            parts.push(<span key={m.index}><em>"{m.content}"</em></span>);
+        } else if (m.type === 'markdown') {
+            const content = m.content;
+            if (content.startsWith('**') && content.endsWith('**')) {
+                parts.push(<strong key={m.index}>{content.slice(2, -2)}</strong>);
+            } else if (content.startsWith('*') && content.endsWith('*')) {
+                // Italic: inl_sub uses noQuoteWrap to avoid extra " " around citaat
+                parts.push(<span key={m.index}>{noQuoteWrap ? <em>{content.slice(1, -1)}</em> : <>"<em>{content.slice(1, -1)}</em>"</>}</span>);
             }
         }
-        
-        currentIdx = match.index + match.length;
+        currentIdx = m.index + m.length;
     }
-    
-    // Add remaining text
-    if (currentIdx < text.length) {
-        parts.push(text.slice(currentIdx));
-    }
-    
+    if (currentIdx < text.length) parts.push(text.slice(currentIdx));
     return parts.length > 0 ? parts : text;
 }
 
@@ -1380,39 +1351,33 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
     return renderTextWithLogoBullets(text, false);
 }
 
-function renderFormattedText(text: string): React.ReactNode {
+function renderFormattedText(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
     if (!text) return text;
-    
-    // Split by double newlines to get paragraphs
+    const formatOpts = opts?.noQuoteWrap ? { noQuoteWrap: true } : undefined;
+
     const paragraphs = text.split(/\n\n+/);
-    
     return paragraphs.map((para, paraIdx) => {
         const lines = para.trim().split('\n');
-        
-        // Check if this paragraph is a list
         const isBulletList = lines.every(l => l.trim().startsWith('•'));
         const isNumberedList = lines.every(l => /^\d+\./.test(l.trim()));
-        
+
         if (isBulletList || isNumberedList) {
-            // Render as list
             const ListTag = isBulletList ? 'ul' : 'ol';
             return (
                 <ListTag key={paraIdx} className="ml-4 mb-4 space-y-1">
                     {lines.map((line, idx) => {
                         const content = line.replace(/^[•\d+\.]\s*/, '');
-                        return <li key={idx}>{formatInlineText(content)}</li>;
+                        return <li key={idx}>{formatInlineText(content, formatOpts)}</li>;
                     })}
                 </ListTag>
             );
         }
-        
-        // Regular paragraph
         return (
             <p key={paraIdx} className={paraIdx > 0 ? "mt-4" : ""}>
                 {lines.map((line, idx) => (
                     <React.Fragment key={idx}>
                         {idx > 0 && <br/>}
-                        {formatInlineText(line)}
+                        {formatInlineText(line, formatOpts)}
                     </React.Fragment>
                 ))}
             </p>
@@ -1588,7 +1553,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                 <>
                                     {s.title && <div className={blockTitle}>{s.title}</div>}
                                     {s.key === 'inl_sub' ? (
-                                        <div className={paperText}>{renderFormattedText(s.text)}</div>
+                                        <div className={paperText}>{renderFormattedText(s.text, { noQuoteWrap: true })}</div>
                                     ) : (
                                         <div className={paperText}>
                                             {s.key.startsWith('act-') ? (
@@ -1778,7 +1743,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                     <>
                         {s.title && <div className={blockTitle}>{s.title}</div>}
                         {s.key === 'inl_sub' ? (
-                            <div className={paperText}>{renderFormattedText(s.text)}</div>
+                            <div className={paperText}>{renderFormattedText(s.text, { noQuoteWrap: true })}</div>
                         ) : (
                             <div className={paperText}>
                                 {s.key.startsWith('act-') ? (
