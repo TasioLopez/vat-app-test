@@ -255,19 +255,19 @@ ${adQuoteText}
 
 - Output ALLEEN deze exacte structuur:
 
-In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende: *${adQuoteText}*
+**In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [naam uit intake] op ${adDate || '[datum uit intake]'}, staat het volgende:** *${adQuoteText}*
 
 - KRITIEKE FORMATTING REGELS:
-  * De tekst "In het Arbeidsdeskundige rapport, opgesteld door [naam] op [datum], staat het volgende:" heeft GEEN markdown - schrijf het als normale tekst
-  * Alleen de citaat tekst na de dubbele punt krijgt markdown asterisken: *tekst*
+  * De tekst "In het Arbeidsdeskundige rapport, opgesteld door [naam] op [datum], staat het volgende:" moet ALTIJD vetgedrukt zijn met **tekst**
+  * Alleen de citaat tekst na de dubbele punt krijgt italic markdown: *tekst*
   * GEEN quotes rondom de citaat, alleen asterisken
   * Output ALLEEN EEN KEER
   
 - VOORBEELD (kopieer dit format EXACT):
-In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende: *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
+**In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari 2026, staat het volgende:** *Werknemer bouwt op bij de eigen werkgever. Hij gaat ook weer opbouwen in het eigen werk. Indien terugkeer in het eigen werk niet lukt zijn er andere alternatieven voor ander werk bij de eigen werkgever zoals buschauffeur. Formeel is werknemer wel langer dan een jaar ziek en moet er een 2e spoor traject gestart worden. Focus blijft wel gericht op een terugkeer in passend werk bij de eigen werkgever.*
 ` : hasAD || hasFML ? `
-- Begin met normale tekst (NIET italic): "In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:"
-- CITEER het VOLLEDIGE advies uit het AD-rapport tussen aanhalingstekens
+- Begin met vetgedrukte tekst: **In het Arbeidsdeskundige rapport, opgesteld door ${titleAbbrev} [volledige naam arbeidsdeskundige uit documenten] op ${adDate || fmlDate}, staat het volgende:**
+- CITEER het VOLLEDIGE advies uit het AD-rapport met italic markdown: *citaat*
 - Neem de complete passage over inclusief:
   * Advies over passende arbeid binnen eigen werkgever
   * Monitoren van re-integratiemogelijkheden
@@ -275,8 +275,8 @@ In het Arbeidsdeskundige rapport, opgesteld door dhr. R. Teegelaar op 15 januari
   * Opbouwschema (bijv. "met een opbouw van één uur per dag per twee weken")
   * Reden voor 2e spoor advies
 - BELANGRIJK: Gebruik LETTERLIJKE CITAAT uit document, inclusief exacte getallen en schema's
-- BELANGRIJK: De tekst VOOR de aanhalingstekens moet normaal zijn (niet italic), ALLEEN de tekst TUSSEN aanhalingstekens moet italic zijn
-- Formaat: "In het Arbeidsdeskundige rapport... staat het volgende: "[citaat in italic]"
+- BELANGRIJK: De intro "In het Arbeidsdeskundige rapport... staat het volgende:" moet vetgedrukt zijn (**), het citaat daarna italic (*)
+- Formaat: **In het Arbeidsdeskundige rapport... staat het volgende:** *citaat in italic*
 ` : `
 - "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
 `}
@@ -391,29 +391,38 @@ function removeDuplicateQuotes(text: string): string {
 function fixItalicFormatting(text: string): string {
   if (!text) return text;
   
-  // Pattern: "In het Arbeidsdeskundige rapport... staat het volgende:" should NOT be italic
-  // But the quote after should be italic
+  // Pattern: "In het Arbeidsdeskundige rapport... staat het volgende:" should be BOLD, not italic
+  // The quote after should remain italic
   
-  // Find the pattern where intro is italic
+  // Find the pattern where intro is incorrectly italic (*...*) - convert to bold (**...**)
   const introPattern = /(\*In het Arbeidsdeskundige rapport[^*]+staat het volgende:\*)\s*(\*[^*]+\*)/;
   const match = text.match(introPattern);
   
   if (match) {
-    // Remove asterisks from intro, keep them on quote
     const intro = match[1].replace(/\*/g, '');
     const quote = match[2];
-    text = text.replace(introPattern, `${intro} ${quote}`);
+    text = text.replace(introPattern, `**${intro}** ${quote}`);
   }
   
   // Also handle cases where the entire thing is wrapped in asterisks
-  // *In het... volgende: *quote**
   const fullWrapPattern = /^\*([^*]+staat het volgende:)\s*(\*[^*]+\*)\*$/;
   const fullMatch = text.match(fullWrapPattern);
   if (fullMatch) {
-    return `${fullMatch[1]} ${fullMatch[2]}`;
+    return `**${fullMatch[1]}** ${fullMatch[2]}`;
   }
   
   return text;
+}
+
+/** Ensures the intro phrase is always bold. Adds ** if the intro is plain text. */
+function ensureBoldIntro(text: string): string {
+  if (!text) return text;
+  // Skip if it's the N.B. default (no AD report)
+  if (text.includes('N.B.:') && text.includes('nog geen AD-rapport')) return text;
+
+  // Match intro only when NOT already wrapped in ** (negative lookbehind/lookahead)
+  const plainIntroPattern = /(?<!\*\*)(In het Arbeidsdeskundige rapport, opgesteld door [^:]+staat het volgende:)(?!\*\*)/;
+  return text.replace(plainIntroPattern, '**$1**');
 }
 
 // ---- Citation Stripping ----
@@ -533,7 +542,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      result.inleiding_sub = fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')));
+      result.inleiding_sub = ensureBoldIntro(fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || ''))));
       
       console.log('✅ Parsed result:', result);
       
