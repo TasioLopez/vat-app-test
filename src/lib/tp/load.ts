@@ -64,7 +64,7 @@ export async function loadTP(
   if (employee?.client_id) {
     const { data: client } = await supabase
       .from("clients")
-      .select("name, referent_first_name, referent_last_name, referent_phone, referent_email")
+      .select("name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function")
       .eq("id", employee.client_id)
       .maybeSingle();
 
@@ -78,6 +78,7 @@ export async function loadTP(
     if (!isFilled(data.client_referent_name) && referentFull) data.client_referent_name = referentFull;
     if (!isFilled(data.client_referent_phone) && client?.referent_phone) data.client_referent_phone = client.referent_phone;
     if (!isFilled(data.client_referent_email) && client?.referent_email) data.client_referent_email = client.referent_email;
+    if (!isFilled(data.client_referent_function) && client?.referent_function) data.client_referent_function = client.referent_function;
   }
 
   // 5) Full employee name - use formatted version with gender/title

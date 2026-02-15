@@ -120,6 +120,7 @@ export default function ClientsPage() {
         referent_last_name: selectedClient.referent_last_name || null,
         referent_phone: selectedClient.referent_phone || null,
         referent_email: selectedClient.referent_email || null,
+        referent_function: selectedClient.referent_function || null,
       })
       .eq('id', selectedClient.id);
 
@@ -289,6 +290,17 @@ export default function ClientsPage() {
                       setSelectedClient({ ...selectedClient, referent_email: e.target.value })
                     }
                     placeholder="Referent Email"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Functie referent</label>
+                  <Input
+                    type="text"
+                    value={selectedClient.referent_function || ''}
+                    onChange={(e) =>
+                      setSelectedClient({ ...selectedClient, referent_function: e.target.value })
+                    }
+                    placeholder="bijv. Teammanager"
                   />
                 </div>
               </div>

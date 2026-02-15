@@ -365,10 +365,12 @@ function SignatureBlock({
     employeeName,
     advisorName,
     employerContact,
+    employerFunctionCompany,
 }: {
     employeeName: string;
     advisorName: string;
     employerContact: string;
+    employerFunctionCompany?: string;
 }) {
     const row = "grid grid-cols-2 gap-6 mt-3";
     const cell = "border rounded p-3 bg-[#e7e6e6]";
@@ -420,6 +422,12 @@ function SignatureBlock({
                             <span className={label}>Naam: </span>
                             <span className={line}>{employerContact}</span>
                         </div>
+                        {employerFunctionCompany ? (
+                            <div className="mb-1">
+                                <span className={label}>Functie, bedrijf: </span>
+                                <span className={line}>{employerFunctionCompany}</span>
+                            </div>
+                        ) : null}
                         <div className="mb-1">
                             <span className={label}>Datum: </span>
                             <span className={line}></span>
@@ -615,6 +623,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                     }
                     advisorName={tpData.consultant_name || "Loopbaanadviseur"}
                     employerContact={tpData.client_referent_name || "Naam opdrachtgever"}
+                    employerFunctionCompany={[tpData.client_referent_function, tpData.client_name].filter(Boolean).join(', ') || undefined}
                 />
             ),
         });

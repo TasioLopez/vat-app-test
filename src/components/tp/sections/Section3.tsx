@@ -103,10 +103,11 @@ function AgreementBlock() {
     );
 }
 
-function SignatureBlock({ employeeName, advisorName, employerContact }: {
+function SignatureBlock({ employeeName, advisorName, employerContact, employerFunctionCompany }: {
     employeeName: string;
     advisorName: string;
     employerContact: string;
+    employerFunctionCompany?: string;
 }) {
     const cell = "border rounded p-3 bg-[#e7e6e6]";
     return (
@@ -131,7 +132,9 @@ function SignatureBlock({ employeeName, advisorName, employerContact }: {
                 <div className="grid grid-cols-2 gap-8 text-xs">
                     <div className={cell}>
                         <div className="font-semibold mb-1">Opdrachtgever</div>
-                        <div className="border-b border-gray-400 mb-6 min-h-[56px]">{employerContact}</div>
+                        <div className="border-b border-gray-400 mb-1">{employerContact}</div>
+                        {employerFunctionCompany ? <div className="text-xs text-gray-700 mb-4">{employerFunctionCompany}</div> : null}
+                        <div className="mb-6 min-h-[56px]"></div>
                         <div className="text-gray-600">Handtekening</div>
                     </div>
                     <div></div>
@@ -332,7 +335,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     if (employee?.client_id) {
                         const { data: client } = await supabase
                             .from('clients')
-                            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email')
+                            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
                             .eq('id', employee.client_id)
                             .single();
 
@@ -341,6 +344,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             updateField('client_referent_name', `${client.referent_first_name} ${client.referent_last_name}`);
                             updateField('client_referent_phone', client.referent_phone);
                             updateField('client_referent_email', client.referent_email);
+                            updateField('client_referent_function', client.referent_function);
                         }
                     }
 
@@ -903,6 +907,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 }
                 advisorName={tpData.consultant_name || "Loopbaanadviseur"}
                 employerContact={tpData.client_referent_name || "Naam opdrachtgever"}
+                employerFunctionCompany={[tpData.client_referent_function, tpData.client_name].filter(Boolean).join(', ') || undefined}
             />,
             signatureMeasureKey
         ),

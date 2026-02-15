@@ -32,6 +32,7 @@ export default function AddClientPage() {
         referent_last_name: '',
         referent_phone: '',
         referent_email: '',
+        referent_function: '',
     });
 
     const [error, setError] = useState('');
@@ -59,6 +60,7 @@ export default function AddClientPage() {
                 referent_last_name: form.referent_last_name || null,
                 referent_phone: form.referent_phone || null,
                 referent_email: form.referent_email || null,
+                referent_function: form.referent_function || null,
             },
         ]);
 
@@ -324,6 +326,35 @@ export default function AddClientPage() {
                                             focusedField === 'referent_email' ? 'text-purple-600 scale-110' : 'text-gray-400'
                                         }`}>
                                             <FaEnvelope />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Functie referent */}
+                                <div className="group">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaUserCircle className="text-purple-600 text-sm" />
+                                        Functie referent
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="referent_function"
+                                            value={form.referent_function}
+                                            onChange={handleChange}
+                                            onFocus={() => setFocusedField('referent_function')}
+                                            onBlur={() => setFocusedField(null)}
+                                            placeholder="bijv. Teammanager"
+                                            className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                                focusedField === 'referent_function'
+                                                    ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                                    : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                            } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                        />
+                                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                            focusedField === 'referent_function' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                        }`}>
+                                            <FaUserCircle />
                                         </div>
                                     </div>
                                 </div>

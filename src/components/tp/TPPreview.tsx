@@ -92,7 +92,7 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
         if (employee?.client_id) {
           const { data: client } = await supabase
             .from('clients')
-            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email')
+            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
             .eq('id', employee.client_id)
             .single();
 
@@ -111,6 +111,9 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
             }
             if (client.referent_email) {
               mergedData.client_referent_email = client.referent_email;
+            }
+            if (client.referent_function) {
+              mergedData.client_referent_function = client.referent_function;
             }
           }
         }

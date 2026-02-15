@@ -128,7 +128,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       if (employee?.client_id) {
         const { data: client } = await supabase
           .from('clients')
-          .select('name, referent_first_name, referent_last_name, referent_phone, referent_email')
+          .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
           .eq('id', employee.client_id)
           .single();
 
@@ -137,7 +137,8 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
           updateField('client_referent_name', `${client.referent_first_name} ${client.referent_last_name}`);
           updateField('client_referent_phone', client.referent_phone);
           updateField('client_referent_email', client.referent_email);
-        }
+          updateField('client_referent_function', client.referent_function);
+          }
       }
 
       // Fetch current user info (consultant)

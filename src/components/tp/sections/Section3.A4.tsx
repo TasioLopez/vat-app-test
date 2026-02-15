@@ -354,10 +354,12 @@ function SignatureBlock({
   employeeName,
   advisorName,
   employerContact,
+  employerFunctionCompany,
 }: {
   employeeName: string;
   advisorName: string;
   employerContact: string;
+  employerFunctionCompany?: string;
 }) {
   const row = "grid grid-cols-2 gap-6 mt-3";
   const cell = "border rounded p-3 bg-[#e7e6e6]";
@@ -413,6 +415,12 @@ function SignatureBlock({
               <span className={label}>Naam: </span>
               <span className={line}>{employerContact}</span>
             </div>
+            {employerFunctionCompany ? (
+              <div className="mb-1">
+                <span className={label}>Functie, bedrijf: </span>
+                <span className={line}>{employerFunctionCompany}</span>
+              </div>
+            ) : null}
             <div className="mb-1">
               <span className={label}>Datum: </span>
               <span className={line}></span>
@@ -451,6 +459,12 @@ export default function Section3A4({ data }: { data: TPData }) {
     || "Naam werknemer";
   const advisorName = ((data as any).consultant_name as string) || "Loopbaanadviseur";
   const employerContact = ((data as any).client_referent_name as string) || "Naam opdrachtgever";
+  const employerFunctionCompany = [
+    (data as any).client_referent_function,
+    (data as any).client_name,
+  ]
+    .filter(Boolean)
+    .join(", ") || undefined;
 
   type Block =
     | { key: string; title?: string; text: string; variant: "block" | "subtle" }
@@ -573,6 +587,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                   employeeName={employeeName}
                   advisorName={advisorName}
                   employerContact={employerContact}
+                  employerFunctionCompany={employerFunctionCompany}
                 />
               )
             ) : (
@@ -636,6 +651,7 @@ export default function Section3A4({ data }: { data: TPData }) {
                 employeeName={employeeName}
                 advisorName={advisorName}
                 employerContact={employerContact}
+                employerFunctionCompany={employerFunctionCompany}
               />
             );
           }
