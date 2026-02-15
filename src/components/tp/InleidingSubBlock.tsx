@@ -34,7 +34,7 @@ export function InleidingSubBlock({ text, className = "" }: { text: string; clas
         <strong>{intro}</strong>
         {quote && (
           <p className="mt-4">
-            <em>{quote}</em>
+            <em>"{quote}"</em>
           </p>
         )}
       </div>
