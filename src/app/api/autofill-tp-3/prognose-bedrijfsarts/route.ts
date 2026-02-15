@@ -18,6 +18,30 @@ function stripCitations(text: string): string {
     .trim();
 }
 
+/** Ensures prognose_bedrijfsarts has intro + quoted block with opening/closing " and normalized labels. */
+function normalizePrognoseBedrijfsarts(text: string): string {
+  if (!text) return text;
+  let s = text.trim();
+  // Ensure opening quote after "het volgende aan:"
+  const introEnd = "het volgende aan:";
+  const idx = s.indexOf(introEnd);
+  if (idx !== -1) {
+    const afterIntro = s.slice(idx + introEnd.length);
+    const trimmedAfter = afterIntro.replace(/^\s+/, "");
+    if (trimmedAfter.length > 0 && trimmedAfter[0] !== '"') {
+      s = s.slice(0, idx + introEnd.length) + "\n\"" + trimmedAfter;
+    }
+  }
+  // Ensure closing quote at end
+  if (s.length > 0 && s[s.length - 1] !== '"') {
+    s = s + '"';
+  }
+  // Normalize label: Re-integratie advies -> Reintegratieadvies (bold)
+  s = s.replace(/\*\*Re-integratie advies:\*\*/g, "**Reintegratieadvies:**");
+  s = s.replace(/(?<!\*)(Re-integratie advies:)(?!\*)/g, "**Reintegratieadvies:**");
+  return s;
+}
+
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (m?.[1]) return m[1];
@@ -66,19 +90,33 @@ BELANGRIJKE FORMATTING REGELS:
 - Gebruik "bedrijfsarts" (niet "arts")
 
 KRITIEK - EXACTE CITATEN:
-- De tekst onder **Re-integratie advies:** en **Prognose:** moet EXACT en LETTERLIJK worden overgenomen uit het brondocument
+- De tekst onder **Reintegratieadvies:** en **Prognose:** moet EXACT en LETTERLIJK worden overgenomen uit het brondocument
 - KOPIEER de woorden PRECIES zoals ze in het document staan, inclusief eventuele typefouten of ongebruikelijke formuleringen
 - NIET parafraseren of herformuleren - het moet een CITAAT zijn
 - Als iets onduidelijk is, kopieer het toch letterlijk
 
-Output structuur:
-"Op [23 oktober 2025] geeft bedrijfsarts [naam bedrijfsarts] werkend onder supervisie van bedrijfsarts [naam supervisor] in de terugkoppeling het volgende aan:
+OUTPUT STRUCTUUR (strikt volgen):
+- Eerste regel: alleen de intro, ZONDER aanhalingstekens. Eindig met "in de terugkoppeling het volgende aan:"
+- Daarna een nieuwe regel met ALLEEN een openingsaanhalingsteken "
+- Gebruik exact de labels **Reintegratieadvies:** en **Prognose:** (één woord, geen "Re-integratie advies"). Alleen **vet** (**...**), geen cursief (*) voor deze labels
+- De inhoud onder de labels is gewone tekst (geen asterisken voor cursief)
+- Sluit af met een sluitingsaanhalingsteken " aan het einde van de hele block
 
-**Re-integratie advies:**
-*[EXACT citaat uit document - letterlijk overnemen, niet parafraseren]*
+Voorbeeld (vul [datum], [naam], [supervisor] en de citaten in):
+
+Op [23 oktober 2025] geeft bedrijfsarts [naam] werkend onder supervisie van bedrijfsarts [supervisor] in de terugkoppeling het volgende aan:
+
+"
+**Reintegratieadvies:**
+[EXACT citaat uit document - letterlijk overnemen]
 
 **Prognose:**
-*[EXACT citaat uit document - letterlijk overnemen, niet parafraseren]*"
+[EXACT citaat uit document - letterlijk overnemen]"
+
+REGELS:
+- Gebruik alleen **...** voor vet. Gebruik geen *...* of vet+cursief voor de labels Reintegratieadvies en Prognose
+- De labels zijn precies **Reintegratieadvies:** en **Prognose:** (vet alleen). De inhoud eronder is gewone tekst
+- Het hele block van openingsaanhalingsteken tot sluitingsaanhalingsteken is één doorlopend geciteerd block; de intro staat buiten de aanhalingstekens
 
 Zoek specifiek naar:
 - Re-integratie advies secties in het document
@@ -142,7 +180,9 @@ export async function GET(req: NextRequest) {
     }
     const fileIds = await uploadDocsToOpenAI(docPaths);
     const parsed = await runAssistant(fileIds);
-    const prognose_bedrijfsarts = stripCitations((parsed?.prognose_bedrijfsarts || '').trim());
+    const prognose_bedrijfsarts = normalizePrognoseBedrijfsarts(
+      stripCitations((parsed?.prognose_bedrijfsarts || '').trim())
+    );
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, prognose_bedrijfsarts } as any,

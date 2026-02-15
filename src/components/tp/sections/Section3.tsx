@@ -1104,9 +1104,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 value={tpData.prognose_bedrijfsarts || ''}
                 onChange={(v) => updateField('prognose_bedrijfsarts', v)}
                 onAutofill={genPrognose}
-                onRewrite={() => rewriteInMyStyle('prognose_bedrijfsarts', tpData.prognose_bedrijfsarts || '')}
                 isAutofilling={busy.prognose}
-                isRewriting={rewriting.prognose_bedrijfsarts}
                 placeholder="Laat AI dit genereren uit FML/IZP/AD documenten — of pas handmatig aan."
             />
             
