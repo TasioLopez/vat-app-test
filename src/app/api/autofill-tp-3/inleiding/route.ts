@@ -394,23 +394,53 @@ function fixItalicFormatting(text: string): string {
   // Pattern: "In het Arbeidsdeskundige rapport... staat het volgende:" should be BOLD, not italic
   // The quote after should remain italic
   
-  // Find the pattern where intro is incorrectly italic (*...*) - convert to bold (**...**)
-  const introPattern = /(\*In het Arbeidsdeskundige rapport[^*]+staat het volgende:\*)\s*(\*[^*]+\*)/;
-  const match = text.match(introPattern);
-  
-  if (match) {
-    const intro = match[1].replace(/\*/g, '');
-    const quote = match[2];
-    text = text.replace(introPattern, `**${intro}** ${quote}`);
+  // Case 1: Entire block wrapped in *...* with quote in double quotes: *intro "quote"*
+  // Convert to **intro** *quote* (strip outer asterisks, use italic for quote)
+  const fullWrapWithQuotes = /^\*In het Arbeidsdeskundige rapport, opgesteld door [^*]*?staat het volgende:\s*"([^"]+)"\*$/;
+  const m1 = text.match(fullWrapWithQuotes);
+  if (m1) {
+    const intro = text.slice(1, text.indexOf('"')).replace(/\*$/, '').trim();
+    return `**${intro}** *${m1[1]}*`;
   }
-  
-  // Also handle cases where the entire thing is wrapped in asterisks
+
+  // Case 2: Entire block wrapped in *...* with quote in italic: *intro *quote**
   const fullWrapPattern = /^\*([^*]+staat het volgende:)\s*(\*[^*]+\*)\*$/;
   const fullMatch = text.match(fullWrapPattern);
   if (fullMatch) {
     return `**${fullMatch[1]}** ${fullMatch[2]}`;
   }
   
+  // Case 3: Intro in italic, quote in italic separately: *intro* *quote*
+  const introPattern = /(\*In het Arbeidsdeskundige rapport[^*]+staat het volgende:\*)\s*(\*[^*]+\*)/;
+  const match = text.match(introPattern);
+  if (match) {
+    const intro = match[1].replace(/\*/g, '');
+    const quote = match[2];
+    text = text.replace(introPattern, `**${intro}** ${quote}`);
+  }
+  
+  return text;
+}
+
+/** Strip leftover outer asterisks from *intro "quote"* that ensureBoldIntro can leave behind. */
+function stripOuterAsterisks(text: string): string {
+  if (!text) return text;
+  if (text.includes('N.B.:') && text.includes('nog geen AD-rapport')) return text;
+
+  // Leading: * **intro**... -> **intro**... (ensureBoldIntro added ** inside *...*)
+  if (text.startsWith('* ') && text.includes('**In het Arbeidsdeskundige rapport')) {
+    text = text.replace(/^\*\s+/, '');
+  }
+  // Trailing: ..."quote"* or ...*quote* * -> remove orphan trailing *
+  // Only strip if it's an orphan (not part of *quote* at end)
+  if (text.endsWith('*') && !text.endsWith('**')) {
+    const beforeLast = text.slice(0, -1);
+    // If we have *quote* at end, the last * closes it - don't strip
+    const italicMatch = beforeLast.match(/\*[^*]+\*$/);
+    if (!italicMatch) {
+      text = beforeLast;
+    }
+  }
   return text;
 }
 
@@ -542,7 +572,7 @@ async function processDocumentsWithAssistant(
       
       // Strip citations from the generated text
       result.inleiding_main = stripCitations(result.inleiding_main || '');
-      result.inleiding_sub = ensureBoldIntro(fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || ''))));
+      result.inleiding_sub = stripOuterAsterisks(ensureBoldIntro(fixItalicFormatting(removeDuplicateQuotes(stripCitations(result.inleiding_sub || '')))));
       
       console.log('✅ Parsed result:', result);
       

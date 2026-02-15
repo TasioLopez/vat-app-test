@@ -5,7 +5,7 @@ import React from "react";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
-import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
+import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS, cleanInleidingSubMarkdown } from "@/lib/tp/static";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
 
@@ -473,7 +473,7 @@ export default function Section3A4({ data }: { data: TPData }) {
   const blocks: Block[] = [
     { key: "inl", title: "Inleiding", text: inleiding, variant: "block" },
     ...(inleidingSub
-      ? [{ key: "inl_sub", text: inleidingSub, variant: "block" as const }]
+      ? [{ key: "inl_sub", text: cleanInleidingSubMarkdown(inleidingSub), variant: "block" as const }]
       : []),
 
     {

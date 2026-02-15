@@ -4,7 +4,7 @@ import React, { useEffect, useState, useLayoutEffect, useRef } from "react";
 import Image from "next/image";
 import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
-import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
+import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS, cleanInleidingSubMarkdown } from "@/lib/tp/static";
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
@@ -878,7 +878,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 
     const sectionsArr: PreviewItem[] = [
         B("inl", "Inleiding", tpData.inleiding || "— nog niet ingevuld —"),
-        ...(tpData.inleiding_sub ? [{ key: "inl_sub", text: tpData.inleiding_sub, variant: "block" as const }] : []),
+        ...(tpData.inleiding_sub ? [{ key: "inl_sub", text: cleanInleidingSubMarkdown(tpData.inleiding_sub), variant: "block" as const }] : []),
 
         B("wk", "Wettelijke kaders en terminologie", WETTELIJKE_KADERS),
         B("soc", "Sociale achtergrond & maatschappelijke context", tpData.sociale_achtergrond || "— nog niet ingevuld —"),
