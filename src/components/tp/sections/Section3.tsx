@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useLayoutEffect, useRef } from "react";
+import React, { useEffect, useState, useLayoutEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
@@ -9,7 +9,7 @@ import { InleidingSubBlock } from "../InleidingSubBlock";
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity, type TPActivitySelection } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
-import { FileText } from 'lucide-react';
+import { FileText, Sparkles } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
 import { Button } from '@/components/ui/button';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
@@ -160,6 +160,11 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         content: string;
     } | null>(null);
     const [openModal, setOpenModal] = useState<string | null>(null);
+    const [bulkModalOpen, setBulkModalOpen] = useState(false);
+    const [bulkSelectedIds, setBulkSelectedIds] = useState<string[]>([]);
+    const [bulkRunning, setBulkRunning] = useState(false);
+    const [bulkProgress, setBulkProgress] = useState<{ currentIndex: number; total: number; currentLabel: string } | null>(null);
+    const bulkCancelRef = useRef(false);
 
     // ✅ no need to keep this in state; it's static
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
@@ -406,48 +411,137 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
+    // --- Internal run helpers (fetch + update only, no UI). Used by single autofill buttons and bulk. ---
+    type RunResult = { success: boolean; error?: string };
+    const runInleiding = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/inleiding?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) {
+                updateField("inleiding", json.details.inleiding || "");
+                updateField("inleiding_sub", json.details.inleiding_sub || "");
+                updateField("has_ad_report", json.details.has_ad_report || false);
+            }
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runSocialeAchtergrond = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/sociale-achtergrond?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("sociale_achtergrond", json.details.sociale_achtergrond || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runVisieWerknemer = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/visie-werknemer?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("visie_werknemer", json.details.visie_werknemer || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runVisieAdviseur = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/visie-adviseur?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("visie_loopbaanadviseur", json.details.visie_loopbaanadviseur || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runPrognose = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/prognose-bedrijfsarts?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("prognose_bedrijfsarts", json.details.prognose_bedrijfsarts || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runPowMeter = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/pow-meter?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.data?.pow_meter) updateField("pow_meter", json.data.pow_meter || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runPersoonlijkProfiel = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/persoonlijk-profiel?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("persoonlijk_profiel", json.details.persoonlijk_profiel || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runZoekprofiel = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/zoekprofiel?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("zoekprofiel", json.details.zoekprofiel || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runAdAdviesPassendeArbeid = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/ad-advies-passende-arbeid?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("advies_ad_passende_arbeid", json.details.advies_ad_passende_arbeid || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+    const runVisiePlaatsbaarheid = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/visie-plaatsbaarheid?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("visie_plaatsbaarheid", json.details.visie_plaatsbaarheid || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
+
     const genInleiding = async () => {
         if (busy.inleiding) return;
         setBusy(prev => ({ ...prev, inleiding: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/inleiding?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                // Update all fields - API returns { details: { inleiding, inleiding_sub, has_ad_report } }
-                updateField("inleiding", json.details.inleiding || "");
-                updateField("inleiding_sub", json.details.inleiding_sub || "");
-                updateField("has_ad_report", json.details.has_ad_report || false);
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Inleiding sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'inleiding, inleiding_sub'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runInleiding();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Inleiding sectie is ingevuld met AI. Velden: inleiding, inleiding_sub' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for inleiding:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, inleiding: false }));
         }
@@ -457,41 +551,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.socialeAchtergrond) return;
         setBusy(prev => ({ ...prev, socialeAchtergrond: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/sociale-achtergrond?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("sociale_achtergrond", json.details.sociale_achtergrond || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Sociale achtergrond sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'sociale_achtergrond'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runSocialeAchtergrond();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Sociale achtergrond sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for sociale-achtergrond:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, socialeAchtergrond: false }));
         }
@@ -501,41 +570,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.visieWerknemer) return;
         setBusy(prev => ({ ...prev, visieWerknemer: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/visie-werknemer?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("visie_werknemer", json.details.visie_werknemer || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Visie van werknemer sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_werknemer'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runVisieWerknemer();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Visie van werknemer sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for visie-werknemer:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, visieWerknemer: false }));
         }
@@ -545,41 +589,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.visieAdviseur) return;
         setBusy(prev => ({ ...prev, visieAdviseur: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/visie-adviseur?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("visie_loopbaanadviseur", json.details.visie_loopbaanadviseur || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Visie van loopbaanadviseur sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_loopbaanadviseur'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runVisieAdviseur();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Visie van loopbaanadviseur sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for visie-adviseur:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, visieAdviseur: false }));
         }
@@ -589,41 +608,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.prognose) return;
         setBusy(prev => ({ ...prev, prognose: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/prognose-bedrijfsarts?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("prognose_bedrijfsarts", json.details.prognose_bedrijfsarts || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Prognose van bedrijfsarts sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'prognose_bedrijfsarts'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runPrognose();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Prognose van bedrijfsarts sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for prognose-bedrijfsarts:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, prognose: false }));
         }
@@ -633,48 +627,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.powMeter) return;
         setBusy(prev => ({ ...prev, powMeter: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/pow-meter?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.data && json.data.pow_meter) {
-                updateField("pow_meter", json.data.pow_meter || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De PoW-meter sectie is ingevuld met AI op basis van documentanalyse.`
-                });
-                
+            const r = await runPowMeter();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De PoW-meter sectie is ingevuld met AI op basis van documentanalyse.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
-            } else if (json.message) {
-                // Handle case where no documents found but API returned success
-                setAutofillMessage({
-                    type: 'warning',
-                    title: '⚠️ Geen documenten',
-                    content: json.message
-                });
-                setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for pow-meter:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, powMeter: false }));
         }
@@ -684,41 +646,16 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.persoonlijkProfiel) return;
         setBusy(prev => ({ ...prev, persoonlijkProfiel: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/persoonlijk-profiel?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("persoonlijk_profiel", json.details.persoonlijk_profiel || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Persoonlijk profiel sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'persoonlijk_profiel'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runPersoonlijkProfiel();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Persoonlijk profiel sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for persoonlijk-profiel:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, persoonlijkProfiel: false }));
         }
@@ -728,86 +665,35 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.zoekprofiel) return;
         setBusy(prev => ({ ...prev, zoekprofiel: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/zoekprofiel?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("zoekprofiel", json.details.zoekprofiel || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Zoekprofiel sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'zoekprofiel'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runZoekprofiel();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Zoekprofiel sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for zoekprofiel:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, zoekprofiel: false }));
         }
     };
 
-
     const genAdAdviesPassendeArbeid = async () => {
         if (busy.adAdvies) return;
         setBusy(prev => ({ ...prev, adAdvies: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/ad-advies-passende-arbeid?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("advies_ad_passende_arbeid", json.details.advies_ad_passende_arbeid || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De AD advies over passende arbeid sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'advies_ad_passende_arbeid'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runAdAdviesPassendeArbeid();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De AD advies over passende arbeid sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for ad-advies-passende-arbeid:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, adAdvies: false }));
         }
@@ -817,44 +703,91 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         if (busy.plaatsbaarheid) return;
         setBusy(prev => ({ ...prev, plaatsbaarheid: true }));
         setAutofillMessage(null);
-        
         try {
-            const res = await fetch(`/api/autofill-tp-3/visie-plaatsbaarheid?employeeId=${employeeId}`);
-            const json = await res.json();
-            
-            if (json.error) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Fout',
-                    content: json.error
-                });
-                throw new Error(json.error);
-            }
-            
-            if (json.details) {
-                updateField("visie_plaatsbaarheid", json.details.visie_plaatsbaarheid || "");
-                
-                setAutofillMessage({
-                    type: 'success',
-                    title: '✅ Succesvol Ingevuld',
-                    content: `De Visie op plaatsbaarheid sectie is ingevuld met AI. Velden: ${json.autofilled_fields?.join(', ') || 'visie_plaatsbaarheid'}`
-                });
-                
-                // Auto-dismiss after 3 seconds
+            const r = await runVisiePlaatsbaarheid();
+            if (r.success) {
+                setAutofillMessage({ type: 'success', title: '✅ Succesvol Ingevuld', content: 'De Visie op plaatsbaarheid sectie is ingevuld met AI.' });
                 setTimeout(() => setAutofillMessage(null), 3000);
+            } else {
+                setAutofillMessage({ type: 'error', title: '❌ Fout', content: r.error || 'Onbekende fout' });
             }
         } catch (err) {
-            console.error("❌ Autofill failed for visie-plaatsbaarheid:", err);
-            if (!autofillMessage) {
-                setAutofillMessage({
-                    type: 'error',
-                    title: '❌ Systeem Fout',
-                    content: err instanceof Error ? err.message : 'Onbekende fout bij autofill'
-                });
-            }
+            setAutofillMessage({ type: 'error', title: '❌ Systeem Fout', content: err instanceof Error ? err.message : 'Onbekende fout bij autofill' });
         } finally {
             setBusy(prev => ({ ...prev, plaatsbaarheid: false }));
         }
+    };
+
+    // Bulk autofill: steps in order (Praktische belemmeringen excluded — no API)
+    const BULK_AUTOFILL_STEPS = [
+        { id: 'inleiding', label: 'Inleiding', run: runInleiding },
+        { id: 'sociale-achtergrond', label: 'Sociale achtergrond', run: runSocialeAchtergrond },
+        { id: 'visie-werknemer', label: 'Visie van werknemer', run: runVisieWerknemer },
+        { id: 'visie-adviseur', label: 'Visie van loopbaanadviseur', run: runVisieAdviseur },
+        { id: 'prognose', label: 'Prognose van de bedrijfsarts', run: runPrognose },
+        { id: 'persoonlijk-profiel', label: 'Persoonlijk profiel', run: runPersoonlijkProfiel },
+        { id: 'zoekprofiel', label: 'Zoekprofiel', run: runZoekprofiel },
+        { id: 'ad-advies', label: 'AD advies over passende arbeid', run: runAdAdviesPassendeArbeid },
+        { id: 'pow', label: 'PoW-meter', run: runPowMeter },
+        { id: 'plaatsbaarheid', label: 'Visie op plaatsbaarheid', run: runVisiePlaatsbaarheid },
+    ];
+
+    const toggleBulkSelected = (id: string) => {
+        setBulkSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+    const selectAllBulk = () => setBulkSelectedIds(BULK_AUTOFILL_STEPS.map(s => s.id));
+    const clearAllBulk = () => setBulkSelectedIds([]);
+
+    const runBulkAutofill = useCallback(async () => {
+        const selected = BULK_AUTOFILL_STEPS.filter(s => bulkSelectedIds.includes(s.id));
+        if (selected.length === 0) return;
+        setBulkModalOpen(false);
+        setAutofillMessage(null);
+        bulkCancelRef.current = false;
+        setBulkRunning(true);
+        const succeeded: string[] = [];
+        const failed: { label: string; error: string }[] = [];
+        const total = selected.length;
+
+        for (let i = 0; i < selected.length; i++) {
+            if (bulkCancelRef.current) break;
+            const step = selected[i];
+            setBulkProgress({ currentIndex: i + 1, total, currentLabel: step.label });
+
+            let result = await step.run();
+            if (!result.success && result.error) {
+                result = await step.run();
+            }
+            if (result.success) {
+                succeeded.push(step.label);
+            } else {
+                failed.push({ label: step.label, error: result.error || 'Onbekende fout' });
+            }
+        }
+
+        setBulkProgress(null);
+        setBulkRunning(false);
+        const failedList = failed.length ? failed.map(f => `${f.label}: ${f.error}`).join('; ') : '';
+        if (failed.length === 0) {
+            setAutofillMessage({
+                type: 'success',
+                title: '✅ Bulk autofill voltooid',
+                content: `${succeeded.length}/${total} secties ingevuld met AI.`
+            });
+        } else {
+            setAutofillMessage({
+                type: succeeded.length > 0 ? 'warning' : 'error',
+                title: succeeded.length > 0 ? '⚠️ Gedeeltelijk voltooid' : '❌ Bulk autofill gestopt',
+                content: `${succeeded.length}/${total} secties ingevuld. Mislukt: ${failedList}`
+            });
+        }
+        setTimeout(() => setAutofillMessage(null), 8000);
+    }, [bulkSelectedIds]);
+
+    const cancelBulkAutofill = () => {
+        bulkCancelRef.current = true;
     };
 
     // force re-measure when activities/signature content changes
@@ -911,7 +844,32 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     if (loading) return <p>Laden...</p>;
 
     return (
-        <div className="flex gap-10 h-full items-start p-6 overflow-hidden">
+        <div className="relative flex gap-10 h-full items-start p-6 overflow-hidden">
+            {/* Overlay during bulk autofill — blocks only Step 3 area */}
+            {bulkRunning && bulkProgress && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/50 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 space-y-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Automatisch invullen met AI</h3>
+                        <p className="text-gray-600">{bulkProgress.currentLabel}</p>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span>{bulkProgress.currentIndex} / {bulkProgress.total}</span>
+                                <span>{Math.round((bulkProgress.currentIndex / bulkProgress.total) * 100)}%</span>
+                            </div>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-purple-600 transition-all duration-300"
+                                    style={{ width: `${(bulkProgress.currentIndex / bulkProgress.total) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                        <Button variant="destructive" onClick={cancelBulkAutofill} className="w-full">
+                            Stoppen
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* LEFT: builder controls */}
             <div className="w-[50%] space-y-6 overflow-y-auto max-h-full pr-2">
                 {/* Notification */}
@@ -934,13 +892,22 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     </div>
                 )}
                 
-                {/* Sticky Save Button at the top */}
+                {/* Sticky Save + Bulk Autofill at the top */}
                 <div className="sticky top-0 backdrop-blur-2xl bg-muted/30 hover:bg-muted/50 z-10 flex items-center gap-3 px-6 py-4 rounded-b-lg border-b border-border transition-all duration-300">
                     <Button
                         onClick={saveAll}
                         disabled={saving}
                     >
                         {saving ? "Opslaan..." : "Opslaan"}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setBulkModalOpen(true)}
+                        disabled={bulkRunning}
+                        className="flex items-center gap-2"
+                    >
+                        <Sparkles className="h-4 w-4" />
+                        Alles automatisch invullen
                     </Button>
                 </div>
                 
@@ -1223,6 +1190,49 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 isRewriting={rewriting.visie_plaatsbaarheid}
                 placeholder="Laat AI dit genereren uit alle documenten — of pas handmatig aan."
             />
+
+            {/* Bulk autofill selection modal */}
+            {bulkModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBulkModalOpen(false)}>
+                    <div
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="px-6 py-4 border-b flex items-center justify-between">
+                            <h2 className="text-xl font-semibold flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-purple-600" />
+                                Alles automatisch invullen
+                            </h2>
+                            <button onClick={() => setBulkModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                        </div>
+                        <p className="px-6 py-2 text-sm text-gray-600">Selecteer de secties die je met AI wilt invullen. Ze worden in volgorde uitgevoerd.</p>
+                        <div className="px-6 py-2 flex gap-2">
+                            <Button variant="outline" size="sm" onClick={selectAllBulk}>Alles selecteren</Button>
+                            <Button variant="ghost" size="sm" onClick={clearAllBulk}>Alles deselecteren</Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-6 py-2 space-y-2">
+                            {BULK_AUTOFILL_STEPS.map((step) => (
+                                <label key={step.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        checked={bulkSelectedIds.includes(step.id)}
+                                        onChange={() => toggleBulkSelected(step.id)}
+                                        className="rounded border-gray-300"
+                                    />
+                                    <span className="text-sm font-medium">{step.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="px-6 py-4 border-t flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setBulkModalOpen(false)}>Annuleren</Button>
+                            <Button onClick={runBulkAutofill} disabled={bulkSelectedIds.length === 0} className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                Start ({bulkSelectedIds.length} geselecteerd)
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* RIGHT: preview (A4 look) */}
             <TPPreviewWrapper>
