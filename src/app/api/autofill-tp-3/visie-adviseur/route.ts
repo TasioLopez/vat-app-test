@@ -138,7 +138,45 @@ Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
   }
 }
 
-function buildInstructions(medischeSituatieText?: string | null, functiebeschrijvingText?: string | null): string {
+/** Parse occupational_doctor_org (e.g. "Arts L. Bollen, werkend onder supervisie van: arts T. de Haas") into names. */
+function parseBedrijfsartsNames(occupational_doctor_org: string | null | undefined): { bedrijfsarts: string; supervisor: string } | null {
+  const s = (occupational_doctor_org || '').trim();
+  if (!s) return null;
+  const match = s.match(/^(.+?)\s*,?\s*werkend onder supervisie van\s*:?\s*(.+)$/i);
+  if (match) {
+    return { bedrijfsarts: match[1].trim(), supervisor: match[2].trim() };
+  }
+  return { bedrijfsarts: s, supervisor: '' };
+}
+
+function nlDate(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function buildInstructions(
+  medischeSituatieText?: string | null,
+  functiebeschrijvingText?: string | null,
+  bedrijfsartsNames?: { bedrijfsarts: string; supervisor: string } | null,
+  fmlDateFormatted?: string | null
+): string {
+  const namesBlock = bedrijfsartsNames
+    ? `
+BEDRIJFSARTS EN SUPERVISOR (gebruik deze exacte namen in de eerste zin):
+- Naam bedrijfsarts: ${bedrijfsartsNames.bedrijfsarts}
+- Naam supervisor: ${bedrijfsartsNames.supervisor || '(niet van toepassing)'}
+Vervang [naam bedrijfsarts] en [naam supervisor] in de eerste zin door bovenstaande namen. Schrijf geen placeholders.
+`
+    : `
+BEDRIJFSARTS EN SUPERVISOR: Als deze niet hierboven gegeven zijn, zoek in de documenten naar de naam van de bedrijfsarts en de supervisor (vaak in FML, Medische situatie of prognose). Vul de echte namen in. Alleen als je ze echt nergens kunt vinden, gebruik dan de placeholders [naam bedrijfsarts] en [naam supervisor].
+`;
+
+  const dateHint = fmlDateFormatted
+    ? `- Gebruik voor de FML-datum: ${fmlDateFormatted} (staat al correct geformatteerd).\n`
+    : '';
+
   return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_loopbaanadviseur".
 
@@ -155,11 +193,12 @@ ${functiebeschrijvingText}
 
 Houd rekening met de informatie uit bovenstaande intake sectie bij het beoordelen van de beperkingen en mogelijkheden.
 ` : ''}
+${namesBlock}
 
 BELANGRIJKE FORMATTING REGELS:
 - Datum ALTIJD in format: "25 april 2025" (dag maand jaar, volledige maandnaam)
 - NOOIT gebruik: "25/04/2025" of "25-04-2025" of andere formaten
-- Eerste alinea (voor de lijst) MOET tussen **dubbele sterretjes** voor bold
+${dateHint}- Eerste alinea (voor de lijst) MOET tussen **dubbele sterretjes** voor bold
 - Gebruik bullet points met • (niet ☑ of andere symbolen)
 
 Output structuur (EXACT volgen):
@@ -182,10 +221,16 @@ KRITIEKE REGELS:
 Output uitsluitend JSON: { "visie_loopbaanadviseur": string }`;
 }
 
-async function runAssistant(files: string[], medischeSituatieText?: string | null, functiebeschrijvingText?: string | null) {
+async function runAssistant(
+  files: string[],
+  medischeSituatieText?: string | null,
+  functiebeschrijvingText?: string | null,
+  bedrijfsartsNames?: { bedrijfsarts: string; supervisor: string } | null,
+  fmlDateFormatted?: string | null
+) {
   const assistant = await openai.beta.assistants.create({
     name: "TP Visie Loopbaan Adviseur",
-    instructions: buildInstructions(medischeSituatieText, functiebeschrijvingText),
+    instructions: buildInstructions(medischeSituatieText, functiebeschrijvingText, bedrijfsartsNames, fmlDateFormatted),
     model: "gpt-4o",
     tools: [{ type: "file_search" }],
   });
@@ -236,6 +281,18 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
+    // Fetch tp_meta for bedrijfsarts/supervisor names and FML date (from Step 2)
+    const { data: meta } = await supabase
+      .from("tp_meta")
+      .select("occupational_doctor_org, fml_izp_lab_date")
+      .eq("employee_id", employeeId)
+      .maybeSingle();
+    const bedrijfsartsNames = parseBedrijfsartsNames(meta?.occupational_doctor_org ?? null);
+    const fmlDateFormatted = meta?.fml_izp_lab_date ? nlDate(meta.fml_izp_lab_date) : null;
+    if (bedrijfsartsNames) {
+      console.log('✅ Using bedrijfsarts/supervisor from tp_meta:', bedrijfsartsNames.bedrijfsarts, bedrijfsartsNames.supervisor || '(geen supervisor)');
+    }
+
     // Extract sections from intake form
     console.log('📋 Extracting sections from intake form...');
     const medischeSituatieText = await extractIntakeSection(employeeId, "5. Medische situatie");
@@ -254,7 +311,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
     const fileIds = await uploadDocsToOpenAI(docPaths);
-    const parsed = await runAssistant(fileIds, medischeSituatieText, functiebeschrijvingText);
+    const parsed = await runAssistant(fileIds, medischeSituatieText, functiebeschrijvingText, bedrijfsartsNames, fmlDateFormatted);
     const visie_loopbaanadviseur = stripCitations((parsed?.visie_loopbaanadviseur || '').trim());
 
     await supabase.from("tp_meta").upsert(
