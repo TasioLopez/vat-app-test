@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
 import Logo2 from "@/assets/images/logo-2.png";
-import ACTIVITIES, { getBodyMain, normalizeTp3Activities, shouldUseLogo, type TPActivity, type TPActivitySelection } from "@/lib/tp/tp_activities";
+import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity, type TPActivitySelection } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
 import { FileText } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
