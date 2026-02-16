@@ -303,14 +303,37 @@ BELANGRIJK:
 - Wees NIET te strikt - als je redelijk zeker bent op basis van de documenten, geef dan een antwoord
 - Geef de voorkeur aan informatie uit secties 6 en 14 van het intakeformulier, daarna andere delen van het intakeformulier, en gebruik andere documenten als aanvulling
 
+UITVOERSTRUCTUUR VOOR DE PARAGRAAF:
+De uiteindelijke tekst moet de vorm hebben: (1) Werknemer bevindt zich ten tijde van de intake in trede X van de PoW-meter. [Korte reden waarom, op basis van documenten.] (2) Het doel is door te groeien naar trede Y door [activiteiten om de volgende trede te bereiken.] (3) Optioneel: als de termijn onduidelijk is, een disclaimer over de termijn.
+Schrijf alle teksten in de derde persoon, professioneel Nederlands, en baseer ze op de geüploade documenten.
+
+Voor "reason_current_trede": één korte zin die uitlegt WAAROM de werknemer in deze trede zit (bijv. werkuren, type werk, medische afspraken).
+Voorbeelden: "Zij verlaat de woning uitsluitend voor medische afspraken." of "Hij verricht momenteel 2x 3 uur werk in aangepaste vorm op locatie bij Middin."
+
+Voor "activities_for_next_trede": één korte zin die beschrijft HOE de volgende trede bereikt kan worden (passende activiteiten uit de documenten of logisch afgeleid van de volgende trede).
+Voorbeelden: "het realiseren van een passende activeringsplaats, waar haar belastbaarheid kan worden getoetst en opgebouwd." of "het opbouwen van stage-uren of een werkervaringsplek."
+
+Zet "timeline_uncertain" op true als de documenten geen duidelijke termijn voor de volgende stap geven.
+
 Geef je antwoord als JSON:
 {
   "trede": number (1-6),
-  "reasoning": "string met uitleg: (1) of je de spoor in secties 6/14 of het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, (3) waarom je Trede 3 vs Trede 4 hebt gekozen (indien relevant), en (4) waarom je op deze trede uitkomt"
+  "reasoning": "string met uitleg: (1) of je de spoor in secties 6/14 of het intakeformulier hebt gevonden, (2) welke werkuren en contextuele informatie je hebt gebruikt, (3) waarom je Trede 3 vs Trede 4 hebt gekozen (indien relevant), en (4) waarom je op deze trede uitkomt",
+  "reason_current_trede": "string: één korte zin waarom de werknemer in deze trede zit (op basis van documenten)",
+  "activities_for_next_trede": "string: één korte zin met activiteiten om de volgende trede te bereiken (alleen relevant als trede < 6)",
+  "timeline_uncertain": "boolean, optioneel: true als er geen duidelijke termijn in de documenten staat"
 }`;
 }
 
-async function runAssistant(files: string[], section6Text?: string | null, section14Text?: string | null): Promise<{ trede: number; reasoning: string }> {
+type PowMeterAssistantResult = {
+  trede: number;
+  reasoning: string;
+  reason_current_trede?: string;
+  activities_for_next_trede?: string;
+  timeline_uncertain?: boolean;
+};
+
+async function runAssistant(files: string[], section6Text?: string | null, section14Text?: string | null): Promise<PowMeterAssistantResult> {
   const assistant = await openai.beta.assistants.create({
     name: "PoW-meter Evaluator",
     instructions: buildInstructions(section6Text, section14Text),
@@ -345,18 +368,29 @@ async function runAssistant(files: string[], section6Text?: string | null, secti
   const match = text.match(/\{[\s\S]*\}/);
   const jsonStr = match ? match[0] : text;
   let parsed: any = {};
-  try { 
-    parsed = JSON.parse(jsonStr); 
-  } catch { 
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
     // Fallback: try to extract trede number from text
     const tredeMatch = text.match(/trede\s*[1-6]|trede\s*[1-6]/i);
     if (tredeMatch) {
-      const tredeNum = parseInt(tredeMatch[0].replace(/trede\s*/i, ''));
+      const tredeNum = parseInt(tredeMatch[0].replace(/trede\s*/i, ''), 10);
       parsed = { trede: tredeNum, reasoning: text };
     } else {
       parsed = { trede: 1, reasoning: "Kon trede niet bepalen uit response" };
     }
   }
+
+  // Normalize and return
+  const reasonCurrent = typeof parsed.reason_current_trede === 'string' ? parsed.reason_current_trede.trim() : undefined;
+  const activitiesNext = typeof parsed.activities_for_next_trede === 'string' ? parsed.activities_for_next_trede.trim() : undefined;
+  const result: PowMeterAssistantResult = {
+    trede: typeof parsed.trede === 'number' ? parsed.trede : parseInt(String(parsed.trede), 10) || 1,
+    reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : String(parsed.reasoning || ''),
+    reason_current_trede: reasonCurrent || undefined,
+    activities_for_next_trede: activitiesNext || undefined,
+    timeline_uncertain: typeof parsed.timeline_uncertain === 'boolean' ? parsed.timeline_uncertain : undefined,
+  };
 
   // Cleanup
   try {
@@ -372,7 +406,7 @@ async function runAssistant(files: string[], section6Text?: string | null, secti
     console.warn('Failed to clean up assistant resources:', e);
   }
 
-  return parsed;
+  return result;
 }
 
 export async function GET(req: NextRequest) {
@@ -420,7 +454,7 @@ export async function GET(req: NextRequest) {
     console.log(`📤 Uploaded ${fileIds.length} files to OpenAI`);
 
     // Single assistant call that evaluates with extracted sections
-    const { trede, reasoning } = await runAssistant(fileIds, section6Text, section14Text);
+    const { trede, reasoning, reason_current_trede, activities_for_next_trede, timeline_uncertain } = await runAssistant(fileIds, section6Text, section14Text);
 
     console.log(`✅ Determined Trede ${trede}: ${reasoning.slice(0, 100)}`);
 
@@ -428,15 +462,29 @@ export async function GET(req: NextRequest) {
     const tredeInfo = TREDE_INFO[tredeKey];
     const nextTrede = trede < 6 ? trede + 1 : 6;
     const nextTredeInfo = TREDE_INFO[nextTrede as keyof typeof TREDE_INFO];
-    
-    let expectationText = "";
-    if (trede === 6) {
-      expectationText = "Werknemer is volledig werkzaam binnen of buiten de organisatie.";
-    } else {
-      expectationText = `De verwachting is dat werknemer binnen nu en 3 maanden de stap naar ${nextTredeInfo.name} (${nextTredeInfo.description}) zal maken.`;
-    }
 
-    const pow_meter = `Werknemer bevindt zich op het moment van de intake in ${tredeInfo.name} (${tredeInfo.description}) van de PoW-meter. ${expectationText}`;
+    let pow_meter: string;
+    if (trede === 6) {
+      pow_meter = `Werknemer bevindt zich ten tijde van de intake in trede 6 van de PoW-meter. Werknemer is volledig werkzaam binnen of buiten de organisatie.`;
+    } else {
+      const becauseText = reason_current_trede && reason_current_trede.length > 0
+        ? reason_current_trede
+        : `Hij/zij valt onder: ${tredeInfo.description}.`;
+      if (!reason_current_trede || reason_current_trede.length === 0) {
+        console.log('PoW-meter: using fallback for reason_current_trede');
+      }
+      const activitiesText = activities_for_next_trede && activities_for_next_trede.length > 0
+        ? activities_for_next_trede
+        : nextTredeInfo.description;
+      if (!activities_for_next_trede || activities_for_next_trede.length === 0) {
+        console.log('PoW-meter: using fallback for activities_for_next_trede');
+      }
+      const part1 = `Werknemer bevindt zich ten tijde van de intake in trede ${trede} van de PoW-meter. ${becauseText}`;
+      const part2 = `Het doel is door te groeien naar trede ${nextTrede} van de PoW-meter door ${activitiesText}.`;
+      const disclaimer = "Over de termijn waarin deze stap kan worden gezet kan op dit moment geen uitspraak worden gedaan; dit is afhankelijk van de ontwikkeling van de belastbaarheid.";
+      const parts = timeline_uncertain ? [part1, part2, disclaimer] : [part1, part2];
+      pow_meter = parts.join(" ");
+    }
 
     // Persist to database
     const supabaseService = SupabaseService.getInstance();
