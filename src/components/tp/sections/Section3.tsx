@@ -1023,7 +1023,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             const checked = activitySelections.some((s) => s.id === a.id);
                             const hasTemplates = "subTextTemplates" in a && Array.isArray(a.subTextTemplates);
                             const currentSub = getSubText(a.id);
-                            const templates = hasTemplates ? (a as TPActivity).subTextTemplates! : [];
+                            const templates = hasTemplates ? (a as TPActivity).subTextTemplates! : ([] as string[]);
                             const subTextOption = currentSub === null ? "geen" : templates.indexOf(currentSub) >= 0 ? `sjabloon-${templates.indexOf(currentSub) + 1}` : "custom";
                             return (
                                 <div key={a.id} className="p-2 border border-border rounded-md hover:bg-muted/50 transition-colors space-y-2">
