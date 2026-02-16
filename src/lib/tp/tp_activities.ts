@@ -1,5 +1,28 @@
 // src/lib/tp/activities.ts
-export type TPActivity = { id: string; title: string; body: string };
+export type TPActivitySelection = { id: string; subText?: string | null };
+
+export type TPActivity = {
+  id: string;
+  title: string;
+  body: string;
+  subTextTemplates?: [string, string, string];
+};
+
+/** Normalize tp3_activities from DB: support legacy string[] or new { id, subText }[]. */
+export function normalizeTp3Activities(raw: unknown): TPActivitySelection[] {
+  if (!Array.isArray(raw)) return [];
+  if (raw.length === 0) return [];
+  if (raw.every((x): x is string => typeof x === "string")) {
+    return raw.map((id) => ({ id, subText: null }));
+  }
+  return raw
+    .filter((x): x is { id: string; subText?: string | null } => typeof x === "object" && x !== null && "id" in x && typeof (x as { id: unknown }).id === "string")
+    .map((x) => ({ id: x.id, subText: x.subText ?? null }));
+}
+
+export function getBodyMain(activity: TPActivity): string {
+  return activity.body;
+}
 
 export const TP_ACTIVITIES: TPActivity[] = [
   {
@@ -20,30 +43,42 @@ export const TP_ACTIVITIES: TPActivity[] = [
   {
     id: "scholing",
     title: "Scholing",
-    body: `Scholing zal alleen ingezet worden als het noodzakelijk blijkt, hierbij wordt het uitgangspunt van redelijkheid en billijkheid toegepast, wat inhoudt dat het om een relatief korte cursus/ opleiding dient te gaan en de kosten naar verhouding zijn. Alle cursussen en opleidingen worden altijd ter goedkeuring voorgelegd aan de werkgever. 
-
- Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.`,
+    body: `Scholing zal alleen ingezet worden als het noodzakelijk blijkt, hierbij wordt het uitgangspunt van redelijkheid en billijkheid toegepast, wat inhoudt dat het om een relatief korte cursus/ opleiding dient te gaan en de kosten naar verhouding zijn. Alle cursussen en opleidingen worden altijd ter goedkeuring voorgelegd aan de werkgever.`,
+    subTextTemplates: [
+      "Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.",
+      "Werknemer is bereid om scholingsmogelijkheden te verkennen indien dit het traject ondersteunt.",
+      "Scholing wordt alleen ingezet wanneer dit noodzakelijk is; werknemer staat open voor een korte, passende cursus.",
+    ],
   },
   {
     id: "social-media",
     title: "Social Media",
-    body: `Tegenwoordig speelt (digitaal) netwerken en solliciteren een belangrijke rol in het vinden van een nieuwe baan. Daarom zal het gebruik van Social Media, met name LinkedIn, een onderdeel zijn van begeleiding. De werknemer maakt zelfstandig (of onder begeleiding) een LinkedIn profiel en leert het eigen netwerk in kaart te brengen, te ontwikkelen en te gebruiken voor het vinden van een baan. 
-
- Werknemer heeft genoeg pc-vaardigheden, voor specifieke Social mediapresentatie zal de loopbaanadviseur de nodige begeleiding bieden.`,
+    body: `Tegenwoordig speelt (digitaal) netwerken en solliciteren een belangrijke rol in het vinden van een nieuwe baan. Daarom zal het gebruik van Social Media, met name LinkedIn, een onderdeel zijn van begeleiding. De werknemer maakt zelfstandig (of onder begeleiding) een LinkedIn profiel en leert het eigen netwerk in kaart te brengen, te ontwikkelen en te gebruiken voor het vinden van een baan.`,
+    subTextTemplates: [
+      "Werknemer heeft genoeg pc-vaardigheden, voor specifieke Social mediapresentatie zal de loopbaanadviseur de nodige begeleiding bieden.",
+      "Werknemer kan met ondersteuning van de loopbaanadviseur een professioneel LinkedIn-profiel opzetten.",
+      "Voor het optimaal gebruik van social media bij solliciteren biedt de loopbaanadviseur de benodigde begeleiding.",
+    ],
   },
   {
     id: "webinars",
     title: "Webinars",
-    body: `ValentineZ biedt verschillende webinars aan waar werknemer gebruik van kan maken. Werknemer zal op basis van vaardigheden en behoefte een voorstel op maat. De webinars zijn erop gericht om op een laagdrempelige manier kennis te verkrijgen over verschillende (sollicitatie)vaardigheden. Omdat de webinars online (live) zijn bij te wonen en/ of terug te kijken kan werknemer dit laten aansluiten op zijn/ haar persoonlijke omstandigheden. 
-
- Werknemer heeft genoeg pc-vaardigheden om via de pc webinars te volgen, loopbaan adviseur zal hierin adviseren welke nuttig kunnen zijn voor werknemer.`,
+    body: `ValentineZ biedt verschillende webinars aan waar werknemer gebruik van kan maken. Werknemer zal op basis van vaardigheden en behoefte een voorstel op maat. De webinars zijn erop gericht om op een laagdrempelige manier kennis te verkrijgen over verschillende (sollicitatie)vaardigheden. Omdat de webinars online (live) zijn bij te wonen en/ of terug te kijken kan werknemer dit laten aansluiten op zijn/ haar persoonlijke omstandigheden.`,
+    subTextTemplates: [
+      "Werknemer heeft genoeg pc-vaardigheden om via de pc webinars te volgen, loopbaan adviseur zal hierin adviseren welke nuttig kunnen zijn voor werknemer.",
+      "Werknemer kan webinars volgen; de loopbaanadviseur adviseert welke webinars het meest passend zijn.",
+      "Online webinars sluiten aan bij de mogelijkheden van werknemer; advies over keuze volgt van de loopbaanadviseur.",
+    ],
   },
   {
     id: "sollicitatievaardigheden-en-sollicitatietools",
     title: "Sollicitatievaardigheden en sollicitatietools",
-    body: `De sollicitatiebegeleiding van ValentineZ is volledig maatwerk en wordt ondersteund vanuit de persoonlijke begeleiding die we werknemers bieden. Solliciteren is een vaardigheid die veel werknemers lang niet meer actief hebben uitgeoefend en soms ook grotendeels verleerd zijn. Wij helpen de werknemer bij het opstellen of bijwerken van een curriculum. Daarnaast laten wij werknemer zien waar vacatures te zoeken en te vinden, die aansluiten bij het persoonlijke zoekprofiel. Ook begeleiden we werknemer bij de geschreven en ongeschreven wetten van het schrijven van een sollicitatiebrief of motivatiebrief en wordt er aandacht besteed aan correct en overtuigend taalgebruik. We informeren werknemers waar, indien nodig, taaladvies in te winnen wanneer het opstellen van een sollicitatiebrief of motivatiebrief niet binnen de mogelijkheden ligt.  
-
- Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.`,
+    body: `De sollicitatiebegeleiding van ValentineZ is volledig maatwerk en wordt ondersteund vanuit de persoonlijke begeleiding die we werknemers bieden. Solliciteren is een vaardigheid die veel werknemers lang niet meer actief hebben uitgeoefend en soms ook grotendeels verleerd zijn. Wij helpen de werknemer bij het opstellen of bijwerken van een curriculum. Daarnaast laten wij werknemer zien waar vacatures te zoeken en te vinden, die aansluiten bij het persoonlijke zoekprofiel. Ook begeleiden we werknemer bij de geschreven en ongeschreven wetten van het schrijven van een sollicitatiebrief of motivatiebrief en wordt er aandacht besteed aan correct en overtuigend taalgebruik. We informeren werknemers waar, indien nodig, taaladvies in te winnen wanneer het opstellen van een sollicitatiebrief of motivatiebrief niet binnen de mogelijkheden ligt.`,
+    subTextTemplates: [
+      "Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.",
+      "CV en sollicitatievaardigheden worden samen met de loopbaanadviseur op maat bijgewerkt.",
+      "De loopbaanadviseur ondersteunt werknemer bij cv, sollicitatiebrieven en het gebruik van sollicitatietools.",
+    ],
   },
   {
     id: "solliciteren",

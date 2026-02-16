@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
-import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
 
 const page =
@@ -82,7 +82,7 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
     const parts: React.ReactNode[] = [];
     let currentIdx = 0;
     const quoteRegex = /"([^"]+)"/g;
-    const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    const markdownRegex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*)/g;
     const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
     let match;
     while ((match = quoteRegex.exec(text)) !== null) {
@@ -99,7 +99,9 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
             parts.push(<span key={m.index}><em>"{m.content}"</em></span>);
         } else if (m.type === 'markdown') {
             const content = m.content;
-            if (content.startsWith('**') && content.endsWith('**')) {
+            if (content.startsWith('***') && content.endsWith('***')) {
+                parts.push(<strong key={m.index}><em>{content.slice(3, -3)}</em></strong>);
+            } else if (content.startsWith('**') && content.endsWith('**')) {
                 parts.push(<strong key={m.index}>{content.slice(2, -2)}</strong>);
             } else if (content.startsWith('*') && content.endsWith('*')) {
                 parts.push(<span key={m.index}>{noQuoteWrap ? <em>{content.slice(1, -1)}</em> : <>"<em>{content.slice(1, -1)}</em>"</>}</span>);
@@ -283,6 +285,7 @@ type PreviewItem = {
     key: string;
     title?: string;
     text?: string;
+    subText?: string | null;
     variant: "block" | "subtle" | "custom";
     node?: React.ReactNode;
 };
@@ -430,7 +433,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
     }, [tpData]);
 
     // pull selected activities for this employee (saved by the builder)
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [activitySelections, setActivitySelections] = useState<Array<{ id: string; subText?: string | null }>>([]);
     const [selectedIdsLoaded, setSelectedIdsLoaded] = useState(false);
 
     useEffect(() => {
@@ -442,21 +445,22 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                 .eq("employee_id", employeeId)
                 .maybeSingle();
 
-            // ensure we end up with string[]
-            const toStringArray = (v: unknown): string[] =>
-                Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-
-            const loadedIds = !error ? toStringArray((data as any)?.tp3_activities) : [];
-            console.log("🔍 Review page loaded activities:", loadedIds);
-            setSelectedIds(loadedIds);
+            const normalized = !error ? normalizeTp3Activities((data as any)?.tp3_activities) : [];
+            console.log("🔍 Review page loaded activities:", normalized);
+            setActivitySelections(normalized);
             setSelectedIdsLoaded(true);
         })();
     }, [employeeId]);
 
-
-    const selectedActivities: TPActivity[] = useMemo(
-        () => ACTIVITIES.filter(a => selectedIds.includes(a.id)),
-        [selectedIds]
+    const selectedActivitiesWithSub = useMemo(
+        () =>
+            activitySelections
+                .map((s) => {
+                    const activity = ACTIVITIES.find((a) => a.id === s.id);
+                    return activity ? { activity, subText: s.subText ?? null } : null;
+                })
+                .filter((x): x is { activity: TPActivity; subText: string | null } => x != null),
+        [activitySelections]
     );
 
     // Wait for BOTH tpData AND selectedIds to be ready before creating sections
@@ -468,12 +472,12 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             console.log('⏳ Section3A4Client: Data not ready', { 
                 isDataReady, 
                 selectedIdsLoaded,
-                selectedIdsCount: selectedIds.length 
+                selectedIdsCount: activitySelections.length 
             });
             return [];
         }
         
-        console.log('📦 Section3A4Client: Creating sections', { selectedIdsCount: selectedIds.length });
+        console.log('📦 Section3A4Client: Creating sections', { selectedIdsCount: activitySelections.length });
         const list: PreviewItem[] = [
             { key: "inl", title: "Inleiding", text: tpData.inleiding || "—", variant: "block" },
         ];
@@ -560,18 +564,19 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         );
 
         // Trajectdoel + activities (each activity as its own block for clean pagination)
-        if (selectedActivities.length) {
+        if (selectedActivitiesWithSub.length) {
             list.push({
                 key: "acts-intro",
                 title: "Trajectdoel en in te zetten activiteiten",
                 text: TP_ACTIVITIES_INTRO,
                 variant: "block",
             });
-            selectedActivities.forEach(a => {
+            selectedActivitiesWithSub.forEach(({ activity, subText }) => {
                 list.push({
-                    key: `act-${a.id}`,
-                    title: a.title,
-                    text: a.body,
+                    key: `act-${activity.id}`,
+                    title: activity.title,
+                    text: getBodyMain(activity),
+                    subText,
                     variant: "block",
                 });
             });
@@ -612,7 +617,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         tpData.advies_ad_passende_arbeid,
         tpData.pow_meter,
         tpData.visie_plaatsbaarheid,
-        selectedActivities,
+        selectedActivitiesWithSub,
     ]);
 
     // Don't render if data isn't ready or sections are empty
@@ -680,8 +685,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                         <div className={paperText}><InleidingSubBlock text={s.text} /></div>
                                     ) : s.key.startsWith('act-') ? (
                                         <ActivityBody 
-                                            activityId={s.key.replace('act-', '')} 
-                                            bodyText={s.text} 
+                                            bodyMain={s.text ?? ""} 
+                                            subText={s.subText ?? null} 
                                             className={paperText}
                                         />
                                     ) : s.key === 'vlb' || s.key === 'wk' ? (
@@ -1001,8 +1006,8 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                 <div className={blockTitle}>{s.title}</div>
                                                 {s.key.startsWith('act-') ? (
                                                     <ActivityBody 
-                                                        activityId={s.key.replace('act-', '')} 
-                                                        bodyText={s.text} 
+                                                        bodyMain={s.text ?? ""} 
+                                                        subText={s.subText ?? null} 
                                                         className={paperText}
                                                     />
                                                 ) : s.key === 'vlb' || s.key === 'wk' ? (

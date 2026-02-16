@@ -7,7 +7,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
-import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
 
 const page =
@@ -64,8 +64,6 @@ function PageFooter({
 
 /* ------------ helpers ------------ */
 const safe = (v: string | null | undefined, fallback = "—") => v ?? fallback;
-const toStringArray = (v: unknown): string[] =>
-  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 const fullName = (full?: string | null, first?: string | null, last?: string | null, fallback = "") =>
   (full && full.trim())
     || `${first ?? ""} ${last ?? ""}`.trim()
@@ -79,7 +77,7 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
   const parts: React.ReactNode[] = [];
   let currentIdx = 0;
   const quoteRegex = /"([^"]+)"/g;
-  const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  const markdownRegex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*)/g;
   const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
   let match;
   while ((match = quoteRegex.exec(text)) !== null) {
@@ -96,7 +94,9 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
       parts.push(<span key={m.index}><em>"{m.content}"</em></span>);
     } else if (m.type === 'markdown') {
       const content = m.content;
-      if (content.startsWith('**') && content.endsWith('**')) {
+      if (content.startsWith('***') && content.endsWith('***')) {
+        parts.push(<strong key={m.index}><em>{content.slice(3, -3)}</em></strong>);
+      } else if (content.startsWith('**') && content.endsWith('**')) {
         parts.push(<strong key={m.index}>{content.slice(2, -2)}</strong>);
       } else if (content.startsWith('*') && content.endsWith('*')) {
         parts.push(<span key={m.index}>{noQuoteWrap ? <em>{content.slice(1, -1)}</em> : <>"<em>{content.slice(1, -1)}</em>"</>}</span>);
@@ -415,10 +415,13 @@ export default function Section3A4({ data }: { data: TPData }) {
       : "");
 
   // selected activities (from tp_meta.tp3_activities)
-  const selectedIds = toStringArray((data as any).tp3_activities);
-  const selectedActivities: TPActivity[] = ACTIVITIES.filter((a) =>
-    selectedIds.includes(a.id)
-  );
+  const activitySelections = normalizeTp3Activities((data as any).tp3_activities);
+  const selectedActivitiesWithSub = activitySelections
+    .map((s) => {
+      const activity = ACTIVITIES.find((a) => a.id === s.id);
+      return activity ? { activity, subText: s.subText ?? null } : null;
+    })
+    .filter((x): x is { activity: TPActivity; subText: string | null } => x != null);
 
   // names for signature - use simple firstName lastName format
   const employeeName = 
@@ -434,7 +437,7 @@ export default function Section3A4({ data }: { data: TPData }) {
     .join(", ") || undefined;
 
   type Block =
-    | { key: string; title?: string; text: string; variant: "block" | "subtle" }
+    | { key: string; title?: string; text: string; subText?: string | null; variant: "block" | "subtle" }
     | { key: string; custom: "agreement" | "signature" };
 
   const blocks: Block[] = [
@@ -512,7 +515,7 @@ export default function Section3A4({ data }: { data: TPData }) {
     },
 
     // Activities (only when any are selected)
-    ...(selectedActivities.length
+    ...(selectedActivitiesWithSub.length
       ? ([
           {
             key: "tp-acts-intro",
@@ -520,10 +523,11 @@ export default function Section3A4({ data }: { data: TPData }) {
             text: TP_ACTIVITIES_INTRO,
             variant: "block" as const,
           },
-          ...selectedActivities.map((a) => ({
-            key: `act-${a.id}`,
-            title: a.title,
-            text: a.body,
+          ...selectedActivitiesWithSub.map(({ activity, subText }) => ({
+            key: `act-${activity.id}`,
+            title: activity.title,
+            text: getBodyMain(activity),
+            subText,
             variant: "block" as const,
           })),
         ] as Block[])
@@ -568,8 +572,8 @@ export default function Section3A4({ data }: { data: TPData }) {
                       <div className={paperText}><InleidingSubBlock text={firstBlock.text} /></div>
                     ) : firstBlock.key.startsWith('act-') ? (
                       <ActivityBody 
-                        activityId={firstBlock.key.replace('act-', '')} 
-                        bodyText={firstBlock.text} 
+                        bodyMain={firstBlock.text} 
+                        subText={"subText" in firstBlock ? firstBlock.subText : null} 
                         className={paperText}
                       />
                     ) : firstBlock.key === 'vlb' || firstBlock.key === 'wk' ? (
@@ -633,8 +637,8 @@ export default function Section3A4({ data }: { data: TPData }) {
                     <div className={paperText}><InleidingSubBlock text={b.text} /></div>
                   ) : b.key.startsWith('act-') ? (
                     <ActivityBody 
-                      activityId={b.key.replace('act-', '')} 
-                      bodyText={b.text} 
+                      bodyMain={b.text} 
+                      subText={"subText" in b ? b.subText : null} 
                       className={paperText}
                     />
                   ) : b.key === 'vlb' || b.key === 'wk' ? (

@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
 import Logo2 from "@/assets/images/logo-2.png";
-import ACTIVITIES, { type TPActivity } from "@/lib/tp/tp_activities";
+import ACTIVITIES, { getBodyMain, normalizeTp3Activities, shouldUseLogo, type TPActivity, type TPActivitySelection } from "@/lib/tp/tp_activities";
 import SectionEditorModal from '../SectionEditorModal';
 import { FileText } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
@@ -54,6 +54,7 @@ type PreviewItem = {
     key: string;
     title?: string;
     text?: string;
+    subText?: string | null;
     variant: PreviewVariant;
     node?: React.ReactNode;
     measureKey?: string | number;
@@ -164,9 +165,42 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     const activities: TPActivity[] = Array.isArray(ACTIVITIES) ? ACTIVITIES : [];
     console.log("activities length:", activities.length, activities.map(a => a.id));
 
-    const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+    const [activitySelections, setActivitySelections] = useState<TPActivitySelection[]>([]);
+    const [editingSubTextForId, setEditingSubTextForId] = useState<string | null>(null);
 
-    const selectedForPreview = activities.filter(a => a && selectedActivities.includes(a.id));
+    const selectedForPreview = activitySelections
+        .map((s) => activities.find((a) => a.id === s.id))
+        .filter((a): a is TPActivity => Boolean(a));
+
+    const getSubText = (id: string) => activitySelections.find((s) => s.id === id)?.subText ?? null;
+
+    const persistActivitySelections = async (selections: TPActivitySelection[]) => {
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                const metaPayload = { employee_id: employeeId, tp3_activities: selections };
+                const { data: existing, error: findErr } = await supabase.from("tp_meta").select("id").eq("employee_id", employeeId).maybeSingle();
+                if (findErr) throw new Error(`tp_meta (find): ${findErr.message}`);
+                const metaRes = existing?.id
+                    ? await supabase.from("tp_meta").update(metaPayload).eq("id", existing.id).select().single()
+                    : await supabase.from("tp_meta").insert(metaPayload).select().single();
+                if (metaRes.error) throw new Error(`tp_meta (save): ${metaRes.error.message}`);
+                break;
+            } catch (err) {
+                console.error("Failed to save activities:", err);
+                retries--;
+                if (retries > 0) await new Promise((r) => setTimeout(r, 500));
+            }
+        }
+    };
+
+    const setSubTextAndSave = (id: string, value: string | null) => {
+        setActivitySelections((prev) => {
+            const next = prev.map((s) => (s.id === id ? { ...s, subText: value } : s));
+            persistActivitySelections(next);
+            return next;
+        });
+    };
 
     // Rewrite function for applying user's writing style
     const rewriteInMyStyle = async (fieldName: string, originalText: string) => {
@@ -213,60 +247,12 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     };
 
     const toggleActivity = async (id: string) => {
-        const newSelectedActivities = selectedActivities.includes(id) 
-            ? selectedActivities.filter(x => x !== id)
-            : [...selectedActivities, id];
-        
-        console.log("🔄 Toggling activity:", id);
-        console.log("📊 Current selected:", selectedActivities);
-        console.log("📊 New selected:", newSelectedActivities);
-        
-        setSelectedActivities(newSelectedActivities);
-        
-        // Auto-save the changes with retry logic
-        let retries = 3;
-        while (retries > 0) {
-            try {
-                const metaPayload = {
-                    employee_id: employeeId,
-                    tp3_activities: newSelectedActivities
-                };
-
-                const { data: existing, error: findErr } = await supabase
-                    .from("tp_meta")
-                    .select("id")
-                    .eq("employee_id", employeeId)
-                    .maybeSingle();
-
-                if (findErr) throw new Error(`tp_meta (find): ${findErr.message}`);
-
-                let metaRes;
-                if (existing?.id) {
-                    metaRes = await supabase
-                        .from("tp_meta")
-                        .update(metaPayload)
-                        .eq("id", existing.id)
-                        .select()
-                        .single();
-                } else {
-                    metaRes = await supabase
-                        .from("tp_meta")
-                        .insert(metaPayload)
-                        .select()
-                        .single();
-                }
-
-                if (metaRes.error) throw new Error(`tp_meta (save): ${metaRes.error.message}`);
-                console.log("✅ Auto-saved activities:", newSelectedActivities);
-                break; // Success, exit retry loop
-            } catch (err) {
-                console.error(`❌ Failed to auto-save activities (${4-retries} retries left):`, err);
-                retries--;
-                if (retries > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
-                }
-            }
-        }
+        const isSelected = activitySelections.some((s) => s.id === id);
+        const newSelections = isSelected
+            ? activitySelections.filter((s) => s.id !== id)
+            : [...activitySelections, { id, subText: null }];
+        setActivitySelections(newSelections);
+        await persistActivitySelections(newSelections);
     };
 
     useEffect(() => {
@@ -281,10 +267,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 if (error) throw error;
 
                 if (data) {
-                    // Load saved activities
-                    const savedActivities = safeParse(data.tp3_activities, []);
-                    console.log("📥 Loaded activities from DB:", savedActivities);
-                    setSelectedActivities(savedActivities);
+                    const normalized = normalizeTp3Activities(data.tp3_activities);
+                    console.log("📥 Loaded activities from DB:", normalized);
+                    setActivitySelections(normalized);
                 } else {
                     console.log("📥 No data found in DB, using empty array");
                 }
@@ -383,7 +368,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         try {
             const metaPayload = {
                 employee_id: employeeId,
-                tp3_activities: selectedActivities
+                tp3_activities: activitySelections
             };
 
             const { data: existing, error: findErr } = await supabase
@@ -873,7 +858,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     };
 
     // force re-measure when activities/signature content changes
-    const activitiesMeasureKey = selectedActivities.join("|");
+    const activitiesMeasureKey = activitySelections.map((s) => `${s.id}:${s.subText ?? ""}`).join("|");
     const signatureMeasureKey =
         `${tpData.employee_first_name ?? ""}|${tpData.loopbaanadviseur_name ?? ""}|${tpData.referent_first_name ?? ""}|${tpData.referent_last_name ?? ""}`;
 
@@ -897,7 +882,14 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         ...(selectedForPreview.length
             ? [
                 B("tp-acts-intro", "Trajectdoel en in te zetten activiteiten", TP_ACTIVITIES_INTRO, activitiesMeasureKey),
-                ...selectedForPreview.filter(a => a).map(a => B(`act-${a.id}`, a.title, a.body, a.id)),
+                ...selectedForPreview.map((a) => ({
+                    key: `act-${a.id}`,
+                    title: a.title,
+                    text: getBodyMain(a),
+                    subText: getSubText(a.id),
+                    variant: "block" as const,
+                    measureKey: a.id,
+                })),
             ]
             : []),
 
@@ -1027,16 +1019,63 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                         Vink de activiteiten aan die je in het trajectplan wilt opnemen.
                     </p>
                     <div className="space-y-2">
-                        {activities.filter(a => a).map((a) => {
-                            const checked = selectedActivities.includes(a.id);
+                        {activities.filter((a) => a).map((a) => {
+                            const checked = activitySelections.some((s) => s.id === a.id);
+                            const hasTemplates = "subTextTemplates" in a && Array.isArray(a.subTextTemplates);
+                            const currentSub = getSubText(a.id);
+                            const templates = hasTemplates ? (a as TPActivity).subTextTemplates! : [];
+                            const subTextOption = currentSub === null ? "geen" : templates.indexOf(currentSub) >= 0 ? `sjabloon-${templates.indexOf(currentSub) + 1}` : "custom";
                             return (
-                                <label key={a.id} className="flex items-start gap-2 p-2 border border-border rounded-md hover:bg-muted/50 transition-colors">
-                                    <input type="checkbox" className="mt-1" checked={checked} onChange={() => toggleActivity(a.id)} />
-                                    <div>
-                                        <div className="font-medium">{a.title}</div>
-                                        <div className="text-xs text-gray-600 line-clamp-2">{a.body}</div>
-                                    </div>
-                                </label>
+                                <div key={a.id} className="p-2 border border-border rounded-md hover:bg-muted/50 transition-colors space-y-2">
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                        <input type="checkbox" className="mt-1" checked={checked} onChange={() => toggleActivity(a.id)} />
+                                        <div className="flex-1">
+                                            <div className="font-medium">{a.title}</div>
+                                            <div className="text-xs text-gray-600 line-clamp-2">{a.body}</div>
+                                        </div>
+                                    </label>
+                                    {checked && hasTemplates && (
+                                        <div className="ml-6 pl-2 border-l border-border space-y-1">
+                                            <label className="text-xs text-muted-foreground">Subtekst (Z-logo):</label>
+                                            <select
+                                                className="w-full text-sm border border-border rounded px-2 py-1 bg-background"
+                                                value={subTextOption}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    if (v === "geen") setSubTextAndSave(a.id, null);
+                                                    else if (v === "sjabloon-1") setSubTextAndSave(a.id, templates[0]);
+                                                    else if (v === "sjabloon-2") setSubTextAndSave(a.id, templates[1]);
+                                                    else if (v === "sjabloon-3") setSubTextAndSave(a.id, templates[2]);
+                                                }}
+                                            >
+                                                <option value="geen">Geen</option>
+                                                <option value="sjabloon-1">Sjabloon 1</option>
+                                                <option value="sjabloon-2">Sjabloon 2</option>
+                                                <option value="sjabloon-3">Sjabloon 3</option>
+                                                <option value="custom">Aangepast</option>
+                                            </select>
+                                            {(currentSub != null && currentSub !== "") && (
+                                                <>
+                                                    <div className="text-xs text-gray-600 line-clamp-2 mt-1">{currentSub}</div>
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-primary underline"
+                                                        onClick={() => setEditingSubTextForId(editingSubTextForId === a.id ? null : a.id)}
+                                                    >
+                                                        {editingSubTextForId === a.id ? "Sluiten" : "Bewerken"}
+                                                    </button>
+                                                    {editingSubTextForId === a.id && (
+                                                        <textarea
+                                                            className="w-full text-sm border border-border rounded px-2 py-1 bg-background min-h-[60px] mt-1"
+                                                            value={currentSub}
+                                                            onChange={(e) => setSubTextAndSave(a.id, e.target.value)}
+                                                        />
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             );
                         })}
                         {activities.length === 0 && (
@@ -1205,7 +1244,7 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
 
     // First, process quoted text (text between double quotes)
     const quoteRegex = /"([^"]+)"/g;
-    const markdownRegex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    const markdownRegex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*)/g;
 
     const allMatches: Array<{index: number; length: number; type: 'quote' | 'markdown'; content: string}> = [];
     let match;
@@ -1223,7 +1262,9 @@ function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React
             parts.push(<span key={m.index}><em>"{m.content}"</em></span>);
         } else if (m.type === 'markdown') {
             const content = m.content;
-            if (content.startsWith('**') && content.endsWith('**')) {
+            if (content.startsWith('***') && content.endsWith('***')) {
+                parts.push(<strong key={m.index}><em>{content.slice(3, -3)}</em></strong>);
+            } else if (content.startsWith('**') && content.endsWith('**')) {
                 parts.push(<strong key={m.index}>{content.slice(2, -2)}</strong>);
             } else if (content.startsWith('*') && content.endsWith('*')) {
                 // Italic: inl_sub uses noQuoteWrap to avoid extra " " around citaat
@@ -1557,8 +1598,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                                         <div className={paperText}>
                                             {s.key.startsWith('act-') ? (
                                                 <ActivityBody 
-                                                    activityId={s.key.replace('act-', '')} 
-                                                    bodyText={s.text} 
+                                                    bodyMain={s.text ?? ""} 
+                                                    subText={s.subText ?? null} 
                                                     className=""
                                                 />
                                             ) : s.key === 'vlb' || s.key === 'wk' ? (
@@ -1727,7 +1768,7 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
     }, [
         sections.length,
         JSON.stringify(
-            sections.map(s => [s.key, s.title ?? "", s.text ?? "", s.variant, s.measureKey ?? ""])
+            sections.map(s => [s.key, s.title ?? "", s.text ?? "", s.subText ?? "", s.variant, s.measureKey ?? ""])
         ),
     ]);
 
@@ -1747,8 +1788,8 @@ function PaginatedPreview({ sections }: { sections: ReadonlyArray<PreviewItem> }
                             <div className={paperText}>
                                 {s.key.startsWith('act-') ? (
                                     <ActivityBody 
-                                        activityId={s.key.replace('act-', '')} 
-                                        bodyText={s.text} 
+                                        bodyMain={s.text ?? ""} 
+                                        subText={s.subText ?? null} 
                                         className=""
                                     />
                                 ) : s.key === 'vlb' || s.key === 'wk' ? (
