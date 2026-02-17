@@ -116,6 +116,8 @@ export default function ClientsPage() {
         name: selectedClient.name,
         industry: selectedClient.industry,
         contact_email: selectedClient.contact_email,
+        phone: selectedClient.phone || null,
+        plaats: selectedClient.plaats || null,
         referent_first_name: selectedClient.referent_first_name || null,
         referent_last_name: selectedClient.referent_last_name || null,
         referent_phone: selectedClient.referent_phone || null,
@@ -170,6 +172,12 @@ export default function ClientsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">{client.contact_email || 'Geen contact e-mailadres'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{client.phone || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{client.plaats || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">
@@ -242,6 +250,24 @@ export default function ClientsPage() {
                     value={selectedClient.contact_email || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, contact_email: e.target.value })}
                     placeholder="Contact Email"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Telefoon (algemeen)</label>
+                  <Input
+                    type="tel"
+                    value={selectedClient.phone || ''}
+                    onChange={(e) => setSelectedClient({ ...selectedClient, phone: e.target.value })}
+                    placeholder="010-1234567"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Plaats</label>
+                  <Input
+                    type="text"
+                    value={selectedClient.plaats || ''}
+                    onChange={(e) => setSelectedClient({ ...selectedClient, plaats: e.target.value })}
+                    placeholder="Rotterdam"
                   />
                 </div>
               </div>

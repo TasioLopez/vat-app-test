@@ -10,6 +10,7 @@ import {
     FaEnvelope,
     FaUser,
     FaPhone,
+    FaMapMarkerAlt,
     FaSpinner,
     FaCheckCircle,
     FaExclamationCircle,
@@ -28,6 +29,8 @@ export default function AddClientPage() {
         name: '',
         industry: '',
         contact_email: '',
+        phone: '',
+        plaats: '',
         referent_first_name: '',
         referent_last_name: '',
         referent_phone: '',
@@ -56,6 +59,8 @@ export default function AddClientPage() {
                 name: form.name,
                 industry: form.industry || null,
                 contact_email: form.contact_email || null,
+                phone: form.phone || null,
+                plaats: form.plaats || null,
                 referent_first_name: form.referent_first_name || null,
                 referent_last_name: form.referent_last_name || null,
                 referent_phone: form.referent_phone || null,
@@ -197,6 +202,64 @@ export default function AddClientPage() {
                                             focusedField === 'contact_email' ? 'text-purple-600 scale-110' : 'text-gray-400'
                                         }`}>
                                             <FaEnvelope />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Phone (algemeen) Field */}
+                                <div className="group">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaPhone className="text-purple-600 text-sm" />
+                                        Telefoon (algemeen)
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            value={form.phone}
+                                            onChange={handleChange}
+                                            onFocus={() => setFocusedField('phone')}
+                                            onBlur={() => setFocusedField(null)}
+                                            placeholder="010-1234567"
+                                            className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                                focusedField === 'phone'
+                                                    ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                                    : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                            } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                        />
+                                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                            focusedField === 'phone' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                        }`}>
+                                            <FaPhone />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Plaats Field */}
+                                <div className="group">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaMapMarkerAlt className="text-purple-600 text-sm" />
+                                        Plaats
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="plaats"
+                                            value={form.plaats}
+                                            onChange={handleChange}
+                                            onFocus={() => setFocusedField('plaats')}
+                                            onBlur={() => setFocusedField(null)}
+                                            placeholder="Rotterdam"
+                                            className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                                focusedField === 'plaats'
+                                                    ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                                    : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                            } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900 placeholder:text-gray-400`}
+                                        />
+                                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+                                            focusedField === 'plaats' ? 'text-purple-600 scale-110' : 'text-gray-400'
+                                        }`}>
+                                            <FaMapMarkerAlt />
                                         </div>
                                     </div>
                                 </div>
