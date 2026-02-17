@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, Pencil } from 'lucide-react';
+import { Trash2, Pencil, Search, ChevronUp, ChevronDown, Building2, Tag, Mail, Phone, MapPin, User, Users, Briefcase } from 'lucide-react';
 import { trackAccess } from '@/lib/tracking';
 
+type SortField = 'name' | 'industry';
+type SortDirection = 'asc' | 'desc';
 
 type Client = Database['public']['Tables']['clients']['Row'] & {
   phone?: string | null;
@@ -24,6 +26,38 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredAndSortedClients = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = clients.filter((c) => {
+      if (!q) return true;
+      return (
+        (c.name?.toLowerCase().includes(q)) ||
+        (c.contact_email?.toLowerCase().includes(q)) ||
+        (c.industry?.toLowerCase().includes(q)) ||
+        (c.plaats?.toLowerCase().includes(q))
+      );
+    });
+    list = [...list].sort((a, b) => {
+      const aVal = sortField === 'name' ? (a.name ?? '') : (a.industry ?? '');
+      const bVal = sortField === 'name' ? (b.name ?? '') : (b.industry ?? '');
+      const cmp = aVal.localeCompare(bVal, undefined, { sensitivity: 'base' });
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [clients, searchQuery, sortField, sortDirection]);
 
   useEffect(() => {
     fetchClients();
@@ -152,12 +186,49 @@ export default function ClientsPage() {
         )}
       </div>
 
+      {clients.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="relative flex-1 w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Zoek op naam, e-mail, branche of plaats"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={sortField === 'name' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('name')}
+              className="gap-1"
+            >
+              Naam {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
+            </Button>
+            <Button
+              variant={sortField === 'industry' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('industry')}
+              className="gap-1"
+            >
+              Branche {sortField === 'industry' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
         {clients.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Geen werkgevers om te tonen.</p>
           </div>
-        ) : clients.map((client) => (
+        ) : filteredAndSortedClients.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Geen werkgevers gevonden die overeenkomen met uw zoekopdracht.</p>
+          </div>
+        ) : filteredAndSortedClients.map((client) => (
           <Card
             key={client.id}
             clickable
@@ -165,27 +236,27 @@ export default function ClientsPage() {
             className="hover:shadow-md transition-all duration-200"
           >
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-8">
-                  <div>
-                    <h2 className="text-lg font-bold text-card-foreground">{client.name}</h2>
+              <div className="flex items-center justify-between gap-4 min-h-[2.5rem]">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)_auto_auto] gap-4 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Building2 className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <h2 className="text-lg font-bold text-card-foreground truncate">{client.name}</h2>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{client.industry || 'Geen branche geselecteerd'}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Tag className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground truncate">{client.industry || 'Geen branche geselecteerd'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{client.contact_email || 'Geen contact e-mailadres'}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground truncate">{client.contact_email || 'Geen contact e-mailadres'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{client.phone || '—'}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Phone className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground truncate">{client.phone || '—'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{client.plaats || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Gemaakt op: {client.created_at ? new Date(client.created_at).toLocaleString() : '—'}
-                    </p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground truncate">{client.plaats || '—'}</p>
                   </div>
                 </div>
 
@@ -216,13 +287,20 @@ export default function ClientsPage() {
       {/* Edit Modal */}
       {selectedClient && userRole === 'admin' && (
         <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">Werkgever bewerken</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Client Info Column */}
-              <div className="space-y-4">
+              <div className="space-y-5">
+                <h3 className="flex items-center gap-2 font-semibold text-card-foreground">
+                  <Building2 className="w-5 h-5 text-purple-600" />
+                  Bedrijfsgegevens
+                </h3>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever naam</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Building2 className="w-4 h-4 shrink-0" />
+                    Werkgever naam
+                  </label>
                   <Input
                     type="text"
                     value={selectedClient.name}
@@ -231,7 +309,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever branche</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Tag className="w-4 h-4 shrink-0" />
+                    Werkgever branche
+                  </label>
                   <select
                     value={selectedClient.industry || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
@@ -247,7 +328,10 @@ export default function ClientsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Werkgever email</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Mail className="w-4 h-4 shrink-0" />
+                    Werkgever email
+                  </label>
                   <Input
                     type="email"
                     value={selectedClient.contact_email || ''}
@@ -256,7 +340,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Telefoon (algemeen)</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Phone className="w-4 h-4 shrink-0" />
+                    Telefoon (algemeen)
+                  </label>
                   <Input
                     type="tel"
                     value={selectedClient.phone || ''}
@@ -265,7 +352,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Plaats</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    Plaats
+                  </label>
                   <Input
                     type="text"
                     value={selectedClient.plaats || ''}
@@ -276,9 +366,16 @@ export default function ClientsPage() {
               </div>
 
               {/* Referent Info Column */}
-              <div className="space-y-4">
+              <div className="space-y-5 rounded-lg border border-border bg-muted/20 p-4">
+                <h3 className="flex items-center gap-2 font-semibold text-card-foreground">
+                  <User className="w-5 h-5 text-purple-600" />
+                  Referent
+                </h3>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Voornaam referent</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <User className="w-4 h-4 shrink-0" />
+                    Voornaam referent
+                  </label>
                   <Input
                     type="text"
                     value={selectedClient.referent_first_name || ''}
@@ -289,7 +386,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Achternaam referent</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <User className="w-4 h-4 shrink-0" />
+                    Achternaam referent
+                  </label>
                   <Input
                     type="text"
                     value={selectedClient.referent_last_name || ''}
@@ -300,7 +400,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Telefoon referent</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Phone className="w-4 h-4 shrink-0" />
+                    Telefoon referent
+                  </label>
                   <Input
                     type="tel"
                     value={selectedClient.referent_phone || ''}
@@ -311,7 +414,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Email referent</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Mail className="w-4 h-4 shrink-0" />
+                    Email referent
+                  </label>
                   <Input
                     type="email"
                     value={selectedClient.referent_email || ''}
@@ -322,7 +428,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-1 block">Functie referent</label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                    <Briefcase className="w-4 h-4 shrink-0" />
+                    Functie referent
+                  </label>
                   <Input
                     type="text"
                     value={selectedClient.referent_function || ''}
@@ -335,8 +444,11 @@ export default function ClientsPage() {
               </div>
             </div>
 
-            <div className="mt-6">
-              <h3 className="mb-3 font-semibold text-sm text-card-foreground">Geassocieerde werknemers</h3>
+            <div className="mt-8">
+              <h3 className="flex items-center gap-2 mb-3 font-semibold text-sm text-card-foreground">
+                <Users className="w-5 h-5 text-purple-600" />
+                Geassocieerde werknemers
+              </h3>
               <ul className="max-h-40 overflow-y-auto text-sm space-y-2 border border-border rounded-md p-3 bg-muted/30">
                 {employees.length === 0 ? (
                   <li className="text-muted-foreground">Geen werknemers gekoppeld</li>
