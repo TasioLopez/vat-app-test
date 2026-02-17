@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import PhoneInput from 'react-phone-input-2';
@@ -57,6 +57,8 @@ export default function UsersTable() {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editedUser, setEditedUser] = useState<Partial<User>>({});
+    const [editClientSearch, setEditClientSearch] = useState("");
+    const [editEmployeeSearch, setEditEmployeeSearch] = useState("");
     const [previewUserId, setPreviewUserId] = useState<string | null>(null);
     const [previewKind, setPreviewKind] = useState<"werkgevers" | "werknemers" | null>(null);
 
@@ -94,6 +96,14 @@ export default function UsersTable() {
     const handleEdit = (user: User) => {
         setEditingId(user.id);
         setEditedUser(user);
+        setEditClientSearch("");
+        setEditEmployeeSearch("");
+    };
+
+    const closeEditModal = () => {
+        setEditingId(null);
+        setEditClientSearch("");
+        setEditEmployeeSearch("");
     };
 
     const handleSave = async (id: string) => {
@@ -147,8 +157,7 @@ export default function UsersTable() {
             supabase.from("employee_users").insert({ user_id: id, employee_id: eid })
         ));
 
-        // Close modal
-        setEditingId(null);
+        closeEditModal();
     };
 
 
@@ -169,19 +178,17 @@ export default function UsersTable() {
 
 
     const toggleClientSelection = (userId: string, clientId: string) => {
-        setUserClients(prev => {
-            const current = new Set(prev[userId] || []);
-            current.has(clientId) ? current.delete(clientId) : current.add(clientId);
-            return { ...prev, [userId]: Array.from(current) };
-        });
-        // Also clear employees not belonging to any selected client
-        setUserEmployees(prev => {
-            const filtered = (prev[userId] || []).filter(eid => {
+        const current = new Set(userClients[userId] || []);
+        current.has(clientId) ? current.delete(clientId) : current.add(clientId);
+        const newSelected = Array.from(current);
+        setUserClients(prev => ({ ...prev, [userId]: newSelected }));
+        setUserEmployees(prev => ({
+            ...prev,
+            [userId]: (prev[userId] || []).filter(eid => {
                 const emp = employees.find(e => e.id === eid);
-                return emp && (userClients[userId] || []).includes(emp.client_id);
-            });
-            return { ...prev, [userId]: filtered };
-        });
+                return emp && newSelected.includes(emp.client_id);
+            }),
+        }));
     };
 
     const addEmployee = (userId: string, employeeId: string) => {
@@ -201,19 +208,42 @@ export default function UsersTable() {
         }));
     };
 
+    const selectedClientsForEdit = editingId ? (userClients[editingId] || []) : [];
+    const filteredClientsForEdit = useMemo(() => {
+        const q = editClientSearch.trim().toLowerCase();
+        if (!q) return [];
+        const selected = editingId ? (userClients[editingId] || []) : [];
+        return clients
+            .filter(c => c.name.toLowerCase().includes(q))
+            .filter(c => !selected.includes(c.id))
+            .slice(0, 50);
+    }, [clients, editingId, userClients, editClientSearch]);
+
+    const selectableEmployeesForEdit = useMemo(
+        () => employees.filter(e => selectedClientsForEdit.includes(e.client_id)),
+        [employees, editingId, userClients]
+    );
+    const filteredEmployeesForEdit = useMemo(() => {
+        const assigned = editingId ? (userEmployees[editingId] || []) : [];
+        const q = editEmployeeSearch.trim().toLowerCase();
+        return selectableEmployeesForEdit
+            .filter(e => !assigned.includes(e.id))
+            .filter(e => (e.first_name + " " + e.last_name).toLowerCase().includes(q))
+            .slice(0, 30);
+    }, [selectableEmployeesForEdit, editingId, userEmployees, editEmployeeSearch]);
+
     const renderModal = (user: User) => {
         const uid = user.id;
         const selectedClients = userClients[uid] || [];
-        const selectableEmployees = employees.filter(e => selectedClients.includes(e.client_id));
 
         return (
             <div className="fixed inset-0 backdrop-blur-sm bg-background/80 z-50 flex items-center justify-center p-4">
-                <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-3xl max-h-[90vh] overflow-y-auto">
-                    <h2 className="text-2xl font-semibold mb-6 text-card-foreground">Gebruiker bewerken</h2>
+                <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-3xl max-h-[90vh] flex flex-col">
+                    <h2 className="text-2xl font-semibold mb-6 text-card-foreground shrink-0">Gebruiker bewerken</h2>
 
-                    <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex flex-col md:flex-row gap-8 min-h-0 flex-1">
                         {/* Left: User Info */}
-                        <div className="flex-1 space-y-4">
+                        <div className="flex-1 space-y-4 shrink-0">
                             <div>
                                 <label className="text-sm font-medium text-muted-foreground mb-1 block">Voornaam</label>
                                 <Input
@@ -280,71 +310,147 @@ export default function UsersTable() {
                             </div>
                         </div>
 
-                        {/* Right: Client/Employee Assignment (Only for non-admins) */}
+                        {/* Right: Client/Employee Assignment (Only for non-admins) - scrollable */}
                         {editedUser.role !== 'admin' && (
-                            <div className="flex-1 space-y-4">
+                            <div className="flex-1 min-h-0 flex flex-col max-h-[50vh] overflow-y-auto space-y-4">
                                 <div>
                                     <label className="text-sm font-semibold mb-2 block text-card-foreground">Klanten toewijzen</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {clients.map(c => {
-                                            const selected = selectedClients.includes(c.id);
-                                            return (
-                                                <button
-                                                    key={c.id}
-                                                    onClick={() => toggleClientSelection(uid, c.id)}
-                                                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                                                        selected 
-                                                            ? "bg-primary text-primary-foreground border-primary" 
-                                                            : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-                                                    }`}
-                                                >
-                                                    {c.name}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-2">{selectedClients.length} klanten geselecteerd</p>
+                                    <ScrollArea className="max-h-[120px] rounded-md border border-border p-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedClients.map(cid => {
+                                                const c = clients.find(cl => cl.id === cid);
+                                                if (!c) return null;
+                                                return (
+                                                    <span
+                                                        key={c.id}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-full bg-primary text-primary-foreground border border-primary"
+                                                    >
+                                                        {c.name}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleClientSelection(uid, c.id)}
+                                                            className="hover:bg-primary-foreground/20 rounded-full p-0.5 focus:outline-none focus:ring-2 focus:ring-ring"
+                                                            aria-label={`Verwijder ${c.name}`}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    </ScrollArea>
+                                    <label htmlFor="edit-client-search" className="sr-only">Zoek klant</label>
+                                    <Input
+                                        id="edit-client-search"
+                                        placeholder="Zoek klant…"
+                                        value={editClientSearch}
+                                        onChange={(e) => setEditClientSearch(e.target.value)}
+                                        className="mt-2"
+                                        aria-label="Zoek klant om toe te voegen"
+                                    />
+                                    {editClientSearch.trim() && (
+                                        <ScrollArea className="max-h-[200px] rounded-md border border-border mt-2">
+                                            <ul className="p-2 space-y-1">
+                                                {filteredClientsForEdit.length === 0 ? (
+                                                    <li className="text-sm text-muted-foreground py-2">Geen klanten gevonden</li>
+                                                ) : (
+                                                    filteredClientsForEdit.map(c => (
+                                                        <li key={c.id}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    toggleClientSelection(uid, c.id);
+                                                                    setEditClientSearch("");
+                                                                }}
+                                                                className="w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors"
+                                                            >
+                                                                {c.name}
+                                                            </button>
+                                                        </li>
+                                                    ))
+                                                )}
+                                            </ul>
+                                        </ScrollArea>
+                                    )}
+                                    {!editClientSearch.trim() && (
+                                        <p className="text-xs text-muted-foreground mt-1">Typ om een klant te zoeken</p>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="text-sm font-semibold block mb-2 text-card-foreground">Medewerker toevoegen</label>
-                                    <select
-                                        onChange={(e) => {
-                                            if (e.target.value) addEmployee(uid, e.target.value);
-                                            e.target.value = "";
-                                        }}
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <option value="">Medewerker selecteren...</option>
-                                        {selectableEmployees.map(e => (
-                                            <option key={e.id} value={e.id}>
-                                                {e.first_name} {e.last_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {selectedClients.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">Selecteer eerst een of meer klanten</p>
+                                    ) : (
+                                        <>
+                                            <label htmlFor="edit-employee-search" className="sr-only">Zoek medewerker</label>
+                                            <Input
+                                                id="edit-employee-search"
+                                                placeholder="Zoek medewerker…"
+                                                value={editEmployeeSearch}
+                                                onChange={(e) => setEditEmployeeSearch(e.target.value)}
+                                                aria-label="Zoek medewerker om toe te voegen"
+                                            />
+                                            <ScrollArea className="max-h-[180px] rounded-md border border-border mt-2">
+                                                <ul className="p-2 space-y-1">
+                                                    {filteredEmployeesForEdit.length === 0 ? (
+                                                        <li className="text-sm text-muted-foreground py-2">
+                                                            {editEmployeeSearch.trim() ? "Geen medewerkers gevonden" : "Typ om te zoeken"}
+                                                        </li>
+                                                    ) : (
+                                                        filteredEmployeesForEdit.map(e => (
+                                                            <li key={e.id}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        addEmployee(uid, e.id);
+                                                                        setEditEmployeeSearch("");
+                                                                    }}
+                                                                    className="w-full text-left text-sm px-3 py-2 rounded-md hover:bg-muted transition-colors"
+                                                                >
+                                                                    {e.first_name} {e.last_name}
+                                                                </button>
+                                                            </li>
+                                                        ))
+                                                    )}
+                                                </ul>
+                                            </ScrollArea>
+                                        </>
+                                    )}
                                 </div>
 
                                 <div>
                                     <label className="text-sm font-semibold block mb-2 text-card-foreground">Toegewezen werknemers</label>
-                                    <ul className="space-y-2">
-                                        {(userEmployees[uid] || []).map(eid => {
-                                            const emp = employees.find(e => e.id === eid);
-                                            if (!emp) return null;
-                                            return (
-                                                <li key={eid} className="flex justify-between items-center bg-muted px-3 py-2 rounded-md">
-                                                    <span className="text-sm text-card-foreground">{emp.first_name} {emp.last_name}</span>
-                                                    <button onClick={() => removeEmployee(uid, eid)} className="text-error-600 hover:text-error-700 text-sm font-medium">✕</button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
+                                    <ScrollArea className="max-h-[160px] rounded-md border border-border">
+                                        <ul className="p-2 space-y-2">
+                                            {(userEmployees[uid] || []).map(eid => {
+                                                const emp = employees.find(e => e.id === eid);
+                                                if (!emp) return null;
+                                                return (
+                                                    <li key={eid} className="flex justify-between items-center bg-muted px-3 py-2 rounded-md">
+                                                        <span className="text-sm text-card-foreground">{emp.first_name} {emp.last_name}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeEmployee(uid, eid)}
+                                                            className="text-error-600 hover:text-error-700 text-sm font-medium"
+                                                            aria-label={`Verwijder ${emp.first_name} ${emp.last_name}`}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </ScrollArea>
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Footer Buttons */}
-                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border">
-                        <Button variant="outline" onClick={() => setEditingId(null)}>Annuleren</Button>
+                    <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border shrink-0">
+                        <Button variant="outline" onClick={closeEditModal}>Annuleren</Button>
                         <Button onClick={() => handleSave(uid)}>Opslaan</Button>
                     </div>
                 </div>
