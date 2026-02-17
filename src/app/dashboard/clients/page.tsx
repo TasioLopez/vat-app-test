@@ -11,7 +11,10 @@ import { Trash2, Pencil } from 'lucide-react';
 import { trackAccess } from '@/lib/tracking';
 
 
-type Client = Database['public']['Tables']['clients']['Row'];
+type Client = Database['public']['Tables']['clients']['Row'] & {
+  phone?: string | null;
+  plaats?: string | null;
+};
 type Employee = Database['public']['Tables']['employees']['Row'];
 
 export default function ClientsPage() {
