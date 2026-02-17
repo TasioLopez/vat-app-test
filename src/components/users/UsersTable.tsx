@@ -14,7 +14,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,6 +57,8 @@ export default function UsersTable() {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editedUser, setEditedUser] = useState<Partial<User>>({});
+    const [previewUserId, setPreviewUserId] = useState<string | null>(null);
+    const [previewKind, setPreviewKind] = useState<"werkgevers" | "werknemers" | null>(null);
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -345,6 +353,30 @@ export default function UsersTable() {
     };
 
 
+    const openPreview = (userId: string, kind: "werkgevers" | "werknemers") => {
+        setPreviewUserId(userId);
+        setPreviewKind(kind);
+    };
+
+    const previewUser = previewUserId ? users.find((u) => u.id === previewUserId) : null;
+    const previewWerkgeverNames =
+        previewUser && previewKind === "werkgevers"
+            ? previewUser.role === "admin"
+                ? clients.map((c) => c.name)
+                : (userClients[previewUserId!] || [])
+                      .map((cid) => clients.find((c) => c.id === cid)?.name)
+                      .filter(Boolean) as string[]
+            : [];
+    const previewWerknemerNames =
+        previewUser && previewKind === "werknemers"
+            ? previewUser.role === "admin"
+                ? employees.map((e) => `${e.first_name} ${e.last_name}`)
+                : (userEmployees[previewUserId!] || []).map((eid) => {
+                      const emp = employees.find((e) => e.id === eid);
+                      return emp ? `${emp.first_name} ${emp.last_name}` : null;
+                  }).filter(Boolean) as string[]
+            : [];
+
     if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
 
     return (
@@ -362,42 +394,80 @@ export default function UsersTable() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {users.map((u) => (
-                        <TableRow key={u.id}>
-                            <TableCell className="font-medium">{u.email}</TableCell>
-                            <TableCell>{u.first_name}</TableCell>
-                            <TableCell>{u.last_name}</TableCell>
-                            <TableCell>
-                                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                                    {u.role}
-                                </span>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                                {(userClients[u.id] || [])
-                                    .map(cid => clients.find(c => c.id === cid)?.name)
-                                    .filter(Boolean)
-                                    .join(", ") || "—"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                                {(userEmployees[u.id] || [])
-                                    .map(eid => {
-                                        const emp = employees.find(e => e.id === eid);
-                                        return emp ? `${emp.first_name} ${emp.last_name}` : null;
-                                    })
-                                    .filter(Boolean)
-                                    .join(", ") || "—"}
-                            </TableCell>
-                            <TableCell>
-                                <div className="flex gap-2">
-                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(u)}>Bewerken</Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDelete(u.id)}>Verwijderen</Button>
-                                </div>
-                                {editingId === u.id && renderModal(u)}
-                            </TableCell>
-                        </TableRow>
-                    ))}
+                    {users.map((u) => {
+                        const werkgeverCount = u.role === "admin" ? null : (userClients[u.id] || []).length;
+                        const werknemerCount = u.role === "admin" ? null : (userEmployees[u.id] || []).length;
+                        const hasWerkgevers = u.role === "admin" || (werkgeverCount ?? 0) > 0;
+                        const hasWerknemers = u.role === "admin" || (werknemerCount ?? 0) > 0;
+                        return (
+                            <TableRow key={u.id}>
+                                <TableCell className="font-medium">{u.email}</TableCell>
+                                <TableCell>{u.first_name}</TableCell>
+                                <TableCell>{u.last_name}</TableCell>
+                                <TableCell>
+                                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                        {u.role}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {hasWerkgevers ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => openPreview(u.id, "werkgevers")}
+                                            className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+                                        >
+                                            {u.role === "admin" ? "ALLE" : werkgeverCount}
+                                        </button>
+                                    ) : (
+                                        "—"
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {hasWerknemers ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => openPreview(u.id, "werknemers")}
+                                            className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
+                                        >
+                                            {u.role === "admin" ? "ALLE" : werknemerCount}
+                                        </button>
+                                    ) : (
+                                        "—"
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="sm" onClick={() => handleEdit(u)}>Bewerken</Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDelete(u.id)}>Verwijderen</Button>
+                                    </div>
+                                    {editingId === u.id && renderModal(u)}
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
                 </TableBody>
             </Table>
+
+            <Dialog open={!!previewUserId && !!previewKind} onOpenChange={(open) => !open && (setPreviewUserId(null), setPreviewKind(null))}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {previewKind === "werkgevers" && previewUser && `Werkgevers – ${previewUser.first_name} ${previewUser.last_name}`}
+                            {previewKind === "werknemers" && previewUser && `Werknemers – ${previewUser.first_name} ${previewUser.last_name}`}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-60 rounded-md border border-border p-3">
+                        <ul className="space-y-1.5 text-sm text-muted-foreground">
+                            {previewKind === "werkgevers" && previewWerkgeverNames.map((name, i) => (
+                                <li key={i}>{name}</li>
+                            ))}
+                            {previewKind === "werknemers" && previewWerknemerNames.map((name, i) => (
+                                <li key={i}>{name}</li>
+                            ))}
+                        </ul>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
