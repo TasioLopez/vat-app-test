@@ -59,6 +59,7 @@ export default function UsersTable() {
     const [editedUser, setEditedUser] = useState<Partial<User>>({});
     const [editClientSearch, setEditClientSearch] = useState("");
     const [editEmployeeSearch, setEditEmployeeSearch] = useState("");
+    const [editModalTab, setEditModalTab] = useState<"profiel" | "toegang">("profiel");
     const [previewUserId, setPreviewUserId] = useState<string | null>(null);
     const [previewKind, setPreviewKind] = useState<"werkgevers" | "werknemers" | null>(null);
 
@@ -98,6 +99,7 @@ export default function UsersTable() {
         setEditedUser(user);
         setEditClientSearch("");
         setEditEmployeeSearch("");
+        setEditModalTab("profiel");
     };
 
     const closeEditModal = () => {
@@ -238,12 +240,47 @@ export default function UsersTable() {
 
         return (
             <div className="fixed inset-0 backdrop-blur-sm bg-background/80 z-50 flex items-center justify-center p-4">
-                <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-3xl max-h-[90vh] flex flex-col">
-                    <h2 className="text-2xl font-semibold mb-6 text-card-foreground shrink-0">Gebruiker bewerken</h2>
+                <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-4xl max-h-[90vh] flex flex-col">
+                    <h2 className="text-2xl font-semibold mb-4 text-card-foreground shrink-0">Gebruiker bewerken</h2>
 
-                    <div className="flex flex-col md:flex-row gap-8 min-h-0 flex-1">
-                        {/* Left: User Info */}
-                        <div className="flex-1 space-y-4 shrink-0">
+                    {/* Tab strip */}
+                    <div role="tablist" aria-label="Bewerken secties" className="flex border-b border-border mb-4 shrink-0">
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={editModalTab === "profiel"}
+                            aria-controls="edit-modal-profiel"
+                            id="tab-profiel"
+                            onClick={() => setEditModalTab("profiel")}
+                            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                                editModalTab === "profiel"
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            Profiel
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={editModalTab === "toegang"}
+                            aria-controls="edit-modal-toegang"
+                            id="tab-toegang"
+                            onClick={() => setEditModalTab("toegang")}
+                            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                                editModalTab === "toegang"
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            Toegang en werknemers
+                        </button>
+                    </div>
+
+                    {/* Content area */}
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        {editModalTab === "profiel" && (
+                            <div id="edit-modal-profiel" role="tabpanel" aria-labelledby="tab-profiel" className="max-w-md space-y-4">
                             <div>
                                 <label className="text-sm font-medium text-muted-foreground mb-1 block">Voornaam</label>
                                 <Input
@@ -308,16 +345,21 @@ export default function UsersTable() {
                                     <option value="user">Gebruiker</option>
                                 </select>
                             </div>
-                        </div>
+                            </div>
+                        )}
 
-                        {/* Right: Client/Employee Assignment (Only for non-admins) - scrollable */}
-                        {editedUser.role !== 'admin' && (
-                            <div className="flex-1 min-h-0 flex flex-col max-h-[50vh] overflow-y-auto space-y-4">
+                        {editModalTab === "toegang" && (
+                            <div id="edit-modal-toegang" role="tabpanel" aria-labelledby="tab-toegang" className="space-y-6">
+                            {editedUser.role === "admin" ? (
+                                <p className="text-sm text-muted-foreground">Beheerders hebben toegang tot alle klanten en werknemers.</p>
+                            ) : (
+                            <>
                                 <div>
                                     <label className="text-sm font-semibold mb-2 block text-card-foreground">Klanten toewijzen</label>
                                     <p className="text-xs text-muted-foreground mb-2">{selectedClients.length} klanten geselecteerd</p>
-                                    <ScrollArea className="max-h-[120px] rounded-md border border-border p-2">
-                                        <div className="flex flex-wrap gap-2">
+                                    <div className="h-[120px] overflow-hidden rounded-md border border-border">
+                                        <ScrollArea className="h-full">
+                                        <div className="flex flex-wrap gap-2 p-2">
                                             {selectedClients.map(cid => {
                                                 const c = clients.find(cl => cl.id === cid);
                                                 if (!c) return null;
@@ -339,7 +381,8 @@ export default function UsersTable() {
                                                 );
                                             })}
                                         </div>
-                                    </ScrollArea>
+                                        </ScrollArea>
+                                    </div>
                                     <label htmlFor="edit-client-search" className="sr-only">Zoek klant</label>
                                     <Input
                                         id="edit-client-search"
@@ -350,7 +393,8 @@ export default function UsersTable() {
                                         aria-label="Zoek klant om toe te voegen"
                                     />
                                     {editClientSearch.trim() && (
-                                        <ScrollArea className="max-h-[200px] rounded-md border border-border mt-2">
+                                        <div className="h-[200px] overflow-hidden rounded-md border border-border mt-2">
+                                            <ScrollArea className="h-full">
                                             <ul className="p-2 space-y-1">
                                                 {filteredClientsForEdit.length === 0 ? (
                                                     <li className="text-sm text-muted-foreground py-2">Geen klanten gevonden</li>
@@ -371,7 +415,8 @@ export default function UsersTable() {
                                                     ))
                                                 )}
                                             </ul>
-                                        </ScrollArea>
+                                            </ScrollArea>
+                                        </div>
                                     )}
                                     {!editClientSearch.trim() && (
                                         <p className="text-xs text-muted-foreground mt-1">Typ om een klant te zoeken</p>
@@ -392,7 +437,8 @@ export default function UsersTable() {
                                                 onChange={(e) => setEditEmployeeSearch(e.target.value)}
                                                 aria-label="Zoek medewerker om toe te voegen"
                                             />
-                                            <ScrollArea className="max-h-[180px] rounded-md border border-border mt-2">
+                                            <div className="h-[180px] overflow-hidden rounded-md border border-border mt-2">
+                                                <ScrollArea className="h-full">
                                                 <ul className="p-2 space-y-1">
                                                     {filteredEmployeesForEdit.length === 0 ? (
                                                         <li className="text-sm text-muted-foreground py-2">
@@ -415,14 +461,16 @@ export default function UsersTable() {
                                                         ))
                                                     )}
                                                 </ul>
-                                            </ScrollArea>
+                                                </ScrollArea>
+                                            </div>
                                         </>
                                     )}
                                 </div>
 
                                 <div>
                                     <label className="text-sm font-semibold block mb-2 text-card-foreground">Toegewezen werknemers</label>
-                                    <ScrollArea className="max-h-[160px] rounded-md border border-border">
+                                    <div className="h-[200px] overflow-hidden rounded-md border border-border">
+                                        <ScrollArea className="h-full">
                                         <ul className="p-2 space-y-2">
                                             {(userEmployees[uid] || []).map(eid => {
                                                 const emp = employees.find(e => e.id === eid);
@@ -442,8 +490,11 @@ export default function UsersTable() {
                                                 );
                                             })}
                                         </ul>
-                                    </ScrollArea>
+                                        </ScrollArea>
+                                    </div>
                                 </div>
+                            </>
+                            )}
                             </div>
                         )}
                     </div>
