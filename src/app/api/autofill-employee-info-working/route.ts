@@ -20,7 +20,7 @@ const DOCUMENT_PRIORITY = {
 };
 
 // Fields that must prefer AD report over intake when both have a value
-const AD_FIRST_FIELDS = ['work_experience'];
+const AD_FIRST_FIELDS = ['work_experience', 'drivers_license', 'drivers_license_type'];
 
 function isFilled(v: unknown): boolean {
   return v != null && v !== '' && (typeof v !== 'string' || v.trim() !== '');
@@ -786,6 +786,25 @@ function mapAndValidateData(extractedData: any): any {
         mappedData[mappedKey] = [];
         console.log(`✅ Set transport_type to empty array`);
       }
+    } else if (mappedKey === 'drivers_license') {
+      if (typeof value === 'boolean') {
+        mappedData[mappedKey] = value;
+      } else if (typeof value === 'string') {
+        const s = value.toLowerCase().trim();
+        mappedData[mappedKey] = s === 'ja' || s === 'yes' || s === 'true' || s === '1';
+        console.log(`✅ Converted drivers_license from "${value}" to ${mappedData[mappedKey]}`);
+      } else {
+        mappedData[mappedKey] = Boolean(value);
+      }
+    } else if (mappedKey === 'drivers_license_type') {
+      if (Array.isArray(value)) {
+        mappedData[mappedKey] = value.map((v: unknown) => String(v).trim()).filter(Boolean);
+      } else if (typeof value === 'string' && value.length > 0) {
+        mappedData[mappedKey] = value.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean);
+        console.log(`✅ Converted drivers_license_type from string "${value}" to array`);
+      } else {
+        mappedData[mappedKey] = [];
+      }
           } else {
             mappedData[mappedKey] = value;
           }
@@ -1087,6 +1106,8 @@ VELDEN TE EXTRACTEN (employee_details tabel - ALLEEN uit tekst):
 - work_experience: Extract functietitels uit beschrijvingen (ALLEEN functietitels, geen datums/jaren/organisaties)
 - education_level: Zoek ALLE opleidingsniveaus in tekst en selecteer het HOOGSTE niveau (Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1, MBO 2, MTS, MBO 3, MBO 4, HBO, WO). MTS is hoger dan LTS.
 - education_name: Zoek opleiding/cursus naam in tekst
+- drivers_license: boolean - true als "rijbewijs" positief vermeld (heeft rijbewijs, beschikt over rijbewijs), false als expliciet geen rijbewijs, weglaten indien niet vermeld
+- drivers_license_type: array van strings - bijv. ["B", "CE"] als types genoemd worden (rijbewijs B, C, CE, etc.); weglaten indien niet vermeld
 
 CONTACTPERSOON / AANMELDER (referent): Zoek in tekst naar contactpersoon, aanmelder, HR-contact:
 - referent_first_name, referent_last_name: Voornaam en achternaam
@@ -1099,8 +1120,6 @@ NIET EXTRACTEN (niet beschikbaar in AD rapporten):
 - computer_skills (NIET in AD rapport)
 - has_computer (NIET in AD rapport)
 - dutch_speaking/writing/reading (NIET in AD rapport)
-- drivers_license (NIET in AD rapport)
-- drivers_license_type (NIET in AD rapport)
 
 BELANGRIJK:
 - Extract ALLEEN uit vrije tekst beschrijvingen
