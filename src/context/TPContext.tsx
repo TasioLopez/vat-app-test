@@ -6,12 +6,15 @@ import React, {
   useMemo,
   useState,
   useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import type { TPData as TPDataType } from '@/lib/tp/load'; // type-only import
 import type { SectionKey } from '@/components/tp/sections/registry';
 
 export type TPData = TPDataType;
+
+const SAVE_ORDER: SectionKey[] = ['cover', 'empinfo', 'part3', 'bijlage'];
 
 type SectionPageCounts = {
   cover: number;
@@ -29,6 +32,13 @@ type TPContextValue = {
   sectionPageCounts: SectionPageCounts;
   setSectionPageCount: (sectionKey: SectionKey, count: number) => void;
   getPageOffset: (sectionKey: SectionKey) => number;
+  /** Unsaved changes guard */
+  isDirty: boolean;
+  markDirty: () => void;
+  markSaved: () => void;
+  registerSaveHandler: (sectionKey: SectionKey, fn: () => Promise<void>) => void;
+  unregisterSaveHandler: (sectionKey: SectionKey) => void;
+  saveAll: () => Promise<void>;
 };
 
 const Ctx = createContext<TPContextValue | undefined>(undefined);
@@ -42,6 +52,8 @@ export function TPProvider({
   initialData?: TPData;
 }) {
   const [tpData, setTPData] = useState<TPData>(initialData ?? ({} as TPData));
+  const [isDirty, setIsDirty] = useState(false);
+  const saveHandlersRef = useRef<Partial<Record<SectionKey, () => Promise<void>>>>({});
   const [sectionPageCounts, setSectionPageCounts] = useState<SectionPageCounts>({
     cover: 1, // Cover page is always 1 page
     empinfo: 0,
@@ -49,8 +61,28 @@ export function TPProvider({
     bijlage: 0,
   });
 
+  const markDirty = useCallback(() => setIsDirty(true), []);
+  const markSaved = useCallback(() => setIsDirty(false), []);
+
   const updateField = useCallback((field: string, value: any) => {
     setTPData((prev) => ({ ...(prev as any), [field]: value }));
+    setIsDirty(true);
+  }, []);
+
+  const registerSaveHandler = useCallback((sectionKey: SectionKey, fn: () => Promise<void>) => {
+    saveHandlersRef.current[sectionKey] = fn;
+  }, []);
+
+  const unregisterSaveHandler = useCallback((sectionKey: SectionKey) => {
+    delete saveHandlersRef.current[sectionKey];
+  }, []);
+
+  const saveAll = useCallback(async () => {
+    for (const key of SAVE_ORDER) {
+      const fn = saveHandlersRef.current[key];
+      if (fn) await fn();
+    }
+    setIsDirty(false);
   }, []);
 
   const setSectionPageCount = useCallback((sectionKey: SectionKey, count: number) => {
@@ -71,15 +103,33 @@ export function TPProvider({
   }, [sectionPageCounts]);
 
   const value = useMemo(
-    () => ({ 
-      tpData, 
-      setTPData, 
+    () => ({
+      tpData,
+      setTPData,
       updateField,
       sectionPageCounts,
       setSectionPageCount,
       getPageOffset,
+      isDirty,
+      markDirty,
+      markSaved,
+      registerSaveHandler,
+      unregisterSaveHandler,
+      saveAll,
     }),
-    [tpData, updateField, sectionPageCounts, setSectionPageCount, getPageOffset]
+    [
+      tpData,
+      updateField,
+      sectionPageCounts,
+      setSectionPageCount,
+      getPageOffset,
+      isDirty,
+      markDirty,
+      markSaved,
+      registerSaveHandler,
+      unregisterSaveHandler,
+      saveAll,
+    ]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
