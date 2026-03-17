@@ -44,6 +44,8 @@ export default function ClientsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [referentsList, setReferentsList] = useState<ReferentRow[]>([]);
   const [newReferent, setNewReferent] = useState<Partial<ReferentRow> | null>(null);
+  const [editingReferentId, setEditingReferentId] = useState<string | null>(null);
+  const [editingReferentDraft, setEditingReferentDraft] = useState<Partial<ReferentRow>>({});
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -147,12 +149,11 @@ export default function ClientsPage() {
   };
 
   const handleEdit = async (client: Client) => {
-    if (userRole !== 'admin') return;
     setSelectedClient(client);
     setNewReferent(null);
+    setEditingReferentId(null);
     await fetchEmployees(client.id);
     await fetchReferents(client.id);
-    // Track when client is opened
     await trackAccess('client', client.id, false);
   };
 
@@ -227,8 +228,37 @@ export default function ClientsPage() {
   };
 
   const updateReferent = async (referentId: string, updates: Partial<ReferentRow>) => {
-    const { error } = await supabase.from('referents' as any).update(updates).eq('id', referentId);
-    if (!error && selectedClient) await fetchReferents(selectedClient.id);
+    const { error } = await (supabase as any).from('referents').update(updates).eq('id', referentId);
+    if (!error && selectedClient) {
+      await fetchReferents(selectedClient.id);
+      setEditingReferentId(null);
+      setEditingReferentDraft({});
+    }
+  };
+
+  const startEditReferent = (r: ReferentRow) => {
+    setEditingReferentId(r.id);
+    setEditingReferentDraft({
+      first_name: r.first_name,
+      last_name: r.last_name,
+      phone: r.phone,
+      email: r.email,
+      referent_function: r.referent_function,
+      gender: r.gender,
+    });
+    setNewReferent(null);
+  };
+
+  const saveEditReferent = async () => {
+    if (!editingReferentId) return;
+    await updateReferent(editingReferentId, {
+      first_name: (editingReferentDraft.first_name ?? '').trim() || null,
+      last_name: (editingReferentDraft.last_name ?? '').trim() || null,
+      phone: (editingReferentDraft.phone as string)?.trim() || null,
+      email: (editingReferentDraft.email as string)?.trim() || null,
+      referent_function: (editingReferentDraft.referent_function as string)?.trim() || null,
+      gender: (editingReferentDraft.gender as string)?.trim() || null,
+    });
   };
 
 
@@ -344,8 +374,8 @@ export default function ClientsPage() {
         ))}
       </div>
 
-      {/* Edit Modal */}
-      {selectedClient && userRole === 'admin' && (
+      {/* Edit Modal – open for admin and for users (associated clients); users can edit referents only */}
+      {selectedClient && (
         <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
           <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">Werkgever bewerken</h2>
@@ -366,6 +396,7 @@ export default function ClientsPage() {
                     value={selectedClient.name}
                     onChange={(e) => setSelectedClient({ ...selectedClient, name: e.target.value })}
                     placeholder="Company Name"
+                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -376,6 +407,7 @@ export default function ClientsPage() {
                   <select
                     value={selectedClient.industry || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
+                    disabled={userRole !== 'admin'}
                     className="flex h-10 w-full rounded-lg border-2 border-purple-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:border-purple-500 hover:border-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Selecteer een branche</option>
@@ -397,6 +429,7 @@ export default function ClientsPage() {
                     value={selectedClient.contact_email || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, contact_email: e.target.value })}
                     placeholder="Contact Email"
+                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -409,6 +442,7 @@ export default function ClientsPage() {
                     value={selectedClient.phone || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, phone: e.target.value })}
                     placeholder="010-1234567"
+                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -421,6 +455,7 @@ export default function ClientsPage() {
                     value={selectedClient.plaats || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, plaats: e.target.value })}
                     placeholder="Rotterdam"
+                    disabled={userRole !== 'admin'}
                   />
                 </div>
               </div>
@@ -433,19 +468,42 @@ export default function ClientsPage() {
                 </h3>
                 <ul className="space-y-3">
                   {referentsList.map((r) => (
-                    <li key={r.id} className="flex flex-wrap items-center gap-2 rounded border border-border/50 bg-background p-3">
-                      <span className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}</span>
-                      {r.referent_function && <span className="text-muted-foreground">({r.referent_function})</span>}
-                      {r.is_default && <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Standaard</span>}
-                      {r.phone && <span className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{r.phone}</span>}
-                      {r.email && <span className="text-sm text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>}
-                      {r.gender && <span className="text-sm text-muted-foreground">{r.gender}</span>}
-                      <div className="ml-auto flex gap-1">
-                        {!r.is_default && (
-                          <Button type="button" variant="outline" size="sm" onClick={() => setReferentDefault(r.id)}>Standaard</Button>
-                        )}
-                        <Button type="button" variant="ghost" size="sm" onClick={() => deleteReferent(r.id)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
+                    <li key={r.id} className="rounded border border-border/50 bg-background p-3">
+                      {editingReferentId === r.id ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input placeholder="Voornaam" value={editingReferentDraft.first_name ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, first_name: e.target.value }))} />
+                          <Input placeholder="Achternaam" value={editingReferentDraft.last_name ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, last_name: e.target.value }))} />
+                          <Input placeholder="Telefoon" value={(editingReferentDraft.phone as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, phone: e.target.value }))} />
+                          <Input placeholder="E-mail" value={(editingReferentDraft.email as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, email: e.target.value }))} />
+                          <Input placeholder="Functie" value={(editingReferentDraft.referent_function as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, referent_function: e.target.value }))} />
+                          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={(editingReferentDraft.gender as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, gender: e.target.value }))}>
+                            <option value="">Geslacht</option>
+                            <option value="Man">Man</option>
+                            <option value="Vrouw">Vrouw</option>
+                            <option value="Anders">Anders</option>
+                          </select>
+                          <div className="col-span-2 flex gap-2">
+                            <Button type="button" size="sm" onClick={saveEditReferent}>Opslaan</Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => { setEditingReferentId(null); setEditingReferentDraft({}); }}>Annuleren</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}</span>
+                          {r.referent_function && <span className="text-muted-foreground">({r.referent_function})</span>}
+                          {r.is_default && <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Standaard</span>}
+                          {r.phone && <span className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{r.phone}</span>}
+                          {r.email && <span className="text-sm text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>}
+                          {r.gender && <span className="text-sm text-muted-foreground">{r.gender}</span>}
+                          <div className="ml-auto flex gap-1">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => startEditReferent(r)} title="Bewerken"><Pencil className="w-4 h-4" /></Button>
+                            {!r.is_default && (
+                              <Button type="button" variant="outline" size="sm" onClick={() => setReferentDefault(r.id)}>Standaard</Button>
+                            )}
+                            <Button type="button" variant="ghost" size="sm" onClick={() => deleteReferent(r.id)}><Trash2 className="w-4 h-4" /></Button>
+                          </div>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -468,7 +526,7 @@ export default function ClientsPage() {
                     </div>
                   </div>
                 ) : (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setNewReferent({})}>+ Nieuwe referent</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setNewReferent({}); setEditingReferentId(null); }}>+ Nieuwe referent</Button>
                 )}
               </div>
             </div>
@@ -494,11 +552,13 @@ export default function ClientsPage() {
 
             <div className="mt-8 flex justify-end gap-4 pt-6 border-t border-purple-200/50">
               <Button variant="outline" onClick={() => setSelectedClient(null)} size="lg">
-                Annuleren
+                {userRole === 'admin' ? 'Annuleren' : 'Sluiten'}
               </Button>
-              <Button onClick={handleSave} size="lg">
-                Opslaan
-              </Button>
+              {userRole === 'admin' && (
+                <Button onClick={handleSave} size="lg">
+                  Opslaan
+                </Button>
+              )}
             </div>
           </div>
         </div>
