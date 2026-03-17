@@ -31,7 +31,7 @@ export async function resolveReferentForEmployee(
   if (!employee?.client_id) return null;
 
   if (employee.referent_id) {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("referents")
       .select("*")
       .eq("id", employee.referent_id)
@@ -39,7 +39,7 @@ export async function resolveReferentForEmployee(
     if (!error && data) return data as ReferentRow;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("referents")
     .select("*")
     .eq("client_id", employee.client_id)

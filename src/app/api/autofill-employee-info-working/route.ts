@@ -1524,7 +1524,7 @@ export async function GET(req: NextRequest) {
       if (employee?.client_id) {
         const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
         const suggestedFull = normalize(`${refFirst} ${refLast}`);
-        const { data: referents } = await supabase
+        const { data: referents } = await (supabase as any)
           .from('referents')
           .select('id, first_name, last_name')
           .eq('client_id', employee.client_id);

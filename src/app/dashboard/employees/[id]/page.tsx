@@ -132,7 +132,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     const fetchReferents = async (clientId: string) => {
         const { data, error } = await supabase
-            .from('referents')
+            .from('referents' as any)
             .select('id, first_name, last_name, referent_function, phone, email, gender')
             .eq('client_id', clientId)
             .order('display_order', { ascending: true, nullsFirst: false });
@@ -477,10 +477,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         if (!suggestedReferent || !employee?.client_id) return;
         setUpdating(true);
         try {
-            const { data: existingList } = await supabase.from('referents').select('id').eq('client_id', employee.client_id);
+            const { data: existingList } = await supabase.from('referents' as any).select('id').eq('client_id', employee.client_id);
             const isFirst = !existingList || existingList.length === 0;
             const { data: newRef, error: insertErr } = await supabase
-                .from('referents')
+                .from('referents' as any)
                 .insert({
                     client_id: employee.client_id,
                     first_name: suggestedReferent.first_name,

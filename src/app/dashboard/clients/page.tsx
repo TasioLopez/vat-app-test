@@ -138,7 +138,7 @@ export default function ClientsPage() {
 
   const fetchReferents = async (clientId: string) => {
     const { data, error } = await supabase
-      .from('referents')
+      .from('referents' as any)
       .select('id, client_id, first_name, last_name, phone, email, referent_function, gender, is_default, display_order')
       .eq('client_id', clientId)
       .order('display_order', { ascending: true, nullsFirst: false });
@@ -195,7 +195,7 @@ export default function ClientsPage() {
   const saveNewReferent = async () => {
     if (!selectedClient || !newReferent?.first_name?.trim() && !newReferent?.last_name?.trim()) return;
     const isFirst = referentsList.length === 0;
-    const { error } = await supabase.from('referents').insert({
+    const { error } = await supabase.from('referents' as any).insert({
       client_id: selectedClient.id,
       first_name: (newReferent.first_name ?? '').trim() || null,
       last_name: (newReferent.last_name ?? '').trim() || null,
@@ -215,19 +215,19 @@ export default function ClientsPage() {
     if (!selectedClient) return;
     const refs = referentsList.map((r) => ({ ...r, is_default: r.id === referentId }));
     for (const r of refs) {
-      await supabase.from('referents').update({ is_default: r.id === referentId }).eq('id', r.id);
+      await supabase.from('referents' as any).update({ is_default: r.id === referentId }).eq('id', r.id);
     }
     setReferentsList(refs);
   };
 
   const deleteReferent = async (referentId: string) => {
     if (!selectedClient) return;
-    const { error } = await supabase.from('referents').delete().eq('id', referentId);
+    const { error } = await supabase.from('referents' as any).delete().eq('id', referentId);
     if (!error) await fetchReferents(selectedClient.id);
   };
 
   const updateReferent = async (referentId: string, updates: Partial<ReferentRow>) => {
-    const { error } = await supabase.from('referents').update(updates).eq('id', referentId);
+    const { error } = await supabase.from('referents' as any).update(updates).eq('id', referentId);
     if (!error && selectedClient) await fetchReferents(selectedClient.id);
   };
 

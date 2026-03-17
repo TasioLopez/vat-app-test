@@ -74,7 +74,7 @@ export default function AddClientPage() {
         }
 
         if (newClient?.id && (form.referent_first_name?.trim() || form.referent_last_name?.trim())) {
-            await supabase.from('referents').insert({
+            await supabase.from('referents' as any).insert({
                 client_id: newClient.id,
                 first_name: form.referent_first_name?.trim() || null,
                 last_name: form.referent_last_name?.trim() || null,
