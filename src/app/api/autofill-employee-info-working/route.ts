@@ -35,6 +35,9 @@ function getFileType(path: string, docName?: string): { ext: string; mime: strin
   if (pathLower.endsWith('.docx') || nameLower.endsWith('.docx')) {
     return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
   }
+  if (pathLower.endsWith('.docm') || nameLower.endsWith('.docm')) {
+    return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+  }
   if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
     return { ext: 'doc', mime: 'application/msword' };
     }
