@@ -1529,7 +1529,7 @@ export async function GET(req: NextRequest) {
           .select('id, first_name, last_name')
           .eq('client_id', employee.client_id);
 
-        const match = referents?.find(r => {
+        const match = referents?.find((r: { id: string; first_name: string | null; last_name: string | null }) => {
           const full = normalize(`${(r.first_name ?? '')} ${(r.last_name ?? '')}`);
           return full === suggestedFull || (suggestedFull && full.includes(suggestedFull)) || (full && suggestedFull.includes(full));
         });
