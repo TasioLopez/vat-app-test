@@ -295,7 +295,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             // Only load if context is empty or missing essential fields
             if (Object.keys(tpData).length === 0 || !tpData.first_name) {
                 try {
-                    const { data: employee } = await supabase
+                    const { data: employee } = await (supabase as any)
                         .from('employees')
                         .select('email, first_name, last_name, client_id, referent_id')
                         .eq('id', employeeId)

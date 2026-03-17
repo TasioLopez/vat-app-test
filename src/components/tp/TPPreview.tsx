@@ -33,7 +33,7 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
       setIsLoading(true);
       try {
         const [employeeResult, detailsResult, metaResult] = await Promise.all([
-          supabase
+          (supabase as any)
             .from('employees')
             .select('email, first_name, last_name, client_id, referent_id')
             .eq('id', employeeId)

@@ -84,7 +84,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     async function fetchData() {
       setLoading(true);
 
-      const { data: employee } = await supabase
+      const { data: employee } = await (supabase as any)
         .from('employees')
         .select('email, first_name, last_name, client_id, referent_id')
         .eq('id', employeeId)

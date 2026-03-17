@@ -33,7 +33,7 @@ export async function loadTP(
 
   // 1) Base rows
   const [employeeResult, detailsResult, metaResult] = await Promise.all([
-    supabase
+    (supabase as any)
       .from("employees")
       .select("id, first_name, last_name, email, client_id, referent_id")
       .eq("id", employeeId)
