@@ -142,7 +142,7 @@ export default function ClientsPage() {
       .select('id, client_id, first_name, last_name, phone, email, referent_function, gender, is_default, display_order')
       .eq('client_id', clientId)
       .order('display_order', { ascending: true, nullsFirst: false });
-    if (!error && data) setReferentsList(data as ReferentRow[]);
+    if (!error && data) setReferentsList(data as unknown as ReferentRow[]);
     else setReferentsList([]);
   };
 
