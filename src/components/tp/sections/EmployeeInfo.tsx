@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
 import { 
@@ -13,6 +13,7 @@ import {
   formatComputerSkills,
   filterOtherEmployers
 } from '@/lib/utils';
+import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { Button } from '@/components/ui/button';
@@ -68,7 +69,7 @@ const DATE_FIELDS = [
 
 
 export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
-  const { tpData, updateField, setSectionPageCount, getPageOffset } = useTP();
+  const { tpData, updateField, setSectionPageCount, getPageOffset, markSaved, registerSaveHandler, unregisterSaveHandler } = useTP();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
@@ -85,7 +86,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
 
       const { data: employee } = await supabase
         .from('employees')
-        .select('email, first_name, last_name, client_id')
+        .select('email, first_name, last_name, client_id, referent_id')
         .eq('id', employeeId)
         .single();
 
@@ -124,21 +125,22 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       }
 
 
-      // Fetch client info
+      // Client name + resolved referent (referents table only)
       if (employee?.client_id) {
         const { data: client } = await supabase
           .from('clients')
-          .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
+          .select('name')
           .eq('id', employee.client_id)
           .single();
+        if (client?.name) updateField('client_name', client.name);
 
-        if (client) {
-          updateField('client_name', client.name);
-          updateField('client_referent_name', `${client.referent_first_name} ${client.referent_last_name}`);
-          updateField('client_referent_phone', client.referent_phone);
-          updateField('client_referent_email', client.referent_email);
-          updateField('client_referent_function', client.referent_function);
-          }
+        const referent = await resolveReferentForEmployee(supabase, { referent_id: employee.referent_id, client_id: employee.client_id });
+        const refFields = referentToClientReferentFields(referent);
+        if (refFields.client_referent_name != null) updateField('client_referent_name', refFields.client_referent_name);
+        if (refFields.client_referent_phone != null) updateField('client_referent_phone', refFields.client_referent_phone);
+        if (refFields.client_referent_email != null) updateField('client_referent_email', refFields.client_referent_email);
+        if (refFields.client_referent_function != null) updateField('client_referent_function', refFields.client_referent_function);
+        if (refFields.client_referent_gender != null) updateField('client_referent_gender', refFields.client_referent_gender);
       }
 
       // Fetch current user info (consultant)
@@ -161,10 +163,11 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       }
 
       setLoading(false);
+      markSaved();
     }
 
     fetchData();
-  }, [employeeId, updateField]);
+  }, [employeeId, updateField, markSaved]);
 
   // Report page count for EmployeeInfo (always 2 pages)
   useEffect(() => {
@@ -235,11 +238,12 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     'has_computer', 'computer_skills', 'contract_hours', 'other_employers'
   ] as const;
 
-  // tp_meta columns - CONSULTANT FIELDS REMOVED (they come from users table)
+  // tp_meta columns - CONSULTANT FIELDS REMOVED (they come from users table); referent snapshot for TP
   const META_FIELDS = [
     'first_sick_day',
     'tp_lead_time', 'tp_start_date', 'tp_end_date', 'fml_izp_lab_date', 'intake_date', 'registration_date', 'tp_creation_date',
-    'ad_report_date', 'occupational_doctor_name', 'occupational_doctor_org', 'has_ad_report'
+    'ad_report_date', 'occupational_doctor_name', 'occupational_doctor_org', 'has_ad_report',
+    'client_referent_name', 'client_referent_phone', 'client_referent_email', 'client_referent_function', 'client_referent_gender'
   ] as const;
 
   // employees columns (drop phone; keep email here if it's editable)
@@ -303,14 +307,15 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       }
 
       setSaveOk(true);
-      
+      markSaved();
+
       // Show success notification
       setAutofillMessage({
         type: 'success',
         title: '✅ Opslaan Succesvol',
         content: 'De gegevens zijn succesvol opgeslagen.'
       });
-      
+
       // Mark all current fields as saved (green border)
       const allFieldKeys = [
         ...DETAILS_FIELDS,
@@ -318,7 +323,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
         ...EMPLOYEE_FIELDS
       ].map(f => String(f));
       setSavedFields(allFieldKeys);
-      
+
       // Clear saved state and notification after 3 seconds
       setTimeout(() => {
         setSavedFields([]);
@@ -331,6 +336,15 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       setSaving(false);
     }
   };
+
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+  useEffect(() => {
+    registerSaveHandler('empinfo', async () => {
+      await handleSaveRef.current();
+    });
+    return () => unregisterSaveHandler('empinfo');
+  }, [employeeId, registerSaveHandler, unregisterSaveHandler]);
 
   const handleAutofill = async () => {
     setAutofillLoading(true);

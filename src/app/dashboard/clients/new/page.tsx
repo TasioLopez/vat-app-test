@@ -36,6 +36,7 @@ export default function AddClientPage() {
         referent_phone: '',
         referent_email: '',
         referent_function: '',
+        referent_gender: '',
     });
 
     const [error, setError] = useState('');
@@ -54,27 +55,39 @@ export default function AddClientPage() {
         setLoading(true);
         setError('');
 
-        const { error } = await supabase.from('clients').insert([
-            {
+        const { data: newClient, error: clientError } = await supabase
+            .from('clients')
+            .insert({
                 name: form.name,
                 industry: form.industry || null,
                 contact_email: form.contact_email || null,
                 phone: form.phone || null,
                 plaats: form.plaats || null,
-                referent_first_name: form.referent_first_name || null,
-                referent_last_name: form.referent_last_name || null,
-                referent_phone: form.referent_phone || null,
-                referent_email: form.referent_email || null,
-                referent_function: form.referent_function || null,
-            },
-        ]);
+            })
+            .select('id')
+            .single();
 
-        if (error) {
-            setError(error.message);
+        if (clientError) {
+            setError(clientError.message);
             setLoading(false);
-        } else {
-            router.push('/dashboard/clients');
+            return;
         }
+
+        if (newClient?.id && (form.referent_first_name?.trim() || form.referent_last_name?.trim())) {
+            await supabase.from('referents').insert({
+                client_id: newClient.id,
+                first_name: form.referent_first_name?.trim() || null,
+                last_name: form.referent_last_name?.trim() || null,
+                phone: form.referent_phone?.trim() || null,
+                email: form.referent_email?.trim() || null,
+                referent_function: form.referent_function?.trim() || null,
+                gender: form.referent_gender?.trim() || null,
+                is_default: true,
+            });
+        }
+
+        router.push('/dashboard/clients');
+        setLoading(false);
     };
 
     return (
@@ -420,6 +433,31 @@ export default function AddClientPage() {
                                             <FaUserCircle />
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Geslacht referent */}
+                                <div className="group">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <FaUser className="text-purple-600 text-sm" />
+                                        Geslacht referent
+                                    </label>
+                                    <select
+                                        name="referent_gender"
+                                        value={form.referent_gender}
+                                        onChange={handleChange}
+                                        onFocus={() => setFocusedField('referent_gender')}
+                                        onBlur={() => setFocusedField(null)}
+                                        className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
+                                            focusedField === 'referent_gender'
+                                                ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                                : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
+                                        } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900`}
+                                    >
+                                        <option value="">Selecteer geslacht</option>
+                                        <option value="Man">Man</option>
+                                        <option value="Vrouw">Vrouw</option>
+                                        <option value="Anders">Anders</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>

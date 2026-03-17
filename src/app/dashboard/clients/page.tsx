@@ -19,6 +19,19 @@ type Client = Database['public']['Tables']['clients']['Row'] & {
 };
 type Employee = Database['public']['Tables']['employees']['Row'];
 
+type ReferentRow = {
+  id: string;
+  client_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  referent_function: string | null;
+  gender: string | null;
+  is_default: boolean;
+  display_order: number | null;
+};
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -29,6 +42,8 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [referentsList, setReferentsList] = useState<ReferentRow[]>([]);
+  const [newReferent, setNewReferent] = useState<Partial<ReferentRow> | null>(null);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -121,10 +136,22 @@ export default function ClientsPage() {
     if (!error && data) setEmployees(data);
   };
 
+  const fetchReferents = async (clientId: string) => {
+    const { data, error } = await supabase
+      .from('referents')
+      .select('id, client_id, first_name, last_name, phone, email, referent_function, gender, is_default, display_order')
+      .eq('client_id', clientId)
+      .order('display_order', { ascending: true, nullsFirst: false });
+    if (!error && data) setReferentsList(data as ReferentRow[]);
+    else setReferentsList([]);
+  };
+
   const handleEdit = async (client: Client) => {
     if (userRole !== 'admin') return;
     setSelectedClient(client);
+    setNewReferent(null);
     await fetchEmployees(client.id);
+    await fetchReferents(client.id);
     // Track when client is opened
     await trackAccess('client', client.id, false);
   };
@@ -155,20 +182,53 @@ export default function ClientsPage() {
         contact_email: selectedClient.contact_email,
         phone: selectedClient.phone || null,
         plaats: selectedClient.plaats || null,
-        referent_first_name: selectedClient.referent_first_name || null,
-        referent_last_name: selectedClient.referent_last_name || null,
-        referent_phone: selectedClient.referent_phone || null,
-        referent_email: selectedClient.referent_email || null,
-        referent_function: selectedClient.referent_function || null,
       })
       .eq('id', selectedClient.id);
 
     if (!error) {
-      // Track modification
       await trackAccess('client', selectedClient.id, true);
       await fetchClients();
       setSelectedClient(null);
     }
+  };
+
+  const saveNewReferent = async () => {
+    if (!selectedClient || !newReferent?.first_name?.trim() && !newReferent?.last_name?.trim()) return;
+    const isFirst = referentsList.length === 0;
+    const { error } = await supabase.from('referents').insert({
+      client_id: selectedClient.id,
+      first_name: (newReferent.first_name ?? '').trim() || null,
+      last_name: (newReferent.last_name ?? '').trim() || null,
+      phone: (newReferent.phone as string)?.trim() || null,
+      email: (newReferent.email as string)?.trim() || null,
+      referent_function: (newReferent.referent_function as string)?.trim() || null,
+      gender: (newReferent.gender as string)?.trim() || null,
+      is_default: isFirst,
+    });
+    if (!error) {
+      await fetchReferents(selectedClient.id);
+      setNewReferent(null);
+    }
+  };
+
+  const setReferentDefault = async (referentId: string) => {
+    if (!selectedClient) return;
+    const refs = referentsList.map((r) => ({ ...r, is_default: r.id === referentId }));
+    for (const r of refs) {
+      await supabase.from('referents').update({ is_default: r.id === referentId }).eq('id', r.id);
+    }
+    setReferentsList(refs);
+  };
+
+  const deleteReferent = async (referentId: string) => {
+    if (!selectedClient) return;
+    const { error } = await supabase.from('referents').delete().eq('id', referentId);
+    if (!error) await fetchReferents(selectedClient.id);
+  };
+
+  const updateReferent = async (referentId: string, updates: Partial<ReferentRow>) => {
+    const { error } = await supabase.from('referents').update(updates).eq('id', referentId);
+    if (!error && selectedClient) await fetchReferents(selectedClient.id);
   };
 
 
@@ -365,82 +425,51 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              {/* Referent Info Column */}
-              <div className="space-y-5 rounded-lg border border-border bg-muted/20 p-4">
+              {/* Referenten */}
+              <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
                 <h3 className="flex items-center gap-2 font-semibold text-card-foreground">
-                  <User className="w-5 h-5 text-purple-600" />
-                  Referent
+                  <Users className="w-5 h-5 text-purple-600" />
+                  Referenten
                 </h3>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                    <User className="w-4 h-4 shrink-0" />
-                    Voornaam referent
-                  </label>
-                  <Input
-                    type="text"
-                    value={selectedClient.referent_first_name || ''}
-                    onChange={(e) =>
-                      setSelectedClient({ ...selectedClient, referent_first_name: e.target.value })
-                    }
-                    placeholder="Referent First Name"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                    <User className="w-4 h-4 shrink-0" />
-                    Achternaam referent
-                  </label>
-                  <Input
-                    type="text"
-                    value={selectedClient.referent_last_name || ''}
-                    onChange={(e) =>
-                      setSelectedClient({ ...selectedClient, referent_last_name: e.target.value })
-                    }
-                    placeholder="Referent Last Name"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                    <Phone className="w-4 h-4 shrink-0" />
-                    Telefoon referent
-                  </label>
-                  <Input
-                    type="tel"
-                    value={selectedClient.referent_phone || ''}
-                    onChange={(e) =>
-                      setSelectedClient({ ...selectedClient, referent_phone: e.target.value })
-                    }
-                    placeholder="Referent Phone"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                    <Mail className="w-4 h-4 shrink-0" />
-                    Email referent
-                  </label>
-                  <Input
-                    type="email"
-                    value={selectedClient.referent_email || ''}
-                    onChange={(e) =>
-                      setSelectedClient({ ...selectedClient, referent_email: e.target.value })
-                    }
-                    placeholder="Referent Email"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                    <Briefcase className="w-4 h-4 shrink-0" />
-                    Functie referent
-                  </label>
-                  <Input
-                    type="text"
-                    value={selectedClient.referent_function || ''}
-                    onChange={(e) =>
-                      setSelectedClient({ ...selectedClient, referent_function: e.target.value })
-                    }
-                    placeholder="bijv. Teammanager"
-                  />
-                </div>
+                <ul className="space-y-3">
+                  {referentsList.map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center gap-2 rounded border border-border/50 bg-background p-3">
+                      <span className="font-medium">{[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}</span>
+                      {r.referent_function && <span className="text-muted-foreground">({r.referent_function})</span>}
+                      {r.is_default && <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">Standaard</span>}
+                      {r.phone && <span className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{r.phone}</span>}
+                      {r.email && <span className="text-sm text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{r.email}</span>}
+                      {r.gender && <span className="text-sm text-muted-foreground">{r.gender}</span>}
+                      <div className="ml-auto flex gap-1">
+                        {!r.is_default && (
+                          <Button type="button" variant="outline" size="sm" onClick={() => setReferentDefault(r.id)}>Standaard</Button>
+                        )}
+                        <Button type="button" variant="ghost" size="sm" onClick={() => deleteReferent(r.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {newReferent ? (
+                  <div className="grid grid-cols-2 gap-2 rounded border border-dashed border-border p-3">
+                    <Input placeholder="Voornaam" value={newReferent.first_name ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, first_name: e.target.value }))} />
+                    <Input placeholder="Achternaam" value={newReferent.last_name ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, last_name: e.target.value }))} />
+                    <Input placeholder="Telefoon" value={(newReferent.phone as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, phone: e.target.value }))} />
+                    <Input placeholder="E-mail" value={(newReferent.email as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, email: e.target.value }))} />
+                    <Input placeholder="Functie" value={(newReferent.referent_function as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, referent_function: e.target.value }))} />
+                    <select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={(newReferent.gender as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, gender: e.target.value }))}>
+                      <option value="">Geslacht</option>
+                      <option value="Man">Man</option>
+                      <option value="Vrouw">Vrouw</option>
+                      <option value="Anders">Anders</option>
+                    </select>
+                    <div className="col-span-2 flex gap-2">
+                      <Button type="button" size="sm" onClick={saveNewReferent}>Toevoegen</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setNewReferent(null)}>Annuleren</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setNewReferent({})}>+ Nieuwe referent</Button>
+                )}
               </div>
             </div>
 

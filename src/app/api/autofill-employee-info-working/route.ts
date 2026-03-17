@@ -966,6 +966,14 @@ EXTRACT ALLEEN DEZE VELDEN (uit vrije tekst, NIET uit tabellen):
 - education_name: Naam van de opleiding/cursus (bij voorkeur van het hoogste niveau als meerdere genoemd worden)
 - other_employers: Andere huidige werkgevers (bij meerdere banen), niet de hoofdwerkgever, komma-gescheiden
 
+CONTACTPERSOON / AANMELDER (referent):
+- referent_first_name: Voornaam van de contactpersoon/aanmelder
+- referent_last_name: Achternaam van de contactpersoon/aanmelder
+- referent_function: Functie van de contactpersoon (bijv. "HR adviseur", "Leidinggevende")
+- referent_phone: Telefoonnummer van de contactpersoon
+- referent_email: E-mail van de contactpersoon
+- referent_gender: "Man", "Vrouw" of "Anders" - leid af uit context (naam, aanspreekvorm) als niet expliciet vermeld
+
 BELANGRIJK:
 - Zoek ALLEEN in de vrije tekst
 - NEGEER tabellen (vervoer, talen, computer - die worden apart verwerkt)
@@ -986,7 +994,15 @@ Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw", 
       console.log('📄 AI text extraction response:', aiResponse.substring(0, 300));
       
       try {
-        textData = parseAssistantResponse(aiResponse);
+        const rawTextData = parseAssistantResponse(aiResponse);
+        // Preserve referent fields before mapAndValidateData (which only keeps employee_details fields)
+        const referentFields: Record<string, unknown> = {};
+        const REFERENT_KEYS = ['referent_first_name', 'referent_last_name', 'referent_function', 'referent_phone', 'referent_email', 'referent_gender'];
+        REFERENT_KEYS.forEach(k => { if (rawTextData[k] != null && rawTextData[k] !== '') referentFields[k] = rawTextData[k]; });
+        
+        textData = mapAndValidateData(rawTextData);
+        // Restore referent fields onto textData so they appear in merged result
+        Object.assign(textData, referentFields);
         
         // Post-process education_level to ensure highest level is selected
         if (rawText) {
@@ -999,8 +1015,6 @@ Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw", 
             }
           }
         }
-        
-        textData = mapAndValidateData(textData);
         console.log('✅ AI text extraction completed:', Object.keys(textData).length, 'fields');
       } catch (parseError: any) {
         console.error('⚠️ Failed to parse AI response:', parseError.message);
@@ -1064,6 +1078,12 @@ VELDEN TE EXTRACTEN (employee_details tabel - ALLEEN uit tekst):
 - education_level: Zoek ALLE opleidingsniveaus in tekst en selecteer het HOOGSTE niveau (Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1, MBO 2, MTS, MBO 3, MBO 4, HBO, WO). MTS is hoger dan LTS.
 - education_name: Zoek opleiding/cursus naam in tekst
 
+CONTACTPERSOON / AANMELDER (referent): Zoek in tekst naar contactpersoon, aanmelder, HR-contact:
+- referent_first_name, referent_last_name: Voornaam en achternaam
+- referent_function: Functie (bijv. HR adviseur, leidinggevende)
+- referent_phone, referent_email: Telefoon en e-mail
+- referent_gender: "Man", "Vrouw" of "Anders" - afleiden uit context indien niet expliciet
+
 NIET EXTRACTEN (niet beschikbaar in AD rapporten):
 - transport_type (NIET in AD rapport)
 - computer_skills (NIET in AD rapport)
@@ -1115,7 +1135,11 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
     
     if (response.type === 'text') {
       const extractedData = parseAssistantResponse(response.text.value);
+      const REFERENT_KEYS = ['referent_first_name', 'referent_last_name', 'referent_function', 'referent_phone', 'referent_email', 'referent_gender'];
+      const referentFields: Record<string, unknown> = {};
+      REFERENT_KEYS.forEach(k => { if (extractedData[k] != null && extractedData[k] !== '') referentFields[k] = extractedData[k]; });
       const mappedData = mapAndValidateData(extractedData);
+      Object.assign(mappedData, referentFields);
       
       await openai.beta.assistants.delete(assistant.id);
       await openai.files.delete(uploadedFile.id);
@@ -1474,13 +1498,58 @@ export async function GET(req: NextRequest) {
       });
     }
     
+    // Build suggested_referent and check if matching referent exists for this employee's client
+    let suggested_referent: { first_name: string; last_name: string; referent_function?: string; phone?: string; email?: string; gender?: string } | null = null;
+    let referent_exists = false;
+    let existing_referent_id: string | null = null;
+
+    const refFirst = (details.referent_first_name ?? '').toString().trim();
+    const refLast = (details.referent_last_name ?? '').toString().trim();
+    if (refFirst || refLast) {
+      suggested_referent = {
+        first_name: refFirst,
+        last_name: refLast,
+        referent_function: details.referent_function != null ? String(details.referent_function).trim() : undefined,
+        phone: details.referent_phone != null && details.referent_phone !== '' ? String(details.referent_phone).trim() : undefined,
+        email: details.referent_email != null && details.referent_email !== '' ? String(details.referent_email).trim() : undefined,
+        gender: details.referent_gender != null && details.referent_gender !== '' ? String(details.referent_gender).trim() : undefined,
+      };
+
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('client_id')
+        .eq('id', employeeId)
+        .single();
+
+      if (employee?.client_id) {
+        const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+        const suggestedFull = normalize(`${refFirst} ${refLast}`);
+        const { data: referents } = await supabase
+          .from('referents')
+          .select('id, first_name, last_name')
+          .eq('client_id', employee.client_id);
+
+        const match = referents?.find(r => {
+          const full = normalize(`${(r.first_name ?? '')} ${(r.last_name ?? '')}`);
+          return full === suggestedFull || (suggestedFull && full.includes(suggestedFull)) || (full && suggestedFull.includes(full));
+        });
+        if (match) {
+          referent_exists = true;
+          existing_referent_id = match.id;
+        }
+      }
+    }
+
     console.log('✅ Document processing completed');
 
     return NextResponse.json({
       success: true,
       data: {
         details,
-        autofilled_fields: Object.keys(details)
+        autofilled_fields: Object.keys(details),
+        suggested_referent: suggested_referent ?? undefined,
+        referent_exists,
+        existing_referent_id: existing_referent_id ?? undefined,
       },
       message: `Employee information successfully extracted from ${docs.length} documents using separate document processing`
     });

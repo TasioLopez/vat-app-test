@@ -5,6 +5,7 @@ import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
 import { makePreviewNodes } from "@/components/tp/sections/registry";
 import { formatEmployeeName } from "@/lib/utils";
+import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
 
 export default function TPPreview({ employeeId }: { employeeId: string }) {
   const { tpData, setTPData } = useTP();
@@ -34,7 +35,7 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
         const [employeeResult, detailsResult, metaResult] = await Promise.all([
           supabase
             .from('employees')
-            .select('email, first_name, last_name, client_id')
+            .select('email, first_name, last_name, client_id, referent_id')
             .eq('id', employeeId)
             .single(),
           supabase
@@ -88,34 +89,34 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
           });
         }
 
-        // Fetch client info
-        if (employee?.client_id) {
+        // Client name + referent (from referents table; mergedData already has tp_meta snapshot, fill blanks from resolved referent)
+        if (employee?.client_id && isMounted) {
           const { data: client } = await supabase
             .from('clients')
-            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
+            .select('name')
             .eq('id', employee.client_id)
             .single();
 
-          if (client && isMounted) {
-            if (client.name) {
-              mergedData.client_name = client.name;
-              mergedData.employer_name = client.name;
-            }
-            const referentFull = [client.referent_first_name, client.referent_last_name]
-              .filter(Boolean).join(' ').trim();
-            if (referentFull) {
-              mergedData.client_referent_name = referentFull;
-            }
-            if (client.referent_phone) {
-              mergedData.client_referent_phone = client.referent_phone;
-            }
-            if (client.referent_email) {
-              mergedData.client_referent_email = client.referent_email;
-            }
-            if (client.referent_function) {
-              mergedData.client_referent_function = client.referent_function;
-            }
+          if (client?.name) {
+            mergedData.client_name = client.name;
+            mergedData.employer_name = client.name;
           }
+
+          const referent = await resolveReferentForEmployee(supabase, {
+            referent_id: employee.referent_id,
+            client_id: employee.client_id,
+          });
+          const refFields = referentToClientReferentFields(referent);
+          const setIfEmpty = (key: string, value: string | null) => {
+            if (value != null && value !== '' && (mergedData[key] == null || mergedData[key] === '')) {
+              mergedData[key] = value;
+            }
+          };
+          setIfEmpty('client_referent_name', refFields.client_referent_name);
+          setIfEmpty('client_referent_phone', refFields.client_referent_phone);
+          setIfEmpty('client_referent_email', refFields.client_referent_email);
+          setIfEmpty('client_referent_function', refFields.client_referent_function);
+          setIfEmpty('client_referent_gender', refFields.client_referent_gender);
         }
 
         // Format employee name

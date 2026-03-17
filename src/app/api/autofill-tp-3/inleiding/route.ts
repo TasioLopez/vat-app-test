@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static";
+import { resolveReferentForEmployee } from "@/lib/referents";
 
 // ---- INIT ----
 const supabase = createClient(
@@ -141,7 +142,7 @@ function buildInleidingInstructions(
   adRapportText?: string | null,
   functiebeschrijvingText?: string | null
 ): string {
-  const { employee, details, meta, client } = context;
+  const { employee, details, meta, client, referent } = context;
   
   // Extract only the quote content from AD report
   const adQuoteText = extractAdQuote(adRapportText);
@@ -165,9 +166,10 @@ function buildInleidingInstructions(
   const firstSickDay = nlDate(meta?.first_sick_day);
   const intakeDate = nlDate(meta?.intake_date);
   
-  const refInitials = getInitials(client?.referent_first_name);
-  const refLastName = client?.referent_last_name || '';
-  const refTitle = getTitlePrefix(client?.referent_gender);
+  const refInitials = getInitials(referent?.first_name);
+  const refLastName = referent?.last_name || '';
+  const refTitle = getTitlePrefix(referent?.gender);
+  const refFunction = referent?.referent_function || 'contactpersoon';
   const companyName = client?.name || '';
   
   // Fix gender in ALINEA 2 - use isMale variable
@@ -211,8 +213,8 @@ ${functiebeschrijvingText}
 
 ALINEA 4 - Aanmelder/Contactpersoon (controleer Extra Aanmelder):
 - Check eerst of er een "Extra Aanmelder" is ingevuld in de documenten
-- ALS Extra Aanmelder BESTAAT: "Werknemer is door ${refTitle} [Voorletter. Achternaam Extra Aanmelder], [functie Extra Aanmelder] bij [bedrijf Extra Aanmelder] In opdracht van: ${refTitle} ${refInitials} ${refLastName}, [functie contactpersoon] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
-- ALS GEEN Extra Aanmelder: "Werknemer is door ${refTitle} ${refInitials} ${refLastName}, [functie contactpersoon] ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
+- ALS Extra Aanmelder BESTAAT: "Werknemer is door ${refTitle} [Voorletter. Achternaam Extra Aanmelder], [functie Extra Aanmelder] bij [bedrijf Extra Aanmelder] In opdracht van: ${refTitle} ${refInitials} ${refLastName}, ${refFunction} ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
+- ALS GEEN Extra Aanmelder: "Werknemer is door ${refTitle} ${refInitials} ${refLastName}, ${refFunction} ${companyName} aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter."
 - Gebruik correcte geslachtsaanduidingen (meneer/mevrouw) voor contactpersonen
 
 ALINEA 5 - Medische informatie (ALGEMEEN - GEEN SPECIFIEKE DETAILS):
@@ -634,7 +636,7 @@ export async function GET(req: NextRequest) {
     // Fetch all required data
     const { data: employee } = await supabase
       .from("employees")
-      .select("first_name, last_name, client_id")
+      .select("first_name, last_name, client_id, referent_id")
       .eq("id", employeeId)
       .single();
 
@@ -652,9 +654,14 @@ export async function GET(req: NextRequest) {
 
     const { data: client } = await supabase
       .from("clients")
-      .select("name, referent_first_name, referent_last_name, referent_gender")
+      .select("name")
       .eq("id", employee?.client_id)
       .single();
+
+    const referent = await resolveReferentForEmployee(supabase, {
+      referent_id: employee?.referent_id,
+      client_id: employee?.client_id,
+    });
 
     // Fetch all documents
     const { data: docs } = await supabase
@@ -704,7 +711,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Build context object
-    const context = { employee, details, meta, client };
+    const context = { employee, details, meta, client, referent };
     
     // Process documents with assistant, passing pre-extracted sections
     let extracted;

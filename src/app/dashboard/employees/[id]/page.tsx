@@ -17,6 +17,17 @@ type Employee = {
     last_name: string;
     email: string;
     client_id: string;
+    referent_id?: string | null;
+};
+
+type Referent = {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    referent_function: string | null;
+    phone?: string | null;
+    email?: string | null;
+    gender?: string | null;
 };
 
 type EmployeeDetails = {
@@ -81,6 +92,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [autofilledFields, setAutofilledFields] = useState<Set<string>>(new Set());
     const [documents, setDocuments] = useState<Document[]>([]);
     const [activeDocType, setActiveDocType] = useState<string | null>(null);
+    const [referents, setReferents] = useState<Referent[]>([]);
+    const [suggestedReferent, setSuggestedReferent] = useState<{ first_name: string; last_name: string; referent_function?: string; phone?: string; email?: string; gender?: string } | null>(null);
+    const [referentExists, setReferentExists] = useState(false);
+    const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchEmployee();
@@ -109,7 +124,25 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         setEmployee(data);
         if (data.client_id) {
             fetchClient(data.client_id);
+            fetchReferents(data.client_id);
+        } else {
+            setReferents([]);
         }
+    };
+
+    const fetchReferents = async (clientId: string) => {
+        const { data, error } = await supabase
+            .from('referents')
+            .select('id, first_name, last_name, referent_function, phone, email, gender')
+            .eq('client_id', clientId)
+            .order('display_order', { ascending: true, nullsFirst: false });
+
+        if (error) {
+            console.error('Error fetching referents:', error);
+            setReferents([]);
+            return;
+        }
+        setReferents(data || []);
     };
 
     const fetchEmployeeDetails = async () => {
@@ -368,8 +401,28 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             // Handle both response formats
             const details = json.details || json.data?.details;
+            const data = json.data || json;
             if (details && Object.keys(details).length > 0) {
                 const fields = Object.keys(details);
+
+                // Suggested referent from autofill (for "Quick create and set" / "Set as contactperson")
+                const suggested = data.suggested_referent;
+                if (suggested && (suggested.first_name || suggested.last_name)) {
+                    setSuggestedReferent({
+                        first_name: suggested.first_name || '',
+                        last_name: suggested.last_name || '',
+                        referent_function: suggested.referent_function,
+                        phone: suggested.phone,
+                        email: suggested.email,
+                        gender: suggested.gender,
+                    });
+                    setReferentExists(Boolean(data.referent_exists));
+                    setExistingReferentId(data.existing_referent_id ?? null);
+                } else {
+                    setSuggestedReferent(null);
+                    setReferentExists(false);
+                    setExistingReferentId(null);
+                }
 
                 // Ensure transport_type and drivers_license_type are handled as arrays
                 const processedDetails: any = { ...details };
@@ -420,6 +473,72 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const applySuggestedReferentCreate = async () => {
+        if (!suggestedReferent || !employee?.client_id) return;
+        setUpdating(true);
+        try {
+            const { data: existingList } = await supabase.from('referents').select('id').eq('client_id', employee.client_id);
+            const isFirst = !existingList || existingList.length === 0;
+            const { data: newRef, error: insertErr } = await supabase
+                .from('referents')
+                .insert({
+                    client_id: employee.client_id,
+                    first_name: suggestedReferent.first_name,
+                    last_name: suggestedReferent.last_name,
+                    referent_function: suggestedReferent.referent_function ?? null,
+                    phone: suggestedReferent.phone ?? null,
+                    email: suggestedReferent.email ?? null,
+                    gender: suggestedReferent.gender ?? null,
+                    is_default: isFirst,
+                })
+                .select('id')
+                .single();
+            if (insertErr) {
+                showError('Fout', 'Kon contactpersoon niet aanmaken.');
+                return;
+            }
+            const { error: updateErr } = await supabase.from('employees').update({ referent_id: newRef.id }).eq('id', employeeId);
+            if (updateErr) {
+                showError('Fout', 'Kon werknemer niet koppelen aan contactpersoon.');
+                return;
+            }
+            setEmployee(prev => prev ? { ...prev, referent_id: newRef.id } : null);
+            setSuggestedReferent(null);
+            setReferentExists(false);
+            setExistingReferentId(null);
+            await fetchReferents(employee.client_id);
+            showSuccess('Contactpersoon aangemaakt en gekoppeld.');
+        } catch (e) {
+            console.error(e);
+            showError('Fout', 'Er is iets misgegaan.');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const applySuggestedReferentSet = async () => {
+        if (!existingReferentId || !employee) return;
+        setUpdating(true);
+        try {
+            const { error } = await supabase.from('employees').update({ referent_id: existingReferentId }).eq('id', employeeId);
+            if (error) {
+                showError('Fout', 'Kon contactpersoon niet koppelen.');
+                return;
+            }
+            setEmployee(prev => prev ? { ...prev, referent_id: existingReferentId } : null);
+            setSuggestedReferent(null);
+            setReferentExists(false);
+            setExistingReferentId(null);
+            if (employee.client_id) await fetchReferents(employee.client_id);
+            showSuccess('Contactpersoon gekoppeld.');
+        } catch (e) {
+            console.error(e);
+            showError('Fout', 'Er is iets misgegaan.');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const fieldClass = (field: keyof EmployeeDetails) =>
         `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${autofilledFields.has(field) ? 'border-yellow-400 bg-yellow-50/30' : ''}`;
 
@@ -437,7 +556,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
                                 {userRole === 'admin' ? (
-                                    <select className="w-full border border-gray-500/30 p-2 rounded" value={employee.client_id || ''} onChange={(e) => { setEmployee({ ...employee, client_id: e.target.value }); fetchClient(e.target.value); }}>
+                                    <select className="w-full border border-gray-500/30 p-2 rounded" value={employee.client_id || ''} onChange={(e) => { const v = e.target.value; setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
                                         <option value="">Selecteer werkgever</option>
                                         {clients.map((client) => (
                                             <option key={client.id} value={client.id}>{client.name}</option>
@@ -446,6 +565,30 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 ) : (
                                     <input className="w-full border border-gray-500/30 p-2 rounded bg-gray-100 text-gray-500" value={clientName || ''} disabled />
                                 )}
+                                {employee.client_id ? (
+                                    <div className="space-y-1">
+                                        <label className="text-sm text-gray-600">Contactpersoon</label>
+                                        <select
+                                            className="w-full border border-gray-500/30 p-2 rounded"
+                                            value={employee.referent_id ?? ''}
+                                            onChange={async (e) => {
+                                                const refId = e.target.value || null;
+                                                setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
+                                                const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
+                                                if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
+                                                else showSuccess('Contactpersoon bijgewerkt.');
+                                            }}
+                                        >
+                                            <option value="">— Geen / Default —</option>
+                                            {referents.map((r) => (
+                                                <option key={r.id} value={r.id}>
+                                                    {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
+                                                    {r.referent_function ? ` (${r.referent_function})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : null}
                                 <div className="flex gap-2 mt-4">
                                     <button onClick={() => window.location.href = `/dashboard/tp/${employeeId}`} className="flex border-2 border-indigo-600 font-semibold text-indigo-600 px-4 py-2 rounded items-center gap-2 hover:bg-indigo-600 hover:text-white hover:cursor-pointer transition"><Map className="w-4 h-4" />Trajectplan</button>
                                     <button onClick={() => window.location.href = `/dashboard/vgr/${employeeId}`} className="flex border-2 border-purple-600 font-semibold text-purple-600 px-4 py-2 rounded items-center gap-2 hover:bg-purple-600 hover:text-white hover:cursor-pointer transition"><Compass className="w-4 h-4" />VGR</button>
@@ -512,6 +655,23 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
                     </Button>
                 </div>
+
+                {suggestedReferent && (employee?.client_id) && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-gray-700">
+                            Contactpersoon uit document: <strong>{[suggestedReferent.first_name, suggestedReferent.last_name].filter(Boolean).join(' ').trim() || '—'}</strong>
+                            {referentExists ? (
+                                <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={applySuggestedReferentSet} disabled={updating}>
+                                    Als contactpersoon koppelen
+                                </Button>
+                            ) : (
+                                <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={applySuggestedReferentCreate} disabled={updating}>
+                                    Aanmaken en koppelen als contactpersoon
+                                </Button>
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 {/* Current Job */}
                 <div className="space-y-2 group">

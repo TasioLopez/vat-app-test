@@ -13,6 +13,7 @@ import { FileText, Sparkles } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
 import { Button } from '@/components/ui/button';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
+import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -149,7 +150,7 @@ function SignatureBlock({ employeeName, advisorName, employerContact, employerFu
 }
 
 export default function Section3({ employeeId }: { employeeId: string }) {
-    const { tpData, updateField, setSectionPageCount, getPageOffset } = useTP();
+    const { tpData, updateField, setSectionPageCount, getPageOffset, markSaved, registerSaveHandler, unregisterSaveHandler } = useTP();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [busy, setBusy] = useState<{ [k: string]: boolean }>({});
@@ -296,7 +297,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 try {
                     const { data: employee } = await supabase
                         .from('employees')
-                        .select('email, first_name, last_name, client_id')
+                        .select('email, first_name, last_name, client_id, referent_id')
                         .eq('id', employeeId)
                         .single();
 
@@ -324,21 +325,22 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                         Object.entries(meta).forEach(([key, value]) => updateField(key, value));
                     }
 
-                    // Fetch client info
+                    // Client name + resolved referent (referents table only)
                     if (employee?.client_id) {
                         const { data: client } = await supabase
                             .from('clients')
-                            .select('name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function')
+                            .select('name')
                             .eq('id', employee.client_id)
                             .single();
+                        if (client?.name) updateField('client_name', client.name);
 
-                        if (client) {
-                            updateField('client_name', client.name);
-                            updateField('client_referent_name', `${client.referent_first_name} ${client.referent_last_name}`);
-                            updateField('client_referent_phone', client.referent_phone);
-                            updateField('client_referent_email', client.referent_email);
-                            updateField('client_referent_function', client.referent_function);
-                        }
+                        const referent = await resolveReferentForEmployee(supabase, { referent_id: employee.referent_id, client_id: employee.client_id });
+                        const refFields = referentToClientReferentFields(referent);
+                        if (refFields.client_referent_name != null) updateField('client_referent_name', refFields.client_referent_name);
+                        if (refFields.client_referent_phone != null) updateField('client_referent_phone', refFields.client_referent_phone);
+                        if (refFields.client_referent_email != null) updateField('client_referent_email', refFields.client_referent_email);
+                        if (refFields.client_referent_function != null) updateField('client_referent_function', refFields.client_referent_function);
+                        if (refFields.client_referent_gender != null) updateField('client_referent_gender', refFields.client_referent_gender);
                     }
 
                     // Fetch current user info (consultant)
@@ -359,6 +361,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             updateField('consultant_email', profile.email);
                         }
                     }
+                    markSaved();
                 } catch (err) {
                     console.error("Failed to load TP data in Section3:", err);
                 }
@@ -366,7 +369,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
 
         fetchTPData();
-    }, [employeeId, tpData, updateField]);
+    }, [employeeId, tpData, updateField, markSaved]);
 
     const saveAll = async () => {
         setSaving(true);
@@ -402,6 +405,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
 
             if (metaRes.error) throw new Error(`tp_meta (save): ${metaRes.error.message}`);
 
+            markSaved();
         } catch (err) {
             const msg = err instanceof Error ? err.message : JSON.stringify(err);
             console.error("Save failed:", err);
@@ -410,6 +414,15 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             setSaving(false);
         }
     };
+
+    const saveAllRef = useRef(saveAll);
+    saveAllRef.current = saveAll;
+    useEffect(() => {
+        registerSaveHandler('part3', async () => {
+            await saveAllRef.current();
+        });
+        return () => unregisterSaveHandler('part3');
+    }, [employeeId, registerSaveHandler, unregisterSaveHandler]);
 
     // --- Internal run helpers (fetch + update only, no UI). Used by single autofill buttons and bulk. ---
     type RunResult = { success: boolean; error?: string };
@@ -793,7 +806,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
     // force re-measure when activities/signature content changes
     const activitiesMeasureKey = activitySelections.map((s) => `${s.id}:${s.subText ?? ""}`).join("|");
     const signatureMeasureKey =
-        `${tpData.employee_first_name ?? ""}|${tpData.loopbaanadviseur_name ?? ""}|${tpData.referent_first_name ?? ""}|${tpData.referent_last_name ?? ""}`;
+        `${tpData.employee_first_name ?? ""}|${tpData.loopbaanadviseur_name ?? ""}|${tpData.client_referent_name ?? ""}`;
 
     const sectionsArr: PreviewItem[] = [
         B("inl", "Inleiding", tpData.inleiding || "— nog niet ingevuld —"),

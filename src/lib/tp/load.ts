@@ -1,6 +1,7 @@
 // src/lib/tp/load.ts
 import { createClient } from "@supabase/supabase-js";
 import { formatEmployeeName } from "@/lib/utils";
+import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
 
 export type TPData = Record<string, any>;
 
@@ -34,7 +35,7 @@ export async function loadTP(
   const [employeeResult, detailsResult, metaResult] = await Promise.all([
     supabase
       .from("employees")
-      .select("id, first_name, last_name, email, client_id")
+      .select("id, first_name, last_name, email, client_id, referent_id")
       .eq("id", employeeId)
       .maybeSingle(),
     supabase
@@ -60,11 +61,11 @@ export async function loadTP(
   if (employee?.first_name) data.first_name = employee.first_name;
   if (employee?.last_name) data.last_name = employee.last_name;
 
-  // 4) Client + referent (unchanged)
+  // 4) Client name + referent (from referents table only; tp_meta snapshot wins, then resolved referent fills blanks)
   if (employee?.client_id) {
     const { data: client } = await supabase
       .from("clients")
-      .select("name, referent_first_name, referent_last_name, referent_phone, referent_email, referent_function")
+      .select("name")
       .eq("id", employee.client_id)
       .maybeSingle();
 
@@ -73,12 +74,16 @@ export async function loadTP(
       data.employer_name = client.name;
     }
 
-    const referentFull = [client?.referent_first_name, client?.referent_last_name]
-      .filter(Boolean).join(" ").trim();
-    if (!isFilled(data.client_referent_name) && referentFull) data.client_referent_name = referentFull;
-    if (!isFilled(data.client_referent_phone) && client?.referent_phone) data.client_referent_phone = client.referent_phone;
-    if (!isFilled(data.client_referent_email) && client?.referent_email) data.client_referent_email = client.referent_email;
-    if (!isFilled(data.client_referent_function) && client?.referent_function) data.client_referent_function = client.referent_function;
+    const referent = await resolveReferentForEmployee(supabase, {
+      referent_id: employee.referent_id,
+      client_id: employee.client_id,
+    });
+    const refFields = referentToClientReferentFields(referent);
+    if (!isFilled(data.client_referent_name)) data.client_referent_name = refFields.client_referent_name;
+    if (!isFilled(data.client_referent_phone)) data.client_referent_phone = refFields.client_referent_phone;
+    if (!isFilled(data.client_referent_email)) data.client_referent_email = refFields.client_referent_email;
+    if (!isFilled(data.client_referent_function)) data.client_referent_function = refFields.client_referent_function;
+    if (!isFilled(data.client_referent_gender)) data.client_referent_gender = refFields.client_referent_gender;
   }
 
   // 5) Full employee name - use formatted version with gender/title
