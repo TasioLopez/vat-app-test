@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { parseWorkExperience } from "@/lib/utils";
+import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,8 +84,9 @@ async function uploadDocsToOpenAI(docs: Array<{ type: string; path: string }>): 
     const { data: file } = await supabase.storage.from("documents").download(doc.path);
     if (!file) continue;
     const buf = Buffer.from(await file.arrayBuffer());
+    const { filename, mimeType } = getOpenAIFileParams(doc.path);
     const uploaded = await openai.files.create({
-      file: new File([buf], doc.path.split('/').pop() || 'doc.pdf', { type: 'application/pdf' }),
+      file: new File([buf], filename, { type: mimeType }),
       purpose: "assistants",
     });
     fileIds.push(uploaded.id);

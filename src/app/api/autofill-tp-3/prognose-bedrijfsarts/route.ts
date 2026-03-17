@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,9 +37,11 @@ function normalizePrognoseBedrijfsarts(text: string): string {
   if (s.length > 0 && s[s.length - 1] !== '"') {
     s = s + '"';
   }
-  // Normalize label: Re-integratie advies -> Reintegratieadvies (bold)
-  s = s.replace(/\*\*Re-integratie advies:\*\*/g, "**Reintegratieadvies:**");
-  s = s.replace(/(?<!\*)(Re-integratie advies:)(?!\*)/g, "**Reintegratieadvies:**");
+  // Normalize labels: bold+italic (***...***) for Reintegratieadvies and Prognose
+  s = s.replace(/\*\*Reintegratieadvies:\*\*/g, "***Reintegratieadvies:***");
+  s = s.replace(/\*\*Prognose:\*\*/g, "***Prognose:***");
+  s = s.replace(/\*\*Re-integratie advies:\*\*/g, "***Reintegratieadvies:***");
+  s = s.replace(/(?<!\*)(Re-integratie advies:)(?!\*)/g, "***Reintegratieadvies:***");
   return s;
 }
 
@@ -71,8 +74,9 @@ async function uploadDocsToOpenAI(paths: string[]) {
     const { data: file } = await supabase.storage.from("documents").download(p);
     if (!file) continue;
     const buf = Buffer.from(await file.arrayBuffer());
+    const { filename, mimeType } = getOpenAIFileParams(p);
     const uploaded = await openai.files.create({
-      file: new File([buf], p.split('/').pop() || 'doc.pdf', { type: 'application/pdf' }),
+      file: new File([buf], filename, { type: mimeType }),
       purpose: "assistants",
     });
     fileIds.push(uploaded.id);
@@ -90,7 +94,7 @@ BELANGRIJKE FORMATTING REGELS:
 - Gebruik "bedrijfsarts" (niet "arts")
 
 KRITIEK - EXACTE CITATEN:
-- De tekst onder **Reintegratieadvies:** en **Prognose:** moet EXACT en LETTERLIJK worden overgenomen uit het brondocument
+- De tekst onder ***Reintegratieadvies:*** en ***Prognose:*** moet EXACT en LETTERLIJK worden overgenomen uit het brondocument
 - KOPIEER de woorden PRECIES zoals ze in het document staan, inclusief eventuele typefouten of ongebruikelijke formuleringen
 - NIET parafraseren of herformuleren - het moet een CITAAT zijn
 - Als iets onduidelijk is, kopieer het toch letterlijk
@@ -98,7 +102,7 @@ KRITIEK - EXACTE CITATEN:
 OUTPUT STRUCTUUR (strikt volgen):
 - Eerste regel: alleen de intro, ZONDER aanhalingstekens. Eindig met "in de terugkoppeling het volgende aan:"
 - Daarna een nieuwe regel met ALLEEN een openingsaanhalingsteken "
-- Gebruik exact de labels **Reintegratieadvies:** en **Prognose:** (één woord, geen "Re-integratie advies"). Alleen **vet** (**...**), geen cursief (*) voor deze labels
+- Gebruik exact de labels ***Reintegratieadvies:*** en ***Prognose:*** (één woord, geen "Re-integratie advies"). Vet én cursief: ***...*** voor deze twee labels
 - De inhoud onder de labels is gewone tekst (geen asterisken voor cursief)
 - Sluit af met een sluitingsaanhalingsteken " aan het einde van de hele block
 
@@ -107,15 +111,15 @@ Voorbeeld (vul [datum], [naam], [supervisor] en de citaten in):
 Op [23 oktober 2025] geeft bedrijfsarts [naam] werkend onder supervisie van bedrijfsarts [supervisor] in de terugkoppeling het volgende aan:
 
 "
-**Reintegratieadvies:**
+***Reintegratieadvies:***
 [EXACT citaat uit document - letterlijk overnemen]
 
-**Prognose:**
+***Prognose:***
 [EXACT citaat uit document - letterlijk overnemen]"
 
 REGELS:
-- Gebruik alleen **...** voor vet. Gebruik geen *...* of vet+cursief voor de labels Reintegratieadvies en Prognose
-- De labels zijn precies **Reintegratieadvies:** en **Prognose:** (vet alleen). De inhoud eronder is gewone tekst
+- De labels Reintegratieadvies en Prognose zijn vet én cursief: gebruik ***label:*** (drie asterisken)
+- De inhoud eronder is gewone tekst
 - Het hele block van openingsaanhalingsteken tot sluitingsaanhalingsteken is één doorlopend geciteerd block; de intro staat buiten de aanhalingstekens
 
 Zoek specifiek naar:

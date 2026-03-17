@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static";
 import { resolveReferentForEmployee } from "@/lib/referents";
+import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 
 // ---- INIT ----
 const supabase = createClient(
@@ -80,8 +81,9 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
     if (!file) return null;
     
     const buffer = Buffer.from(await file.arrayBuffer());
+    const { filename, mimeType } = getOpenAIFileParams(path);
     const uploadedFile = await openai.files.create({
-      file: new File([buffer], `intake.pdf`, { type: 'application/pdf' }),
+      file: new File([buffer], filename, { type: mimeType }),
       purpose: "assistants"
     });
     
@@ -528,9 +530,9 @@ async function processDocumentsWithAssistant(
     if (!file) continue;
     
     const buffer = Buffer.from(await file.arrayBuffer());
-    
+    const { filename, mimeType } = getOpenAIFileParams(path);
     const uploadedFile = await openai.files.create({
-      file: new File([buffer], `${doc.type}.pdf`, { type: 'application/pdf' }),
+      file: new File([buffer], filename, { type: mimeType }),
       purpose: "assistants"
     });
     fileIds.push(uploadedFile.id);

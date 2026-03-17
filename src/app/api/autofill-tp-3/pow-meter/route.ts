@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID } from "@/lib/api-utils";
 import { SupabaseService } from "@/lib/supabase-service";
+import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -54,13 +55,9 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
     if (!file) return null;
     
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = path.split('/').pop() || 'intake.pdf';
-    const mimeType = fileName.endsWith('.docx') 
-      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-      : 'application/pdf';
-    
+    const { filename, mimeType } = getOpenAIFileParams(path);
     const uploadedFile = await openai.files.create({
-      file: new File([buffer], fileName, { type: mimeType }),
+      file: new File([buffer], filename, { type: mimeType }),
       purpose: "assistants"
     });
     
@@ -185,13 +182,9 @@ async function uploadDocsToOpenAI(docs: Array<{ type: string; path: string }>): 
       if (!file) continue;
       
       const buf = Buffer.from(await file.arrayBuffer());
-      const fileName = doc.path.split('/').pop() || 'doc.pdf';
-      const mimeType = fileName.endsWith('.docx') 
-        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-        : 'application/pdf';
-      
+      const { filename, mimeType } = getOpenAIFileParams(doc.path);
       const uploaded = await openai.files.create({
-        file: new File([buf], fileName, { type: mimeType }),
+        file: new File([buf], filename, { type: mimeType }),
         purpose: "assistants",
       });
       fileIds.push(uploaded.id);
