@@ -19,6 +19,13 @@ const DOCUMENT_PRIORITY = {
   'extra': 4
 };
 
+// Fields that must prefer AD report over intake when both have a value
+const AD_FIRST_FIELDS = ['work_experience'];
+
+function isFilled(v: unknown): boolean {
+  return v != null && v !== '' && (typeof v !== 'string' || v.trim() !== '');
+}
+
 function extractStoragePath(url: string): string | null {
   const match = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
   if (match?.[1]) return match[1];
@@ -1391,10 +1398,17 @@ async function processDocumentsSeparately(docs: any[]): Promise<any> {
   if (adDoc) {
     console.log('📄 Processing AD report (priority 2)...');
     const adResult = await processADReport(adDoc);
-    // Only merge fields that are missing
+    // AD-first fields: prefer AD when it has a value; other fields: only fill if missing
     Object.keys(adResult).forEach(key => {
-      if (!results[key] || results[key] === null || results[key] === '') {
-        results[key] = adResult[key];
+      const adValue = adResult[key];
+      if (AD_FIRST_FIELDS.includes(key)) {
+        if (isFilled(adValue)) {
+          results[key] = adValue;
+        }
+      } else {
+        if (!isFilled(results[key])) {
+          results[key] = adValue;
+        }
       }
     });
     processedDocs.push('ad_rapport');
