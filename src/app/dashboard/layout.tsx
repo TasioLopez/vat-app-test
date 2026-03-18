@@ -6,15 +6,15 @@ import ClientLayout from '@/app/dashboard/ClientLayout';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await getSupabaseServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) redirect('/login');
+  if (!user) redirect('/login');
 
   const { data: userData, error } = await supabase
     .from('users')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   if (error) redirect('/login');

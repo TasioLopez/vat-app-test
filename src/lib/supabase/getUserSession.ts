@@ -4,8 +4,9 @@ import { getSupabaseServerClient } from "./server";
 export async function getUserSession() {
   const supabase = await getSupabaseServerClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return session;
+  if (!user) return null;
+  return { user };
 }

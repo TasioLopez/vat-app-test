@@ -26,10 +26,10 @@ function ResetPasswordContent() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Check if we have a valid session from the reset link
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Check if we have a valid user from the reset link (getUser validates with Auth server)
+        const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (error || !session) {
+        if (error || !user) {
           setMessage({ 
             type: 'error', 
             text: 'Ongeldige of verlopen reset link. Vraag een nieuwe reset link aan.' 
