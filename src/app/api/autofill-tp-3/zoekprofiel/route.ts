@@ -96,117 +96,192 @@ async function uploadDocsToOpenAI(docs: Array<{ type: string; path: string }>): 
 
 function buildInstructions(employeeData: any, fmlDate: string): string {
   const educationLevel = employeeData.education_level || null;
-  const educationName = employeeData.education_name || '';
-  
-  // Format job titles - use exact values from database
   const currentJob = employeeData.current_job || '';
   const workExperienceRaw = employeeData.work_experience || '';
-  
-  // Parse work_experience to handle JSON arrays
   const workExperience = parseWorkExperience(workExperienceRaw);
-  
-  // Combine job titles for display
-  let jobTitles = currentJob;
-  if (workExperience && workExperience !== currentJob) {
-    jobTitles = currentJob ? `${currentJob}, ${workExperience}` : workExperience;
-  }
+  const jobTitles = currentJob
+    ? (workExperience && workExperience !== currentJob ? `${currentJob}, ${workExperience}` : currentJob)
+    : workExperience || '';
 
-  // Build education phrase for first paragraph
-  let educationPhrase = '';
-  if (educationLevel) {
-    educationPhrase = `${educationLevel} niveau`;
-  } else {
-    educationPhrase = '... niveau (...)';
-  }
+  const dataBlock = [
+    "Aangeleverde gegevens voor de eerste alinea (gebruik uitsluitend zoals hieronder; voor de rest uitsluitend het belastbaarheidsdocument):",
+    `- Hoogst genoten scholing: ${educationLevel ? educationLevel : "onbekend (gebruik exact: Werknemer is geschikt voor functies op … niveau op basis van kennis en ervaring.)"}`,
+    `- Werkervaring: ${jobTitles ? `Werkervaring is opgedaan in de functie van ${jobTitles} (eventueel context uit document).` : "niet aangeleverd (gebruik een volledige zin met functienamen als puntjes (…))."}`,
+    `- Datum FML/IZP: ${fmlDate ? fmlDate : "niet aangeleverd (laat de datumverwijzing in de sluitzin weg)."}`,
+  ].join("\n");
 
-  // Build work experience phrase
-  let workExperiencePhrase = '';
-  if (jobTitles) {
-    workExperiencePhrase = `Zij kan voornamelijk steunen op haar ervaring als ${jobTitles}.`;
-  } else {
-    workExperiencePhrase = `Zij kan voornamelijk steunen op haar ervaring als ...`;
-  }
+  const masterPrompt = `MASTER PROMPT – ZOEKPROFIEL (UWV / ARBEIDSDESKUNDIG)
 
-  // Build date phrase
-  let datePhrase = '';
-  if (fmlDate) {
-    datePhrase = fmlDate;
-  }
+Je schrijft een professioneel Zoekprofiel in zakelijk Nederlands, geschikt voor opname in een UWV-arbeidsdeskundige rapportage.
+De tekst is volledig AVG/GDPR-proof en uitsluitend gebaseerd op het aangeleverde belastbaarheidsdocument.
 
-  return `Schrijf een professioneel Zoekprofiel in zakelijk Nederlands, geschikt voor gebruik binnen een UWV-arbeidsdeskundige rapportage. De tekst moet volledig AVG/GDPR-proof zijn en uitsluitend gebaseerd zijn op het aangeleverde belastbaarheidsdocument.
-
-## Documentherkenning (verplicht):
+Documentherkenning (verplicht)
 
 Herken automatisch of het aangeleverde document een Functionele Mogelijkhedenlijst (FML) of een Inzetbaarheidsprofiel (IZP) betreft.
 
-Gebruik in de tekst uitsluitend de benaming die in het aangeleverde document wordt gebruikt (FML of IZP).
+Gebruik in de tekst uitsluitend de benaming die in het document wordt gebruikt (FML of IZP).
+Combineer of vervang documentnamen niet.
 
-Voeg geen andere documenttypen toe en combineer de benamingen niet.
+Datumregel (verplicht)
 
-## Datumregel (verplicht):
+Indien een datum is aangeleverd, schrijf deze voluit met de maand in woorden, in correct Nederlands
+(bijvoorbeeld: 12 december 2025).
 
-Indien een datum wordt genoemd, schrijf deze altijd voluit met de maand in woorden in het Nederlands (bijvoorbeeld: 7 oktober 2025, niet 7-10-2025 of 07-10-2025).
+Indien geen datum is aangeleverd, laat de datumverwijzing weg.
 
-Indien geen datum is aangeleverd, laat de datum leeg.
+Startinstructie (verplicht)
 
-## Startinstructie (verplicht):
+Zodra het belastbaarheidsdocument (FML of IZP) is aangeleverd, genereer je direct het Zoekprofiel.
 
-Zodra het belastbaarheidsdocument (FML of IZP) wordt aangeleverd, genereer je direct het Zoekprofiel. Geef uitsluitend de definitieve tekst en geen toelichting, uitleg of kopjes.
+Geef uitsluitend de definitieve tekst.
+Geen toelichting, uitleg, kopjes, labels of commentaar.
 
-## Vormvereisten (strikt):
+Vormvereisten (strikt)
 
-Gebruik geen kopjes, titels, labels of opsommingen.
+Gebruik geen kopjes, titels, labels of opsommingen
 
-Schrijf in twee doorlopende alinea's, gescheiden door één witregel.
+Schrijf exact twee doorlopende alinea's, gescheiden door één witregel
 
-Gebruik geen exacte getallen, geen hoeveelheden, geen tijdsduren, geen frequenties, geen kg's, geen Newton (N).
+Gebruik geen exacte getallen, geen hoeveelheden, geen tijdsduren, geen frequenties
 
-Gebruik geen benoeming van lichaamsdelen, medische lokalisaties of anatomische termen.
+Gebruik geen kg's, Newton, meters, uren of aantallen
 
-Gebruik uitsluitend kwalitatieve, functiegerichte formuleringen zoals: licht, beperkt, afwisselend, ondersteunend, binnen vastgestelde grenzen, incidenteel onderdeel van het werk.
+Gebruik geen anatomische termen, medische lokalisaties of benoeming van lichaamsdelen
 
-## Eerste alinea – vaste volgorde (verplicht):
+Gebruik uitsluitend kwalitatieve, functiegerichte formuleringen, zoals:
 
-Hoogst genoten scholing: ${educationLevel 
-    ? `Werknemer is geschikt voor ${educationLevel} niveau functies op basis van kennis en ervaring.` 
-    : `Werknemer is geschikt voor functies op ... niveau (...) op basis van kennis en ervaring.`}
+licht
 
-Werkervaring: ${workExperiencePhrase}
+beperkt
 
-Sluit deze alinea altijd af met exact de volgende zin, met gebruik van de juiste documentnaam (FML of IZP) en correcte datumweergave:
-${datePhrase 
-    ? `"De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel en de beperkingen/voorwaarden zoals beschreven in de [FML/IZP] van ${datePhrase}."`
-    : `"De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel en de beperkingen/voorwaarden zoals beschreven in de [FML/IZP]."`}
+ondersteunend
 
-## Tweede alinea – gecombineerd en strikt functiegericht arbeidsbeeld:
+binnen vastgestelde grenzen
 
-Begin direct functiegericht, bijvoorbeeld met "De focus ligt op functies ...".
+structureel passend
 
-Beschrijf de inzetbaarheid uitsluitend in termen van functiekenmerken.
+geen structureel onderdeel van het werk
 
-Handelingen die volgens het aangeleverde document slechts in beperkte mate zijn toegestaan worden niet afzonderlijk benoemd, maar gecombineerd verwerkt als onderdeel van een licht en afwisselend werkpatroon.
+Verboden formuleringen (absoluut niet gebruiken)
 
-Benoem uitsluitend wat structureel en duurzaam passend is binnen arbeid.
+Gebruik geen generieke of samenvattende werkpatroonbegrippen zoals:
 
-## Strikte documentafbakening (verplicht):
+licht werk
 
-Voeg geen contextuele, organisatorische, cognitieve of omgevingskenmerken toe die niet expliciet of functioneel uit het aangeleverde document volgen.
+licht en afwisselend werkpatroon
 
-Vermijd termen zoals (niet-limitatief): overzichtelijk, stabiel, rustig, voorspelbaar, gestructureerd, weinig prikkels, laag tempo, eenvoudige werkomgeving.
+afwisselende werkzaamheden
 
-Indien een kenmerk niet direct herleidbaar is tot het aangeleverde document, mag het niet worden benoemd.
+passend werkpatroon
 
-Bij twijfel: niet opnemen.
+daggebonden werktijden
 
-## Zelfcontrole vóór output (verplicht):
+rustige of overzichtelijke werkomgeving
 
-Controleer of elke zin functioneel herleidbaar is tot het aangeleverde document (FML of IZP).
+voorspelbaar, gestructureerd, prikkelarm, laag tempo
 
-Verwijder automatisch gegenereerde contextzinnen die niet strikt noodzakelijk zijn voor de arbeidskundige beoordeling.
+Indien een formulering niet direct en eenduidig herleidbaar is tot het document: niet opnemen.
 
-BELANGRIJK: Gebruik ALLEEN informatie die expliciet of functioneel uit de aangeleverde documenten volgt. Voeg GEEN kenmerken toe die niet in de documenten staan.
+Eerste alinea – vaste volgorde (verplicht)
 
-Output uitsluitend JSON: { "zoekprofiel": string }`;
+Hoogst genoten scholing
+Indien onbekend, gebruik exact:
+"Werknemer is geschikt voor functies op … niveau op basis van kennis en ervaring."
+
+Werkervaring
+Benoem relevante werkervaring indien aangeleverd.
+Indien niet aangeleverd: gebruik een volledige zin met functienamen als puntjes (…).
+
+Sluit de alinea altijd af met exact deze zin (met juiste documentnaam en datum):
+
+"De zoektocht naar werk houdt rekening met de wensen van de werknemer, het persoonlijk profiel, de beperkingen en voorwaarden zoals beschreven in de [FML/IZP] van [datum voluit]."
+
+Tweede alinea – strikt functiegericht arbeidsbeeld
+
+Begin direct functiegericht, bijvoorbeeld met:
+"De focus ligt op functies …"
+
+Beschrijf uitsluitend structureel en duurzaam passende arbeid
+
+Combineer beperkingen tot functie-eisen, geen losse opsomming van handelingen
+
+Benoem alleen wat kan binnen arbeid, niet wat incidenteel of theoretisch mogelijk is
+
+Sociale en persoonlijke voorwaarden (verplicht expliciet verwerken)
+
+Indien van toepassing:
+
+Conflicthantering
+Formuleer kort en eenduidig in mogelijkhedenstijl, bijvoorbeeld:
+"Conflicthantering met agressieve of onredelijke personen vindt uitsluitend op afstand plaats."
+
+Samenwerken / solitair werk
+Benoem expliciet de noodzaak tot structurele terugval op collega's of leidinggevenden indien aangegeven.
+
+Vervoer en bereikbaarheid (verplicht)
+
+Indien uit het document blijkt dat de werknemer geen voertuig kan besturen:
+
+Vertaal dit altijd naar een functie-eis inzake bereikbaarheid
+
+Gebruik niet de termen mobiliteit of rijgeschiktheid
+
+Formuleer bijvoorbeeld:
+"De werkzaamheden zijn bereikbaar zonder dat het besturen van een vervoermiddel onderdeel is van het werk."
+
+Werktijden (zeer strikt)
+
+Werktijden moeten positief en functioneel worden geformuleerd vanuit wat mogelijk is.
+
+Indien arbeid tussen 22:00 en 06:00 niet is toegestaan, formuleer dit altijd als:
+
+werkzaamheden overdag en in de avond zijn passend;
+
+werkzaamheden in de nacht zijn niet passend.
+
+Gebruik geen termen zoals:
+
+nachtarbeid
+
+tijdvak
+
+dagdienst
+
+ploegendienst
+
+daggebonden werktijden
+
+Fysieke en omgevingsfactoren
+
+Benoem uitsluitend structurele functiekenmerken
+
+Geen exacte belasting, geen aantallen, geen meeteenheden
+
+Formuleer als uitsluiting van structurele blootstelling, bijvoorbeeld:
+
+geen structurele krachtbelasting
+
+geen blootstelling aan schokken of trillingen
+
+geen gebruik van verzwarende beschermende uitrusting
+
+Zelfcontrole vóór output (verplicht)
+
+Controleer vóór het genereren:
+
+Is elke zin direct herleidbaar tot de FML of IZP?
+
+Zijn alle expliciete FML-items functioneel verwerkt (sociaal, vervoer, werktijden)?
+
+Zijn geen generieke samenvattingen gebruikt?
+
+Is de tekst arbeidskundig toetsbaar en vrij van interpretatieve taal?
+
+Indien twijfel: niet opnemen.`;
+
+  const jsonInstruction = 'Output: lever het gegenereerde zoekprofiel (alleen de twee alinea\'s) als JSON in het formaat { "zoekprofiel": "<tekst>" }.';
+
+  return `${dataBlock}\n\n${masterPrompt}\n\n${jsonInstruction}`;
 }
 
 async function runAssistant(files: string[], employeeData: any, fmlDate: string) {
