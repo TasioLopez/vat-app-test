@@ -6,6 +6,7 @@ import { SELECT_CLASS } from '@/lib/select-class';
 import { Label } from './label';
 import { Input } from './input';
 import { Textarea } from './textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
 interface BaseFieldProps {
   label: string;
@@ -25,9 +26,13 @@ interface TextareaFieldProps extends BaseFieldProps, Omit<React.TextareaHTMLAttr
   rows?: number;
 }
 
-interface SelectFieldProps extends BaseFieldProps, Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'name'> {
+interface SelectFieldProps extends BaseFieldProps {
   options: { value: string; label: string; disabled?: boolean }[];
   placeholder?: string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  disabled?: boolean;
 }
 
 interface CheckboxFieldProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'name' | 'type'> {
@@ -103,41 +108,46 @@ export const TextareaField = forwardRef<HTMLTextAreaElement, TextareaFieldProps>
 );
 TextareaField.displayName = 'TextareaField';
 
-// Select Field
-export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
-  ({ label, name, error, required, disabled, className, helpText, options, placeholder, ...props }, ref) => {
+// Select Field - uses Radix Select for styled dropdown list; hidden input for form submission
+export const SelectField = forwardRef<HTMLButtonElement, SelectFieldProps>(
+  ({ label, name, error, required, disabled, className, helpText, options, placeholder, value, defaultValue, onChange }, ref) => {
     return (
       <div className={cn('space-y-2', className)}>
         <Label htmlFor={name} className={cn(required && 'after:content-["*"] after:ml-0.5 after:text-red-500')}>
           {label}
         </Label>
-        <select
-          ref={ref}
-          id={name}
-          name={name}
+        {name && (value ?? defaultValue) != null && (value ?? defaultValue) !== '' && (
+          <input type="hidden" name={name} value={value ?? defaultValue ?? ''} readOnly />
+        )}
+        <Select
+          value={value ?? undefined}
+          defaultValue={defaultValue}
           disabled={disabled}
-          className={cn(
-            SELECT_CLASS,
-            error && 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500',
-            disabled && 'bg-gray-50 text-gray-500 cursor-not-allowed'
-          )}
-          {...props}
+          required={required}
+          onValueChange={(v) => onChange?.({ target: { value: v } })}
         >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.map((option) => (
-            <option
-              key={option.value}
-              value={option.value}
-              disabled={option.disabled}
-            >
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            ref={ref}
+            id={name}
+            className={cn(
+              error && 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500',
+              disabled && 'bg-gray-50 text-gray-500 cursor-not-allowed'
+            )}
+          >
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {helpText && !error && (
           <p className="text-sm text-gray-500 dark:text-gray-400">{helpText}</p>
         )}

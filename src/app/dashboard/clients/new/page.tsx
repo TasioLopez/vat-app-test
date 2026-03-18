@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
     FaBriefcase, 
     FaBuilding, 
@@ -160,34 +161,32 @@ export default function AddClientPage() {
                                         Branche
                                     </label>
                                     <div className="relative">
-                                        <select
-                                            name="industry"
-                                            value={form.industry}
-                                            onChange={handleChange}
-                                            onFocus={() => setFocusedField('industry')}
-                                            onBlur={() => setFocusedField(null)}
-                                            className={cn(
-                                                SELECT_CLASS,
-                                                'rounded-xl pl-12 appearance-none cursor-pointer',
-                                                focusedField === 'industry' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
-                                            )}
+                                        <Select
+                                            value={form.industry || undefined}
+                                            onValueChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
+                                            onOpenChange={(open) => setFocusedField(open ? 'industry' : null)}
                                         >
-                                            <option value="">Selecteer een branche</option>
-                                            {industryOptions.map((option) => (
-                                                <option key={option} value={option}>
-                                                    {option}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger
+                                                className={cn(
+                                                    SELECT_CLASS,
+                                                    'rounded-xl pl-12 appearance-none cursor-pointer',
+                                                    focusedField === 'industry' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                                )}
+                                            >
+                                                <SelectValue placeholder="Selecteer een branche" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {industryOptions.map((option) => (
+                                                    <SelectItem key={option} value={option}>
+                                                        {option}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 pointer-events-none ${
                                             focusedField === 'industry' ? 'text-purple-600 scale-110' : 'text-gray-400'
                                         }`}>
                                             <FaIndustry />
-                                        </div>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
                                         </div>
                                     </div>
                                 </div>
@@ -443,23 +442,26 @@ export default function AddClientPage() {
                                         <FaUser className="text-purple-600 text-sm" />
                                         Geslacht referent
                                     </label>
-                                    <select
-                                        name="referent_gender"
-                                        value={form.referent_gender}
-                                        onChange={handleChange}
-                                        onFocus={() => setFocusedField('referent_gender')}
-                                        onBlur={() => setFocusedField(null)}
-                                        className={cn(
-                                            SELECT_CLASS,
-                                            'rounded-xl pl-12',
-                                            focusedField === 'referent_gender' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
-                                        )}
+                                    <Select
+                                        value={form.referent_gender || undefined}
+                                        onValueChange={(v) => setForm((prev) => ({ ...prev, referent_gender: v }))}
+                                        onOpenChange={(open) => setFocusedField(open ? 'referent_gender' : null)}
                                     >
-                                        <option value="">Selecteer geslacht</option>
-                                        <option value="Man">Man</option>
-                                        <option value="Vrouw">Vrouw</option>
-                                        <option value="Anders">Anders</option>
-                                    </select>
+                                        <SelectTrigger
+                                            className={cn(
+                                                SELECT_CLASS,
+                                                'rounded-xl pl-12',
+                                                focusedField === 'referent_gender' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            )}
+                                        >
+                                            <SelectValue placeholder="Selecteer geslacht" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Man">Man</SelectItem>
+                                            <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                            <SelectItem value="Anders">Anders</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                         </div>

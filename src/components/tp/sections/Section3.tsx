@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
 import { SELECT_CLASS } from '@/lib/select-class';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -1018,23 +1019,26 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                                     {checked && hasTemplates && (
                                         <div className="ml-6 pl-2 border-l border-border space-y-1">
                                             <label className="text-xs text-muted-foreground">Subtekst (Z-logo):</label>
-                                            <select
-                                                className={SELECT_CLASS}
+                                            <Select
                                                 value={subTextOption}
-                                                onChange={(e) => {
-                                                    const v = e.target.value;
+                                                onValueChange={(v) => {
                                                     if (v === "geen") setSubTextAndSave(a.id, null);
                                                     else if (v === "sjabloon-1") setSubTextAndSave(a.id, templates[0]);
                                                     else if (v === "sjabloon-2") setSubTextAndSave(a.id, templates[1]);
                                                     else if (v === "sjabloon-3") setSubTextAndSave(a.id, templates[2]);
                                                 }}
                                             >
-                                                <option value="geen">Geen</option>
-                                                <option value="sjabloon-1">Sjabloon 1</option>
-                                                <option value="sjabloon-2">Sjabloon 2</option>
-                                                <option value="sjabloon-3">Sjabloon 3</option>
-                                                <option value="custom">Aangepast</option>
-                                            </select>
+                                                <SelectTrigger className={SELECT_CLASS}>
+                                                    <SelectValue placeholder="Subtekst" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="geen">Geen</SelectItem>
+                                                    <SelectItem value="sjabloon-1">Sjabloon 1</SelectItem>
+                                                    <SelectItem value="sjabloon-2">Sjabloon 2</SelectItem>
+                                                    <SelectItem value="sjabloon-3">Sjabloon 3</SelectItem>
+                                                    <SelectItem value="custom">Aangepast</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             {(currentSub != null && currentSub !== "") && (
                                                 <>
                                                     <div className="text-xs text-gray-600 line-clamp-2 mt-1">{currentSub}</div>

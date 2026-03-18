@@ -11,6 +11,7 @@ import { Trash2, Pencil, Search, ChevronUp, ChevronDown, Building2, Tag, Mail, P
 import { trackAccess } from '@/lib/tracking';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type SortField = 'name' | 'industry';
 type SortDirection = 'asc' | 'desc';
@@ -406,20 +407,23 @@ export default function ClientsPage() {
                     <Tag className="w-4 h-4 shrink-0" />
                     Werkgever branche
                   </label>
-                  <select
-                    value={selectedClient.industry || ''}
-                    onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
+                  <Select
+                    value={selectedClient.industry || undefined}
+                    onValueChange={(v) => setSelectedClient({ ...selectedClient, industry: v })}
                     disabled={userRole !== 'admin'}
-                    className={cn(SELECT_CLASS)}
                   >
-                    <option value="">Selecteer een branche</option>
-                    {[
-                      'Gezondheidszorg', 'Onderwijs', 'Financiën', 'Technologie', 'Detailhandel',
-                      'Productie', 'Bouw', 'Horeca', 'Transport', 'Overig'
-                    ].map((industry) => (
-                      <option key={industry} value={industry}>{industry}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className={cn(SELECT_CLASS)}>
+                      <SelectValue placeholder="Selecteer een branche" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        'Gezondheidszorg', 'Onderwijs', 'Financiën', 'Technologie', 'Detailhandel',
+                        'Productie', 'Bouw', 'Horeca', 'Transport', 'Overig'
+                      ].map((industry) => (
+                        <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
@@ -478,12 +482,16 @@ export default function ClientsPage() {
                           <Input placeholder="Telefoon" value={(editingReferentDraft.phone as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, phone: e.target.value }))} />
                           <Input placeholder="E-mail" value={(editingReferentDraft.email as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, email: e.target.value }))} />
                           <Input placeholder="Functie" value={(editingReferentDraft.referent_function as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, referent_function: e.target.value }))} />
-                          <select className={SELECT_CLASS} value={(editingReferentDraft.gender as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, gender: e.target.value }))}>
-                            <option value="">Geslacht</option>
-                            <option value="Man">Man</option>
-                            <option value="Vrouw">Vrouw</option>
-                            <option value="Anders">Anders</option>
-                          </select>
+                          <Select value={(editingReferentDraft.gender as string) || undefined} onValueChange={(v) => setEditingReferentDraft((p) => ({ ...p, gender: v }))}>
+                            <SelectTrigger className={SELECT_CLASS}>
+                              <SelectValue placeholder="Geslacht" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Man">Man</SelectItem>
+                              <SelectItem value="Vrouw">Vrouw</SelectItem>
+                              <SelectItem value="Anders">Anders</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <div className="col-span-2 flex gap-2">
                             <Button type="button" size="sm" onClick={saveEditReferent}>Opslaan</Button>
                             <Button type="button" variant="outline" size="sm" onClick={() => { setEditingReferentId(null); setEditingReferentDraft({}); }}>Annuleren</Button>
@@ -516,12 +524,16 @@ export default function ClientsPage() {
                     <Input placeholder="Telefoon" value={(newReferent.phone as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, phone: e.target.value }))} />
                     <Input placeholder="E-mail" value={(newReferent.email as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, email: e.target.value }))} />
                     <Input placeholder="Functie" value={(newReferent.referent_function as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, referent_function: e.target.value }))} />
-                    <select className={SELECT_CLASS} value={(newReferent.gender as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, gender: e.target.value }))}>
-                      <option value="">Geslacht</option>
-                      <option value="Man">Man</option>
-                      <option value="Vrouw">Vrouw</option>
-                      <option value="Anders">Anders</option>
-                    </select>
+                    <Select value={(newReferent.gender as string) || undefined} onValueChange={(v) => setNewReferent((p) => ({ ...p, gender: v }))}>
+                      <SelectTrigger className={SELECT_CLASS}>
+                        <SelectValue placeholder="Geslacht" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Man">Man</SelectItem>
+                        <SelectItem value="Vrouw">Vrouw</SelectItem>
+                        <SelectItem value="Anders">Anders</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <div className="col-span-2 flex gap-2">
                       <Button type="button" size="sm" onClick={saveNewReferent}>Toevoegen</Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => setNewReferent(null)}>Annuleren</Button>

@@ -20,6 +20,7 @@ import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 
 const tdLabel = "py-1 px-2 border-collapse align-top w-[40%] font-bold";
@@ -772,36 +773,37 @@ function Field({
     return (
       <div>
         <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
-        <select
-          className={selectClass}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value || null)}
-        >
-          <option value="">Selecteer</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <Select value={value ?? undefined} onValueChange={(v) => onChange(v || null)}>
+          <SelectTrigger className={selectClass}>
+            <SelectValue placeholder="Selecteer" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     );
   }
 
   // Boolean field
   if (bool) {
+    const boolValue = value === true ? 'Ja' : value === false ? 'Nee' : '';
     return (
       <div>
         <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
-        <select
-          className={selectClass}
-          value={value === true ? 'Ja' : value === false ? 'Nee' : ''}
-          onChange={(e) => onChange(e.target.value === 'Ja')}
-        >
-          <option value="">Selecteer</option>
-          <option value="Ja">Ja</option>
-          <option value="Nee">Nee</option>
-        </select>
+        <Select value={boolValue || undefined} onValueChange={(v) => onChange(v === 'Ja')}>
+          <SelectTrigger className={selectClass}>
+            <SelectValue placeholder="Selecteer" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Ja">Ja</SelectItem>
+            <SelectItem value="Nee">Nee</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     );
   }

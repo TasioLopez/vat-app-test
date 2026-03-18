@@ -21,6 +21,7 @@ import { useToastHelpers } from '@/components/ui/Toast';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
@@ -248,18 +249,19 @@ export default function EmployeesPage() {
           {userRole === 'admin' && clients.length > 0 && (
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className={cn(SELECT_CLASS, 'w-full sm:w-48 px-10')}
-              >
-                <option value="all">Alle werkgevers</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger className={cn(SELECT_CLASS, 'w-full sm:w-48 px-10')}>
+                  <SelectValue placeholder="Alle werkgevers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle werkgevers</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

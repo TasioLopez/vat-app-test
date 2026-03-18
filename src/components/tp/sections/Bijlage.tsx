@@ -18,6 +18,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import { supabase } from "@/lib/supabase/client";
 import { useTP } from "@/context/TPContext";
 import { SELECT_CLASS } from "@/lib/select-class";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STATUS_OPTIONS = ["G", "P", "N"] as const;
 
@@ -680,17 +681,21 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                       <SortableItem id={act.name} key={act.name}>
                         <div className="bg-white p-2 rounded border flex justify-between items-center">
                           <span>{act.name}</span>
-                          <select
+                          <Select
                             value={act.status}
-                            onChange={(e) => handleStatusChange(i, act.name, e.target.value)}
-                            className={SELECT_CLASS}
+                            onValueChange={(v) => handleStatusChange(i, act.name, v)}
                           >
-                            {STATUS_OPTIONS.map((status) => (
-                              <option key={status} value={status}>
-                                {status}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className={SELECT_CLASS}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </SortableItem>
                     ))}

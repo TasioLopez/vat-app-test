@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Employee = {
     id: string;
@@ -560,37 +561,45 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
                                 {userRole === 'admin' ? (
-                                    <select className={SELECT_CLASS} value={employee.client_id || ''} onChange={(e) => { const v = e.target.value; setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
-                                        <option value="">Selecteer werkgever</option>
-                                        {clients.map((client) => (
-                                            <option key={client.id} value={client.id}>{client.name}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={employee.client_id || undefined} onValueChange={(v) => { setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
+                                        <SelectTrigger className={SELECT_CLASS}>
+                                            <SelectValue placeholder="Selecteer werkgever" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {clients.map((client) => (
+                                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 ) : (
                                     <input className="w-full border border-gray-500/30 p-2 rounded bg-gray-100 text-gray-500" value={clientName || ''} disabled />
                                 )}
                                 {employee.client_id ? (
                                     <div className="space-y-1">
                                         <label className="text-sm text-gray-600">Contactpersoon</label>
-                                        <select
-                                            className={SELECT_CLASS}
-                                            value={employee.referent_id ?? ''}
-                                            onChange={async (e) => {
-                                                const refId = e.target.value || null;
+                                        <Select
+                                            value={employee.referent_id ?? '__none__'}
+                                            onValueChange={async (v) => {
+                                                const refId = v === '__none__' ? null : v;
                                                 setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
                                                 const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
                                                 if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
                                                 else showSuccess('Contactpersoon bijgewerkt.');
                                             }}
                                         >
-                                            <option value="">— Geen / Default —</option>
-                                            {referents.map((r) => (
-                                                <option key={r.id} value={r.id}>
-                                                    {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
-                                                    {r.referent_function ? ` (${r.referent_function})` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger className={SELECT_CLASS}>
+                                                <SelectValue placeholder="— Geen / Default —" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__none__">— Geen / Default —</SelectItem>
+                                                {referents.map((r) => (
+                                                    <SelectItem key={r.id} value={r.id}>
+                                                        {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
+                                                        {r.referent_function ? ` (${r.referent_function})` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 ) : null}
                                 <div className="flex gap-2 mt-4">
@@ -608,12 +617,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </div>
 
                             <div className="flex flex-col gap-2 w-2/5">
-                                <select className={selectFieldClass('gender')} value={employeeDetails?.gender || ''} onChange={e => handleDetailChange('gender', e.target.value)} >
-                                    <option value="">Geslacht selecteren</option>
-                                    <option value="Man">Man</option>
-                                    <option value="Vrouw">Vrouw</option>
-                                    <option value="Anders">Anders</option>
-                                </select>
+                                <Select value={employeeDetails?.gender || undefined} onValueChange={(v) => handleDetailChange('gender', v)}>
+                                    <SelectTrigger className={selectFieldClass('gender')}>
+                                        <SelectValue placeholder="Geslacht selecteren" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Man">Man</SelectItem>
+                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                        <SelectItem value="Anders">Anders</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <input className={fieldClass('phone')} placeholder="Telefoon" value={employeeDetails?.phone || ''} onChange={e => handleDetailChange('phone', e.target.value)} />
                                 <input className={fieldClass('date_of_birth')} type="date" value={employeeDetails?.date_of_birth || ''} onChange={e => handleDetailChange('date_of_birth', e.target.value)} />
                             </div>
@@ -712,16 +725,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             <GraduationCap className="w-4 h-4 text-purple-600" />
                             Opleidingsniveau
                         </label>
-                        <select 
-                            className={selectFieldClass('education_level')} 
-                            value={employeeDetails?.education_level || ''} 
-                            onChange={e => handleDetailChange('education_level', e.target.value)}
-                        >
-                            <option value="">Selecteer opleidingsniveau</option>
-                            {['Praktijkonderwijs', 'VMBO', 'LTS', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MTS', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
-                                <option key={level} value={level}>{level}</option>
-                            ))}
-                        </select>
+                        <Select value={employeeDetails?.education_level || undefined} onValueChange={(v) => handleDetailChange('education_level', v)}>
+                            <SelectTrigger className={selectFieldClass('education_level')}>
+                                <SelectValue placeholder="Selecteer opleidingsniveau" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {['Praktijkonderwijs', 'VMBO', 'LTS', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MTS', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
+                                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-2 group">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -877,42 +890,42 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
-                            <select 
-                                className={selectFieldClass('dutch_speaking')} 
-                                value={employeeDetails?.dutch_speaking || ''} 
-                                onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
-                            >
-                                <option value="">Selecteer...</option>
-                                <option value="Niet goed">Niet goed</option>
-                                <option value="Gemiddeld">Gemiddeld</option>
-                                <option value="Goed">Goed</option>
-                            </select>
+                            <Select value={employeeDetails?.dutch_speaking || undefined} onValueChange={(v) => handleDetailChange('dutch_speaking', v || null)}>
+                                <SelectTrigger className={selectFieldClass('dutch_speaking')}>
+                                    <SelectValue placeholder="Selecteer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                    <SelectItem value="Goed">Goed</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
-                            <select 
-                                className={selectFieldClass('dutch_writing')} 
-                                value={employeeDetails?.dutch_writing || ''} 
-                                onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
-                            >
-                                <option value="">Selecteer...</option>
-                                <option value="Niet goed">Niet goed</option>
-                                <option value="Gemiddeld">Gemiddeld</option>
-                                <option value="Goed">Goed</option>
-                            </select>
+                            <Select value={employeeDetails?.dutch_writing || undefined} onValueChange={(v) => handleDetailChange('dutch_writing', v || null)}>
+                                <SelectTrigger className={selectFieldClass('dutch_writing')}>
+                                    <SelectValue placeholder="Selecteer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                    <SelectItem value="Goed">Goed</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
-                            <select 
-                                className={selectFieldClass('dutch_reading')} 
-                                value={employeeDetails?.dutch_reading || ''} 
-                                onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
-                            >
-                                <option value="">Selecteer...</option>
-                                <option value="Niet goed">Niet goed</option>
-                                <option value="Gemiddeld">Gemiddeld</option>
-                                <option value="Goed">Goed</option>
-                            </select>
+                            <Select value={employeeDetails?.dutch_reading || undefined} onValueChange={(v) => handleDetailChange('dutch_reading', v || null)}>
+                                <SelectTrigger className={selectFieldClass('dutch_reading')}>
+                                    <SelectValue placeholder="Selecteer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                    <SelectItem value="Goed">Goed</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>
@@ -923,18 +936,18 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <Computer className="w-4 h-4 text-purple-600" />
                         Computervaardigheden
                     </label>
-                    <select 
-                        className={selectFieldClass('computer_skills')} 
-                        value={employeeDetails?.computer_skills || ''} 
-                        onChange={e => handleDetailChange('computer_skills', e.target.value)}
-                    >
-                        <option value="">Selecteer computervaardigheden</option>
-                        <option value="1">1 - Geen</option>
-                        <option value="2">2 - Basis (e-mail, browsen)</option>
-                        <option value="3">3 - Gemiddeld (Word, Excel)</option>
-                        <option value="4">4 - Geavanceerd (meerdere programma's)</option>
-                        <option value="5">5 - Expert (IT-gerelateerde vaardigheden)</option>
-                    </select>
+                    <Select value={employeeDetails?.computer_skills || undefined} onValueChange={(v) => handleDetailChange('computer_skills', v)}>
+                        <SelectTrigger className={selectFieldClass('computer_skills')}>
+                            <SelectValue placeholder="Selecteer computervaardigheden" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1">1 - Geen</SelectItem>
+                            <SelectItem value="2">2 - Basis (e-mail, browsen)</SelectItem>
+                            <SelectItem value="3">3 - Gemiddeld (Word, Excel)</SelectItem>
+                            <SelectItem value="4">4 - Geavanceerd (meerdere programma's)</SelectItem>
+                            <SelectItem value="5">5 - Expert (IT-gerelateerde vaardigheden)</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {/* Contract Hours */}

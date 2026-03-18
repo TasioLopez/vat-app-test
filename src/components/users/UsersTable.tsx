@@ -23,6 +23,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { SELECT_CLASS } from "@/lib/select-class";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -336,16 +337,18 @@ export default function UsersTable() {
                             />
                             <div>
                                 <label className="text-sm font-medium text-muted-foreground mb-1 block">Rol</label>
-                                <select
-                                    name="role"
-                                    value={editedUser.role || ""}
-                                    onChange={handleChange}
-                                    className={cn(SELECT_CLASS)}
+                                <Select
+                                    value={editedUser.role || undefined}
+                                    onValueChange={(v) => handleChange({ target: { name: 'role', value: v } } as React.ChangeEvent<HTMLSelectElement>)}
                                 >
-                                    <option value="">Selecteer rol...</option>
-                                    <option value="admin">Beheerder</option>
-                                    <option value="user">Gebruiker</option>
-                                </select>
+                                    <SelectTrigger className={cn(SELECT_CLASS)}>
+                                        <SelectValue placeholder="Selecteer rol..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="admin">Beheerder</SelectItem>
+                                        <SelectItem value="user">Gebruiker</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             </div>
                         )}

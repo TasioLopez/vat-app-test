@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SELECT_CLASS } from "@/lib/select-class";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function InviteUserModal({
   open,
@@ -62,14 +63,15 @@ export default function InviteUserModal({
           onChange={(e) => setLastName(e.target.value)}
           className="mb-2 w-full border px-3 py-2 rounded"
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as "user" | "admin")}
-          className={cn('mb-4', SELECT_CLASS)}
-        >
-          <option value="user">Gebruiker</option>
-          <option value="admin">Beheerder</option>
-        </select>
+        <Select value={role} onValueChange={(v) => setRole(v as "user" | "admin")}>
+          <SelectTrigger className={cn('mb-4', SELECT_CLASS)}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="user">Gebruiker</SelectItem>
+            <SelectItem value="admin">Beheerder</SelectItem>
+          </SelectContent>
+        </Select>
         <button
           onClick={inviteUser}
           disabled={loading}
