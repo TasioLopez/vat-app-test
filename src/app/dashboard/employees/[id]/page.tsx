@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
+import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 
 type Employee = {
     id: string;
@@ -541,6 +543,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     const fieldClass = (field: keyof EmployeeDetails) =>
         `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${autofilledFields.has(field) ? 'border-yellow-400 bg-yellow-50/30' : ''}`;
+    const selectFieldClass = (field: keyof EmployeeDetails) =>
+        cn(SELECT_CLASS, autofilledFields.has(field) && '!border-yellow-400 bg-yellow-50/30');
 
     return (
         <div className="p-4 space-y-6">
@@ -556,7 +560,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
                                 {userRole === 'admin' ? (
-                                    <select className="w-full border border-gray-500/30 p-2 rounded" value={employee.client_id || ''} onChange={(e) => { const v = e.target.value; setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
+                                    <select className={SELECT_CLASS} value={employee.client_id || ''} onChange={(e) => { const v = e.target.value; setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
                                         <option value="">Selecteer werkgever</option>
                                         {clients.map((client) => (
                                             <option key={client.id} value={client.id}>{client.name}</option>
@@ -569,7 +573,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <div className="space-y-1">
                                         <label className="text-sm text-gray-600">Contactpersoon</label>
                                         <select
-                                            className="w-full border border-gray-500/30 p-2 rounded"
+                                            className={SELECT_CLASS}
                                             value={employee.referent_id ?? ''}
                                             onChange={async (e) => {
                                                 const refId = e.target.value || null;
@@ -604,7 +608,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </div>
 
                             <div className="flex flex-col gap-2 w-2/5">
-                                <select className={fieldClass('gender')} value={employeeDetails?.gender || ''} onChange={e => handleDetailChange('gender', e.target.value)} >
+                                <select className={selectFieldClass('gender')} value={employeeDetails?.gender || ''} onChange={e => handleDetailChange('gender', e.target.value)} >
                                     <option value="">Geslacht selecteren</option>
                                     <option value="Man">Man</option>
                                     <option value="Vrouw">Vrouw</option>
@@ -709,7 +713,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             Opleidingsniveau
                         </label>
                         <select 
-                            className={fieldClass('education_level')} 
+                            className={selectFieldClass('education_level')} 
                             value={employeeDetails?.education_level || ''} 
                             onChange={e => handleDetailChange('education_level', e.target.value)}
                         >
@@ -874,7 +878,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
                             <select 
-                                className={fieldClass('dutch_speaking')} 
+                                className={selectFieldClass('dutch_speaking')} 
                                 value={employeeDetails?.dutch_speaking || ''} 
                                 onChange={e => handleDetailChange('dutch_speaking', e.target.value || null)}
                             >
@@ -887,7 +891,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
                             <select 
-                                className={fieldClass('dutch_writing')} 
+                                className={selectFieldClass('dutch_writing')} 
                                 value={employeeDetails?.dutch_writing || ''} 
                                 onChange={e => handleDetailChange('dutch_writing', e.target.value || null)}
                             >
@@ -900,7 +904,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <div className="space-y-2 group">
                             <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
                             <select 
-                                className={fieldClass('dutch_reading')} 
+                                className={selectFieldClass('dutch_reading')} 
                                 value={employeeDetails?.dutch_reading || ''} 
                                 onChange={e => handleDetailChange('dutch_reading', e.target.value || null)}
                             >
@@ -920,7 +924,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         Computervaardigheden
                     </label>
                     <select 
-                        className={fieldClass('computer_skills')} 
+                        className={selectFieldClass('computer_skills')} 
                         value={employeeDetails?.computer_skills || ''} 
                         onChange={e => handleDetailChange('computer_skills', e.target.value)}
                     >

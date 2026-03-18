@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { SELECT_CLASS } from "@/lib/select-class";
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -338,7 +340,7 @@ export default function UsersTable() {
                                     name="role"
                                     value={editedUser.role || ""}
                                     onChange={handleChange}
-                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className={cn(SELECT_CLASS)}
                                 >
                                     <option value="">Selecteer rol...</option>
                                     <option value="admin">Beheerder</option>

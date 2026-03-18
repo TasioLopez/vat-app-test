@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
+import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 import { 
     FaUserTie, 
     FaUser, 
@@ -325,11 +327,11 @@ export default function NewEmployeePage() {
                                     onChange={handleChange}
                                     onFocus={() => setFocusedField('client_id')}
                                     onBlur={() => setFocusedField(null)}
-                                    className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 appearance-none cursor-pointer ${
-                                        focusedField === 'client_id'
-                                            ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
-                                            : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
-                                    } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900`}
+                                    className={cn(
+                                        SELECT_CLASS,
+                                        'rounded-xl pl-12 appearance-none cursor-pointer',
+                                        focusedField === 'client_id' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                    )}
                                     required
                                 >
                                     <option value="">Kies een werkgever...</option>

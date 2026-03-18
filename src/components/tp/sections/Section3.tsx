@@ -14,6 +14,7 @@ import { ActivityBody } from './ActivityBody';
 import { Button } from '@/components/ui/button';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
+import { SELECT_CLASS } from '@/lib/select-class';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -1018,7 +1019,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                                         <div className="ml-6 pl-2 border-l border-border space-y-1">
                                             <label className="text-xs text-muted-foreground">Subtekst (Z-logo):</label>
                                             <select
-                                                className="w-full text-sm border border-border rounded px-2 py-1 bg-background"
+                                                className={SELECT_CLASS}
                                                 value={subTextOption}
                                                 onChange={(e) => {
                                                     const v = e.target.value;

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { SELECT_CLASS } from "@/lib/select-class";
 
 export default function InviteUserModal({
   open,
@@ -63,7 +65,7 @@ export default function InviteUserModal({
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as "user" | "admin")}
-          className="mb-4 w-full border px-3 py-2 rounded"
+          className={cn('mb-4', SELECT_CLASS)}
         >
           <option value="user">Gebruiker</option>
           <option value="admin">Beheerder</option>

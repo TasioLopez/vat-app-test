@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 import { 
     FaBriefcase, 
     FaBuilding, 
@@ -164,11 +166,11 @@ export default function AddClientPage() {
                                             onChange={handleChange}
                                             onFocus={() => setFocusedField('industry')}
                                             onBlur={() => setFocusedField(null)}
-                                            className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 appearance-none cursor-pointer ${
-                                                focusedField === 'industry'
-                                                    ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
-                                                    : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
-                                            } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900`}
+                                            className={cn(
+                                                SELECT_CLASS,
+                                                'rounded-xl pl-12 appearance-none cursor-pointer',
+                                                focusedField === 'industry' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                            )}
                                         >
                                             <option value="">Selecteer een branche</option>
                                             {industryOptions.map((option) => (
@@ -447,11 +449,11 @@ export default function AddClientPage() {
                                         onChange={handleChange}
                                         onFocus={() => setFocusedField('referent_gender')}
                                         onBlur={() => setFocusedField(null)}
-                                        className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
-                                            focusedField === 'referent_gender'
-                                                ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
-                                                : 'border-gray-200 bg-gray-50/50 hover:border-purple-300 hover:bg-white'
-                                        } focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-gray-900`}
+                                        className={cn(
+                                            SELECT_CLASS,
+                                            'rounded-xl pl-12',
+                                            focusedField === 'referent_gender' && 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
+                                        )}
                                     >
                                         <option value="">Selecteer geslacht</option>
                                         <option value="Man">Man</option>

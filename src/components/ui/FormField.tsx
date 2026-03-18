@@ -2,6 +2,7 @@
 
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 import { Label } from './label';
 import { Input } from './input';
 import { Textarea } from './textarea';
@@ -116,12 +117,8 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
           name={name}
           disabled={disabled}
           className={cn(
-            'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors',
-            'file:border-0 file:bg-transparent file:text-sm file:font-medium',
-            'placeholder:text-muted-foreground',
-            'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
+            SELECT_CLASS,
+            error && 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500',
             disabled && 'bg-gray-50 text-gray-500 cursor-not-allowed'
           )}
           {...props}

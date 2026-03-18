@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Trash2, Pencil, Search, ChevronUp, ChevronDown, Building2, Tag, Mail, Phone, MapPin, User, Users, Briefcase } from 'lucide-react';
 import { trackAccess } from '@/lib/tracking';
+import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 
 type SortField = 'name' | 'industry';
 type SortDirection = 'asc' | 'desc';
@@ -408,7 +410,7 @@ export default function ClientsPage() {
                     value={selectedClient.industry || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, industry: e.target.value })}
                     disabled={userRole !== 'admin'}
-                    className="flex h-10 w-full rounded-lg border-2 border-purple-200 bg-white px-4 py-2 text-sm shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:border-purple-500 hover:border-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={cn(SELECT_CLASS)}
                   >
                     <option value="">Selecteer een branche</option>
                     {[
@@ -476,7 +478,7 @@ export default function ClientsPage() {
                           <Input placeholder="Telefoon" value={(editingReferentDraft.phone as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, phone: e.target.value }))} />
                           <Input placeholder="E-mail" value={(editingReferentDraft.email as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, email: e.target.value }))} />
                           <Input placeholder="Functie" value={(editingReferentDraft.referent_function as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, referent_function: e.target.value }))} />
-                          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={(editingReferentDraft.gender as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, gender: e.target.value }))}>
+                          <select className={SELECT_CLASS} value={(editingReferentDraft.gender as string) ?? ''} onChange={(e) => setEditingReferentDraft((p) => ({ ...p, gender: e.target.value }))}>
                             <option value="">Geslacht</option>
                             <option value="Man">Man</option>
                             <option value="Vrouw">Vrouw</option>
@@ -514,7 +516,7 @@ export default function ClientsPage() {
                     <Input placeholder="Telefoon" value={(newReferent.phone as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, phone: e.target.value }))} />
                     <Input placeholder="E-mail" value={(newReferent.email as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, email: e.target.value }))} />
                     <Input placeholder="Functie" value={(newReferent.referent_function as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, referent_function: e.target.value }))} />
-                    <select className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={(newReferent.gender as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, gender: e.target.value }))}>
+                    <select className={SELECT_CLASS} value={(newReferent.gender as string) ?? ''} onChange={(e) => setNewReferent((p) => ({ ...p, gender: e.target.value }))}>
                       <option value="">Geslacht</option>
                       <option value="Man">Man</option>
                       <option value="Vrouw">Vrouw</option>

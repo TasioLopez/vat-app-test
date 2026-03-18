@@ -17,6 +17,7 @@ import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 import { supabase } from "@/lib/supabase/client";
 import { useTP } from "@/context/TPContext";
+import { SELECT_CLASS } from "@/lib/select-class";
 
 const STATUS_OPTIONS = ["G", "P", "N"] as const;
 
@@ -317,7 +318,7 @@ function useFitScale(ref: React.RefObject<HTMLElement>, baseWidth: number, baseH
 const PREVIEW_ZOOM = 0.65; // 65% of the fit size
 
 export default function Bijlage({ employeeId }: { employeeId: string }) {
-  const { updateField, tpData, setSectionPageCount, getPageOffset } = useTP();
+  const { updateField, tpData, setSectionPageCount, getPageOffset, markSaved, registerSaveHandler, unregisterSaveHandler } = useTP();
 
   // --- local state
   const [fases, setFases] = useState<Fase[]>([
@@ -399,9 +400,10 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         setHasUserChanges(false);
       }
       setLoading(false);
+      markSaved();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId, tpData?.tp_start_date, tpData?.intake_date, tpData?.tp_end_date]);
+  }, [employeeId, tpData?.tp_start_date, tpData?.intake_date, tpData?.tp_end_date, markSaved]);
 
   // --- persist (debounced)
   const persist = async (payload: Fase[]) => {
@@ -412,7 +414,10 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
         onConflict: "employee_id",
       });
     setSaving(false);
-    if (!error) setLastSavedAt(new Date());
+    if (!error) {
+      setLastSavedAt(new Date());
+      markSaved();
+    }
   };
 
   useEffect(() => {
@@ -434,6 +439,15 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     await persist(fases);
   };
+
+  const handleSaveNowRef = useRef(handleSaveNow);
+  handleSaveNowRef.current = handleSaveNow;
+  useEffect(() => {
+    registerSaveHandler('bijlage', async () => {
+      await handleSaveNowRef.current();
+    });
+    return () => unregisterSaveHandler('bijlage');
+  }, [employeeId, registerSaveHandler, unregisterSaveHandler]);
 
   const addFase = () => {
     setFases((prev) => [...prev, { title: "", periode: { from: "", to: "" }, activiteiten: [] }]);
@@ -669,7 +683,7 @@ export default function Bijlage({ employeeId }: { employeeId: string }) {
                           <select
                             value={act.status}
                             onChange={(e) => handleStatusChange(i, act.name, e.target.value)}
-                            className="border rounded px-1 py-0.5"
+                            className={SELECT_CLASS}
                           >
                             {STATUS_OPTIONS.map((status) => (
                               <option key={status} value={status}>

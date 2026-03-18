@@ -19,6 +19,8 @@ import {
 import { Trash2, Eye, Search, Filter, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToastHelpers } from '@/components/ui/Toast';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
+import { cn } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
@@ -249,7 +251,7 @@ export default function EmployeesPage() {
               <select
                 value={selectedClient}
                 onChange={(e) => setSelectedClient(e.target.value)}
-                className="flex h-10 w-full sm:w-48 rounded-lg border-2 border-purple-200 bg-white px-10 py-2 text-sm shadow-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:border-purple-500 hover:border-purple-300"
+                className={cn(SELECT_CLASS, 'w-full sm:w-48 px-10')}
               >
                 <option value="all">Alle werkgevers</option>
                 {clients.map((client) => (

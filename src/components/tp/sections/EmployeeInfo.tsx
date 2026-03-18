@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import { 
   formatEmployeeName, 
   formatEmployeeNameWithoutPrefix,
@@ -13,6 +14,7 @@ import {
   formatComputerSkills,
   filterOtherEmployers
 } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
@@ -728,6 +730,12 @@ function Field({
     : highlight 
     ? 'border-warning-500 bg-warning-50 border-2' 
     : 'border-border';
+  const selectBorderColor = saved 
+    ? '!border-success-500 bg-success-50' 
+    : highlight 
+    ? '!border-warning-500 bg-warning-50' 
+    : '';
+  const selectClass = cn(SELECT_CLASS, selectBorderColor);
   const inputClass = `w-full border px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${borderColor}`;
 
   // Multi-select for transport
@@ -765,7 +773,7 @@ function Field({
       <div>
         <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
         <select
-          className={inputClass}
+          className={selectClass}
           value={value || ''}
           onChange={(e) => onChange(e.target.value || null)}
         >
@@ -786,7 +794,7 @@ function Field({
       <div>
         <label className="block text-sm font-bold mb-1.5 text-foreground">{label}</label>
         <select
-          className={inputClass}
+          className={selectClass}
           value={value === true ? 'Ja' : value === false ? 'Nee' : ''}
           onChange={(e) => onChange(e.target.value === 'Ja')}
         >
