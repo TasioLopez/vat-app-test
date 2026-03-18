@@ -74,7 +74,11 @@ async function uploadDocsToOpenAI(paths: string[]) {
 }
 
 // Extract specific section from intake form using AI
-async function extractIntakeSection(employeeId: string, sectionName: string): Promise<string | null> {
+async function extractIntakeSection(
+  employeeId: string,
+  sectionName: string,
+  extraInstructions?: string
+): Promise<string | null> {
   const { data: docs } = await supabase
     .from("documents")
     .select("type, url, uploaded_at")
@@ -112,7 +116,7 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
 Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
 - Geef de VOLLEDIGE tekst van deze sectie terug
 - Behoud de originele structuur en formatting
-- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
+${extraInstructions ? `\n${extraInstructions}\n` : ""}- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
       model: "gpt-4o",
       tools: [{ type: "file_search" }]
     });
@@ -220,12 +224,23 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get("employeeId");
     if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
 
-    const extractedSection = await extractIntakeSection(employeeId, "Visie van werknemer");
+    const VISIE_EXTRA = `Deze sectie kan in het formulier als "Visie van werknemer" of "Visie van de werknemer" staan. De sectie omvat ALLES onder die kop tot de volgende hoofdsectie (bijv. "Algemene informatie"), inclusief alle genummerde onderdelen (13. Werkverleden en verbondenheid, 14. Huidige situatie, 15. Houding t.o.v. spoor 2, 16. Toekomstbeeld en voorkeuren) en hun antwoorden. Geef die volledige inhoud terug, niet alleen de kop.`;
+
+    let extractedSection =
+      (await extractIntakeSection(employeeId, "Visie van de werknemer", VISIE_EXTRA)) ??
+      (await extractIntakeSection(employeeId, "Visie van werknemer", VISIE_EXTRA));
+
     if (!extractedSection) {
       return NextResponse.json(
-        { error: "Intake sectie 'Visie van werknemer' niet gevonden of leeg.", details: {} },
+        { error: "Intake sectie 'Visie van werknemer' / 'Visie van de werknemer' niet gevonden of leeg.", details: {} },
         { status: 200 }
       );
+    }
+
+    // Strip meta-sentence if extractor returned "De sectie ... is niet ingevuld."
+    const nietIngevuldMatch = extractedSection.match(/^De sectie ['"].*?['"] is niet ingevuld\.\s*/i);
+    if (nietIngevuldMatch) {
+      extractedSection = extractedSection.slice(nietIngevuldMatch[0].length).trim();
     }
 
     const docPaths = await listEmployeeDocumentPaths(employeeId);
