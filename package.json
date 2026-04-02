@@ -47,7 +47,7 @@
     "tailwind-variants": "^1.0.0",
     "tesseract.js": "^6.0.1",
     "uuid": "^11.1.0",
-    "zod": "^4.3.6"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

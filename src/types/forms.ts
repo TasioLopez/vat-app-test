@@ -102,3 +102,4 @@ export type UserFormData = z.infer<typeof userSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type SignupFormData = z.infer<typeof signupSchema>;
 export type DocumentUploadData = z.infer<typeof documentUploadSchema>;
+

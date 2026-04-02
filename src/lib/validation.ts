@@ -181,8 +181,8 @@ export function validateField<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const fieldError = field 
-        ? error.issues.find(e => e.path[0] === field)
-        : error.issues[0];
+        ? error.errors.find(e => e.path[0] === field)
+        : error.errors[0];
       
       return { 
         success: false, 
@@ -203,7 +203,7 @@ export function validateForm<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors: Record<string, string> = {};
-      error.issues.forEach(err => {
+      error.errors.forEach(err => {
         const field = err.path[0] as string;
         if (field) {
           errors[field] = err.message;
@@ -261,3 +261,5 @@ export type ChangePasswordFormData = z.infer<typeof passwordValidation.changePas
 export type ResetPasswordFormData = z.infer<typeof passwordValidation.resetPassword>;
 export type DocumentFormData = z.infer<typeof documentValidation>;
 export type SearchFormData = z.infer<typeof searchValidation>;
+
+
