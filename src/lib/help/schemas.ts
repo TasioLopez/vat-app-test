@@ -43,6 +43,16 @@ export const adminTicketPatchSchema = z.object({
   internalNotes: z.string().max(20000).nullable().optional(),
 });
 
+export const reorderCategoryItemSchema = z.object({
+  id: z.string().uuid(),
+  parentId: z.string().uuid().nullable(),
+  sortOrder: z.number().int(),
+});
+
+export const reorderCategoriesSchema = z.object({
+  items: z.array(reorderCategoryItemSchema).min(1),
+});
+
 export const categoryWriteSchema = z.object({
   parentId: z.string().uuid().nullable().optional(),
   slug: z
