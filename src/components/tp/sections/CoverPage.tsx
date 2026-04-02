@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
 import { formatEmployeeName } from '@/lib/utils';
@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Cover from '@/assets/images/valentinez-cover.jpg';
 
 export default function CoverPage({ employeeId }: { employeeId: string }) {
-    const { tpData, updateField } = useTP();
+    const { tpData, updateField, markSaved, registerSaveHandler, unregisterSaveHandler } = useTP();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -62,10 +62,11 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
             }
 
             setLoading(false);
+            markSaved();
         }
 
         fetchCoverData();
-    }, [employeeId]);
+    }, [employeeId, updateField, markSaved]);
 
     const handleChange = (field: string, value: string) => {
         updateField(field, value);
@@ -88,10 +89,21 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
 
         if (error) {
             console.error('Save failed:', error.message);
+        } else {
+            markSaved();
         }
 
         setSaving(false);
     };
+
+    const handleSaveRef = useRef(handleSave);
+    handleSaveRef.current = handleSave;
+    useEffect(() => {
+        registerSaveHandler('cover', async () => {
+            await handleSaveRef.current();
+        });
+        return () => unregisterSaveHandler('cover');
+    }, [employeeId, registerSaveHandler, unregisterSaveHandler]);
 
     if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
 
