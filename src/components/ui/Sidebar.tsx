@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -13,7 +13,10 @@ import {
   FaCog,
   FaBars,
   FaSignOutAlt,
+  FaLifeRing,
+  FaTools,
 } from "react-icons/fa";
+import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
 
 export default function Sidebar({
   collapsed,
@@ -25,7 +28,7 @@ export default function Sidebar({
   role: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { attemptNavigate } = useUnsavedChangesGuard();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,7 +70,7 @@ export default function Sidebar({
     if (error) {
       console.error("❌ Logout failed:", error.message);
     } else {
-      router.push("/login");
+      attemptNavigate("/login");
     }
   };
 
@@ -79,6 +82,10 @@ export default function Sidebar({
     { name: "Werkgevers", href: "/dashboard/clients", icon: <FaBriefcase /> },
     { name: "Werknemers", href: "/dashboard/employees", icon: <FaUserTie /> },
     { name: "TP Docs", href: "/dashboard/tpdocs", icon: <FaFileAlt /> },
+    { name: "Help", href: "/dashboard/help", icon: <FaLifeRing /> },
+    ...(role === "admin"
+      ? [{ name: "Help admin", href: "/dashboard/help/admin", icon: <FaTools /> }]
+      : []),
   ];
 
   return (
@@ -102,11 +109,18 @@ export default function Sidebar({
 
       <nav className="flex-1 px-2 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                attemptNavigate(item.href);
+              }}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
@@ -123,6 +137,10 @@ export default function Sidebar({
       <div className="p-2 space-y-2 border-t border-white/10">
         <Link
           href="/dashboard/settings"
+          onClick={(e) => {
+            e.preventDefault();
+            attemptNavigate("/dashboard/settings");
+          }}
           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
             pathname === "/dashboard/settings"
               ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"

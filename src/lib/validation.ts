@@ -67,8 +67,8 @@ const userBasicSchema = z.object({
     .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
   last_name: commonValidators.required('Achternaam is verplicht')
     .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
-  role: z.enum(['admin', 'standard'], {
-    errorMap: () => ({ message: 'Rol moet admin of standard zijn' })
+  role: z.enum(["admin", "standard"], {
+    message: "Rol moet admin of standard zijn",
   }),
 });
 
@@ -181,8 +181,8 @@ export function validateField<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const fieldError = field 
-        ? error.errors.find(e => e.path[0] === field)
-        : error.errors[0];
+        ? error.issues.find(e => e.path[0] === field)
+        : error.issues[0];
       
       return { 
         success: false, 
@@ -203,7 +203,7 @@ export function validateForm<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors: Record<string, string> = {};
-      error.errors.forEach(err => {
+      error.issues.forEach(err => {
         const field = err.path[0] as string;
         if (field) {
           errors[field] = err.message;

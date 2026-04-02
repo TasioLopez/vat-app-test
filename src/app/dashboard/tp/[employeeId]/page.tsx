@@ -1,13 +1,14 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CoverPage from '@/components/tp/sections/CoverPage';
 import EmployeeInfo from '@/components/tp/sections/EmployeeInfo';
 import Section3 from '@/components/tp/sections/Section3';
 import Bijlage from '@/components/tp/sections/Bijlage';
 import FinalReview from '@/components/tp/sections/FinalReview';
-import { TPProvider } from '@/context/TPContext';
+import { TPProvider, useTP } from '@/context/TPContext';
+import { useUnsavedChangesGuard } from '@/context/UnsavedChangesGuardContext';
 import { Button } from '@/components/ui/button';
 
 const SECTIONS = [
@@ -18,14 +19,43 @@ const SECTIONS = [
   { id: 5, title: 'Final Review', component: FinalReview },
 ];
 
+function TPSyncGuard() {
+  const { isDirty, saveAll } = useTP();
+  const { setDirty, setOnSaveBeforeLeave } = useUnsavedChangesGuard();
+
+  useEffect(() => {
+    setDirty(isDirty);
+  }, [isDirty, setDirty]);
+
+  useEffect(() => {
+    setOnSaveBeforeLeave(saveAll);
+    return () => {
+      setOnSaveBeforeLeave(null);
+      setDirty(false);
+    };
+  }, [saveAll, setOnSaveBeforeLeave, setDirty]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  return null;
+}
+
 export default function TPBuilderPage() {
   const { employeeId } = useParams() as { employeeId: string };
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = SECTIONS.length;
-  const SectionComponent = SECTIONS[currentStep - 1].component;
 
   return (
     <TPProvider>
+      <TPSyncGuard />
       <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-purple-50/20">
         {/* Header */}
         <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-purple-200/50 bg-white/80 backdrop-blur-sm">
@@ -59,10 +89,18 @@ export default function TPBuilderPage() {
           </div>
         </div>
 
-        {/* Content Area - takes remaining space */}
+        {/* Content Area - all sections mounted, only current visible */}
         <div className="flex-1 overflow-hidden min-h-0">
-          <div className="h-full overflow-y-auto p-6">
-            <SectionComponent employeeId={employeeId} />
+          <div className="h-full overflow-y-auto p-6 relative">
+            {SECTIONS.map((section, index) => (
+              <div
+                key={section.id}
+                style={{ display: currentStep === index + 1 ? 'block' : 'none' }}
+                className="h-full"
+              >
+                <section.component employeeId={employeeId} />
+              </div>
+            ))}
           </div>
         </div>
 

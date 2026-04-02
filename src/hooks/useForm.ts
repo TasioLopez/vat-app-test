@@ -72,7 +72,7 @@ export function useForm<T extends Record<string, any>>({
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const fieldError = error.errors.find(e => e.path[0] === field);
+        const fieldError = error.issues.find(e => e.path[0] === field);
         if (fieldError) {
           setErrors(prev => ({
             ...prev,
@@ -95,7 +95,7 @@ export function useForm<T extends Record<string, any>>({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Partial<Record<keyof T, string>> = {};
-        error.errors.forEach(err => {
+        error.issues.forEach(err => {
           const field = err.path[0] as keyof T;
           if (field) {
             newErrors[field] = err.message;
