@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: [] });
   }
 
-  const localeParsed = localeSchema.safeParse(searchParams.get("locale") || "en");
-  const locale = localeParsed.success ? localeParsed.data : "en";
+  const localeParsed = localeSchema.safeParse(searchParams.get("locale") || "nl");
+  const locale = localeParsed.success ? localeParsed.data : "nl";
 
   const { data, error } = await supabaseAdmin.rpc("search_kb_articles", {
     search_query: q,

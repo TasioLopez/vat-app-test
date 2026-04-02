@@ -9,7 +9,8 @@ export const chatMessageSchema = z.object({
 
 export const chatBodySchema = z.object({
   messages: z.array(chatMessageSchema).max(50),
-  locale: localeSchema,
+  /** End-user help is Nederlands only */
+  locale: z.literal("nl").optional().default("nl"),
 });
 
 export const ticketCreateSchema = z.object({

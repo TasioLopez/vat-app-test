@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 
 type Art = {
   id: string;
@@ -14,13 +15,12 @@ type Art = {
 
 export default function AdminArticlesPage() {
   const [articles, setArticles] = useState<Art[]>([]);
-  const [locale, setLocale] = useState("en");
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/help/admin/articles?locale=${locale}`);
+    const res = await fetch(`/api/help/admin/articles?locale=${HELP_DEFAULT_LOCALE}`);
     const j = await res.json();
     setArticles(j.articles || []);
-  }, [locale]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -29,23 +29,13 @@ export default function AdminArticlesPage() {
   return (
     <div className="p-8 space-y-6 max-w-4xl">
       <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Articles</h1>
-        <div className="flex gap-2 items-center">
-          <select
-            value={locale}
-            onChange={(e) => setLocale(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          >
-            <option value="en">English</option>
-            <option value="nl">Nederlands</option>
-          </select>
-          <Link
-            href={`/dashboard/help/admin/articles/new?locale=${locale}`}
-            className="px-4 py-2 bg-purple-700 text-white rounded-lg font-medium"
-          >
-            New article
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Artikelen (Nederlands)</h1>
+        <Link
+          href="/dashboard/help/admin/articles/new"
+          className="px-4 py-2 bg-purple-700 text-white rounded-lg font-medium"
+        >
+          Nieuw artikel
+        </Link>
       </div>
       <ul className="space-y-2">
         {articles.map((a) => (
@@ -56,7 +46,7 @@ export default function AdminArticlesPage() {
             >
               <span className="font-medium">{a.title}</span>
               <span className="text-sm text-gray-500 ml-2">
-                {a.slug} · {a.published ? "published" : "draft"}
+                {a.slug} · {a.published ? "gepubliceerd" : "concept"}
               </span>
             </Link>
           </li>

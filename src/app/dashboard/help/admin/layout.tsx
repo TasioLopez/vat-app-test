@@ -9,17 +9,17 @@ export default async function HelpAdminLayout({ children }: { children: React.Re
   }
 
   const links = [
-    { href: "/dashboard/help/admin", label: "Overview" },
-    { href: "/dashboard/help/admin/categories", label: "Categories" },
-    { href: "/dashboard/help/admin/articles", label: "Articles" },
+    { href: "/dashboard/help/admin", label: "Overzicht" },
+    { href: "/dashboard/help/admin/categories", label: "Categorieën" },
+    { href: "/dashboard/help/admin/articles", label: "Artikelen" },
     { href: "/dashboard/help/admin/tickets", label: "Tickets" },
-    { href: "/dashboard/help/admin/insights", label: "Insights" },
+    { href: "/dashboard/help/admin/insights", label: "Inzichten" },
   ];
 
   return (
     <div className="min-h-full flex flex-col md:flex-row bg-gradient-to-br from-gray-50 to-purple-50/30">
       <aside className="md:w-56 bg-white/90 border-b md:border-b-0 md:border-r border-purple-100 p-4 space-y-2 shrink-0">
-        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide px-2">Help admin</p>
+        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide px-2">Helpbeheer</p>
         {links.map((l) => (
           <Link
             key={l.href}
@@ -33,7 +33,7 @@ export default async function HelpAdminLayout({ children }: { children: React.Re
           href="/dashboard/help"
           className="block px-3 py-2 mt-4 text-sm text-purple-700 font-medium"
         >
-          ← User Help
+          ← Help voor gebruikers
         </Link>
       </aside>
       <div className="flex-1 overflow-auto">{children}</div>

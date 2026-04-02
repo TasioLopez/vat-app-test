@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const localeParsed = localeSchema.safeParse(searchParams.get("locale") || "en");
-  const locale = localeParsed.success ? localeParsed.data : "en";
+  const localeParsed = localeSchema.safeParse(searchParams.get("locale") || "nl");
+  const locale = localeParsed.success ? localeParsed.data : "nl";
   const categoryId = searchParams.get("categoryId");
 
   const supabase = await getSupabaseServerClient();

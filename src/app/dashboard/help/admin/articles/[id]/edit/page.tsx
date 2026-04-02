@@ -11,14 +11,13 @@ export default function EditArticlePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [categories, setCategories] = useState<Cat[]>([]);
-  const [locale, setLocale] = useState("en");
+  const [locale, setLocale] = useState("nl");
   const [categoryId, setCategoryId] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [body, setBody] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [published, setPublished] = useState(true);
-  const [siblings, setSiblings] = useState<{ id: string; locale: string; slug: string }[]>([]);
 
   const load = useCallback(async () => {
     const [aRes, cRes] = await Promise.all([
@@ -28,7 +27,7 @@ export default function EditArticlePage() {
     const aj = await aRes.json();
     const cj = await cRes.json();
     if (!aRes.ok) {
-      alert(aj.error || "Load failed");
+      alert(aj.error || "Laden mislukt");
       return;
     }
     const a = aj.article;
@@ -39,7 +38,6 @@ export default function EditArticlePage() {
     setBody(a.body);
     setExcerpt(a.excerpt || "");
     setPublished(a.published);
-    setSiblings(aj.siblings || []);
     setCategories(cj.categories || []);
   }, [id]);
 
@@ -55,7 +53,7 @@ export default function EditArticlePage() {
     });
     const sj = await sign.json();
     if (!sign.ok) {
-      alert(sj.error || "Sign failed");
+      alert(sj.error || "Ondertekenen mislukt");
       return;
     }
     const put = await fetch(sj.signedUrl, {
@@ -64,11 +62,11 @@ export default function EditArticlePage() {
       body: file,
     });
     if (!put.ok) {
-      alert("Upload failed");
+      alert("Upload mislukt");
       return;
     }
     const path = sj.path as string;
-    setBody((b) => `${b}\n\n![image](${path})\n`);
+    setBody((b) => `${b}\n\n![afbeelding](${path})\n`);
   };
 
   const save = async () => {
@@ -86,50 +84,34 @@ export default function EditArticlePage() {
       }),
     });
     const j = await res.json();
-    if (!res.ok) alert(j.error || "Save failed");
-    else alert("Saved and re-indexed.");
+    if (!res.ok) alert(j.error || "Opslaan mislukt");
+    else alert("Opgeslagen en opnieuw geïndexeerd.");
   };
 
   const del = async () => {
-    if (!confirm("Delete article?")) return;
+    if (!confirm("Artikel verwijderen?")) return;
     const res = await fetch(`/api/help/admin/articles/${id}`, { method: "DELETE" });
     if (res.ok) router.push("/dashboard/help/admin/articles");
-    else alert("Delete failed");
+    else alert("Verwijderen mislukt");
   };
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
       <Link href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
-        <FaArrowLeft /> Articles
+        <FaArrowLeft /> Artikelen
       </Link>
-      <h1 className="text-2xl font-bold">Edit article</h1>
-      {siblings.length > 0 ? (
-        <p className="text-sm text-gray-600">
-          Translations:{" "}
-          {siblings.map((s) => (
-            <Link
-              key={s.id}
-              href={`/dashboard/help/admin/articles/${s.id}/edit`}
-              className="text-purple-700 underline mr-2"
-            >
-              {s.locale}
-            </Link>
-          ))}
-        </p>
-      ) : null}
+      <h1 className="text-2xl font-bold">Artikel bewerken</h1>
       <div className="grid gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-          Published (included in search & chat)
+          Gepubliceerd (zichtbaar in zoekfunctie en chat)
         </label>
-        <select
-          className="border rounded-lg px-3 py-2"
-          value={locale}
-          onChange={(e) => setLocale(e.target.value)}
-        >
-          <option value="en">English</option>
-          <option value="nl">Nederlands</option>
-        </select>
+        {locale !== "nl" ? (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Dit artikel heeft taalcode «{locale}». De gebruikerssite toont alleen Nederlands ({`locale=nl`}); overweeg
+            inhoud te migreren naar een NL-artikel.
+          </p>
+        ) : null}
         <select
           className="border rounded-lg px-3 py-2"
           value={categoryId}
@@ -153,12 +135,12 @@ export default function EditArticlePage() {
         />
         <input
           className="border rounded-lg px-3 py-2"
-          placeholder="Excerpt"
+          placeholder="Samenvatting"
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
         />
         <div className="flex items-center gap-2">
-          <span className="text-sm">Image</span>
+          <span className="text-sm">Afbeelding</span>
           <input
             type="file"
             accept="image/*"
@@ -176,10 +158,10 @@ export default function EditArticlePage() {
       </div>
       <div className="flex gap-3">
         <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
-          Save
+          Opslaan
         </button>
         <button type="button" onClick={del} className="px-6 py-3 border border-red-300 text-red-700 rounded-xl">
-          Delete
+          Verwijderen
         </button>
       </div>
     </div>

@@ -15,31 +15,31 @@ export function buildSystemPrompt(
   lowConfidence: boolean
 ): string {
   const baseUrlNote =
-    "Article links must use paths exactly as given in the knowledge context (format: /dashboard/help/{locale}/a/{slug}).";
+    "Article links must use paths exactly as given in the knowledge context (format: /dashboard/help/a/{slug}).";
 
   const ctx =
     chunks.length === 0
-      ? "No relevant knowledge base passages were retrieved for this question."
+      ? "Er zijn geen relevante fragmenten uit de kennisbank gevonden voor deze vraag."
       : chunks
           .map((c, i) => {
-            const link = articleHref(locale, c.slug);
-            return `[${i + 1}] Title: "${c.title}"\nLink: ${link}\nExcerpt:\n${c.content}\n`;
+            const link = articleHref(c.slug);
+            return `[${i + 1}] Titel: "${c.title}"\nLink: ${link}\nFragment: ${c.content}\n`;
           })
           .join("\n---\n");
 
   const disclaimer =
     lowConfidence || chunks.length === 0
-      ? `\nIMPORTANT: You MUST start your reply with a clear notice that the information is NOT taken from a Knowledge Center article and is general best-effort only. Then answer helpfully. Always suggest opening a support ticket for verified guidance.`
-      : `\nWhen you use facts from the passages above, cite which passage number(s) you used and include the markdown link to the article using the exact Link URL from the passage.`;
+      ? `\nBELANGRIJK: Begin je antwoord met een duidelijke mededeling dat de informatie NIET uit een Kenniscentrum-artikel komt en een best-effort antwoord is. Antwoord daarna nuttig. Verwijs altijd naar het aanmaken van een supportticket voor betrouwbare ondersteuning.`
+      : `\nWanneer je feiten uit de fragmenten hierboven gebruikt, vermeld welk fragmentnummer (of welke nummers) je gebruikte en voeg de markdownlink naar het artikel toe met exact de Link-URL uit het fragment.`;
 
-  return `You are a helpful assistant for an internal HR/planning application (Trajectplan Builder, etc.). The user's interface locale is ${locale}.
+  return `Je bent een behulpzame assistent voor een interne HR/planningsapplicatie (o.a. Trajectplan Builder). De gebruiker werkt in het Nederlands (locale: ${locale}).
 
-Knowledge context (use only this for factual claims about the product when passages are relevant):
+Kenniscontext (gebruik dit alleen voor feitelijke claims over het product wanneer fragmenten relevant zijn):
 ${ctx}
 
-Rules:
+Regels:
 - ${baseUrlNote}
-- If the knowledge context is empty or clearly insufficient, do not pretend it came from articles.${disclaimer}
-- Be concise and actionable.
-- At the end, if the user might need human support, mention they can create a ticket from Help > My tickets or the chat escalation button.`;
+- Als de kenniscontext leeg of duidelijk ontoereikend is, doe niet alsof ze uit artikelen komt.${disclaimer}
+- Wees beknopt en concreet.
+- Aan het eind: als de gebruiker mogelijk menselijke hulp nodig heeft, vermeld dat men een ticket kan aanmaken via Help → Mijn tickets of de knop in de chat.`;
 }

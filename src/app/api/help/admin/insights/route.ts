@@ -40,9 +40,9 @@ export async function GET() {
 
   const { data: cats } = await supabase
     .from("support_ticket_categories")
-    .select("id, slug, label_en");
+    .select("id, slug, label_nl");
 
-  const catLabels = new Map((cats || []).map((c) => [c.id, c.label_en]));
+  const catLabels = new Map((cats || []).map((c) => [c.id, c.label_nl]));
 
   const categoryBreakdown = Object.entries(byCategory).map(([cid, count]) => ({
     categoryId: cid,

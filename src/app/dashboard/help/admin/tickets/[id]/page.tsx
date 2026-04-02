@@ -45,8 +45,8 @@ export default function AdminTicketDetailPage() {
     });
     if (!res.ok) {
       const j = await res.json();
-      alert(j.error || "Update failed");
-    } else alert("Updated");
+      alert(j.error || "Bijwerken mislukt");
+    } else alert("Bijgewerkt");
   };
 
   const sendMsg = async () => {
@@ -62,7 +62,7 @@ export default function AdminTicketDetailPage() {
     }
   };
 
-  if (!ticket) return <div className="p-8">Loading…</div>;
+  if (!ticket) return <div className="p-8">Laden…</div>;
 
   const transcript = ticket.escalation_chat_transcript as
     | { role: string; content: string }[]
@@ -72,7 +72,7 @@ export default function AdminTicketDetailPage() {
   return (
     <div className="p-8 max-w-3xl space-y-6">
       <Link href="/dashboard/help/admin/tickets" className="text-purple-700 inline-flex items-center gap-2">
-        <FaArrowLeft /> All tickets
+        <FaArrowLeft /> Alle tickets
       </Link>
       <h1 className="text-2xl font-bold">{String(ticket.subject)}</h1>
       <div className="grid sm:grid-cols-2 gap-3 bg-white border border-purple-100 rounded-xl p-4">
@@ -91,7 +91,7 @@ export default function AdminTicketDetailPage() {
           </select>
         </label>
         <label className="text-sm">
-          Priority
+          Prioriteit
           <select
             className="w-full border rounded-lg mt-1 px-2 py-2"
             value={priority}
@@ -105,7 +105,7 @@ export default function AdminTicketDetailPage() {
           </select>
         </label>
         <label className="text-sm sm:col-span-2">
-          Internal notes
+          Interne notities
           <textarea
             className="w-full border rounded-lg mt-1 px-2 py-2 min-h-[80px]"
             value={internalNotes}
@@ -117,16 +117,16 @@ export default function AdminTicketDetailPage() {
           onClick={patchTicket}
           className="sm:col-span-2 px-4 py-2 bg-purple-700 text-white rounded-lg"
         >
-          Save ticket fields
+          Ticketvelden opslaan
         </button>
       </div>
       <div className="bg-white border border-purple-100 rounded-xl p-4">
-        <h2 className="font-semibold mb-2">Description</h2>
+        <h2 className="font-semibold mb-2">Beschrijving</h2>
         <p className="text-gray-700 whitespace-pre-wrap">{String(ticket.description)}</p>
       </div>
       {transcript && transcript.length > 0 ? (
         <div className="bg-white border border-purple-100 rounded-xl p-4">
-          <h2 className="font-semibold mb-2">Escalation transcript</h2>
+          <h2 className="font-semibold mb-2">Escalatie: chatgeschiedenis</h2>
           <ul className="text-sm space-y-1">
             {transcript.map((m, i) => (
               <li key={i}>
@@ -137,13 +137,13 @@ export default function AdminTicketDetailPage() {
         </div>
       ) : null}
       <div className="space-y-2">
-        <h2 className="font-semibold">Thread</h2>
+        <h2 className="font-semibold">Discussie</h2>
         {messages.map((m) => (
           <div
             key={m.id}
             className={`text-sm p-3 rounded-lg ${m.is_internal ? "bg-amber-50 border border-amber-100" : "bg-gray-50"}`}
           >
-            {m.is_internal ? <span className="text-amber-800 font-medium">Internal · </span> : null}
+            {m.is_internal ? <span className="text-amber-800 font-medium">Intern · </span> : null}
             {m.body}
           </div>
         ))}
@@ -151,7 +151,7 @@ export default function AdminTicketDetailPage() {
       <div className="space-y-2">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={internalReply} onChange={(e) => setInternalReply(e.target.checked)} />
-          Internal note (not visible to requester)
+          Interne notitie (niet zichtbaar voor aanvrager)
         </label>
         <textarea
           className="w-full border rounded-lg p-3"
@@ -160,7 +160,7 @@ export default function AdminTicketDetailPage() {
           onChange={(e) => setReply(e.target.value)}
         />
         <button type="button" onClick={sendMsg} className="px-4 py-2 bg-purple-700 text-white rounded-lg">
-          Add message
+          Bericht toevoegen
         </button>
       </div>
     </div>

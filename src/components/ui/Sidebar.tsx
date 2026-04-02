@@ -84,7 +84,7 @@ export default function Sidebar({
     { name: "TP Docs", href: "/dashboard/tpdocs", icon: <FaFileAlt /> },
     { name: "Help", href: "/dashboard/help", icon: <FaLifeRing /> },
     ...(role === "admin"
-      ? [{ name: "Help admin", href: "/dashboard/help/admin", icon: <FaTools /> }]
+      ? [{ name: "Helpbeheer", href: "/dashboard/help/admin", icon: <FaTools /> }]
       : []),
   ];
 

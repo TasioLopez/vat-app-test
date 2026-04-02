@@ -46,34 +46,34 @@ export default function AdminCategoriesPage() {
       load();
     } else {
       const j = await res.json();
-      alert(j.error || "Failed");
+      alert(j.error || "Mislukt");
     }
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete category? Articles must be moved first.")) return;
+    if (!confirm("Categorie verwijderen? Verplaats eerst artikelen.")) return;
     const res = await fetch(`/api/help/admin/categories/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const j = await res.json();
-      alert(j.error || "Failed");
+      alert(j.error || "Mislukt");
     } else load();
   };
 
   return (
     <div className="p-8 space-y-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900">KB Categories</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Kenniscategorieën</h1>
       <div className="bg-white rounded-xl border border-purple-100 p-6 space-y-4">
-        <h2 className="font-semibold">New category</h2>
+        <h2 className="font-semibold">Nieuwe categorie</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           <input
             className="border rounded-lg px-3 py-2"
-            placeholder="slug (e.g. my-section)"
+            placeholder="slug (bijv. mijn-sectie)"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
           />
           <input
             className="border rounded-lg px-3 py-2"
-            placeholder="Title"
+            placeholder="Titel"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -82,7 +82,7 @@ export default function AdminCategoriesPage() {
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}
           >
-            <option value="">No parent (top level)</option>
+            <option value="">Geen ouder (hoofdniveau)</option>
             {list.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
@@ -97,7 +97,7 @@ export default function AdminCategoriesPage() {
           />
         </div>
         <button type="button" onClick={create} className="px-4 py-2 bg-purple-700 text-white rounded-lg">
-          Create
+          Aanmaken
         </button>
       </div>
       <ul className="space-y-2">
@@ -111,7 +111,7 @@ export default function AdminCategoriesPage() {
               <span className="text-sm text-gray-500 ml-2">{c.slug}</span>
             </div>
             <button type="button" onClick={() => remove(c.id)} className="text-red-600 text-sm">
-              Delete
+              Verwijderen
             </button>
           </li>
         ))}

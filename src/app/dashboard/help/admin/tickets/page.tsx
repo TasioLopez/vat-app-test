@@ -27,15 +27,15 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="p-8 space-y-4 max-w-6xl overflow-x-auto">
-      <h1 className="text-2xl font-bold text-gray-900">Support tickets</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Supporttickets</h1>
       <table className="w-full text-sm bg-white rounded-xl border border-purple-100">
         <thead>
           <tr className="border-b border-purple-100 text-left">
-            <th className="p-3">Subject</th>
-            <th className="p-3">Requester</th>
+            <th className="p-3">Onderwerp</th>
+            <th className="p-3">Aanvrager</th>
             <th className="p-3">Status</th>
-            <th className="p-3">Priority</th>
-            <th className="p-3">Created</th>
+            <th className="p-3">Prioriteit</th>
+            <th className="p-3">Aangemaakt</th>
           </tr>
         </thead>
         <tbody>
@@ -49,7 +49,7 @@ export default function AdminTicketsPage() {
               <td className="p-3 text-gray-600">{r.requester?.email}</td>
               <td className="p-3">{r.status}</td>
               <td className="p-3">{r.priority}</td>
-              <td className="p-3 text-gray-500">{new Date(r.created_at).toLocaleString()}</td>
+              <td className="p-3 text-gray-500">{new Date(r.created_at).toLocaleString("nl-NL")}</td>
             </tr>
           ))}
         </tbody>

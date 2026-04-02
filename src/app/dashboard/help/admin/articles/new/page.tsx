@@ -3,19 +3,17 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 
 type Cat = { id: string; title: string; slug: string };
 
 export default function NewArticlePage() {
   const router = useRouter();
-  const sp = useSearchParams();
-  const defaultLocale = sp.get("locale") === "nl" ? "nl" : "en";
 
   const [categories, setCategories] = useState<Cat[]>([]);
-  const [locale, setLocale] = useState(defaultLocale);
   const [categoryId, setCategoryId] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -43,7 +41,7 @@ export default function NewArticlePage() {
     });
     const sj = await sign.json();
     if (!sign.ok) {
-      alert(sj.error || "Sign failed");
+      alert(sj.error || "Ondertekenen mislukt");
       return;
     }
     const put = await fetch(sj.signedUrl, {
@@ -52,11 +50,11 @@ export default function NewArticlePage() {
       body: file,
     });
     if (!put.ok) {
-      alert("Upload failed");
+      alert("Upload mislukt");
       return;
     }
     const path = sj.path as string;
-    setBody((b) => `${b}\n\n![image](${path})\n`);
+    setBody((b) => `${b}\n\n![afbeelding](${path})\n`);
   };
 
   const save = async () => {
@@ -64,7 +62,7 @@ export default function NewArticlePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        locale,
+        locale: HELP_DEFAULT_LOCALE,
         categoryId,
         title,
         slug,
@@ -78,32 +76,24 @@ export default function NewArticlePage() {
     if (res.ok) {
       router.push(`/dashboard/help/admin/articles/${j.id}/edit`);
     } else {
-      alert(j.error || "Save failed");
+      alert(j.error || "Opslaan mislukt");
     }
   };
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
       <Link href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
-        <FaArrowLeft /> Articles
+        <FaArrowLeft /> Artikelen
       </Link>
-      <h1 className="text-2xl font-bold">New article</h1>
+      <h1 className="text-2xl font-bold">Nieuw artikel</h1>
       <div className="grid gap-3">
-        <label className="text-sm font-medium">Link to existing translation (optional UUID)</label>
+        <label className="text-sm font-medium">Koppeling bestaande vertaling (optioneel, UUID)</label>
         <input
           className="border rounded-lg px-3 py-2"
           value={translationGroupId}
           onChange={(e) => setTranslationGroupId(e.target.value)}
-          placeholder="translation_group_id for NL/EN pair"
+          placeholder="translation_group_id"
         />
-        <select
-          className="border rounded-lg px-3 py-2"
-          value={locale}
-          onChange={(e) => setLocale(e.target.value)}
-        >
-          <option value="en">English</option>
-          <option value="nl">Nederlands</option>
-        </select>
         <select
           className="border rounded-lg px-3 py-2"
           value={categoryId}
@@ -117,7 +107,7 @@ export default function NewArticlePage() {
         </select>
         <input
           className="border rounded-lg px-3 py-2"
-          placeholder="Title"
+          placeholder="Titel"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -129,12 +119,12 @@ export default function NewArticlePage() {
         />
         <input
           className="border rounded-lg px-3 py-2"
-          placeholder="Excerpt"
+          placeholder="Samenvatting"
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
         />
         <div className="flex items-center gap-2">
-          <label className="text-sm">Image upload</label>
+          <label className="text-sm">Afbeelding uploaden</label>
           <input
             type="file"
             accept="image/*"
@@ -148,11 +138,11 @@ export default function NewArticlePage() {
           className="border rounded-lg px-3 py-2 font-mono text-sm min-h-[320px]"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Markdown body"
+          placeholder="Markdown-inhoud"
         />
       </div>
       <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
-        Save & index
+        Opslaan &amp; indexeren
       </button>
     </div>
   );

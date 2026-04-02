@@ -22,26 +22,25 @@ export default function HelpInsightsPage() {
     load();
   }, [load]);
 
-  if (!data) return <div className="p-8">Loading…</div>;
+  if (!data) return <div className="p-8">Laden…</div>;
 
   const maxStatus = Math.max(1, ...Object.values(data.byStatus));
   const maxCat = Math.max(1, ...data.categoryBreakdown.map((c) => c.count));
 
   return (
     <div className="p-8 space-y-10 max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-900">Help center insights</h1>
-      <p className="text-gray-600">Total tickets: {data.totalTickets}</p>
+      <h1 className="text-2xl font-bold text-gray-900">Helpcentrum: inzichten</h1>
+      <p className="text-gray-600">Totaal tickets: {data.totalTickets}</p>
       {data.slaResolvedWithin3BusinessDays ? (
         <p className="text-gray-700">
-          Resolved within 3 business days:{" "}
-          {Math.round(data.slaResolvedWithin3BusinessDays.rate * 100)}% (
+          Binnen 3 werkdagen opgelost: {Math.round(data.slaResolvedWithin3BusinessDays.rate * 100)}% (
           {data.slaResolvedWithin3BusinessDays.met}/{data.slaResolvedWithin3BusinessDays.total})
         </p>
       ) : (
-        <p className="text-gray-500 text-sm">No resolved tickets yet for SLA stats.</p>
+        <p className="text-gray-500 text-sm">Nog geen opgeloste tickets voor SLA-statistieken.</p>
       )}
       <div className="bg-white rounded-xl border border-purple-100 p-6 space-y-4">
-        <h2 className="font-semibold">By status</h2>
+        <h2 className="font-semibold">Per status</h2>
         <ul className="space-y-2">
           {Object.entries(data.byStatus).map(([name, value]) => (
             <li key={name} className="flex items-center gap-3">
@@ -58,7 +57,7 @@ export default function HelpInsightsPage() {
         </ul>
       </div>
       <div className="bg-white rounded-xl border border-purple-100 p-6 space-y-4">
-        <h2 className="font-semibold">By category</h2>
+        <h2 className="font-semibold">Per categorie</h2>
         <ul className="space-y-2">
           {data.categoryBreakdown.map((c) => (
             <li key={c.categoryId} className="flex items-center gap-3">

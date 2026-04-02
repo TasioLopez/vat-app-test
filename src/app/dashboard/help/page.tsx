@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaBook, FaComments, FaSearch, FaTicketAlt } from "react-icons/fa";
-import { articleHref, type HelpLocale } from "@/lib/help/constants";
+import { articleHref, HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 
 type Category = {
   id: string;
@@ -24,7 +24,7 @@ type ArticleRow = {
 };
 
 export default function HelpHubPage() {
-  const [locale, setLocale] = useState<HelpLocale>("en");
+  const locale = HELP_DEFAULT_LOCALE;
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<ArticleRow[]>([]);
   const [q, setQ] = useState("");
@@ -90,32 +90,10 @@ export default function HelpHubPage() {
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Help & Knowledge Center</h1>
-            <p className="text-gray-600 mt-1">Search articles, browse by topic, or ask the assistant.</p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setLocale("en")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium ${
-                locale === "en"
-                  ? "bg-purple-700 text-white"
-                  : "bg-white text-gray-700 border border-purple-200"
-              }`}
-            >
-              English
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocale("nl")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium ${
-                locale === "nl"
-                  ? "bg-purple-700 text-white"
-                  : "bg-white text-gray-700 border border-purple-200"
-              }`}
-            >
-              Nederlands
-            </button>
+            <h1 className="text-3xl font-bold text-gray-900">Help &amp; Kenniscentrum</h1>
+            <p className="text-gray-600 mt-1">
+              Zoek artikelen, blader per onderwerp of stel een vraag aan de assistent.
+            </p>
           </div>
         </div>
 
@@ -124,13 +102,13 @@ export default function HelpHubPage() {
             href="/dashboard/help/chat"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold shadow-lg shadow-purple-500/25"
           >
-            <FaComments /> Ask assistant
+            <FaComments /> Vraag de assistent
           </Link>
           <Link
             href="/dashboard/help/tickets"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-purple-200 text-purple-800 font-semibold"
           >
-            <FaTicketAlt /> My tickets
+            <FaTicketAlt /> Mijn tickets
           </Link>
         </div>
 
@@ -140,19 +118,19 @@ export default function HelpHubPage() {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search the knowledge base…"
+            placeholder="Zoek in de kennisbank…"
             className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none bg-white shadow-sm text-lg"
           />
         </div>
 
         {searchResults.length > 0 && (
           <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-6 space-y-3">
-            <h2 className="font-semibold text-gray-900">Search results</h2>
+            <h2 className="font-semibold text-gray-900">Zoekresultaten</h2>
             <ul className="space-y-2">
               {searchResults.map((r) => (
                 <li key={r.id}>
                   <Link
-                    href={articleHref(locale, r.slug)}
+                    href={articleHref(r.slug)}
                     className="block p-3 rounded-xl hover:bg-purple-50 border border-transparent hover:border-purple-100"
                   >
                     <span className="font-medium text-purple-800">{r.title}</span>
@@ -170,11 +148,11 @@ export default function HelpHubPage() {
         )}
 
         {loading ? (
-          <p className="text-gray-500">Loading…</p>
+          <p className="text-gray-500">Laden…</p>
         ) : (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <FaBook className="text-purple-600" /> Browse
+              <FaBook className="text-purple-600" /> Bladeren
             </h2>
             {tree.roots.sort((a, b) => a.sort_order - b.sort_order).map((root) => (
               <section
@@ -194,30 +172,24 @@ export default function HelpHubPage() {
                       <ul className="space-y-1">
                         {(articlesByCategory.get(sub.id) || []).map((a) => (
                           <li key={a.id}>
-                            <Link
-                              href={articleHref(locale, a.slug)}
-                              className="text-purple-700 hover:underline"
-                            >
+                            <Link href={articleHref(a.slug)} className="text-purple-700 hover:underline">
                               {a.title}
                             </Link>
                           </li>
                         ))}
                         {(articlesByCategory.get(sub.id) || []).length === 0 ? (
-                          <li className="text-sm text-gray-400">No articles yet.</li>
+                          <li className="text-sm text-gray-400">Nog geen artikelen.</li>
                         ) : null}
                       </ul>
                     </div>
                   ))}
                   {(articlesByCategory.get(root.id) || []).length > 0 ? (
                     <div>
-                      <h4 className="font-semibold text-gray-800 mb-2">General</h4>
+                      <h4 className="font-semibold text-gray-800 mb-2">Algemeen</h4>
                       <ul className="space-y-1">
                         {(articlesByCategory.get(root.id) || []).map((a) => (
                           <li key={a.id}>
-                            <Link
-                              href={articleHref(locale, a.slug)}
-                              className="text-purple-700 hover:underline"
-                            >
+                            <Link href={articleHref(a.slug)} className="text-purple-700 hover:underline">
                               {a.title}
                             </Link>
                           </li>
