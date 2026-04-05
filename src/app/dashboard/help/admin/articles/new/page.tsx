@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
 import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 
 type Cat = { id: string; title: string; slug: string };
@@ -33,7 +34,7 @@ export default function NewArticlePage() {
     loadCats();
   }, [loadCats]);
 
-  const uploadImage = async (file: File) => {
+  const uploadKbMediaImage = useCallback(async (file: File): Promise<string> => {
     const sign = await fetch("/api/help/admin/media/sign-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,7 +43,7 @@ export default function NewArticlePage() {
     const sj = await sign.json();
     if (!sign.ok) {
       alert(sj.error || "Ondertekenen mislukt");
-      return;
+      throw new Error(sj.error || "Ondertekenen mislukt");
     }
     const put = await fetch(sj.signedUrl, {
       method: "PUT",
@@ -51,11 +52,10 @@ export default function NewArticlePage() {
     });
     if (!put.ok) {
       alert("Upload mislukt");
-      return;
+      throw new Error("Upload mislukt");
     }
-    const path = sj.path as string;
-    setBody((b) => `${b}\n\n![afbeelding](${path})\n`);
-  };
+    return sj.path as string;
+  }, []);
 
   const save = async () => {
     const res = await fetch("/api/help/admin/articles", {
@@ -123,22 +123,12 @@ export default function NewArticlePage() {
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
         />
-        <div className="flex items-center gap-2">
-          <label className="text-sm">Afbeelding uploaden</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadImage(f);
-            }}
-          />
-        </div>
-        <textarea
-          className="border rounded-lg px-3 py-2 font-mono text-sm min-h-[320px]"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Markdown-inhoud"
+        <label className="text-sm font-medium">Inhoud</label>
+        <KbArticleBodyEditor
+          markdown={body}
+          onMarkdownChange={setBody}
+          uploadKbMediaImage={uploadKbMediaImage}
+          placeholder="Typ of plak tekst; gebruik de werkbalk voor koppen, lijsten en afbeeldingen."
         />
       </div>
       <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">

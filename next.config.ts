@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["@mdxeditor/editor"],
   eslint: {
     // ESLint 9 + Next patch can fail in some environments ("Failed to patch ESLint"); types still checked via tsc
     ignoreDuringBuilds: true,

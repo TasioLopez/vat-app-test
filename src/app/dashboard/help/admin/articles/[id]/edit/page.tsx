@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
 
 type Cat = { id: string; title: string };
 
@@ -18,8 +19,10 @@ export default function EditArticlePage() {
   const [body, setBody] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [published, setPublished] = useState(true);
+  const [articleLoaded, setArticleLoaded] = useState(false);
 
   const load = useCallback(async () => {
+    setArticleLoaded(false);
     const [aRes, cRes] = await Promise.all([
       fetch(`/api/help/admin/articles/${id}`),
       fetch("/api/help/admin/categories"),
@@ -39,13 +42,14 @@ export default function EditArticlePage() {
     setExcerpt(a.excerpt || "");
     setPublished(a.published);
     setCategories(cj.categories || []);
+    setArticleLoaded(true);
   }, [id]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const uploadImage = async (file: File) => {
+  const uploadKbMediaImage = useCallback(async (file: File): Promise<string> => {
     const sign = await fetch("/api/help/admin/media/sign-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,7 +58,7 @@ export default function EditArticlePage() {
     const sj = await sign.json();
     if (!sign.ok) {
       alert(sj.error || "Ondertekenen mislukt");
-      return;
+      throw new Error(sj.error || "Ondertekenen mislukt");
     }
     const put = await fetch(sj.signedUrl, {
       method: "PUT",
@@ -63,11 +67,10 @@ export default function EditArticlePage() {
     });
     if (!put.ok) {
       alert("Upload mislukt");
-      return;
+      throw new Error("Upload mislukt");
     }
-    const path = sj.path as string;
-    setBody((b) => `${b}\n\n![afbeelding](${path})\n`);
-  };
+    return sj.path as string;
+  }, []);
 
   const save = async () => {
     const res = await fetch(`/api/help/admin/articles/${id}`, {
@@ -139,22 +142,19 @@ export default function EditArticlePage() {
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
         />
-        <div className="flex items-center gap-2">
-          <span className="text-sm">Afbeelding</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadImage(f);
-            }}
+        <label className="text-sm font-medium">Inhoud</label>
+        {articleLoaded ? (
+          <KbArticleBodyEditor
+            markdown={body}
+            onMarkdownChange={setBody}
+            uploadKbMediaImage={uploadKbMediaImage}
+            placeholder="Typ of plak tekst; gebruik de werkbalk voor koppen, lijsten en afbeeldingen."
           />
-        </div>
-        <textarea
-          className="border rounded-lg px-3 py-2 font-mono text-sm min-h-[360px]"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
+        ) : (
+          <div className="min-h-[360px] rounded-xl border border-purple-200 bg-purple-50/50 animate-pulse p-4 text-sm text-purple-700">
+            Artikel laden…
+          </div>
+        )}
       </div>
       <div className="flex gap-3">
         <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">

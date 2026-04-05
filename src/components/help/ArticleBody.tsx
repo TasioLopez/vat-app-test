@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import type { Components } from "react-markdown";
+import { KbMediaImg } from "@/lib/help/kb-media-image";
 
 const schema = {
   ...defaultSchema,
@@ -19,41 +20,6 @@ const schema = {
 type Props = {
   markdown: string;
 };
-
-function KbMediaImg({ path, alt }: { path: string; alt: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/help/kb-media/sign-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ path }),
-        });
-        const j = await res.json();
-        if (!cancelled && j.url) setUrl(j.url);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [path]);
-
-  if (!url) {
-    return (
-      <div className="my-4 h-32 bg-purple-50 rounded-lg animate-pulse text-sm text-purple-600 p-4">
-        Loading image…
-      </div>
-    );
-  }
-
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt={alt} className="rounded-lg max-w-full h-auto my-4 border border-purple-100" />;
-}
 
 export function ArticleBody({ markdown }: Props) {
   const components: Components = {
