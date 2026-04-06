@@ -42,7 +42,7 @@ async function main() {
   }
 
   const doReindex = process.argv.includes("--reindex");
-  const { reindexArticle } = await import("../src/lib/help/reindex.ts");
+  const { reindexArticle } = await import("../src/lib/help/reindex");
 
   const supabase = createClient(url, serviceKey);
   const dir = resolve(process.cwd(), "content/help/nl");

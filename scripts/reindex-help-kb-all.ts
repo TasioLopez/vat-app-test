@@ -21,7 +21,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { reindexArticle } = await import("../src/lib/help/reindex.ts");
+  const { reindexArticle } = await import("../src/lib/help/reindex");
   const supabase = createClient(url, serviceKey);
 
   const { data: rows, error } = await supabase
