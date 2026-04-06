@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "help:generate-nl-md": "node scripts/generate-help-nl-md.mjs",
+    "help:seed": "tsx scripts/seed-help-kb.ts",
+    "help:reindex-all": "tsx scripts/reindex-help-kb-all.ts",
+    "help:seed-and-reindex": "tsx scripts/seed-help-kb.ts --reindex"
   },
   "dependencies": {
     "@aws-sdk/client-textract": "^3.848.0",
@@ -64,6 +68,7 @@
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.4.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5"
   }
