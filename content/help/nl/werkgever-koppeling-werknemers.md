@@ -7,17 +7,24 @@ translation_group_id: aa89678d-ed73-4c82-8c37-3483792a1037
 locale: nl
 ---
 
-# Relatie werkgever ↔ werknemer
+# Werkgever en werknemers
 
-Elke **werknemer** hoort bij precies één **werkgever**. Zo blijven dossiers en documenten logisch gegroepeerd.
+Elke **werknemer** hoort bij **een werkgever** (organisatie). Zo blijven dossiers en documenten logisch gegroepeerd.
 
-## Praktijk
+## Volgorde
 
-- Maak eerst de **werkgever** aan als deze nog niet bestaat.
-- Voeg daarna **werknemers** toe en kies de juiste werkgever.
+1. Maak of kies een **werkgever**: [Werkgever toevoegen](/dashboard/help/a/werkgever-nieuw-beheren).
+2. Maak een **werknemer** en kies de juiste werkgever in het formulier.
+
+> **Schermafbeelding (nog toe te voegen)**  
+> Toon: werknemerformulier met werkgever-dropdown.  
+> **Bestandsnaam:** `werknemer-werkgever-dropdown.png`
 
 ## Zichtbaarheid
 
-Standaardgebruikers zien alleen werknemers van werkgevers binnen hun toegewezen dossiers.
+Standaardgebruikers zien alleen werknemers binnen **toegewezen dossiers**.
 
-Meer over werknemers: [Werknemer aanmaken en bewerken](/dashboard/help/a/werknemer-aanmaken-en-bewerken).
+## Zie ook
+
+- [Werknemer aanmaken en bewerken](/dashboard/help/a/werknemer-aanmaken-en-bewerken)
+- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)

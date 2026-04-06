@@ -7,17 +7,40 @@ translation_group_id: db778ef3-8ed5-4488-b2bc-a9ca85fc395a
 locale: nl
 ---
 
-# Trajectplan Bouwer
+# Trajectplan Bouwer: werkwijze
 
-De bouwer bestaat uit vijf stappen met een voortgangsbalk bovenaan. Gebruik Terug en Volgende om tussen stappen te gaan.
+De **Trajectplan Bouwer** is een **wizard** met **vijf stappen**, een **voortgangsbalk** bovenaan en knoppen **Terug** en **Volgende** onderaan. Dit artikel beschrijft **navigatie**, **opslaan** en **waarschuwingen bij niet-opgeslagen wijzigingen**.
 
-## Opslaan
+## Schermopbouw
 
-Sla uw werk op volgens de knoppen op het scherm. Als u het venster sluit met openstaande wijzigingen, kan de applicatie waarschuwen: bevestig of sla eerst op.
+- **Titelbalk**: toont dat u in de bouwer bent en welke **stap** (bijv. stap 2 van 5).
+- **Voortgang**: gekleurde segmenten tonen voltooide en actieve stap.
+- **Inhoud**: het formulier van de huidige stap.
+- **Voettekst**: **Terug** / **Volgende**.
 
-## Tips
+> **Schermafbeelding (nog toe te voegen)**  
+> Toon: bouwer met voortgangsbalk en footer-knoppen.  
+> **Bestandsnaam:** `trajectplan-bouwer-layout.png`
 
-Werk stap voor stap; u kunt later terug naar eerdere stappen via Terug.
+## Navigeren tussen stappen
 
-Zie per stap de aparte hulpitems onder Trajectplan Bouwer.
+- **Volgende**: valideert vaak de huidige stap en gaat verder (gedrag kan per stap verschillen).
+- **Terug**: naar vorige stap; ingevulde gegevens blijven doorgaans bewaard als ze zijn **opgeslagen** volgens app-logica.
 
+## Opslaan en niet-opgeslagen wijzigingen
+
+- Gebruik expliciete **opslaan**-acties op het scherm wanneer die zichtbaar zijn.
+- Bij **navigatie weg** van de app (ander menu, tab sluiten) kan een **waarschuwing** verschijnen als er **wijzigingen** zijn. Kies **opslaan** of **annuleren** bewust.
+
+## Per-stap hulp
+
+- [Voorblad](/dashboard/help/a/tp-stap-voorblad)  
+- [Gegevens werknemer](/dashboard/help/a/tp-stap-gegevens-werknemer)  
+- [TP deel 3](/dashboard/help/a/tp-stap-deel-drie)  
+- [Bijlage 1](/dashboard/help/a/tp-stap-bijlage-een)  
+- [Eindecontrole](/dashboard/help/a/tp-stap-eindcontrole)
+
+## Zie ook
+
+- [Trajectplan starten vanuit werknemer](/dashboard/help/a/trajectplan-starten-vanuit-werknemer)
+- [TP-documenten](/dashboard/help/a/tp-documenten-wat-zijn-dit)

@@ -7,9 +7,22 @@ translation_group_id: 5f4cfd96-cd54-47c8-80fc-a2e963d9c1c6
 locale: nl
 ---
 
-# Koppeling gebruiker en werknemer
+# Werknemer koppelen aan een gebruiker
 
-Standaardgebruikers zien alleen werknemers waaraan zij zijn gekoppeld. Een beheerder koppelt gebruikers aan werknemers (via gebruikersbeheer of het werknemersrecord, afhankelijk van uw inrichting).
+Standaardgebruikers zien alleen werknemers waaraan zij **gekoppeld** zijn. Een **beheerder** koppelt via **Gebruikers** in het menu.
 
-Zonder koppeling verschijnt een werknemer niet in uw lijst.
+## Actie voor beheerder
+
+Open Gebruikers, kies de gebruiker, en wijs werknemers toe volgens het scherm.
+
+> **Schermafbeelding (nog toe te voegen)**  
+> Toon: gebruikersscherm met werknemertoewijzing.  
+> **Bestandsnaam:** `gebruiker-werknemers.png`
+
+Zonder koppeling ziet de gebruiker de werknemer **niet** in de lijst.
+
+## Zie ook
+
+- [Gebruikersbeheer](/dashboard/help/a/gebruikersbeheer-admin)
+- [Werknemer aanmaken en bewerken](/dashboard/help/a/werknemer-aanmaken-en-bewerken)
 

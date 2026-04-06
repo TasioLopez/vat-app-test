@@ -64,7 +64,7 @@ export function ArticleBody({ markdown }: Props) {
   };
 
   return (
-    <div className="max-w-none text-gray-800 space-y-4 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_code]:bg-purple-50 [&_code]:px-1 [&_code]:rounded">
+    <div className="max-w-none text-gray-800 space-y-4 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-gray-900 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_code]:bg-purple-50 [&_code]:px-1 [&_code]:rounded [&_blockquote]:border-l-4 [&_blockquote]:border-purple-200 [&_blockquote]:bg-purple-50/60 [&_blockquote]:pl-4 [&_blockquote]:py-3 [&_blockquote]:pr-3 [&_blockquote]:rounded-r-lg [&_blockquote]:text-gray-700 [&_blockquote]:not-italic [&_hr]:my-8 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-purple-100">
       <ReactMarkdown rehypePlugins={[[rehypeSanitize, schema]]} components={components}>
         {markdown}
       </ReactMarkdown>

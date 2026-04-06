@@ -1,6 +1,8 @@
 # Help center content (NL)
 
-Markdown sources live in [`nl/`](nl/). Each file has YAML frontmatter:
+Markdown sources live in [`nl/`](nl/). Articles are maintained as **full help-center copy** (structure, cross-links, screenshot placeholders in blockquotes). After editing, run `npm run help:seed` or `npm run help:seed-and-reindex`, then `npm run help:reindex-all` if you only seeded, so Supabase and embeddings stay in sync.
+
+Each file has YAML frontmatter:
 
 - `slug` — unique per locale (`nl`), lowercase and hyphens only
 - `title`, `excerpt`

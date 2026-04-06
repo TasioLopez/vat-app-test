@@ -9,9 +9,32 @@ locale: nl
 
 # Mijn Stem
 
-De tab Mijn Stem bevat functies rond spraak en audio binnen de applicatie (microfoon).
+**Mijn Stem** verzamelt instellingen en acties rond **microfoon** en spraak binnen de applicatie. U vindt het onder Instellingen naast profiel en wachtwoord.
 
-Volg de instructies op het scherm en geef microfoontoestemming in de browser als daarom wordt gevraagd.
+## Waar in de app
 
-Bij problemen controleert u de browserinstellingen voor microfoontoegang.
+`/dashboard/settings` > tab **Mijn Stem** (microfoon-icoon).
+
+## Stap voor stap
+
+1. Open [Instellingen](/dashboard/help/a/instellingen-tab-overzicht) en kies **Mijn Stem**.
+2. Lees de korte uitleg op het scherm.
+3. Wanneer de browser om **microfoontoestemming** vraagt, kies **Toestaan** als uw beleid dat toestaat.
+4. Test de functie volgens de knoppen of instructies op de pagina.
+5. Werk op **HTTPS** en vermijd geblokkeerde browsers of extensies die de microfoon uitschakelen.
+
+> **Schermafbeelding (nog toe te voegen)**  
+> Toon: Mijn Stem-tab met status microfoon (geen gevoelige audio).  
+> **Bestandsnaam:** `instellingen-mijn-stem.png`
+
+## Veelvoorkomende problemen
+
+- Geen geluid of geen invoer: controleer Windows/macOS privacy-instellingen voor de browser.
+- Toestemming geweigerd: open site-instellingen in de browser en zet microfoon op **Toestaan** voor dit domein.
+- Werkt op een apparaat wel en op een ander niet: corporate policy of hardware kan microfoon blokkeren.
+
+## Zie ook
+
+- [Instellingen: overzicht](/dashboard/help/a/instellingen-tab-overzicht)
+- [Eerste stappen in de app](/dashboard/help/a/eerste-stappen-in-de-app)
 
