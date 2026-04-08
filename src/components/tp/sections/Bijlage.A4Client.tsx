@@ -6,7 +6,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTP } from "@/context/TPContext";
 import Image from "next/image";
-import Logo2 from "@/assets/images/logo-2.png";
+const Logo2 = "/branding/vat-app-logo.svg";
 
 const page =
   "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none";

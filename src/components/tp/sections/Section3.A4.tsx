@@ -3,7 +3,7 @@
 
 import React from "react";
 import Image from "next/image";
-import Logo2 from "@/assets/images/logo-2.png";
+const Logo2 = "/branding/vat-app-logo.svg";
 import { loadTP, TPData } from "@/lib/tp/load";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";

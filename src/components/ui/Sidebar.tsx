@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import Image from "next/image";
 import {
   FaTachometerAlt,
   FaUsers,
@@ -100,6 +101,19 @@ export default function Sidebar({
       >
         <FaBars className="text-xl" />
       </button>
+
+      <div className={`px-3 ${collapsed ? "mb-3" : "mb-4"}`}>
+        <div className="flex items-center justify-center rounded-xl bg-white/10 border border-white/15 p-2">
+          <Image
+            src="/branding/vat-app-logo.svg"
+            alt="VAT logo"
+            width={collapsed ? 28 : 140}
+            height={collapsed ? 28 : 36}
+            className="h-auto"
+            priority
+          />
+        </div>
+      </div>
 
       {!collapsed && (
         <h2 className="text-lg font-bold px-4 mb-6 text-white mt-4">

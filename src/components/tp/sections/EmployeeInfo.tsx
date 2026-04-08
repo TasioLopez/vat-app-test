@@ -17,7 +17,7 @@ import {
 import { SELECT_CLASS } from '@/lib/select-class';
 import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
 import Image from 'next/image';
-import Logo2 from '@/assets/images/logo-2.png';
+const Logo2 = '/branding/vat-app-logo.svg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

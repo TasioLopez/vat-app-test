@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
-import Logo from "@/assets/images/valentinez-logo.png";
+const Logo = "/branding/vat-app-logo.svg";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation, type ResetPasswordFormData } from "@/lib/validation";
 

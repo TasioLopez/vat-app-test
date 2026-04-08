@@ -1,8 +1,8 @@
 // src/app/layout.tsx
-"use client";
 
 import "@/styles/globals.css";
 import { ReactNode } from "react";
+import type { Metadata } from "next";
 import { ToastProvider } from "@/components/ui/Toast";
 import { Montserrat } from "next/font/google";
 
@@ -11,6 +11,14 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
   display: "swap",
 });
+
+export const metadata: Metadata = {
+  icons: {
+    icon: "/branding/vat-app-logo.svg",
+    shortcut: "/branding/vat-app-logo.svg",
+    apple: "/branding/vat-app-logo.svg",
+  },
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

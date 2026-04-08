@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
-import Logo from "@/assets/images/valentinez-logo.png";
+const Logo = "/branding/vat-app-logo.svg";
 import { validateForm, authValidation, type ForgotPasswordFormData } from "@/lib/validation";
 
 export default function LoginPage() {
