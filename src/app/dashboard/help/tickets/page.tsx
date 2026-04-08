@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft, FaPlus } from "react-icons/fa";
+import { ticketPriorityLabelNl, ticketStatusLabelNl } from "@/lib/help/ticket-labels";
 
 type Ticket = {
   id: string;
@@ -17,22 +18,32 @@ export default function MyTicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [cats, setCats] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    (async () => {
-      const [tRes, cRes] = await Promise.all([
-        fetch("/api/help/tickets"),
-        fetch("/api/help/ticket-categories"),
-      ]);
-      const tj = await tRes.json();
-      const cj = await cRes.json();
-      setTickets(tj.tickets || []);
-      const map: Record<string, string> = {};
-      for (const c of cj.categories || []) {
-        map[c.id] = c.label_nl;
-      }
-      setCats(map);
-    })();
+  const load = useCallback(async () => {
+    const [tRes, cRes] = await Promise.all([
+      fetch("/api/help/tickets"),
+      fetch("/api/help/ticket-categories"),
+    ]);
+    const tj = await tRes.json();
+    const cj = await cRes.json();
+    setTickets(tj.tickets || []);
+    const map: Record<string, string> = {};
+    for (const c of cj.categories || []) {
+      map[c.id] = c.label_nl;
+    }
+    setCats(map);
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [load]);
 
   return (
     <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
@@ -58,8 +69,8 @@ export default function MyTicketsPage() {
               >
                 <div className="font-semibold text-gray-900">{t.subject}</div>
                 <div className="text-sm text-gray-500 mt-1">
-                  {cats[t.category_id] || "Categorie"} · {t.status} ·{" "}
-                  {new Date(t.created_at).toLocaleString("nl-NL")}
+                  {cats[t.category_id] || "Categorie"} · {ticketStatusLabelNl(t.status)} ·{" "}
+                  {ticketPriorityLabelNl(t.priority)} · {new Date(t.created_at).toLocaleString("nl-NL")}
                 </div>
               </Link>
             </li>

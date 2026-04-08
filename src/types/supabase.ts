@@ -749,6 +749,39 @@ export type Database = {
           },
         ]
       }
+      support_ticket_reads: {
+        Row: {
+          last_read_at: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          last_read_at?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_reads_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_reads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           assignee_id: string | null
@@ -830,6 +863,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      help_unread_ticket_count_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      help_unread_ticket_count_requester: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       match_kb_chunks: {
         Args: {
           filter_locale: string

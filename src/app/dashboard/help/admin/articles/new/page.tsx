@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { toast } from "sonner";
 import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
 import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 
@@ -42,7 +43,7 @@ export default function NewArticlePage() {
     });
     const sj = await sign.json();
     if (!sign.ok) {
-      alert(sj.error || "Ondertekenen mislukt");
+      toast.error(sj.error || "Ondertekenen mislukt");
       throw new Error(sj.error || "Ondertekenen mislukt");
     }
     const put = await fetch(sj.signedUrl, {
@@ -51,7 +52,7 @@ export default function NewArticlePage() {
       body: file,
     });
     if (!put.ok) {
-      alert("Upload mislukt");
+      toast.error("Upload mislukt");
       throw new Error("Upload mislukt");
     }
     return sj.path as string;
@@ -76,7 +77,7 @@ export default function NewArticlePage() {
     if (res.ok) {
       router.push(`/dashboard/help/admin/articles/${j.id}/edit`);
     } else {
-      alert(j.error || "Opslaan mislukt");
+      toast.error(j.error || "Opslaan mislukt");
     }
   };
 

@@ -19,6 +19,7 @@ import {
   FaChevronLeft,
 } from "react-icons/fa";
 import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 
 export default function Sidebar({
   collapsed,
@@ -31,6 +32,7 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const { attemptNavigate } = useUnsavedChangesGuard();
+  const { userTicketUnread, adminTicketUnread } = useHelpNotifications();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -149,6 +151,12 @@ export default function Sidebar({
             item.href === "/dashboard"
               ? pathname === "/dashboard"
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const badgeCount =
+            item.href === "/dashboard/help"
+              ? userTicketUnread
+              : item.href === "/dashboard/help/admin"
+                ? adminTicketUnread
+                : 0;
           return (
             <Link
               key={item.href}
@@ -157,14 +165,27 @@ export default function Sidebar({
                 e.preventDefault();
                 attemptNavigate(item.href);
               }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
                   : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
-              {!collapsed && <span className="font-medium">{item.name}</span>}
+              <span className="relative text-xl">
+                {item.icon}
+                {collapsed && badgeCount > 0 ? (
+                  <span
+                    className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-amber-400"
+                    aria-hidden
+                  />
+                ) : null}
+              </span>
+              {!collapsed && <span className="min-w-0 flex-1 font-medium">{item.name}</span>}
+              {!collapsed && badgeCount > 0 ? (
+                <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-purple-900">
+                  {badgeCount > 99 ? "99+" : badgeCount}
+                </span>
+              ) : null}
             </Link>
           );
         })}

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { Toaster } from 'sonner';
 import Sidebar from '@/components/ui/Sidebar';
 import { ResponsiveLayout } from '@/components/layout/ResponsiveLayout';
 import { UnsavedChangesGuardProvider } from '@/context/UnsavedChangesGuardContext';
+import { HelpNotificationsProvider } from '@/context/HelpNotificationsContext';
 
 export default function ClientLayout({
   children,
@@ -16,18 +18,21 @@ export default function ClientLayout({
 
   return (
     <UnsavedChangesGuardProvider>
-      <ResponsiveLayout
-        collapsed={collapsed}
-        sidebar={
-          <Sidebar
-            collapsed={collapsed}
-            setCollapsed={setCollapsed}
-            role={role}
-          />
-        }
-      >
-        {children}
-      </ResponsiveLayout>
+      <HelpNotificationsProvider role={role}>
+        <Toaster richColors position="top-center" />
+        <ResponsiveLayout
+          collapsed={collapsed}
+          sidebar={
+            <Sidebar
+              collapsed={collapsed}
+              setCollapsed={setCollapsed}
+              role={role}
+            />
+          }
+        >
+          {children}
+        </ResponsiveLayout>
+      </HelpNotificationsProvider>
     </UnsavedChangesGuardProvider>
   );
 }

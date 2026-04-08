@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ticketPriorityLabelNl, ticketStatusLabelNl } from "@/lib/help/ticket-labels";
 
 type Row = {
   id: string;
@@ -22,7 +23,15 @@ export default function AdminTicketsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [load]);
 
   return (
@@ -47,8 +56,8 @@ export default function AdminTicketsPage() {
                 </Link>
               </td>
               <td className="p-3 text-gray-600">{r.requester?.email}</td>
-              <td className="p-3">{r.status}</td>
-              <td className="p-3">{r.priority}</td>
+              <td className="p-3">{ticketStatusLabelNl(r.status)}</td>
+              <td className="p-3">{ticketPriorityLabelNl(r.priority)}</td>
               <td className="p-3 text-gray-500">{new Date(r.created_at).toLocaleString("nl-NL")}</td>
             </tr>
           ))}

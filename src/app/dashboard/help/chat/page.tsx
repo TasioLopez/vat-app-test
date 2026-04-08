@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { FaArrowLeft, FaPaperPlane } from "react-icons/fa";
 import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 export default function HelpChatPage() {
+  const { refresh: refreshNotifications } = useHelpNotifications();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState("");
@@ -124,6 +127,8 @@ export default function HelpChatPage() {
     if (res.ok) {
       setEscalateOpen(false);
       setTicketSubject("");
+      toast.success("Ticket aangemaakt");
+      void refreshNotifications();
       setMessages((prev) => [
         ...prev,
         {
@@ -132,7 +137,7 @@ export default function HelpChatPage() {
         },
       ]);
     } else {
-      alert(j.error || "Ticket aanmaken mislukt");
+      toast.error(j.error || "Ticket aanmaken mislukt");
     }
   };
 

@@ -1,12 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { toast } from "sonner";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import {
+  TICKET_PRIORITY_VALUES,
+  TICKET_STATUS_VALUES,
+  ticketPriorityLabelNl,
+  ticketStatusLabelNl,
+} from "@/lib/help/ticket-labels";
 
 export default function AdminTicketDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { refresh: refreshNotifications } = useHelpNotifications();
   const [ticket, setTicket] = useState<Record<string, unknown> | null>(null);
   const [messages, setMessages] = useState<
     { id: string; body: string; is_internal: boolean; author_id: string; created_at: string }[]
@@ -26,11 +36,15 @@ export default function AdminTicketDetailPage() {
       setStatus((j.ticket.status as string) || "open");
       setPriority((j.ticket.priority as string) || "normal");
       setInternalNotes((j.ticket.internal_notes as string) || "");
+      await fetch(`/api/help/tickets/${id}/mark-read`, { method: "POST" });
+      await refreshNotifications();
+    } else {
+      toast.error(j.error || "Laden mislukt");
     }
-  }, [id]);
+  }, [id, refreshNotifications]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const patchTicket = async () => {
@@ -45,8 +59,15 @@ export default function AdminTicketDetailPage() {
     });
     if (!res.ok) {
       const j = await res.json();
-      alert(j.error || "Bijwerken mislukt");
-    } else alert("Bijgewerkt");
+      toast.error(j.error || "Bijwerken mislukt");
+      return;
+    }
+    toast.success("Ticket bijgewerkt");
+    await load();
+    await refreshNotifications();
+    if (status === "closed" || status === "resolved") {
+      router.push("/dashboard/help/admin/tickets");
+    }
   };
 
   const sendMsg = async () => {
@@ -56,10 +77,15 @@ export default function AdminTicketDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: reply.trim(), isInternal: internalReply }),
     });
-    if (res.ok) {
-      setReply("");
-      load();
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error || "Bericht versturen mislukt");
+      return;
     }
+    setReply("");
+    toast.success("Bericht toegevoegd");
+    await load();
+    await refreshNotifications();
   };
 
   if (!ticket) return <div className="p-8">Laden…</div>;
@@ -83,9 +109,9 @@ export default function AdminTicketDetailPage() {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            {["open", "in_progress", "waiting_customer", "resolved", "closed"].map((s) => (
+            {TICKET_STATUS_VALUES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {ticketStatusLabelNl(s)}
               </option>
             ))}
           </select>
@@ -97,9 +123,9 @@ export default function AdminTicketDetailPage() {
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
           >
-            {["low", "normal", "high", "urgent"].map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {TICKET_PRIORITY_VALUES.map((p) => (
+              <option key={p} value={p}>
+                {ticketPriorityLabelNl(p)}
               </option>
             ))}
           </select>
@@ -114,7 +140,7 @@ export default function AdminTicketDetailPage() {
         </label>
         <button
           type="button"
-          onClick={patchTicket}
+          onClick={() => void patchTicket()}
           className="sm:col-span-2 px-4 py-2 bg-purple-700 text-white rounded-lg"
         >
           Ticketvelden opslaan
@@ -159,7 +185,11 @@ export default function AdminTicketDetailPage() {
           value={reply}
           onChange={(e) => setReply(e.target.value)}
         />
-        <button type="button" onClick={sendMsg} className="px-4 py-2 bg-purple-700 text-white rounded-lg">
+        <button
+          type="button"
+          onClick={() => void sendMsg()}
+          className="px-4 py-2 bg-purple-700 text-white rounded-lg"
+        >
           Bericht toevoegen
         </button>
       </div>

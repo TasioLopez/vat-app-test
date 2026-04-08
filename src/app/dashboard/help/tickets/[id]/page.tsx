@@ -2,18 +2,23 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { createBrowserClient } from "@supabase/ssr";
+import { toast } from "sonner";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import { ticketPriorityLabelNl, ticketStatusLabelNl } from "@/lib/help/ticket-labels";
 import type { Database } from "@/types/supabase";
 
 export default function TicketDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { refresh: refreshNotifications } = useHelpNotifications();
   const [ticket, setTicket] = useState<{
     subject: string;
     description: string;
     status: string;
+    priority: string;
     category?: { label_en: string; label_nl?: string };
     escalation_chat_transcript: unknown;
   } | null>(null);
@@ -31,18 +36,22 @@ export default function TicketDetailPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, []);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const res = await fetch(`/api/help/tickets/${id}`);
     const j = await res.json();
     if (res.ok) {
       setTicket(j.ticket);
       setMessages(j.messages || []);
+      await fetch(`/api/help/tickets/${id}/mark-read`, { method: "POST" });
+      await refreshNotifications();
+    } else {
+      toast.error(j.error || "Laden mislukt");
     }
-  };
+  }, [id, refreshNotifications]);
 
   useEffect(() => {
-    load();
-  }, [id]);
+    void load();
+  }, [load]);
 
   const sendReply = async () => {
     if (!reply.trim()) return;
@@ -51,10 +60,15 @@ export default function TicketDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body: reply.trim(), isInternal: false }),
     });
-    if (res.ok) {
-      setReply("");
-      load();
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error || "Bericht versturen mislukt");
+      return;
     }
+    setReply("");
+    toast.success("Bericht verstuurd");
+    await load();
+    await refreshNotifications();
   };
 
   if (!ticket) {
@@ -75,7 +89,8 @@ export default function TicketDetailPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {ticket.category?.label_nl ?? ticket.category?.label_en} · {ticket.status}
+            {ticket.category?.label_nl ?? ticket.category?.label_en} · {ticketStatusLabelNl(ticket.status)} ·{" "}
+            Prioriteit: {ticketPriorityLabelNl(ticket.priority ?? "normal")}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-purple-100 p-4">
@@ -119,7 +134,7 @@ export default function TicketDetailPage() {
           />
           <button
             type="button"
-            onClick={sendReply}
+            onClick={() => void sendReply()}
             className="self-end px-4 py-2 rounded-xl bg-purple-700 text-white font-medium"
           >
             Versturen

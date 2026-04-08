@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { toast } from "sonner";
 import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 type Cat = { id: string; title: string };
 
@@ -20,6 +22,8 @@ export default function EditArticlePage() {
   const [excerpt, setExcerpt] = useState("");
   const [published, setPublished] = useState(true);
   const [articleLoaded, setArticleLoaded] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const load = useCallback(async () => {
     setArticleLoaded(false);
@@ -30,7 +34,7 @@ export default function EditArticlePage() {
     const aj = await aRes.json();
     const cj = await cRes.json();
     if (!aRes.ok) {
-      alert(aj.error || "Laden mislukt");
+      toast.error(aj.error || "Laden mislukt");
       return;
     }
     const a = aj.article;
@@ -57,7 +61,7 @@ export default function EditArticlePage() {
     });
     const sj = await sign.json();
     if (!sign.ok) {
-      alert(sj.error || "Ondertekenen mislukt");
+      toast.error(sj.error || "Ondertekenen mislukt");
       throw new Error(sj.error || "Ondertekenen mislukt");
     }
     const put = await fetch(sj.signedUrl, {
@@ -66,7 +70,7 @@ export default function EditArticlePage() {
       body: file,
     });
     if (!put.ok) {
-      alert("Upload mislukt");
+      toast.error("Upload mislukt");
       throw new Error("Upload mislukt");
     }
     return sj.path as string;
@@ -87,15 +91,27 @@ export default function EditArticlePage() {
       }),
     });
     const j = await res.json();
-    if (!res.ok) alert(j.error || "Opslaan mislukt");
-    else alert("Opgeslagen en opnieuw geïndexeerd.");
+    if (!res.ok) {
+      toast.error(j.error || "Opslaan mislukt");
+    } else {
+      toast.success("Opgeslagen en opnieuw geïndexeerd.");
+    }
   };
 
-  const del = async () => {
-    if (!confirm("Artikel verwijderen?")) return;
-    const res = await fetch(`/api/help/admin/articles/${id}`, { method: "DELETE" });
-    if (res.ok) router.push("/dashboard/help/admin/articles");
-    else alert("Verwijderen mislukt");
+  const confirmDelete = async () => {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/help/admin/articles/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Artikel verwijderd");
+        router.push("/dashboard/help/admin/articles");
+      } else {
+        toast.error("Verwijderen mislukt");
+      }
+    } finally {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
+    }
   };
 
   return (
@@ -160,10 +176,25 @@ export default function EditArticlePage() {
         <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
           Opslaan
         </button>
-        <button type="button" onClick={del} className="px-6 py-3 border border-red-300 text-red-700 rounded-xl">
+        <button
+          type="button"
+          onClick={() => setDeleteOpen(true)}
+          className="px-6 py-3 border border-red-300 text-red-700 rounded-xl"
+        >
           Verwijderen
         </button>
       </div>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Artikel verwijderen?"
+        description="Deze actie kan niet ongedaan worden gemaakt."
+        confirmLabel="Verwijderen"
+        cancelLabel="Annuleren"
+        variant="destructive"
+        loading={deleteLoading}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

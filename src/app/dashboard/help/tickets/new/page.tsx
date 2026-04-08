@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
+import { toast } from "sonner";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 
 type TicketCategory = {
   id: string;
@@ -13,6 +15,7 @@ type TicketCategory = {
 
 export default function NewTicketPage() {
   const router = useRouter();
+  const { refresh: refreshNotifications } = useHelpNotifications();
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [subject, setSubject] = useState("");
@@ -29,7 +32,9 @@ export default function NewTicketPage() {
         const res = await fetch("/api/help/ticket-categories");
         const j = await res.json();
         if (!res.ok) {
-          setError(j.error || "Kon categorieen niet laden.");
+          const msg = j.error || "Kon categorieen niet laden.";
+          setError(msg);
+          toast.error(msg);
           return;
         }
         const nextCategories = j.categories || [];
@@ -39,6 +44,7 @@ export default function NewTicketPage() {
         }
       } catch {
         setError("Netwerkfout bij laden van categorieen.");
+        toast.error("Netwerkfout bij laden van categorieen.");
       } finally {
         setLoadingCategories(false);
       }
@@ -62,12 +68,17 @@ export default function NewTicketPage() {
       });
       const j = await res.json();
       if (!res.ok) {
-        setError(j.error || "Ticket aanmaken mislukt.");
+        const msg = j.error || "Ticket aanmaken mislukt.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
+      toast.success("Ticket aangemaakt");
+      await refreshNotifications();
       router.push(`/dashboard/help/tickets/${j.id}`);
     } catch {
       setError("Netwerkfout bij ticket aanmaken.");
+      toast.error("Netwerkfout bij ticket aanmaken.");
     } finally {
       setSubmitting(false);
     }
