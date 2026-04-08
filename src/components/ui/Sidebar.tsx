@@ -95,29 +95,35 @@ export default function Sidebar({
         collapsed ? "w-16" : "w-64"
       } bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r border-purple-700/50 flex flex-col fixed left-0 top-0 z-10 flex-shrink-0`}
     >
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="p-4 text-white/80 hover:text-white hover:bg-white/10 focus:outline-none transition-all duration-200 rounded-lg mx-2 mt-2"
-      >
-        <FaBars className="text-xl" />
-      </button>
-
       <div
-        className={`flex justify-center px-3 ${collapsed ? "mb-2" : "mb-3"}`}
+        className={`flex shrink-0 items-center gap-2 px-2 pt-2 pb-1 ${
+          collapsed ? "justify-center" : "justify-start"
+        }`}
       >
-        <Image
-          src="/branding/vat-app-logo.svg"
-          alt="VAT logo"
-          width={collapsed ? 22 : 48}
-          height={collapsed ? 22 : 24}
-          className="h-auto w-auto max-h-6 max-w-[48px] object-contain object-center shrink-0"
-          sizes="48px"
-          priority
-        />
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Menu openen" : "Menu sluiten"}
+        >
+          <FaBars className="text-xl" />
+        </button>
+        {!collapsed && (
+          <Image
+            src="/branding/vat-app-logo.svg"
+            alt="Valentinez Assist Tool"
+            width={72}
+            height={32}
+            className="h-auto w-auto max-h-8 max-w-[72px] object-contain object-left"
+            sizes="72px"
+            priority
+          />
+        )}
       </div>
 
       {!collapsed && (
-        <h2 className="text-lg font-bold px-4 mb-6 text-white mt-4">
+        <h2 className="mb-6 mt-1 px-4 text-lg font-bold text-white">
           {firstName ? `Hi, ${firstName}` : "Welkom"}
         </h2>
       )}
