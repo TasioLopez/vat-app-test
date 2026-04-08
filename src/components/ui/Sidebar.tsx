@@ -16,6 +16,7 @@ import {
   FaSignOutAlt,
   FaLifeRing,
   FaTools,
+  FaChevronLeft,
 } from "react-icons/fa";
 import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
 
@@ -96,29 +97,43 @@ export default function Sidebar({
       } bg-gradient-to-b from-purple-900 via-purple-800 to-purple-900 border-r border-purple-700/50 flex flex-col fixed left-0 top-0 z-10 flex-shrink-0`}
     >
       <div
-        className={`flex shrink-0 items-center gap-2 px-2 pt-2 pb-1 ${
-          collapsed ? "justify-center" : "justify-start"
+        className={`flex w-full shrink-0 items-center px-2 pb-1 pt-2 ${
+          collapsed ? "justify-center" : "justify-between gap-2"
         }`}
       >
-        <button
-          type="button"
-          onClick={() => setCollapsed(!collapsed)}
-          className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "Menu openen" : "Menu sluiten"}
-        >
-          <FaBars className="text-xl" />
-        </button>
-        {!collapsed && (
-          <Image
-            src="/branding/vat-app-logo.svg"
-            alt="Valentinez Assist Tool"
-            width={72}
-            height={32}
-            className="h-auto w-auto max-h-8 max-w-[72px] object-contain object-left"
-            sizes="72px"
-            priority
-          />
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
+            aria-expanded={false}
+            aria-label="Menu openen"
+          >
+            <FaBars className="text-xl" />
+          </button>
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-1 items-center pl-1">
+              <Image
+                src="/branding/vat-app-logo.svg"
+                alt="Valentinez Assist Tool"
+                width={88}
+                height={36}
+                className="h-auto w-auto max-h-9 max-w-[88px] object-contain object-left"
+                sizes="88px"
+                priority
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
+              aria-expanded={true}
+              aria-label="Menu sluiten"
+            >
+              <FaChevronLeft className="text-xl" aria-hidden />
+            </button>
+          </>
         )}
       </div>
 
