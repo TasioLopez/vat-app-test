@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaPlus } from "react-icons/fa";
 
 type Ticket = {
   id: string;
@@ -40,7 +40,15 @@ export default function MyTicketsPage() {
         <Link href="/dashboard/help" className="text-purple-700 font-medium inline-flex items-center gap-2">
           <FaArrowLeft /> Help
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Mijn tickets</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold text-gray-900">Mijn tickets</h1>
+          <Link
+            href="/dashboard/help/tickets/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-700 text-white font-semibold"
+          >
+            <FaPlus /> Nieuw ticket
+          </Link>
+        </div>
         <ul className="space-y-3">
           {tickets.map((t) => (
             <li key={t.id}>

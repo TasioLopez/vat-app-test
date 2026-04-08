@@ -128,7 +128,7 @@ export default function HelpChatPage() {
         ...prev,
         {
           role: "assistant",
-          content: `Ticket aangemaakt. Je vindt het onder Help → Mijn tickets (id: ${j.id}).`,
+          content: `Ticket aangemaakt met dit chatgesprek. Je vindt het onder Help -> Mijn tickets (id: ${j.id}).`,
         },
       ]);
     } else {
@@ -147,7 +147,7 @@ export default function HelpChatPage() {
           onClick={openEscalate}
           className="px-4 py-2 rounded-xl bg-purple-100 text-purple-900 text-sm font-semibold"
         >
-          Contact / ticket
+          Ticket met chatgesprek
         </button>
       </div>
 
@@ -208,7 +208,8 @@ export default function HelpChatPage() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900">Supportticket aanmaken</h2>
             <p className="text-sm text-gray-600">
-              Het volledige chatgesprek wordt toegevoegd. We reageren binnen 3 werkdagen.
+              We sturen het volledige chatgesprek mee zodat support direct context heeft.
+              We reageren binnen 3 werkdagen.
             </p>
             <label className="block text-sm font-medium text-gray-700">Categorie</label>
             <select
@@ -228,6 +229,7 @@ export default function HelpChatPage() {
               onChange={(e) => setTicketSubject(e.target.value)}
               className="w-full rounded-lg border border-purple-200 px-3 py-2"
               placeholder="Korte samenvatting"
+              required
             />
             <div className="flex gap-2 justify-end pt-2">
               <button

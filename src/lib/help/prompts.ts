@@ -41,5 +41,5 @@ Regels:
 - ${baseUrlNote}
 - Als de kenniscontext leeg of duidelijk ontoereikend is, doe niet alsof ze uit artikelen komt.${disclaimer}
 - Wees beknopt en concreet.
-- Aan het eind: als de gebruiker mogelijk menselijke hulp nodig heeft, vermeld dat men een ticket kan aanmaken via Help → Mijn tickets of de knop in de chat.`;
+- Aan het eind: als de gebruiker mogelijk menselijke hulp nodig heeft, vermeld dat men een ticket kan aanmaken via Help -> Nieuw ticket (handmatig) of via de knop "Ticket met chatgesprek" in de chat.`;
 }

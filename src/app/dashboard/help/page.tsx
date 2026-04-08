@@ -114,6 +114,12 @@ export default function HelpHubPage() {
 
         <div className="flex flex-wrap gap-3">
           <Link
+            href="/dashboard/help/tickets/new"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-700 text-white font-semibold shadow-lg shadow-purple-500/20"
+          >
+            <FaTicketAlt /> Nieuw ticket
+          </Link>
+          <Link
             href="/dashboard/help/chat"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold shadow-lg shadow-purple-500/25"
           >
