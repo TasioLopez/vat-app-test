@@ -3,7 +3,7 @@
 // No hooks, no context, no "use client".
 
 import Image from "next/image";
-const Logo2 = "/branding/vat-app-logo.svg";
+import Logo2 from "@/assets/images/logo-2.png";
 import { TPData } from "@/lib/tp/load";
 import { 
   formatEmployeeName,

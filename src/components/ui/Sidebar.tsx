@@ -102,17 +102,17 @@ export default function Sidebar({
         <FaBars className="text-xl" />
       </button>
 
-      <div className={`px-3 ${collapsed ? "mb-3" : "mb-4"}`}>
-        <div className="flex items-center justify-center rounded-xl bg-white/10 border border-white/15 p-2">
-          <Image
-            src="/branding/vat-app-logo.svg"
-            alt="VAT logo"
-            width={collapsed ? 28 : 140}
-            height={collapsed ? 28 : 36}
-            className="h-auto"
-            priority
-          />
-        </div>
+      <div
+        className={`flex justify-center px-3 ${collapsed ? "mb-3" : "mb-4"}`}
+      >
+        <Image
+          src="/branding/vat-app-logo.svg"
+          alt="VAT logo"
+          width={collapsed ? 32 : 108}
+          height={collapsed ? 32 : 32}
+          className="h-auto max-w-[108px] w-full object-contain"
+          priority
+        />
       </div>
 
       {!collapsed && (

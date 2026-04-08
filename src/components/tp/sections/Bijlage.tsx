@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
-const Logo2 = "/branding/vat-app-logo.svg";
+import Logo2 from "@/assets/images/logo-2.png";
 import { supabase } from "@/lib/supabase/client";
 import { useTP } from "@/context/TPContext";
 import { SELECT_CLASS } from "@/lib/select-class";
