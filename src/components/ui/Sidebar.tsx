@@ -138,7 +138,7 @@ export default function Sidebar({
       </div>
 
       {!collapsed && (
-        <h2 className="mb-6 mt-1 px-4 text-lg font-bold text-white">
+        <h2 className="mb-6 mt-4 px-4 text-lg font-bold text-white">
           {firstName ? `Hi, ${firstName}` : "Welkom"}
         </h2>
       )}
