@@ -871,6 +871,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      help_unread_ticket_ids_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: { ticket_id: string }[]
+      }
+      help_unread_ticket_ids_requester: {
+        Args: Record<PropertyKey, never>
+        Returns: { ticket_id: string }[]
+      }
       match_kb_chunks: {
         Args: {
           filter_locale: string

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaBook, FaComments, FaSearch, FaTicketAlt } from "react-icons/fa";
 import { articleHref, HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 import { cn } from "@/lib/utils";
+import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 
 type Category = {
   id: string;
@@ -25,6 +26,7 @@ type ArticleRow = {
 };
 
 export default function HelpHubPage() {
+  const { userTicketUnread } = useHelpNotifications();
   const locale = HELP_DEFAULT_LOCALE;
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<ArticleRow[]>([]);
@@ -127,9 +129,14 @@ export default function HelpHubPage() {
           </Link>
           <Link
             href="/dashboard/help/tickets"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-purple-200 text-purple-800 font-semibold"
+            className="relative inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-purple-200 text-purple-800 font-semibold"
           >
             <FaTicketAlt /> Mijn tickets
+            {userTicketUnread > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-[1.25rem] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-xs font-bold text-purple-900">
+                {userTicketUnread > 99 ? "99+" : userTicketUnread}
+              </span>
+            ) : null}
           </Link>
         </div>
 

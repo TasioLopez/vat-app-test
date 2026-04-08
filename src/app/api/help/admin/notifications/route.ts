@@ -9,11 +9,12 @@ export async function GET() {
   }
 
   const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase.rpc("help_unread_ticket_count_admin");
+  const { data: rows, error } = await supabase.rpc("help_unread_ticket_ids_admin");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ count: data ?? 0 });
+  const ticketIds = (rows || []).map((r: { ticket_id: string }) => r.ticket_id);
+  return NextResponse.json({ count: ticketIds.length, ticketIds });
 }

@@ -15,10 +15,17 @@ import type { Database } from "@/types/supabase";
 type HelpNotificationsContextValue = {
   userTicketUnread: number;
   adminTicketUnread: number;
+  userUnreadTicketIds: string[];
+  adminUnreadTicketIds: string[];
   refresh: () => Promise<void>;
 };
 
 const HelpNotificationsContext = createContext<HelpNotificationsContextValue | null>(null);
+
+function normalizeTicketIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === "string");
+}
 
 export function HelpNotificationsProvider({
   role,
@@ -30,6 +37,8 @@ export function HelpNotificationsProvider({
   const isAdmin = role === "admin";
   const [userTicketUnread, setUserTicketUnread] = useState(0);
   const [adminTicketUnread, setAdminTicketUnread] = useState(0);
+  const [userUnreadTicketIds, setUserUnreadTicketIds] = useState<string[]>([]);
+  const [adminUnreadTicketIds, setAdminUnreadTicketIds] = useState<string[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -37,15 +46,20 @@ export function HelpNotificationsProvider({
       const userRes = await fetch("/api/help/notifications");
       if (userRes.ok) {
         const j = await userRes.json();
-        setUserTicketUnread(typeof j.count === "number" ? j.count : 0);
+        const ids = normalizeTicketIds(j.ticketIds);
+        setUserUnreadTicketIds(ids);
+        setUserTicketUnread(typeof j.count === "number" ? j.count : ids.length);
       }
       if (isAdmin) {
         const adminRes = await fetch("/api/help/admin/notifications");
         if (adminRes.ok) {
           const j = await adminRes.json();
-          setAdminTicketUnread(typeof j.count === "number" ? j.count : 0);
+          const ids = normalizeTicketIds(j.ticketIds);
+          setAdminUnreadTicketIds(ids);
+          setAdminTicketUnread(typeof j.count === "number" ? j.count : ids.length);
         }
       } else {
+        setAdminUnreadTicketIds([]);
         setAdminTicketUnread(0);
       }
     } catch {
@@ -108,6 +122,8 @@ export function HelpNotificationsProvider({
   const value: HelpNotificationsContextValue = {
     userTicketUnread,
     adminTicketUnread,
+    userUnreadTicketIds,
+    adminUnreadTicketIds,
     refresh,
   };
 
