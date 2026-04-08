@@ -103,14 +103,15 @@ export default function Sidebar({
       </button>
 
       <div
-        className={`flex justify-center px-3 ${collapsed ? "mb-3" : "mb-4"}`}
+        className={`flex justify-center px-3 ${collapsed ? "mb-2" : "mb-3"}`}
       >
         <Image
           src="/branding/vat-app-logo.svg"
           alt="VAT logo"
-          width={collapsed ? 32 : 108}
-          height={collapsed ? 32 : 32}
-          className="h-auto max-w-[108px] w-full object-contain"
+          width={collapsed ? 22 : 48}
+          height={collapsed ? 22 : 24}
+          className="h-auto w-auto max-h-6 max-w-[48px] object-contain object-center shrink-0"
+          sizes="48px"
           priority
         />
       </div>
