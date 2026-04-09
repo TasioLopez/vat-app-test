@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 const Logo = "/branding/vat-app-logo.svg";
-import { validateForm, authValidation, type ForgotPasswordFormData } from "@/lib/validation";
+import { validateForm, authValidation } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,7 +78,6 @@ export default function LoginPage() {
     setResetMessage(null);
 
     try {
-      // Validate email
       const validation = validateForm(authValidation.forgotPassword, { email: resetEmail });
       if (!validation.success) {
         const firstError = Object.values(validation.errors || {})[0];
@@ -87,67 +86,17 @@ export default function LoginPage() {
         return;
       }
 
-      // Check if user exists in the database
-      const { data: userRecord, error: userError } = await supabase
-        .from("users")
-        .select("email, status")
-        .eq("email", resetEmail.trim().toLowerCase())
-        .maybeSingle();
-
-      if (userError) {
-        console.error("Error checking user:", userError);
-        setResetMessage({ 
-          type: 'error', 
-          text: 'Er is een fout opgetreden bij het controleren van je account.' 
-        });
-        setResetLoading(false);
-        return;
-      }
-
-      if (!userRecord) {
-        // For security, don't reveal if email exists, but log it
-        console.warn("Password reset requested for non-existent email:", resetEmail);
-        // Still show success message for security (don't reveal if email exists)
-        setResetMessage({ 
-          type: 'success', 
-          text: 'Als dit e-mailadres bestaat in ons systeem, ontvang je een reset link. Controleer je inbox en spam folder.' 
-        });
-        setResetEmail("");
-        setTimeout(() => {
-          setShowForgotPassword(false);
-          setResetMessage(null);
-        }, 5000);
-        setResetLoading(false);
-        return;
-      }
-
-      // Determine the correct redirect URL based on current hostname
-      // Always use the current origin to ensure it matches the whitelisted URL in Supabase
-      const currentHostname = window.location.hostname;
-      const isLocalhost = currentHostname === 'localhost' || currentHostname === '127.0.0.1';
-      
-      // Use current origin for redirect URL - this must match what's whitelisted in Supabase
+      const emailNorm = resetEmail.trim().toLowerCase();
+      // Must match Authentication > URL Configuration > Redirect URLs in Supabase
       const redirectUrl = `${window.location.origin}/reset-password`;
-      
-      console.log('Password reset request:', {
-        email: resetEmail,
-        hostname: currentHostname,
-        origin: window.location.origin,
-        redirectUrl: redirectUrl,
-        isLocalhost: isLocalhost,
-        environment: process.env.NODE_ENV
-      });
 
-      const { data, error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailNorm, {
         redirectTo: redirectUrl,
       });
 
       if (error) {
         console.error("Supabase password reset error:", error);
-        
-        // Provide more specific error messages
         let errorMessage = 'Er is een fout opgetreden bij het verzenden van de reset link.';
-        
         if (error.message.includes('redirect_to')) {
           errorMessage = 'De redirect URL is niet geconfigureerd in Supabase. Neem contact op met de beheerder.';
         } else if (error.message.includes('email')) {
@@ -157,17 +106,14 @@ export default function LoginPage() {
         } else {
           errorMessage = `Fout: ${error.message}`;
         }
-        
         setResetMessage({ type: 'error', text: errorMessage });
         setResetLoading(false);
         return;
       }
 
-      console.log("Password reset email sent successfully:", data);
-
-      setResetMessage({ 
-        type: 'success', 
-        text: 'Een wachtwoord reset link is verzonden naar je e-mailadres. Controleer je inbox (en spam folder) en klik op de link om je wachtwoord te resetten.' 
+      setResetMessage({
+        type: 'success',
+        text: 'Als dit e-mailadres bij ons bekend is, ontvang je een link om je wachtwoord te resetten. Controleer je inbox en spam.',
       });
       setResetEmail("");
       setTimeout(() => {
@@ -176,9 +122,9 @@ export default function LoginPage() {
       }, 5000);
     } catch (error: any) {
       console.error("Unexpected error sending reset email:", error);
-      setResetMessage({ 
-        type: 'error', 
-        text: error?.message || 'Er is een onverwachte fout opgetreden. Probeer het later opnieuw of neem contact op met de beheerder.' 
+      setResetMessage({
+        type: 'error',
+        text: error?.message || 'Er is een onverwachte fout opgetreden. Probeer het later opnieuw of neem contact op met de beheerder.',
       });
     } finally {
       setResetLoading(false);

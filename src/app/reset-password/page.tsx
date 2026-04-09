@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 const Logo = "/branding/vat-app-logo.svg";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
-import { validateForm, passwordValidation, type ResetPasswordFormData } from "@/lib/validation";
+import { validateForm, passwordValidation } from "@/lib/validation";
 
 function ResetPasswordContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +25,8 @@ function ResetPasswordContent() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Check if we have a valid user from the reset link (getUser validates with Auth server)
+        // Ensure PKCE/hash callback from the email link is applied to storage before we validate
+        await supabase.auth.getSession();
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (error || !user) {
