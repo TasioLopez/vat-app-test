@@ -1,4 +1,10 @@
 // File: app/dashboard/vgr/[employeeId]/page.tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "VGR",
+};
+
 export default function VGRPage() {
   return (
     <div className="p-6 text-center">

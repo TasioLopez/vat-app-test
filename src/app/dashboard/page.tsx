@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 import { StatCard, Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Users, Building2, ChevronRight } from "lucide-react";

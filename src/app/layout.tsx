@@ -13,6 +13,10 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
+  title: {
+    default: "VAT App",
+    template: "%s | VAT App",
+  },
   icons: {
     icon: "/branding/vat-app-logo.svg",
     shortcut: "/branding/vat-app-logo.svg",

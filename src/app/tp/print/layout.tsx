@@ -1,6 +1,11 @@
 // Minimal layout for the print route only
+import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "@/styles/globals.css";
+
+export const metadata: Metadata = {
+  title: "Trajectplan afdrukken | VAT App",
+};
 
 const montserrat = Montserrat({
   subsets: ["latin"],

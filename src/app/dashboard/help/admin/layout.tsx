@@ -1,6 +1,11 @@
 import HelpAdminSubnav from "@/components/help/HelpAdminSubnav";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUserWithRole, isAdmin } from "@/lib/help/auth";
+
+export const metadata: Metadata = {
+  title: "Help beheer",
+};
 
 export default async function HelpAdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSessionUserWithRole();

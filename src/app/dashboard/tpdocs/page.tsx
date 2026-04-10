@@ -1,5 +1,10 @@
 // app/dashboard/tpdocs/page.tsx
+import type { Metadata } from "next";
 import { cookies as nextCookies } from "next/headers";
+
+export const metadata: Metadata = {
+  title: "TP-documenten",
+};
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import TPDocsClient from "./tpdocs-client";
