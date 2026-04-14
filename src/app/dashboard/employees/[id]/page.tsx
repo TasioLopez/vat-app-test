@@ -394,20 +394,24 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             if (shouldSaveEmployee) {
                 operations.push(
-                    supabase
-                        .from('employees')
-                        .update(currentEmployeePayload)
-                        .eq('id', employeeId)
-                        .then(({ error }) => ({ type: 'employee' as const, error }))
+                    (async () => {
+                        const { error } = await supabase
+                            .from('employees')
+                            .update(currentEmployeePayload)
+                            .eq('id', employeeId);
+                        return { type: 'employee' as const, error };
+                    })()
                 );
             }
 
             if (shouldSaveDetails) {
                 operations.push(
-                    supabase
-                        .from('employee_details')
-                        .upsert([currentDetailsPayload], { onConflict: 'employee_id' })
-                        .then(({ error }) => ({ type: 'details' as const, error }))
+                    (async () => {
+                        const { error } = await supabase
+                            .from('employee_details')
+                            .upsert([currentDetailsPayload], { onConflict: 'employee_id' });
+                        return { type: 'details' as const, error };
+                    })()
                 );
             }
 
