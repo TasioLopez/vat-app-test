@@ -49,6 +49,22 @@ body {
   transition: all 1s ease-in-out;
 }
 
+/* Consistent pointer cursor for interactive controls (browser default on <button> is often not pointer). */
+@layer base {
+  button:enabled,
+  input[type="button"]:enabled,
+  input[type="submit"]:enabled,
+  input[type="reset"]:enabled {
+    cursor: pointer;
+  }
+  button:disabled,
+  input[type="button"]:disabled,
+  input[type="submit"]:disabled,
+  input[type="reset"]:disabled {
+    cursor: not-allowed;
+  }
+}
+
 .paginated-preview {
   display: flex;
   flex-direction: column;

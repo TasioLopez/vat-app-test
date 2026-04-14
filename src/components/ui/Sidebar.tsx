@@ -107,7 +107,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => setCollapsed(false)}
-            className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
+            className="shrink-0 cursor-pointer rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
             aria-expanded={false}
             aria-label="Menu openen"
           >
@@ -129,7 +129,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setCollapsed(true)}
-              className="shrink-0 rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
+              className="shrink-0 cursor-pointer rounded-lg p-2 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white focus:outline-none"
               aria-expanded={true}
               aria-label="Menu sluiten"
             >
@@ -165,7 +165,7 @@ export default function Sidebar({
                 e.preventDefault();
                 attemptNavigate(item.href);
               }}
-              className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+              className={`relative flex cursor-pointer items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
                   ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
                   : "text-white/70 hover:text-white hover:bg-white/10"
@@ -198,7 +198,7 @@ export default function Sidebar({
             e.preventDefault();
             attemptNavigate("/dashboard/settings");
           }}
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+          className={`flex cursor-pointer items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
             pathname === "/dashboard/settings"
               ? "bg-white/20 text-white shadow-lg shadow-purple-500/20 backdrop-blur-sm"
               : "text-white/70 hover:text-white hover:bg-white/10"
