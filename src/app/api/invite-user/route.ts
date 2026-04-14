@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required." }, { status: 400 });
     }
 
-    // PKCE: redirect to server route that exchanges ?code= for session cookies, then sends user to /signup
+    // Email link lands on /auth/callback (client exchanges code or reads hash), then user is sent to /signup
     const base = getBaseUrl(req);
     const callbackUrl = new URL("/auth/callback", base);
     callbackUrl.searchParams.set("next", "/signup");
