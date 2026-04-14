@@ -1024,14 +1024,7 @@ Voorbeeld: {"current_job": "Helpende", "contract_hours": 16, "gender": "Vrouw", 
       
       try {
         const rawTextData = parseAssistantResponse(aiResponse);
-        // Preserve referent fields before mapAndValidateData (which only keeps employee_details fields)
-        const referentFields: Record<string, unknown> = {};
-        const REFERENT_KEYS = ['referent_first_name', 'referent_last_name', 'referent_function', 'referent_phone', 'referent_email', 'referent_gender'];
-        REFERENT_KEYS.forEach(k => { if (rawTextData[k] != null && rawTextData[k] !== '') referentFields[k] = rawTextData[k]; });
-        
         textData = mapAndValidateData(rawTextData);
-        // Restore referent fields onto textData so they appear in merged result
-        Object.assign(textData, referentFields);
         
         // Post-process education_level to ensure highest level is selected
         if (rawText) {
@@ -1164,11 +1157,7 @@ NIET markdown, NIET bullet points, ALLEEN JSON object.`,
     
     if (response.type === 'text') {
       const extractedData = parseAssistantResponse(response.text.value);
-      const REFERENT_KEYS = ['referent_first_name', 'referent_last_name', 'referent_function', 'referent_phone', 'referent_email', 'referent_gender'];
-      const referentFields: Record<string, unknown> = {};
-      REFERENT_KEYS.forEach(k => { if (extractedData[k] != null && extractedData[k] !== '') referentFields[k] = extractedData[k]; });
       const mappedData = mapAndValidateData(extractedData);
-      Object.assign(mappedData, referentFields);
       
       await openai.beta.assistants.delete(assistant.id);
       await openai.files.delete(uploadedFile.id);

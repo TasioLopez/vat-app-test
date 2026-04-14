@@ -77,6 +77,43 @@ const DOC_LABELS: Record<string, string> = {
     extra: 'Overig'
 };
 
+const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
+    'gender',
+    'phone',
+    'date_of_birth',
+    'current_job',
+    'work_experience',
+    'education_level',
+    'education_name',
+    'drivers_license',
+    'drivers_license_type',
+    'transport_type',
+    'dutch_speaking',
+    'dutch_writing',
+    'dutch_reading',
+    'has_computer',
+    'computer_skills',
+    'contract_hours',
+    'other_employers',
+    'autofilled_fields',
+];
+
+function toEmployeeDetailsPayload(
+    details: Partial<EmployeeDetails> | null | undefined,
+    employeeId: string
+): EmployeeDetails {
+    const payload: EmployeeDetails = { employee_id: employeeId };
+    if (!details) return payload;
+
+    for (const key of EMPLOYEE_DETAILS_FIELD_KEYS) {
+        const value = details[key];
+        if (value !== undefined) {
+            payload[key] = value;
+        }
+    }
+    return payload;
+}
+
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: employeeId } = use(params);
     const { showSuccess, showError } = useToastHelpers();
@@ -296,7 +333,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 : employeeDetails.work_experience;
 
             // Ensure transport_type and drivers_license_type are saved as arrays
-            const payload = {
+            const normalizedDetails: Partial<EmployeeDetails> = {
                 ...employeeDetails,
                 work_experience: normalizedWorkExperience,
                 transport_type: Array.isArray(employeeDetails.transport_type) 
@@ -310,6 +347,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         ? [employeeDetails.drivers_license_type] 
                         : null)
             };
+            const payload = toEmployeeDetailsPayload(normalizedDetails, employeeId);
             
             const { error } = await supabase
                 .from('employee_details')
@@ -356,7 +394,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             // Save employee details (including gender)
             // Ensure transport_type and drivers_license_type are saved as arrays
-            const detailsPayload = {
+            const normalizedDetails: Partial<EmployeeDetails> = {
                 ...employeeDetails,
                 work_experience: normalizedWorkExperience,
                 transport_type: Array.isArray(employeeDetails.transport_type) 
@@ -370,6 +408,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         ? [employeeDetails.drivers_license_type] 
                         : null)
             };
+            const detailsPayload = toEmployeeDetailsPayload(normalizedDetails, employeeId);
             
             const { error: detailsError } = await supabase
                 .from('employee_details')
@@ -406,7 +445,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             const details = json.details || json.data?.details;
             const data = json.data || json;
             if (details && Object.keys(details).length > 0) {
-                const fields = Object.keys(details);
+                const fields = EMPLOYEE_DETAILS_FIELD_KEYS.filter((key) =>
+                    Object.prototype.hasOwnProperty.call(details, key)
+                );
 
                 // Suggested referent from autofill (for "Quick create and set" / "Set as contactperson")
                 const suggested = data.suggested_referent;
@@ -449,7 +490,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 // Create a new updated version of the employeeDetails object
                 const updatedDetails: EmployeeDetails = {
                     ...(employeeDetails || {}),
-                    ...processedDetails,
+                    ...toEmployeeDetailsPayload(processedDetails, employeeId),
                     employee_id: employeeId,
                     autofilled_fields: fields,
                 };
@@ -459,9 +500,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 setAutofilledFields(new Set(fields));
 
                 // Persist to Supabase
-                await supabase
+                const { error: persistError } = await supabase
                     .from('employee_details')
-                    .upsert([updatedDetails], { onConflict: 'employee_id' });
+                    .upsert([toEmployeeDetailsPayload(updatedDetails, employeeId)], { onConflict: 'employee_id' });
+
+                if (persistError) {
+                    console.error('Error persisting autofilled details:', persistError);
+                    showError('Autofill deels mislukt', 'AI velden zijn gevonden, maar opslaan in het profiel is mislukt.');
+                    return;
+                }
 
                 showSuccess('AI autofill succesvol uitgevoerd!');
             } else {
