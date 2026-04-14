@@ -43,8 +43,8 @@ type EmployeeDetails = {
     education_level?: string;
     education_name?: string;
     drivers_license?: boolean;
-    drivers_license_type?: string[];
-    transport_type?: string[];
+    drivers_license_type?: string[] | null;
+    transport_type?: string[] | null;
     dutch_speaking?: string;
     dutch_writing?: string;
     dutch_reading?: string;
@@ -102,16 +102,16 @@ function toEmployeeDetailsPayload(
     details: Partial<EmployeeDetails> | null | undefined,
     employeeId: string
 ): EmployeeDetails {
-    const payload: EmployeeDetails = { employee_id: employeeId };
-    if (!details) return payload;
+    const filtered = Object.fromEntries(
+        EMPLOYEE_DETAILS_FIELD_KEYS
+            .map((key) => [key, details?.[key]])
+            .filter(([, value]) => value !== undefined)
+    ) as Partial<EmployeeDetails>;
 
-    for (const key of EMPLOYEE_DETAILS_FIELD_KEYS) {
-        const value = details[key];
-        if (value !== undefined) {
-            payload[key] = value;
-        }
-    }
-    return payload;
+    return {
+        employee_id: employeeId,
+        ...filtered,
+    };
 }
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
