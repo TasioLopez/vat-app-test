@@ -1,8 +1,27 @@
 'use client';
 
 import { useState, useEffect, use, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
-import { Map, Compass, Sparkles, Save, Briefcase, GraduationCap, Car, Languages, Computer, Clock, Building2, FileText } from 'lucide-react';
+import {
+    Map,
+    Compass,
+    Sparkles,
+    Save,
+    Briefcase,
+    GraduationCap,
+    Car,
+    Languages,
+    Computer,
+    Clock,
+    Building2,
+    FileText,
+    FolderOpen,
+    Files,
+    IdCard,
+    CheckCircle2,
+    CircleDashed,
+} from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience } from '@/lib/utils';
@@ -13,6 +32,7 @@ import { trackAccess } from '@/lib/tracking';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Employee = {
     id: string;
@@ -169,6 +189,7 @@ function arePayloadsEqual<T>(left: T | null, right: T | null): boolean {
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: employeeId } = use(params);
+    const router = useRouter();
     const { showSuccess, showError } = useToastHelpers();
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -191,6 +212,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
+    const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
+    const [docsModalOpen, setDocsModalOpen] = useState(false);
+
+    const uploadedSourcesCount = useMemo(
+        () =>
+            DOC_TYPES.filter((type) =>
+                documents.some((d) => d.type?.toLowerCase().trim() === type)
+            ).length,
+        [documents]
+    );
 
     useEffect(() => {
         fetchEmployee();
@@ -688,10 +719,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </Select>
                                     </div>
                                 ) : null}
-                                <div className="flex gap-2 mt-4">
-                                    <button onClick={() => window.location.href = `/dashboard/tp/${employeeId}`} className="flex border-2 border-indigo-600 font-semibold text-indigo-600 px-4 py-2 rounded items-center gap-2 hover:bg-indigo-600 hover:text-white hover:cursor-pointer transition"><Map className="w-4 h-4" />Trajectplan</button>
-                                    <button onClick={() => window.location.href = `/dashboard/vgr/${employeeId}`} className="flex border-2 border-purple-600 font-semibold text-purple-600 px-4 py-2 rounded items-center gap-2 hover:bg-purple-600 hover:text-white hover:cursor-pointer transition"><Compass className="w-4 h-4" />VGR</button>
-                                </div>
                             </div>
 
                             <div className="flex flex-col gap-2 w-2/5">
@@ -711,23 +738,161 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded shadow w-full lg:w-[400px]">
-                        <h2 className="text-lg font-semibold mb-4">Documenten</h2>
-                        <div className="grid grid-cols-2 gap-2">
-                            {DOC_TYPES.map(type => {
-                                const doc = documents.find(d => d.type?.toLowerCase().trim() === type);
-                                return (
-                                    <div
-                                        key={type}
-                                        onClick={() => setActiveDocType(type)}
-                                        className={`rounded p-4 text-sm bg-gray-50 cursor-pointer hover:bg-gray-100 ${doc ? 'border-2 border-green-600' : 'border border-gray-500/30'
-                                            }`}
-                                    >
-                                        <p className="font-semibold mb-1">{DOC_LABELS[type]}</p>
-                                        {doc ? <p className="text-green-600">Geüpload</p> : <p className="text-gray-400">Niet geüpload</p>}
+                    <div className="bg-white p-4 rounded-lg shadow border border-purple-100/80 w-full lg:w-[400px] space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-purple-600" />
+                            Documenten
+                        </h2>
+                        <div className="flex flex-col gap-3">
+                            <Dialog open={sourcesModalOpen} onOpenChange={setSourcesModalOpen}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/80 to-white py-4 px-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50"
+                                    onClick={() => setSourcesModalOpen(true)}
+                                >
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                        <FolderOpen className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Bronnen beheren</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            Uploads per type: intake, AD, FML/IZP, overig
+                                        </span>
+                                        <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            {uploadedSourcesCount}/{DOC_TYPES.length} geüpload
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent className="max-w-md sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <FolderOpen className="h-5 w-5 text-emerald-600" />
+                                            Bronnen & uploads
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Kies een documenttype om te uploaden of te vervangen.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        {DOC_TYPES.map((type) => {
+                                            const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSourcesModalOpen(false);
+                                                        setActiveDocType(type);
+                                                    }}
+                                                    className={cn(
+                                                        'rounded-xl p-4 text-left text-sm transition-colors',
+                                                        'border-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2',
+                                                        doc
+                                                            ? 'border-emerald-500 bg-emerald-50/60 hover:bg-emerald-50'
+                                                            : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
+                                                    )}
+                                                >
+                                                    <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
+                                                        {doc ? (
+                                                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                                        ) : (
+                                                            <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                        )}
+                                                        {DOC_LABELS[type]}
+                                                    </p>
+                                                    {doc ? (
+                                                        <p className="text-xs text-emerald-700">Geüpload</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-500">Niet geüpload</p>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                );
-                            })}
+                                </DialogContent>
+                            </Dialog>
+
+                            <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white py-4 px-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50"
+                                    onClick={() => setDocsModalOpen(true)}
+                                >
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                                        <Files className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Documenten maken</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            Trajectplan, VGR of CV openen
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent className="max-w-md sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <Files className="h-5 w-5 text-indigo-600" />
+                                            Welk document wil je maken?
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Ga naar de editor of placeholder-pagina voor dit dossier.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="flex flex-col gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDocsModalOpen(false);
+                                                router.push(`/dashboard/tp/${employeeId}`);
+                                            }}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
+                                                <Map className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">Trajectplan</span>
+                                                <span className="text-sm text-gray-600">TP-editor voor deze werknemer</span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDocsModalOpen(false);
+                                                router.push(`/dashboard/vgr/${employeeId}`);
+                                            }}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
+                                                <Compass className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">VGR</span>
+                                                <span className="text-sm text-gray-600">Placeholder (coming soon)</span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDocsModalOpen(false);
+                                                router.push(`/dashboard/cv/${employeeId}`);
+                                            }}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 group-hover:bg-amber-200">
+                                                <IdCard className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">CV</span>
+                                                <span className="text-sm text-gray-600">Placeholder (coming soon)</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
                 </div>
