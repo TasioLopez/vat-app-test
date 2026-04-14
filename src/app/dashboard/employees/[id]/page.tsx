@@ -1066,11 +1066,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             <Button
                 onClick={saveUnified}
                 disabled={updating}
+                variant="default"
                 aria-label="Opslaan werknemer en profiel"
                 className={cn(
                     'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl transition-all duration-200',
-                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
-                    hasUnsavedChanges ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-muted text-foreground'
+                    'text-white border border-white/15',
+                    hasUnsavedChanges
+                        ? 'opacity-100 shadow-lg shadow-purple-500/30 ring-2 ring-purple-300/40'
+                        : 'opacity-90 hover:opacity-100 focus-visible:opacity-100 hover:shadow-lg'
                 )}
             >
                 <Save className="w-4 h-4 mr-2" />
