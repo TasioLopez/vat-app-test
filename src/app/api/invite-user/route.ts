@@ -42,13 +42,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required." }, { status: 400 });
     }
 
-    // Build absolute signup URL from the actual request host
+    // PKCE: redirect to server route that exchanges ?code= for session cookies, then sends user to /signup
     const base = getBaseUrl(req);
-    const signupUrl = new URL("/signup", base);
+    const callbackUrl = new URL("/auth/callback", base);
+    callbackUrl.searchParams.set("next", "/signup");
 
     // Send email using Supabase Auth inviteUser function
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(emailNorm, {
-      redirectTo: signupUrl.toString(),
+      redirectTo: callbackUrl.toString(),
       data: {
         first_name: firstNameNorm,
         last_name: lastNameNorm,

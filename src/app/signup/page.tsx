@@ -1,9 +1,10 @@
 // src/app/signup/page.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation } from "@/lib/validation";
 
@@ -21,6 +22,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
+  const resolvedRef = useRef(false);
 
   const supabase = useMemo(() => {
     return createBrowserClient(
@@ -30,32 +32,79 @@ export default function SignupPage() {
   }, []);
 
   useEffect(() => {
-    const hydrateInviteSession = async () => {
-      try {
-        await supabase.auth.getSession();
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+    const applyUser = (user: User) => {
+      resolvedRef.current = true;
+      setError("");
+      setEmail(user.email ?? "");
+      const metaFirst =
+        typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : "";
+      const metaLast =
+        typeof user.user_metadata?.last_name === "string" ? user.user_metadata.last_name : "";
+      setFirstName(metaFirst);
+      setLastName(metaLast);
+      setCheckingSession(false);
+    };
 
-        if (userError || !user) {
-          setError("Ongeldige of verlopen aanmeldlink.");
-          return;
+    const tryHydrateFromSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        applyUser(session.user);
+        return true;
+      }
+      return false;
+    };
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (
+        session?.user &&
+        (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED")
+      ) {
+        applyUser(session.user);
+      }
+    });
+
+    const run = async () => {
+      try {
+        await tryHydrateFromSession();
+
+        for (let i = 0; i < 6 && !resolvedRef.current; i++) {
+          await new Promise((r) => setTimeout(r, 120 * (i + 1)));
+          await tryHydrateFromSession();
         }
 
-        setEmail(user.email ?? "");
-        const metaFirst = typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : "";
-        const metaLast = typeof user.user_metadata?.last_name === "string" ? user.user_metadata.last_name : "";
-        setFirstName(metaFirst);
-        setLastName(metaLast);
+        if (!resolvedRef.current) {
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
+          if (!userError && user) {
+            applyUser(user);
+          }
+        }
       } catch {
-        setError("Ongeldige of verlopen aanmeldlink.");
-      } finally {
-        setCheckingSession(false);
+        // Let onAuthStateChange or the timeout below surface a clear error.
       }
     };
 
-    hydrateInviteSession();
+    void run();
+
+    timeoutId = setTimeout(() => {
+      if (!resolvedRef.current) {
+        setError("Ongeldige of verlopen aanmeldlink.");
+        setCheckingSession(false);
+      }
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, [supabase]);
 
   const handleSignup = async () => {

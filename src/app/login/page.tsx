@@ -88,10 +88,11 @@ export default function LoginPage() {
 
       const emailNorm = resetEmail.trim().toLowerCase();
       // Must match Authentication > URL Configuration > Redirect URLs in Supabase
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", "/reset-password");
 
       const { error } = await supabase.auth.resetPasswordForEmail(emailNorm, {
-        redirectTo: redirectUrl,
+        redirectTo: callbackUrl.toString(),
       });
 
       if (error) {
