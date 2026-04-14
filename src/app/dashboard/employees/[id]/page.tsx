@@ -1068,12 +1068,18 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 disabled={updating}
                 variant="default"
                 aria-label="Opslaan werknemer en profiel"
+                aria-busy={updating}
                 className={cn(
-                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl transition-all duration-200',
+                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl',
+                    'cursor-pointer disabled:cursor-not-allowed',
                     'text-white border border-white/15',
-                    hasUnsavedChanges
-                        ? 'opacity-100 shadow-lg shadow-purple-500/30 ring-2 ring-purple-300/40'
-                        : 'opacity-90 hover:opacity-100 focus-visible:opacity-100 hover:shadow-lg'
+                    'transition-all duration-200 ease-out',
+                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
+                    'active:scale-[0.97] active:duration-100',
+                    'disabled:active:scale-100',
+                    updating && 'animate-pulse',
+                    hasUnsavedChanges &&
+                        'opacity-75 ring-2 ring-purple-300/35 ring-offset-2 ring-offset-transparent hover:opacity-100'
                 )}
             >
                 <Save className="w-4 h-4 mr-2" />

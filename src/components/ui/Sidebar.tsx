@@ -209,8 +209,9 @@ export default function Sidebar({
         </Link>
 
         <button
+          type="button"
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left text-white/70 hover:text-white hover:bg-red-500/20 transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left cursor-pointer text-white/70 hover:text-white hover:bg-red-500/20 transition-all duration-200"
         >
           <FaSignOutAlt />
           {!collapsed && <span className="font-medium">Uitloggen</span>}
