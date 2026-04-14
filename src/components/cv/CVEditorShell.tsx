@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Printer, Mail, Check, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import { normalizeCvPayload } from '@/lib/cv/normalize';
 import type { CvModel } from '@/types/cv';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
+import AiResultPreview from '@/components/cv/AiResultPreview';
 
 type Props = {
   employeeId: string;
@@ -29,7 +29,6 @@ type Props = {
 };
 
 export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
-  const router = useRouter();
   const {
     cvId,
     title,
@@ -178,14 +177,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                type="button"
-                variant="link"
-                className="text-sm text-gray-700"
-                onClick={() => router.push(`/dashboard/cv/${employeeId}/new`)}
-              >
-                Andere template kiezen (nieuw CV)
-              </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
@@ -215,7 +206,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
       </div>
 
       <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
           <DialogHeader>
             <DialogTitle>AI-resultaat toepassen?</DialogTitle>
             <p className="text-sm text-muted-foreground">
@@ -224,10 +215,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
             </p>
           </DialogHeader>
           {aiPreview && (
-            <pre className="max-h-48 overflow-auto rounded bg-gray-50 p-3 text-xs text-gray-700">
-              {JSON.stringify(aiPreview, null, 2).slice(0, 4000)}
-              {(JSON.stringify(aiPreview).length > 4000 ? '…' : '')}
-            </pre>
+            <AiResultPreview data={normalizeCvPayload(aiPreview) as CvModel} />
           )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setAiOpen(false)}>
