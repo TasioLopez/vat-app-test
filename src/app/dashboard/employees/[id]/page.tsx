@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { Map, Compass, Sparkles, Save, Briefcase, GraduationCap, Car, Languages, Computer, Clock, Building2, FileText } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
@@ -22,6 +22,8 @@ type Employee = {
     client_id: string;
     referent_id?: string | null;
 };
+
+type EditableEmployeePayload = Pick<Employee, 'first_name' | 'last_name' | 'email' | 'client_id' | 'referent_id'>;
 
 type Referent = {
     id: string;
@@ -98,6 +100,35 @@ const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'autofilled_fields',
 ];
 
+const EDITABLE_EMPLOYEE_FIELD_KEYS: (keyof EditableEmployeePayload)[] = [
+    'first_name',
+    'last_name',
+    'email',
+    'client_id',
+    'referent_id',
+];
+
+function normalizeStringArray(value: unknown): string[] | null {
+    if (!value) return null;
+    if (Array.isArray(value)) {
+        const clean = value
+            .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+            .map((item) => item.trim());
+        return clean.length > 0 ? [...clean].sort() : null;
+    }
+    if (typeof value === 'string' && value.trim()) {
+        return [value.trim()];
+    }
+    return null;
+}
+
+function toEditableEmployeePayload(employee: Employee): EditableEmployeePayload {
+    const filtered = Object.fromEntries(
+        EDITABLE_EMPLOYEE_FIELD_KEYS.map((key) => [key, employee[key] ?? null])
+    ) as EditableEmployeePayload;
+    return filtered;
+}
+
 function toEmployeeDetailsPayload(
     details: Partial<EmployeeDetails> | null | undefined,
     employeeId: string
@@ -112,6 +143,28 @@ function toEmployeeDetailsPayload(
         employee_id: employeeId,
         ...filtered,
     };
+}
+
+function toNormalizedDetailsPayload(
+    details: Partial<EmployeeDetails> | null | undefined,
+    employeeId: string
+): EmployeeDetails {
+    const normalizedWorkExperience = details?.work_experience
+        ? parseWorkExperience(details.work_experience)
+        : details?.work_experience;
+
+    const normalizedDetails: Partial<EmployeeDetails> = {
+        ...details,
+        work_experience: normalizedWorkExperience,
+        transport_type: normalizeStringArray(details?.transport_type),
+        drivers_license_type: normalizeStringArray(details?.drivers_license_type),
+    };
+
+    return toEmployeeDetailsPayload(normalizedDetails, employeeId);
+}
+
+function arePayloadsEqual<T>(left: T | null, right: T | null): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -136,6 +189,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [suggestedReferent, setSuggestedReferent] = useState<{ first_name: string; last_name: string; referent_function?: string; phone?: string; email?: string; gender?: string } | null>(null);
     const [referentExists, setReferentExists] = useState(false);
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
+    const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
+    const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
 
     useEffect(() => {
         fetchEmployee();
@@ -162,6 +217,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
 
         setEmployee(data);
+        setSavedEmployeeSnapshot(toEditableEmployeePayload(data));
         if (data.client_id) {
             fetchClient(data.client_id);
             fetchReferents(data.client_id);
@@ -219,9 +275,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 drivers_license_type: parsedLicenseType
             };
             setEmployeeDetails(parsedData);
+            setSavedDetailsSnapshot(toNormalizedDetailsPayload(parsedData, employeeId));
             if (data.autofilled_fields) {
                 setAutofilledFields(new Set(data.autofilled_fields));
             }
+        } else {
+            setSavedDetailsSnapshot(null);
         }
     };
 
@@ -297,135 +356,105 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }));
     };
 
-    const saveEmployeeInfo = async () => {
+    const currentEmployeePayload = useMemo(
+        () => (employee ? toEditableEmployeePayload(employee) : null),
+        [employee]
+    );
+    const currentDetailsPayload = useMemo(
+        () => (employeeDetails ? toNormalizedDetailsPayload(employeeDetails, employeeId) : null),
+        [employeeDetails, employeeId]
+    );
+
+    const isEmployeeDirty = useMemo(() => {
+        if (!currentEmployeePayload || !savedEmployeeSnapshot) return false;
+        return !arePayloadsEqual(currentEmployeePayload, savedEmployeeSnapshot);
+    }, [currentEmployeePayload, savedEmployeeSnapshot]);
+
+    const isDetailsDirty = useMemo(() => {
+        if (!savedDetailsSnapshot && !currentDetailsPayload) return false;
+        return !arePayloadsEqual(currentDetailsPayload, savedDetailsSnapshot);
+    }, [currentDetailsPayload, savedDetailsSnapshot]);
+
+    const hasUnsavedChanges = isEmployeeDirty || isDetailsDirty;
+
+    const saveUnified = async () => {
         if (!employee) return;
 
-        setUpdating(true);
-        try {
-            const { error } = await supabase
-                .from('employees')
-                .update(employee)
-                .eq('id', employeeId);
+        const shouldSaveEmployee = isEmployeeDirty && currentEmployeePayload;
+        const shouldSaveDetails = isDetailsDirty && currentDetailsPayload;
 
-            if (error) {
-                console.error('Error updating employee:', error);
-                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
-                return;
-            }
-
-            showSuccess('Werknemer informatie opgeslagen!');
-        } catch (err) {
-            console.error('Error saving employee info:', err);
-            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van de werknemer informatie.');
-        } finally {
-            setUpdating(false);
+        if (!shouldSaveEmployee && !shouldSaveDetails) {
+            showSuccess('Geen wijzigingen om op te slaan.');
+            return;
         }
-    };
-
-    const saveDetails = async () => {
-        if (!employeeDetails) return;
 
         setUpdating(true);
         try {
-            // Normalize work_experience to plain string (not JSON array)
-            const normalizedWorkExperience = employeeDetails.work_experience 
-                ? parseWorkExperience(employeeDetails.work_experience)
-                : employeeDetails.work_experience;
+            const operations: Promise<{ type: 'employee' | 'details'; error: any }>[] = [];
 
-            // Ensure transport_type and drivers_license_type are saved as arrays
-            const normalizedDetails: Partial<EmployeeDetails> = {
-                ...employeeDetails,
-                work_experience: normalizedWorkExperience,
-                transport_type: Array.isArray(employeeDetails.transport_type) 
-                    ? employeeDetails.transport_type 
-                    : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
-                        ? [employeeDetails.transport_type] 
-                        : null),
-                drivers_license_type: Array.isArray(employeeDetails.drivers_license_type) 
-                    ? employeeDetails.drivers_license_type 
-                    : (typeof employeeDetails.drivers_license_type === 'string' && employeeDetails.drivers_license_type 
-                        ? [employeeDetails.drivers_license_type] 
-                        : null)
-            };
-            const payload = toEmployeeDetailsPayload(normalizedDetails, employeeId);
-            
-            const { error } = await supabase
-                .from('employee_details')
-                .upsert([payload], { onConflict: 'employee_id' });
+            if (shouldSaveEmployee) {
+                operations.push(
+                    supabase
+                        .from('employees')
+                        .update(currentEmployeePayload)
+                        .eq('id', employeeId)
+                        .then(({ error }) => ({ type: 'employee' as const, error }))
+                );
+            }
 
-            if (error) {
-                console.error('Error saving details:', error);
-                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van het profiel.');
+            if (shouldSaveDetails) {
+                operations.push(
+                    supabase
+                        .from('employee_details')
+                        .upsert([currentDetailsPayload], { onConflict: 'employee_id' })
+                        .then(({ error }) => ({ type: 'details' as const, error }))
+                );
+            }
+
+            const results = await Promise.all(operations);
+            const employeeResult = results.find((result) => result.type === 'employee');
+            const detailsResult = results.find((result) => result.type === 'details');
+
+            const employeeSaved = Boolean(employeeResult && !employeeResult.error);
+            const detailsSaved = Boolean(detailsResult && !detailsResult.error);
+
+            if (employeeSaved && currentEmployeePayload) {
+                setSavedEmployeeSnapshot(currentEmployeePayload);
+            }
+
+            if (detailsSaved && currentDetailsPayload) {
+                setSavedDetailsSnapshot(currentDetailsPayload);
+                await trackAccess('employee', employeeId, true);
+            }
+
+            if ((employeeResult?.error || detailsResult?.error) && !employeeSaved && !detailsSaved) {
+                const errorMessage = employeeResult?.error?.message || detailsResult?.error?.message || 'Er is een fout opgetreden bij het opslaan.';
+                showError('Fout bij opslaan', errorMessage);
                 return;
             }
 
-            // Track modification
-            await trackAccess('employee', employeeId, true);
-            showSuccess('Profiel opgeslagen!');
+            if (employeeSaved && detailsSaved) {
+                showSuccess('Werknemer en profiel opgeslagen!');
+                return;
+            }
+
+            if (employeeSaved) {
+                showSuccess('Werknemer informatie opgeslagen!');
+                if (detailsResult?.error) {
+                    showError('Profiel niet opgeslagen', detailsResult.error.message || 'Er is een fout opgetreden bij het opslaan van het profiel.');
+                }
+                return;
+            }
+
+            if (detailsSaved) {
+                showSuccess('Profiel opgeslagen!');
+                if (employeeResult?.error) {
+                    showError('Werknemer informatie niet opgeslagen', employeeResult.error.message || 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
+                }
+            }
         } catch (err) {
-            console.error('Error saving details:', err);
-            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van het profiel.');
-        } finally {
-            setUpdating(false);
-        }
-    };
-
-    const saveAllInfo = async () => {
-        if (!employee || !employeeDetails) return;
-
-        setUpdating(true);
-        try {
-            // Save employee basic info
-            const { error: employeeError } = await supabase
-                .from('employees')
-                .update(employee)
-                .eq('id', employeeId);
-
-            if (employeeError) {
-                console.error('Error updating employee:', employeeError);
-                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
-                return;
-            }
-
-            // Normalize work_experience to plain string (not JSON array)
-            const normalizedWorkExperience = employeeDetails.work_experience 
-                ? parseWorkExperience(employeeDetails.work_experience)
-                : employeeDetails.work_experience;
-
-            // Save employee details (including gender)
-            // Ensure transport_type and drivers_license_type are saved as arrays
-            const normalizedDetails: Partial<EmployeeDetails> = {
-                ...employeeDetails,
-                work_experience: normalizedWorkExperience,
-                transport_type: Array.isArray(employeeDetails.transport_type) 
-                    ? employeeDetails.transport_type 
-                    : (typeof employeeDetails.transport_type === 'string' && employeeDetails.transport_type 
-                        ? [employeeDetails.transport_type] 
-                        : null),
-                drivers_license_type: Array.isArray(employeeDetails.drivers_license_type) 
-                    ? employeeDetails.drivers_license_type 
-                    : (typeof employeeDetails.drivers_license_type === 'string' && employeeDetails.drivers_license_type 
-                        ? [employeeDetails.drivers_license_type] 
-                        : null)
-            };
-            const detailsPayload = toEmployeeDetailsPayload(normalizedDetails, employeeId);
-            
-            const { error: detailsError } = await supabase
-                .from('employee_details')
-                .upsert([detailsPayload], { onConflict: 'employee_id' });
-
-            if (detailsError) {
-                console.error('Error saving details:', detailsError);
-                showError('Fout bij opslaan', 'Er is een fout opgetreden bij het opslaan van het profiel.');
-                return;
-            }
-
-            // Track modification
-            await trackAccess('employee', employeeId, true);
-            showSuccess('Werknemer informatie opgeslagen!');
-        } catch (err) {
-            console.error('Error saving all info:', err);
-            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan van de werknemer informatie.');
+            console.error('Error saving unified data:', err);
+            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan.');
         } finally {
             setUpdating(false);
         }
@@ -510,6 +539,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     return;
                 }
 
+                setSavedDetailsSnapshot(toNormalizedDetailsPayload(updatedDetails, employeeId));
                 showSuccess('AI autofill succesvol uitgevoerd!');
             } else {
                 showError('Geen documenten gevonden', 'Er zijn geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
@@ -553,6 +583,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
             setEmployee(prev => prev ? { ...prev, referent_id: newRef.id } : null);
+            setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: newRef.id } : prev));
             setSuggestedReferent(null);
             setReferentExists(false);
             setExistingReferentId(null);
@@ -576,6 +607,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
             setEmployee(prev => prev ? { ...prev, referent_id: existingReferentId } : null);
+            setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: existingReferentId } : prev));
             setSuggestedReferent(null);
             setReferentExists(false);
             setExistingReferentId(null);
@@ -631,7 +663,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                 setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
                                                 const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
                                                 if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
-                                                else showSuccess('Contactpersoon bijgewerkt.');
+                                                else {
+                                                    setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
+                                                    showSuccess('Contactpersoon bijgewerkt.');
+                                                }
                                             }}
                                         >
                                             <SelectTrigger className={SELECT_CLASS}>
@@ -653,14 +688,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <button onClick={() => window.location.href = `/dashboard/tp/${employeeId}`} className="flex border-2 border-indigo-600 font-semibold text-indigo-600 px-4 py-2 rounded items-center gap-2 hover:bg-indigo-600 hover:text-white hover:cursor-pointer transition"><Map className="w-4 h-4" />Trajectplan</button>
                                     <button onClick={() => window.location.href = `/dashboard/vgr/${employeeId}`} className="flex border-2 border-purple-600 font-semibold text-purple-600 px-4 py-2 rounded items-center gap-2 hover:bg-purple-600 hover:text-white hover:cursor-pointer transition"><Compass className="w-4 h-4" />VGR</button>
                                 </div>
-                                <Button 
-                                    onClick={saveAllInfo} 
-                                    disabled={updating}
-                                    className="mt-4 w-full"
-                                >
-                                    <Save className="w-4 h-4 mr-2" />
-                                    {updating ? 'Opslaan...' : 'Opslaan informatie'}
-                                </Button>
                             </div>
 
                             <div className="flex flex-col gap-2 w-2/5">
@@ -1030,16 +1057,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </p>
                 </div>
 
-                <Button 
-                    onClick={saveDetails} 
-                    disabled={updating}
-                    className="w-full md:w-auto"
-                    size="lg"
-                >
-                    <Save className="w-4 h-4 mr-2" />
-                    {updating ? 'Opslaan...' : 'Profiel Opslaan'}
-                </Button>
             </div>
+
+            <Button
+                onClick={saveUnified}
+                disabled={updating}
+                aria-label="Opslaan werknemer en profiel"
+                className={cn(
+                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl transition-all duration-200',
+                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
+                    hasUnsavedChanges ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-muted text-foreground'
+                )}
+            >
+                <Save className="w-4 h-4 mr-2" />
+                {updating ? 'Opslaan...' : hasUnsavedChanges ? 'Alles opslaan' : 'Alles opgeslagen'}
+            </Button>
 
             {activeDocType && (
                 <DocumentModal
