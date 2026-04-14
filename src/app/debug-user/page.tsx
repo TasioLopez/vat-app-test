@@ -64,7 +64,7 @@ export default function DebugUserPage() {
           id: userInfo.authUser.id,
           email: userInfo.authUser.email,
           status: "confirmed",
-          role: "standard", // Default role
+          role: "user", // Default role
           first_name: "",
           last_name: ""
         });

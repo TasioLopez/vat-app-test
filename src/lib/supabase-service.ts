@@ -116,7 +116,7 @@ export class SupabaseService {
         throw new APIError(`Database error: ${error.message}`, 500, 'DB_ERROR');
       }
 
-      return data?.role || 'standard';
+      return data?.role || 'user';
     } catch (error) {
       if (error instanceof APIError) {
         throw error;

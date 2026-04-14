@@ -56,7 +56,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'standard';
+  role: 'admin' | 'user';
   status: 'pending' | 'confirmed';
   created_at: string;
   updated_at: string;
@@ -138,7 +138,7 @@ export interface UserFormData {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'standard';
+  role: 'admin' | 'user';
 }
 
 // Search and Filter Types

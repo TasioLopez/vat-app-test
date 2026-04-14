@@ -28,8 +28,8 @@ export const userSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres'),
   first_name: z.string().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
   last_name: z.string().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
-  role: z.enum(["admin", "standard"], {
-    message: "Rol moet admin of standard zijn",
+  role: z.enum(["admin", "user"], {
+    message: "Rol moet admin of user zijn",
   }),
 });
 

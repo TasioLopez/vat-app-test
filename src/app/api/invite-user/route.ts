@@ -1,7 +1,7 @@
 // src/app/api/invite-user/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { v4 as uuidv4 } from "uuid";
+import { getSessionUserWithRole, isAdmin } from "@/lib/help/auth";
 
 // -------- base URL helper (no env, no localhost) ----------
 function getBaseUrl(req: NextRequest) {
@@ -24,69 +24,90 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSessionUserWithRole();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!isAdmin(session.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { email, first_name, last_name, role } = await req.json();
+    const emailNorm = String(email ?? "").trim().toLowerCase();
+    const roleNorm = role === "admin" ? "admin" : "user";
+    const firstNameNorm = String(first_name ?? "").trim();
+    const lastNameNorm = String(last_name ?? "").trim();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-
-    // Already invited or signed up?
-    const { data: existingUser, error: selErr } = await supabase
-      .from("users")
-      .select("email")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (selErr) {
-      return NextResponse.json({ error: selErr.message }, { status: 500 });
-    }
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "User already invited or signed up." },
-        { status: 400 }
-      );
-    }
-
-    const signup_token = uuidv4();
-    const expires_at = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
-
-    const { error: insErr } = await supabase.from("users").insert({
-      email,
-      first_name,
-      last_name,
-      role,
-      status: "invited",
-      signup_token,
-      signup_token_expires_at: expires_at.toISOString(),
-    });
-
-    if (insErr) {
-      return NextResponse.json({ error: insErr.message }, { status: 500 });
+    if (!emailNorm) {
+      return NextResponse.json({ error: "Email is required." }, { status: 400 });
     }
 
     // Build absolute signup URL from the actual request host
     const base = getBaseUrl(req);
     const signupUrl = new URL("/signup", base);
-    signupUrl.searchParams.set("email", email);
-    signupUrl.searchParams.set("token", signup_token);
 
     // Send email using Supabase Auth inviteUser function
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(emailNorm, {
       redirectTo: signupUrl.toString(),
       data: {
-        first_name: first_name,
-        last_name: last_name,
-        role: role,
-        signup_token: signup_token
-      }
+        first_name: firstNameNorm,
+        last_name: lastNameNorm,
+        role: roleNorm,
+      },
     });
 
     if (inviteError) {
       console.error("Failed to send invite email:", inviteError);
-      // Continue anyway - the user record is created in the database
-      // The admin can manually share the signup URL
+      return NextResponse.json(
+        { error: "User already exists or could not be invited." },
+        { status: 400 }
+      );
+    }
+
+    const authUserId = inviteData.user?.id;
+    if (!authUserId) {
+      return NextResponse.json({ error: "No invited user ID returned." }, { status: 500 });
+    }
+
+    const { data: existingRows, error: findErr } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", emailNorm);
+
+    if (findErr) {
+      return NextResponse.json({ error: findErr.message }, { status: 500 });
+    }
+
+    const existingByEmail = Array.isArray(existingRows) && existingRows.length > 0;
+    if (existingByEmail) {
+      const { error: updateErr } = await supabase
+        .from("users")
+        .update({
+          id: authUserId,
+          email: emailNorm,
+          first_name: firstNameNorm,
+          last_name: lastNameNorm,
+          role: roleNorm,
+          status: "invited",
+        })
+        .eq("email", emailNorm);
+
+      if (updateErr) {
+        return NextResponse.json({ error: updateErr.message }, { status: 500 });
+      }
     } else {
-      console.log("Invite email sent successfully:", inviteData);
+      const { error: insertErr } = await supabase.from("users").insert({
+        id: authUserId,
+        email: emailNorm,
+        first_name: firstNameNorm,
+        last_name: lastNameNorm,
+        role: roleNorm,
+        status: "invited",
+      });
+
+      if (insertErr) {
+        return NextResponse.json({ error: insertErr.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ message: "Invite sent." });

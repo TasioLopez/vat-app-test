@@ -1,27 +1,17 @@
 // src/app/signup/page.tsx
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
-import { validateForm, passwordValidation, type ResetPasswordFormData } from "@/lib/validation";
+import { validateForm, passwordValidation } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
 export default function SignupPage() {
-  return (
-    <Suspense fallback={<div className="p-6 max-w-md mx-auto">Laden…</div>}>
-      <SignupForm />
-    </Suspense>
-  );
-}
-
-function SignupForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") ?? "";
-  const token = searchParams.get("token") ?? "";
+  const [email, setEmail] = useState("");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -29,9 +19,9 @@ function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
 
-  // Create the Supabase browser client once
   const supabase = useMemo(() => {
     return createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,45 +29,45 @@ function SignupForm() {
     );
   }, []);
 
-  // 🔄 Prefill names
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (!email || !token) {
+    const hydrateInviteSession = async () => {
+      try {
+        await supabase.auth.getSession();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          setError("Ongeldige of verlopen aanmeldlink.");
+          return;
+        }
+
+        setEmail(user.email ?? "");
+        const metaFirst = typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : "";
+        const metaLast = typeof user.user_metadata?.last_name === "string" ? user.user_metadata.last_name : "";
+        setFirstName(metaFirst);
+        setLastName(metaLast);
+      } catch {
         setError("Ongeldige of verlopen aanmeldlink.");
-        return;
+      } finally {
+        setCheckingSession(false);
       }
-
-      const { data, error } = await supabase
-        .from("users")
-        .select("first_name, last_name")
-        .eq("email", email)
-        .eq("signup_token", token)
-        .eq("status", "invited")
-        .single();
-
-      if (error || !data) {
-        setError("Ongeldige of verlopen aanmeldlink.");
-        return;
-      }
-
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
     };
 
-    fetchUserInfo();
-  }, [email, token, supabase]);
+    hydrateInviteSession();
+  }, [supabase]);
 
   const handleSignup = async () => {
     setError("");
     setLoading(true);
 
-    if (!email || !token) {
+    if (!email) {
       setError("Ongeldige of verlopen aanmeldlink.");
       setLoading(false);
       return;
     }
 
-    // Validate password using the same validation as reset password
     const validation = validateForm(
       passwordValidation.resetPassword,
       { newPassword: password, confirmPassword }
@@ -90,12 +80,19 @@ function SignupForm() {
       return;
     }
 
-    const res = await fetch("/api/complete-signup", {
+    const { error: passwordError } = await supabase.auth.updateUser({ password });
+    if (passwordError) {
+      setError(passwordError.message || "Wachtwoord kon niet worden ingesteld.");
+      setLoading(false);
+      return;
+    }
+
+    const res = await fetch("/api/signup/finalize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, token, firstName, lastName, password }),
+      credentials: "include",
+      body: JSON.stringify({ firstName, lastName }),
     });
-
     const result = await res.json();
 
     if (!res.ok) {
@@ -106,6 +103,16 @@ function SignupForm() {
 
     setLoading(false);
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="w-full max-w-md bg-white shadow rounded-lg p-6 text-sm text-gray-600">
+          Laden...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
@@ -201,7 +208,7 @@ function SignupForm() {
 
         <button
           onClick={handleSignup}
-          disabled={loading || !password || !confirmPassword || password !== confirmPassword}
+          disabled={checkingSession || loading || !password || !confirmPassword || password !== confirmPassword}
           className="mt-6 w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Account aanmaken...' : 'Account Aanmaken'}

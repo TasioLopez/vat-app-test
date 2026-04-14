@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: me } = await ssr.from("users").select("role").eq("id", user.id).maybeSingle();
-    const role = (me?.role as "admin" | "standard" | string) || "standard";
+    const role = (me?.role as "admin" | "user" | string) || "user";
 
     // If not admin, optionally restrict deletes to employees assigned to the user:
     if (role !== "admin") {

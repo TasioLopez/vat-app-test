@@ -18,7 +18,7 @@ type EmployeeRow = {
 };
 
 type ClientRow = { id: string; name: string | null };
-type UserRow = { id: string; role: "admin" | "standard" | string };
+type UserRow = { id: string; role: "admin" | "user" | string };
 
 type Row = {
   id: string;                 // doc id from table
