@@ -137,6 +137,85 @@ export type Database = {
           },
         ]
       }
+      cv_documents: {
+        Row: {
+          id: string
+          employee_id: string
+          title: string
+          template_key: string
+          accent_color: string
+          status: string
+          payload_json: Json
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          title?: string
+          template_key?: string
+          accent_color?: string
+          status?: string
+          payload_json?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          title?: string
+          template_key?: string
+          accent_color?: string
+          status?: string
+          payload_json?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cv_versions: {
+        Row: {
+          id: string
+          cv_document_id: string
+          payload_json: Json
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cv_document_id: string
+          payload_json: Json
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cv_document_id?: string
+          payload_json?: Json
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_versions_cv_document_id_fkey"
+            columns: ["cv_document_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_details: {
         Row: {
           ad_report_date: string | null

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:cv": "tsx --test src/lib/cv/__tests__/normalize.test.ts",
     "help:generate-nl-md": "node scripts/generate-help-nl-md.mjs",
     "help:seed": "tsx scripts/seed-help-kb.ts",
     "help:reindex-all": "tsx scripts/reindex-help-kb-all.ts",

@@ -1,14 +1,29 @@
-import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import CVHubClient from '@/components/cv/CVHubClient';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'CV',
 };
 
-export default function CVPage() {
+export default async function CVHubPage({ params }: { params: Promise<{ employeeId: string }> }) {
+  const { employeeId } = await params;
+  const supabase = await getSupabaseServerClient();
+  const { data: emp, error } = await supabase
+    .from('employees')
+    .select('id, first_name, last_name')
+    .eq('id', employeeId)
+    .maybeSingle();
+
+  if (error || !emp) {
+    notFound();
+  }
+
+  const label = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Werknemer';
+
   return (
-    <div className="p-6 text-center">
-      <h1 className="text-2xl font-bold text-gray-700">CV</h1>
-      <p className="mt-4 text-gray-500">Coming soon...</p>
+    <div>
+      <CVHubClient employeeId={employeeId} employeeLabel={label} />
     </div>
   );
 }

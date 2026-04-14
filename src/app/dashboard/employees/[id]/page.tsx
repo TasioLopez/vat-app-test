@@ -887,7 +887,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block font-semibold text-gray-900">CV</span>
-                                                <span className="text-sm text-gray-600">Placeholder (coming soon)</span>
+                                                <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
                                             </span>
                                         </button>
                                     </div>

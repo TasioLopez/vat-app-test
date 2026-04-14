@@ -213,7 +213,8 @@ html, body {
   [data-rq-devtools-button],
   .Toastify,
   [data-sonner-toaster],
-  .nextjs-portal {
+  .nextjs-portal,
+  .cv-no-print {
     display: none !important;
     visibility: hidden !important;
   }
