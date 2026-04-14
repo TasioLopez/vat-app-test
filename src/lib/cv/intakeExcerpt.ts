@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import pdfParse from 'pdf-parse';
 import { parseDocx } from '@/lib/parse-docx';
 
 const MAX_EXCERPT_CHARS = 12_000;
@@ -32,6 +31,8 @@ async function bufferToPlainText(buffer: Buffer, kind: 'pdf' | 'docx' | 'doc' | 
   }
   if (kind === 'pdf') {
     try {
+      // Dynamic import: avoids bundling pdf-parse test fixtures into Next server chunks
+      const pdfParse = (await import('pdf-parse')).default;
       const data = await pdfParse(buffer);
       return typeof data?.text === 'string' ? data.text : '';
     } catch {
