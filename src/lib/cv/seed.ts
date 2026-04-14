@@ -22,10 +22,37 @@ type DetailsRow = {
   dutch_writing?: string | null;
   dutch_reading?: string | null;
   drivers_license?: boolean | null;
-  drivers_license_type?: string[] | null;
-  transport_type?: string[] | null;
+  /** DB may return string[] or legacy string / JSON string */
+  drivers_license_type?: string | string[] | null;
+  transport_type?: string | string[] | null;
   contract_hours?: number | null;
 };
+
+/**
+ * Normalize Postgres/legacy values to string[] (same idea as formatDriversLicense in utils).
+ */
+export function normalizeStringArrayField(value: unknown): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (!s) return [];
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((x) => String(x).trim()).filter(Boolean);
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    return s.split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
+  }
+  return [];
+}
 
 function splitList(text: string | null | undefined): string[] {
   if (!text?.trim()) return [];
@@ -128,13 +155,15 @@ function seedLanguages(details: DetailsRow): CvLanguageItem[] {
 function seedExtra(details: DetailsRow): string {
   const bits: string[] = [];
   if (details.drivers_license) {
-    const t = details.drivers_license_type?.length
-      ? `Rijbewijs: ${details.drivers_license_type.join(', ')}`
+    const licenseTypes = normalizeStringArrayField(details.drivers_license_type);
+    const t = licenseTypes.length
+      ? `Rijbewijs: ${licenseTypes.join(', ')}`
       : 'Rijbewijs: ja';
     bits.push(t);
   }
-  if (details.transport_type?.length) {
-    bits.push(`Vervoer: ${details.transport_type.join(', ')}`);
+  const transport = normalizeStringArrayField(details.transport_type);
+  if (transport.length) {
+    bits.push(`Vervoer: ${transport.join(', ')}`);
   }
   if (details.contract_hours != null && details.contract_hours > 0) {
     bits.push(`Contracturen: ${details.contract_hours} uur per week`);
