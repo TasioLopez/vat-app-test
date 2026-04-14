@@ -104,7 +104,25 @@ function seedExperience(details: DetailsRow): CvExperienceItem[] {
         }));
     }
   } catch {
-    // prose
+    // prose — split paragraphs when helpful
+  }
+
+  const prose = raw.trim();
+  const paras = prose
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (paras.length >= 2) {
+    const firstLine = paras[0].split('\n')[0].trim();
+    const roleGuess = firstLine.length > 0 && firstLine.length < 100 ? firstLine : 'Werkervaring';
+    const body = paras.join('\n\n');
+    return [
+      {
+        id: newCvId(),
+        role: roleGuess,
+        description: body,
+      },
+    ];
   }
 
   const joined = parseWorkExperience(raw);
@@ -174,16 +192,24 @@ function seedExtra(details: DetailsRow): string {
 function seedProfile(employee: EmployeeRow, details: DetailsRow): string {
   const name = [employee.first_name, employee.last_name].filter(Boolean).join(' ');
   const job = details.current_job?.trim();
-  const edu = formatEducationLevel(details.education_level, details.education_name);
-  if (!name && !job) return '';
-  const parts: string[] = [];
-  if (job) {
-    parts.push(`${name || 'Kandidaat'} is ${job}.`);
+  const skillParts = splitList(details.computer_skills);
+  const skillsHint = skillParts.slice(0, 4).join(', ');
+  if (!name && !job && !skillsHint) return '';
+
+  const sentences: string[] = [];
+  if (job && name) {
+    sentences.push(
+      `${name} is ${job} en richt zich op een professionele bijdrage in passende werkzaamheden.`
+    );
+  } else if (job) {
+    sentences.push(`Professioneel actief als ${job}, met focus op kwaliteit en samenwerking.`);
+  } else if (name) {
+    sentences.push(`${name} zoekt passende werkzaamheden die aansluiten bij opleiding en ervaring.`);
   }
-  if (edu && edu !== '—') {
-    parts.push(`Opleiding: ${edu}.`);
+  if (skillsHint) {
+    sentences.push(`Digitale vaardigheden en interessegebieden: o.a. ${skillsHint}.`);
   }
-  return parts.join(' ');
+  return sentences.join(' ').trim();
 }
 
 /**

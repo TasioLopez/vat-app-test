@@ -133,32 +133,62 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 border-t border-gray-100 pt-2">
-            <AccentColorPicker value={accentColor} onChange={setAccentColor} />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Template:</span>
-              <Select
-                value={templateKey}
-                onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}
+          <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3 border-t border-gray-100 pt-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">AI</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-1"
+                disabled={aiBusy}
+                onClick={() => runAi('fill')}
               >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="modern_professional">Modern Professional</SelectItem>
-                  <SelectItem value="creative_bold">Creative Bold</SelectItem>
-                </SelectContent>
-              </Select>
+                <Sparkles className="h-4 w-4" />
+                Lege velden invullen
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-1"
+                disabled={aiBusy}
+                onClick={() => runAi('polish')}
+              >
+                <Wand2 className="h-4 w-4" />
+                Teksten verfijnen
+              </Button>
+              {aiError && <span className="max-w-[min(100%,12rem)] text-xs text-red-600">{aiError}</span>}
             </div>
-            <Button
-              type="button"
-              variant="link"
-              className="text-sm text-gray-700"
-              onClick={() => router.push(`/dashboard/cv/${employeeId}/new`)}
-            >
-              Andere template kiezen (nieuw CV)
-            </Button>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-4">
+              <AccentColorPicker value={accentColor} onChange={setAccentColor} />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Template:</span>
+                <Select
+                  value={templateKey}
+                  onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="modern_professional">Modern Professional</SelectItem>
+                    <SelectItem value="creative_bold">Creative Bold</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="link"
+                className="text-sm text-gray-700"
+                onClick={() => router.push(`/dashboard/cv/${employeeId}/new`)}
+              >
+                Andere template kiezen (nieuw CV)
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
               <Button type="button" variant="outline" size="sm" className="gap-1" onClick={handlePrint}>
                 <Printer className="h-4 w-4" />
                 Print
@@ -171,33 +201,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
               </Button>
               <ExportCVButton employeeId={employeeId} cvId={cvId} />
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-2">
-            <span className="text-xs font-medium text-gray-500">AI</span>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="gap-1"
-              disabled={aiBusy}
-              onClick={() => runAi('fill')}
-            >
-              <Sparkles className="h-4 w-4" />
-              Lege velden invullen
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="gap-1"
-              disabled={aiBusy}
-              onClick={() => runAi('polish')}
-            >
-              <Wand2 className="h-4 w-4" />
-              Teksten verfijnen
-            </Button>
-            {aiError && <span className="text-xs text-red-600">{aiError}</span>}
           </div>
         </div>
       </div>
