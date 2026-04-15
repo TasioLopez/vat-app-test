@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSessionUserWithRole, isAdmin } from "@/lib/help/auth";
+import { getConfiguredServerAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
 
 // -------- base URL helper (no env, no localhost) ----------
 function getBaseUrl(req: NextRequest) {
@@ -44,7 +45,8 @@ export async function POST(req: NextRequest) {
 
     // Email link lands on /auth/callback (client exchanges code or reads hash), then user is sent to /signup
     const base = getBaseUrl(req);
-    const callbackUrl = new URL("/auth/callback", base);
+    const authOrigin = getConfiguredServerAuthOrigin() ?? normalizeAuthOrigin(base);
+    const callbackUrl = new URL("/auth/callback", authOrigin);
     callbackUrl.searchParams.set("next", "/signup");
 
     // Send email using Supabase Auth inviteUser function

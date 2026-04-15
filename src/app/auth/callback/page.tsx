@@ -57,20 +57,60 @@ export default function AuthCallbackPage() {
       setPhase("error");
     };
 
+    const logBranch = (branch: string, details?: Record<string, unknown>) => {
+      if (process.env.NODE_ENV !== "production") {
+        // Keep diagnostics minimal and non-sensitive.
+        console.info("[auth/callback]", branch, details ?? {});
+      }
+    };
+
+    const parseHashTokens = () => {
+      const rawHash = window.location.hash?.replace(/^#/, "") ?? "";
+      const hash = new URLSearchParams(rawHash);
+      const accessToken = hash.get("access_token");
+      const refreshToken = hash.get("refresh_token");
+      return { accessToken, refreshToken };
+    };
+
+    const clearHash = () => {
+      const clean = `${window.location.pathname}${window.location.search}`;
+      window.history.replaceState(null, "", clean);
+    };
+
     const run = async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const nextPath = getSafeAuthRedirectPath(params.get("next"), "/signup");
 
       if (code) {
+        logBranch("code.exchange.start");
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
         if (exchangeError) {
+          logBranch("code.exchange.error", { message: exchangeError.message });
           fail(exchangeError.message || "Sessie kon niet worden gestart.");
           return;
         }
+        logBranch("code.exchange.success");
         go(nextPath);
         return;
+      }
+
+      const { accessToken, refreshToken } = parseHashTokens();
+      if (accessToken && refreshToken) {
+        logBranch("hash.setSession.start");
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (cancelled) return;
+        if (!setSessionError) {
+          clearHash();
+          logBranch("hash.setSession.success");
+          go(nextPath);
+          return;
+        }
+        logBranch("hash.setSession.error", { message: setSessionError.message });
       }
 
       const trySession = async () => {
@@ -78,6 +118,7 @@ export default function AuthCallbackPage() {
           data: { session },
         } = await supabase.auth.getSession();
         if (session?.user) {
+          logBranch("session.detected");
           go(nextPath);
           return true;
         }
@@ -113,6 +154,7 @@ export default function AuthCallbackPage() {
           error: userError,
         } = await supabase.auth.getUser();
         if (!userError && user) {
+          logBranch("user.fallback.success");
           go(nextPath);
         }
       }

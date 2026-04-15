@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 const Logo = "/branding/vat-app-logo.svg";
 import { validateForm, authValidation } from "@/lib/validation";
+import { getConfiguredClientAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -88,7 +89,9 @@ export default function LoginPage() {
 
       const emailNorm = resetEmail.trim().toLowerCase();
       // Must match Authentication > URL Configuration > Redirect URLs in Supabase
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      const authOrigin =
+        getConfiguredClientAuthOrigin() ?? normalizeAuthOrigin(window.location.origin);
+      const callbackUrl = new URL("/auth/callback", authOrigin);
       callbackUrl.searchParams.set("next", "/reset-password");
 
       const { error } = await supabase.auth.resetPasswordForEmail(emailNorm, {
