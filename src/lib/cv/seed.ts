@@ -72,7 +72,14 @@ function levelLabel(level: string | null | undefined, kind: 'spreek' | 'schrijf'
     '5': 'Zeer goed',
   };
   const v = map[level] ?? level;
-  return `Nederlands (${kind}): ${v}`;
+  return `${kind}: ${v}`;
+}
+
+function splitExperienceLines(raw: string): string[] {
+  return raw
+    .split(/[\n;]+/)
+    .map((line) => line.replace(/^[-*•]\s*/, '').trim())
+    .filter((line) => line.length > 2);
 }
 
 /**
@@ -101,10 +108,20 @@ function seedExperience(details: DetailsRow): CvExperienceItem[] {
         .map((line: string) => ({
           id: newCvId(),
           role: line.trim(),
+          description: 'Uitgevoerd met focus op kwaliteit, samenwerking en continuiteit van werkzaamheden.',
         }));
     }
   } catch {
     // prose — split paragraphs when helpful
+  }
+
+  const splitLines = splitExperienceLines(raw);
+  if (splitLines.length >= 2 && splitLines.length <= 6) {
+    return splitLines.map((line) => ({
+      id: newCvId(),
+      role: line,
+      description: 'Verantwoordelijk voor dagelijkse werkzaamheden binnen deze functie.',
+    }));
   }
 
   const prose = raw.trim();
@@ -141,11 +158,17 @@ function seedEducation(details: DetailsRow): CvEducationItem[] {
   const level = details.education_level;
   const name = details.education_name;
   if (!level?.trim() && !name?.trim()) return [];
+  const levelLabelText = level?.trim();
+  const nameText = name?.trim();
+  const descParts = [
+    levelLabelText ? `Opleidingsniveau: ${levelLabelText}` : '',
+    nameText ? `Richting/opleiding: ${nameText}` : '',
+  ].filter(Boolean);
   return [
     {
       id: newCvId(),
       institution: formatEducationLevel(level, name),
-      description: '',
+      description: descParts.join('. '),
     },
   ];
 }
@@ -164,29 +187,55 @@ function seedLanguages(details: DetailsRow): CvLanguageItem[] {
   if (wr) lines.push(wr);
   if (re) lines.push(re);
   if (lines.length === 0) return [];
-  return lines.map((line) => ({
+  return [
+    {
+      id: newCvId(),
+      language: 'Nederlands',
+      level: lines.join(', '),
+    },
+    ...lines.map((line) => ({
     id: newCvId(),
-    language: line,
-  }));
+    language: `Nederlands (${line})`,
+  })),
+  ];
+}
+
+function seedInterests(details: DetailsRow): CvListItem[] {
+  const seeds: string[] = [];
+  if (details.current_job?.trim()) {
+    seeds.push('Kwaliteit in uitvoering van werkzaamheden');
+  }
+  const transport = normalizeStringArrayField(details.transport_type);
+  if (transport.length) {
+    seeds.push('Flexibel inzetbaar op verschillende locaties');
+  }
+  const skillParts = splitList(details.computer_skills);
+  if (skillParts.length) {
+    seeds.push('Digitale vaardigheden verder ontwikkelen');
+  }
+  if (details.contract_hours != null && details.contract_hours > 0) {
+    seeds.push('Stabiele inzet binnen afgesproken contracturen');
+  }
+  const unique = Array.from(new Set(seeds));
+  return unique.map((text) => ({ id: newCvId(), text }));
 }
 
 function seedExtra(details: DetailsRow): string {
   const bits: string[] = [];
   if (details.drivers_license) {
     const licenseTypes = normalizeStringArrayField(details.drivers_license_type);
-    const t = licenseTypes.length
-      ? `Rijbewijs: ${licenseTypes.join(', ')}`
-      : 'Rijbewijs: ja';
+    const t = licenseTypes.length ? `Beschikt over rijbewijs ${licenseTypes.join(', ')}` : 'Beschikt over rijbewijs';
     bits.push(t);
   }
   const transport = normalizeStringArrayField(details.transport_type);
   if (transport.length) {
-    bits.push(`Vervoer: ${transport.join(', ')}`);
+    bits.push(`Beschikbaar vervoer: ${transport.join(', ')}`);
   }
   if (details.contract_hours != null && details.contract_hours > 0) {
-    bits.push(`Contracturen: ${details.contract_hours} uur per week`);
+    bits.push(`Inzetbaar voor circa ${details.contract_hours} uur per week`);
   }
-  return bits.join('\n');
+  if (bits.length === 0) return '';
+  return bits.join('. ') + '.';
 }
 
 function seedProfile(employee: EmployeeRow, details: DetailsRow): string {
@@ -236,7 +285,7 @@ export function seedCvModelFromEmployee(employee: EmployeeRow, details: DetailsR
   base.education = seedEducation(details);
   base.skills = seedSkills(details);
   base.languages = seedLanguages(details);
-  base.interests = [];
+  base.interests = seedInterests(details);
   base.extra = seedExtra(details);
 
   return base;
