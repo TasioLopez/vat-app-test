@@ -3,9 +3,13 @@
  * Template components render from this shape only.
  */
 
-export type CvTemplateKey = 'modern_professional' | 'creative_bold';
+export type CvTemplateKey = 'modern_professional' | 'creative_bold' | 'corporate_minimal';
 
-export const CV_TEMPLATE_KEYS: CvTemplateKey[] = ['modern_professional', 'creative_bold'];
+export const CV_TEMPLATE_KEYS: CvTemplateKey[] = [
+  'modern_professional',
+  'creative_bold',
+  'corporate_minimal',
+];
 
 export const DEFAULT_ACCENT_COLOR = '#00A3CC';
 
@@ -40,8 +44,16 @@ export type CvPersonal = {
   phone: string;
   location: string;
   dateOfBirth?: string;
-  /** Optional future: blob URL or storage path */
+  /** @deprecated Prefer photoStoragePath; legacy signed/public URL */
   photoUrl?: string;
+  /** Supabase Storage path inside bucket `cv-photos` (e.g. employeeId/cvId/file.jpg) */
+  photoStoragePath?: string;
+};
+
+/** Display and export options persisted with the CV */
+export type CvModelOptions = {
+  /** When true and photoStoragePath is set, templates show the photo */
+  includePhotoInCv?: boolean;
 };
 
 export type CvModel = {
@@ -55,6 +67,7 @@ export type CvModel = {
   interests: CvListItem[];
   /** Vrij tekstblok (rijbewijs, beschikbaarheid, etc.) */
   extra: string;
+  options?: CvModelOptions;
 };
 
 export function newCvId(): string {
@@ -80,5 +93,6 @@ export function emptyCvModel(): CvModel {
     languages: [],
     interests: [],
     extra: '',
+    options: { includePhotoInCv: false },
   };
 }

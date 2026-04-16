@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 import type { CvModel } from '@/types/cv';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AiResultPreview from '@/components/cv/AiResultPreview';
 
 type Props = {
@@ -44,11 +44,15 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
     saveError,
     cvData,
     applyAiPayload,
+    updateOptions,
+    updatePersonal,
   } = useCV();
 
+  const photoFileRef = useRef<HTMLInputElement>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<Record<string, unknown> | null>(null);
 
   const runAi = async (mode: 'fill' | 'polish') => {
@@ -90,6 +94,54 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
   const mailto = cvData.personal.email
     ? `mailto:?subject=${encodeURIComponent(`CV ${cvData.personal.fullName || title}`)}`
     : '#';
+
+  const includePhoto = cvData.options?.includePhotoInCv === true;
+
+  const onPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('employeeId', employeeId);
+    fd.append('cvId', cvId);
+    setPhotoError(null);
+    try {
+      const res = await fetch('/api/cv-photo/upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok) {
+        setPhotoError(json?.error || 'Upload mislukt');
+        return;
+      }
+      updatePersonal({ photoStoragePath: json.path as string });
+      updateOptions({ includePhotoInCv: true });
+      await save();
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Upload mislukt');
+    }
+  };
+
+  const removePhoto = async () => {
+    const path = cvData.personal.photoStoragePath?.trim();
+    if (path) {
+      try {
+        await fetch('/api/cv-photo', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employeeId, cvId, path }),
+        });
+      } catch {
+        /* still clear local state */
+      }
+    }
+    updatePersonal({ photoStoragePath: undefined });
+    updateOptions({ includePhotoInCv: false });
+    try {
+      await save();
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 pb-24 print:bg-white print:pb-0">
@@ -174,8 +226,45 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                   <SelectContent>
                     <SelectItem value="modern_professional">Modern Professional</SelectItem>
                     <SelectItem value="creative_bold">Creative Bold</SelectItem>
+                    <SelectItem value="corporate_minimal">Corporate Minimal</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-2 sm:border-t-0 sm:pt-0">
+                <span className="text-xs font-medium text-gray-500">Foto</span>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300"
+                    checked={includePhoto}
+                    onChange={(e) => updateOptions({ includePhotoInCv: e.target.checked })}
+                  />
+                  Tonen op CV
+                </label>
+                <input
+                  ref={photoFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={onPhotoSelected}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={saving}
+                  onClick={() => photoFileRef.current?.click()}
+                >
+                  Upload
+                </Button>
+                {cvData.personal.photoStoragePath ? (
+                  <Button type="button" variant="ghost" size="sm" className="text-red-700" onClick={removePhoto}>
+                    Verwijderen
+                  </Button>
+                ) : null}
+                {photoError ? (
+                  <span className="text-xs text-red-600">{photoError}</span>
+                ) : null}
               </div>
             </div>
 

@@ -19,7 +19,7 @@ export default function TemplatePicker({ onChoose, busy }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         <button
           type="button"
           disabled={busy}
@@ -72,6 +72,34 @@ export default function TemplatePicker({ onChoose, busy }: Props) {
             Creatief two-column design met kleuraccenten en moderne uitstraling
           </p>
           <span className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00A3CC] py-3 text-sm font-semibold text-white">
+            <Check className="h-4 w-4" />
+            Kies deze template
+          </span>
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onChoose('corporate_minimal')}
+          className={cn(
+            'group flex flex-col rounded-2xl border-2 border-gray-200 bg-white p-6 text-left shadow-md transition-all',
+            'hover:border-neutral-400 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400'
+          )}
+        >
+          <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-neutral-100">
+            <div className="relative h-32 w-24 rounded border border-neutral-300 bg-white shadow-sm">
+              <div className="absolute left-2 top-2 h-8 w-8 rounded-full border border-neutral-300 bg-neutral-200" />
+              <div className="absolute bottom-3 left-2 right-2 space-y-1">
+                <div className="h-0.5 w-full bg-neutral-300" />
+                <div className="h-0.5 w-[80%] bg-neutral-200" />
+              </div>
+            </div>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Corporate Minimal</h2>
+          <p className="mt-2 flex-1 text-sm text-gray-600">
+            Zwart-wit, strak en zakelijk — minimale accenten, focus op inhoud
+          </p>
+          <span className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-800 py-3 text-sm font-semibold text-white">
             <Check className="h-4 w-4" />
             Kies deze template
           </span>

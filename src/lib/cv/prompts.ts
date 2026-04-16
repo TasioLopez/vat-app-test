@@ -67,15 +67,18 @@ export function cvComposeSystemPrompt(): string {
   return `Je bent een ervaren Nederlandse CV-schrijver.
 Je antwoordt ALLEEN met geldige JSON volgens CvModel:
 {
-  personal: { fullName, title, email, phone, location, dateOfBirth? },
+  personal: { fullName, title, email, phone, location, dateOfBirth?, photoStoragePath?, photoUrl? },
   profile: string,
   experience: [{ id, role, organization?, period?, description? }],
   education: [{ id, institution, diploma?, period?, description? }],
   skills: [{ id, text }],
   languages: [{ id, language, level? }],
   interests: [{ id, text }],
-  extra: string
+  extra: string,
+  options?: { includePhotoInCv?: boolean }
 }
+
+Behoud altijd personal.photoStoragePath en options.includePhotoInCv uit de huidige CV tenzij expliciet leeg; verzin geen fotopaden.
 
 Kwaliteitseisen:
 - profile: 4-6 zinnen, professioneel en concreet.

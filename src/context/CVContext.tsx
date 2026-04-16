@@ -45,6 +45,9 @@ export type CVContextValue = {
   updateInterest: (id: string, text: string) => void;
   removeInterest: (id: string) => void;
   applyAiPayload: (partial: Partial<CvModel>) => void;
+  /** Signed read URL for personal.photoStoragePath (editor fetch or print bootstrap) */
+  photoDisplayUrl: string | null;
+  updateOptions: (patch: Partial<NonNullable<CvModel['options']>>) => void;
   isDirty: boolean;
   markSaved: () => void;
   save: (options?: { version?: boolean }) => Promise<void>;
@@ -64,6 +67,7 @@ export function CVProvider({
   initialAccentColor,
   initialPayload,
   initialUpdatedAt,
+  initialPhotoSignedUrl,
 }: {
   children: ReactNode;
   employeeId: string;
@@ -73,11 +77,14 @@ export function CVProvider({
   initialAccentColor: string;
   initialPayload: CvModel;
   initialUpdatedAt?: string | null;
+  /** Server-signed URL for PDF/print; editor leaves undefined */
+  initialPhotoSignedUrl?: string | null;
 }) {
   const [title, setTitleState] = useState(initialTitle);
   const [templateKey, setTemplateKeyState] = useState<CvTemplateKey>(initialTemplateKey);
   const [accentColor, setAccentColorState] = useState(initialAccentColor);
   const [cvData, setCvDataInternal] = useState<CvModel>(initialPayload);
+  const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(initialPhotoSignedUrl ?? null);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialUpdatedAt ?? null);
@@ -88,9 +95,44 @@ export function CVProvider({
     setTemplateKeyState(initialTemplateKey);
     setAccentColorState(initialAccentColor);
     setCvDataInternal(initialPayload);
+    setPhotoDisplayUrl(initialPhotoSignedUrl ?? null);
     setIsDirty(false);
     setLastSavedAt(initialUpdatedAt ?? null);
-  }, [cvId, initialTitle, initialTemplateKey, initialAccentColor, initialPayload, initialUpdatedAt]);
+  }, [
+    cvId,
+    initialTitle,
+    initialTemplateKey,
+    initialAccentColor,
+    initialPayload,
+    initialUpdatedAt,
+    initialPhotoSignedUrl,
+  ]);
+
+  useEffect(() => {
+    if (initialPhotoSignedUrl) {
+      setPhotoDisplayUrl(initialPhotoSignedUrl);
+      return;
+    }
+    const path = cvData.personal.photoStoragePath?.trim();
+    if (!path) {
+      setPhotoDisplayUrl(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(
+      `/api/cv-photo/sign?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&path=${encodeURIComponent(path)}`
+    )
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('sign failed'))))
+      .then((d: { signedUrl?: string }) => {
+        if (!cancelled && d.signedUrl) setPhotoDisplayUrl(d.signedUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoDisplayUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, cvId, cvData.personal.photoStoragePath, initialPhotoSignedUrl]);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const markSaved = useCallback(() => setIsDirty(false), []);
@@ -130,6 +172,17 @@ export function CVProvider({
   const updatePersonal = useCallback(
     (patch: Partial<CvModel['personal']>) => {
       setCvDataInternal((prev) => ({ ...prev, personal: { ...prev.personal, ...patch } }));
+      markDirty();
+    },
+    [markDirty]
+  );
+
+  const updateOptions = useCallback(
+    (patch: Partial<NonNullable<CvModel['options']>>) => {
+      setCvDataInternal((prev) => ({
+        ...prev,
+        options: { ...(prev.options ?? {}), ...patch },
+      }));
       markDirty();
     },
     [markDirty]
@@ -275,6 +328,7 @@ export function CVProvider({
         ...prev,
         ...partial,
         personal: partial.personal ? { ...prev.personal, ...partial.personal } : prev.personal,
+        options: partial.options ? { ...(prev.options ?? {}), ...partial.options } : prev.options,
         experience: partial.experience ?? prev.experience,
         education: partial.education ?? prev.education,
         skills: partial.skills ?? prev.skills,
@@ -340,6 +394,8 @@ export function CVProvider({
       updateInterest,
       removeInterest,
       applyAiPayload,
+      photoDisplayUrl,
+      updateOptions,
       isDirty,
       markSaved,
       save,
@@ -357,7 +413,9 @@ export function CVProvider({
       accentColor,
       setAccentColor,
       cvData,
+      photoDisplayUrl,
       updatePersonal,
+      updateOptions,
       setProfile,
       setExtra,
       addExperience,
@@ -376,6 +434,8 @@ export function CVProvider({
       updateInterest,
       removeInterest,
       applyAiPayload,
+      photoDisplayUrl,
+      updateOptions,
       isDirty,
       markSaved,
       save,

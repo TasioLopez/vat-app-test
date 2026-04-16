@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 import CVPrintableClient from '@/components/cv/CVPrintableClient';
 import type { CvTemplateKey } from '@/types/cv';
 import { DEFAULT_ACCENT_COLOR } from '@/types/cv';
@@ -39,6 +40,17 @@ export default async function Page(props: {
 
   const payload = normalizeCvPayload(doc.payload_json);
 
+  let initialPhotoSignedUrl: string | null = null;
+  const photoPath = payload.personal.photoStoragePath?.trim();
+  if (photoPath && payload.options?.includePhotoInCv) {
+    const { data, error } = await supabaseAdmin.storage
+      .from('cv-photos')
+      .createSignedUrl(photoPath, 3600);
+    if (!error && data?.signedUrl) {
+      initialPhotoSignedUrl = data.signedUrl;
+    }
+  }
+
   return (
     <CVPrintableClient
       employeeId={employeeId}
@@ -47,6 +59,7 @@ export default async function Page(props: {
       templateKey={(doc.template_key as CvTemplateKey) || 'modern_professional'}
       accentColor={doc.accent_color || DEFAULT_ACCENT_COLOR}
       payload={payload}
+      initialPhotoSignedUrl={initialPhotoSignedUrl}
     />
   );
 }

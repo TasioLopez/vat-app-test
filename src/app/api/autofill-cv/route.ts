@@ -19,6 +19,12 @@ const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.
 
 export const dynamic = 'force-dynamic';
 
+function preserveCvPhotoFields(payload: CvModel, source: CvModel) {
+  if (!payload.personal.photoStoragePath?.trim() && source.personal.photoStoragePath?.trim()) {
+    payload.personal.photoStoragePath = source.personal.photoStoragePath;
+  }
+}
+
 function stripCitations(text: string): string {
   if (!text) return text;
   return text
@@ -124,6 +130,7 @@ export async function GET(req: NextRequest) {
 
     const parsedComposed = JSON.parse(rawComposed) as unknown;
     let payload = normalizeCvPayload(parsedComposed) as CvModel;
+    preserveCvPhotoFields(payload, current);
 
     // strip citations in narrative fields
     payload.profile = stripCitations(payload.profile);
@@ -173,6 +180,7 @@ export async function GET(req: NextRequest) {
             description: ed.description ? stripCitations(ed.description) : ed.description,
             diploma: ed.diploma ? stripCitations(ed.diploma) : ed.diploma,
           }));
+          preserveCvPhotoFields(rewritten, current);
           payload = rewritten;
         }
       } catch (rewriteErr) {

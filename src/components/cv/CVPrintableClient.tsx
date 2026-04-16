@@ -12,6 +12,7 @@ type Props = {
   templateKey: CvTemplateKey;
   accentColor: string;
   payload: CvModel;
+  initialPhotoSignedUrl?: string | null;
 };
 
 export default function CVPrintableClient({
@@ -21,19 +22,35 @@ export default function CVPrintableClient({
   templateKey,
   accentColor,
   payload,
+  initialPhotoSignedUrl,
 }: Props) {
   useEffect(() => {
     const root = document.getElementById('cv-print-root');
     if (!root) return;
     let cancelled = false;
-    const to = window.setTimeout(() => {
+
+    const markReady = () => {
       if (!cancelled) root.setAttribute('data-ready', '1');
-    }, 400);
+    };
+
+    if (initialPhotoSignedUrl && payload.options?.includePhotoInCv) {
+      const img = new Image();
+      img.onload = markReady;
+      img.onerror = markReady;
+      img.src = initialPhotoSignedUrl;
+      const fallback = window.setTimeout(markReady, 4000);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(fallback);
+      };
+    }
+
+    const to = window.setTimeout(markReady, 400);
     return () => {
       cancelled = true;
       window.clearTimeout(to);
     };
-  }, [employeeId, cvId, payload]);
+  }, [employeeId, cvId, payload, initialPhotoSignedUrl]);
 
   return (
     <CVProvider
@@ -43,6 +60,7 @@ export default function CVPrintableClient({
       initialTemplateKey={templateKey}
       initialAccentColor={accentColor}
       initialPayload={payload}
+      initialPhotoSignedUrl={initialPhotoSignedUrl}
     >
       <div id="cv-print-root" className="cv-print-root bg-gray-100 p-6 print:bg-white print:p-0">
         <CVPreview />
