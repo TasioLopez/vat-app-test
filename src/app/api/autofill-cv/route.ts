@@ -23,6 +23,9 @@ function preserveCvPhotoFields(payload: CvModel, source: CvModel) {
   if (!payload.personal.photoStoragePath?.trim() && source.personal.photoStoragePath?.trim()) {
     payload.personal.photoStoragePath = source.personal.photoStoragePath;
   }
+  if (!payload.personal.photoCrop && source.personal.photoCrop) {
+    payload.personal.photoCrop = source.personal.photoCrop;
+  }
 }
 
 function stripCitations(text: string): string {

@@ -22,6 +22,7 @@ import type { CvModel } from '@/types/cv';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRef, useState } from 'react';
 import AiResultPreview from '@/components/cv/AiResultPreview';
+import CvPhotoCropDialog from '@/components/cv/CvPhotoCropDialog';
 
 type Props = {
   employeeId: string;
@@ -46,9 +47,11 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
     applyAiPayload,
     updateOptions,
     updatePersonal,
+    photoDisplayUrl,
   } = useCV();
 
   const photoFileRef = useRef<HTMLInputElement>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
         setPhotoError(json?.error || 'Upload mislukt');
         return;
       }
-      updatePersonal({ photoStoragePath: json.path as string });
+      updatePersonal({ photoStoragePath: json.path as string, photoCrop: undefined });
       updateOptions({ includePhotoInCv: true });
       await save();
     } catch (err) {
@@ -134,7 +137,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
         /* still clear local state */
       }
     }
-    updatePersonal({ photoStoragePath: undefined });
+    updatePersonal({ photoStoragePath: undefined, photoCrop: undefined });
     updateOptions({ includePhotoInCv: false });
     try {
       await save();
@@ -220,13 +223,15 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                   value={templateKey}
                   onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}
                 >
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[min(100%,280px)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="modern_professional">Modern Professional</SelectItem>
-                    <SelectItem value="creative_bold">Creative Bold</SelectItem>
-                    <SelectItem value="corporate_minimal">Corporate Minimal</SelectItem>
+                    <SelectItem value="modern_professional">Modern zakelijk (zijbalk)</SelectItem>
+                    <SelectItem value="creative_bold">Creatief & opvallend</SelectItem>
+                    <SelectItem value="corporate_minimal">Formeel executive</SelectItem>
+                    <SelectItem value="linear_timeline">Chronologische tijdlijn</SelectItem>
+                    <SelectItem value="balanced_split">Evenwichtig tweeluik</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -258,9 +263,20 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                   Upload
                 </Button>
                 {cvData.personal.photoStoragePath ? (
-                  <Button type="button" variant="ghost" size="sm" className="text-red-700" onClick={removePhoto}>
-                    Verwijderen
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={saving || !photoDisplayUrl}
+                      onClick={() => setCropOpen(true)}
+                    >
+                      Bewerken
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="text-red-700" onClick={removePhoto}>
+                      Verwijderen
+                    </Button>
+                  </>
                 ) : null}
                 {photoError ? (
                   <span className="text-xs text-red-600">{photoError}</span>
@@ -293,6 +309,17 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
           <CVPreview />
         </div>
       </div>
+
+      <CvPhotoCropDialog
+        open={cropOpen}
+        onOpenChange={setCropOpen}
+        imageSrc={photoDisplayUrl}
+        initialCrop={cvData.personal.photoCrop}
+        onSave={async (crop) => {
+          updatePersonal({ photoCrop: crop });
+          await save();
+        }}
+      />
 
       <Dialog open={aiOpen} onOpenChange={setAiOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">

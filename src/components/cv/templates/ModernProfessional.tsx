@@ -3,6 +3,7 @@
 import { Mail, Phone, MapPin, Plus, X } from 'lucide-react';
 import { useCV } from '@/context/CVContext';
 import CVA4Canvas from '@/components/cv/CVA4Canvas';
+import CvPhotoFrame from '@/components/cv/CvPhotoFrame';
 import InlineEditableText from '@/components/cv/InlineEditableText';
 import InlineEditableList from '@/components/cv/InlineEditableList';
 
@@ -48,19 +49,17 @@ export default function ModernProfessional() {
         >
           {showPhoto && (
             <div className="flex flex-col items-center gap-2">
-              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white/40 bg-white/20">
-                {photoDisplayUrl ? (
-                  <img
-                    src={photoDisplayUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
+              <CvPhotoFrame
+                src={photoDisplayUrl}
+                crop={cvData.personal.photoCrop}
+                alt=""
+                frameClassName="h-24 w-24 shrink-0 rounded-full border-4 border-white/40 bg-white/20"
+                placeholder={
                   <div className="flex h-full w-full items-center justify-center text-[10px] text-white/80">
                     Foto
                   </div>
-                )}
-              </div>
+                }
+              />
             </div>
           )}
 

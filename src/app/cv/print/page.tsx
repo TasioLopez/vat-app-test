@@ -2,8 +2,7 @@ import { notFound } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 import CVPrintableClient from '@/components/cv/CVPrintableClient';
-import type { CvTemplateKey } from '@/types/cv';
-import { DEFAULT_ACCENT_COLOR } from '@/types/cv';
+import { coerceCvTemplateKey, DEFAULT_ACCENT_COLOR } from '@/types/cv';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 
 /** Print-only route for CV PDF export (RLS: user must have access to CV row). */
@@ -56,7 +55,7 @@ export default async function Page(props: {
       employeeId={employeeId}
       cvId={cvId}
       title={doc.title}
-      templateKey={(doc.template_key as CvTemplateKey) || 'modern_professional'}
+      templateKey={coerceCvTemplateKey(doc.template_key)}
       accentColor={doc.accent_color || DEFAULT_ACCENT_COLOR}
       payload={payload}
       initialPhotoSignedUrl={initialPhotoSignedUrl}

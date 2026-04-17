@@ -3,13 +3,37 @@
  * Template components render from this shape only.
  */
 
-export type CvTemplateKey = 'modern_professional' | 'creative_bold' | 'corporate_minimal';
+export type CvTemplateKey =
+  | 'modern_professional'
+  | 'creative_bold'
+  | 'corporate_minimal'
+  | 'linear_timeline'
+  | 'balanced_split';
 
 export const CV_TEMPLATE_KEYS: CvTemplateKey[] = [
   'modern_professional',
   'creative_bold',
   'corporate_minimal',
+  'linear_timeline',
+  'balanced_split',
 ];
+
+/** Crop window as percentages of natural image (0–100), from react-easy-crop `Area` */
+export type CvPhotoCrop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Zoom used in the crop editor (≥ 1) */
+  zoom?: number;
+};
+
+export function coerceCvTemplateKey(raw: string | undefined | null): CvTemplateKey {
+  if (raw && (CV_TEMPLATE_KEYS as readonly string[]).includes(raw)) {
+    return raw as CvTemplateKey;
+  }
+  return 'modern_professional';
+}
 
 export const DEFAULT_ACCENT_COLOR = '#00A3CC';
 
@@ -48,6 +72,8 @@ export type CvPersonal = {
   photoUrl?: string;
   /** Supabase Storage path inside bucket `cv-photos` (e.g. employeeId/cvId/file.jpg) */
   photoStoragePath?: string;
+  /** Framing inside the photo frame (editor / print / PDF) */
+  photoCrop?: CvPhotoCrop;
 };
 
 /** Display and export options persisted with the CV */
