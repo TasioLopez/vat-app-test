@@ -1,7 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Printer, Mail, Check, Sparkles, Wand2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Printer,
+  Mail,
+  Check,
+  Sparkles,
+  Wand2,
+  Image,
+  ImageOff,
+  Upload,
+  Crop,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -100,6 +112,14 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
 
   const includePhoto = cvData.options?.includePhotoInCv === true;
 
+  const statusText = saving
+    ? 'Opslaan…'
+    : isDirty
+      ? 'Niet opgeslagen'
+      : lastSavedAt
+        ? 'Opgeslagen'
+        : '';
+
   const onPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -149,37 +169,41 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
   return (
     <div className="min-h-screen bg-gray-100 pb-24 print:bg-white print:pb-0">
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="ghost" size="sm" className="gap-1 text-gray-600" asChild>
-              <Link href={`/dashboard/employees/${employeeId}`}>
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-gray-600" asChild>
+              <Link
+                href={`/dashboard/employees/${employeeId}`}
+                aria-label="Terug naar werknemer"
+                title="Terug naar werknemer"
+              >
                 <ArrowLeft className="h-4 w-4" />
-                Terug naar werknemer
               </Link>
             </Button>
-            <div className="hidden h-6 w-px bg-gray-200 sm:block" />
+            <div className="hidden h-6 w-px shrink-0 bg-gray-200 sm:block" aria-hidden />
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="max-w-xs font-semibold"
+              className="min-w-0 max-w-[10rem] flex-1 font-semibold sm:max-w-xs"
               placeholder="CV-titel"
             />
-            <span
-              className={cn(
-                'text-xs',
-                isDirty ? 'text-amber-600' : 'text-emerald-600'
-              )}
-            >
-              {saving
-                ? 'Opslaan…'
-                : isDirty
-                  ? 'Niet opgeslagen'
-                  : lastSavedAt
-                    ? 'Opgeslagen'
-                    : ''}
-            </span>
-            {saveError && <span className="text-xs text-red-600">{saveError}</span>}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            {statusText ? (
+              <span
+                className={cn(
+                  'shrink-0 text-xs',
+                  saving || isDirty ? 'text-amber-600' : 'text-emerald-600'
+                )}
+                title={statusText}
+              >
+                {statusText}
+              </span>
+            ) : null}
+            {saveError ? (
+              <span className="max-w-[min(100%,14rem)] shrink-0 text-xs text-red-600" role="alert">
+                {saveError}
+              </span>
+            ) : null}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => save()} disabled={saving}>
                 <Check className="mr-1 h-4 w-4" />
                 Opslaan
@@ -187,122 +211,180 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3 border-t border-gray-100 pt-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-gray-500">AI</span>
+          <div
+            className="-mx-1 flex min-h-0 flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden border-t border-gray-100 px-1 pt-1.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="toolbar"
+            aria-label="CV-werkbalk"
+          >
+            <div className="flex shrink-0 items-center gap-1">
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
-                className="gap-1"
+                size="icon"
+                className="h-8 w-8 shrink-0"
                 disabled={aiBusy}
                 onClick={() => runAi('fill')}
+                aria-label="Lege velden invullen met AI"
+                title="Lege velden invullen met AI"
               >
                 <Sparkles className="h-4 w-4" />
-                Lege velden invullen
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
-                className="gap-1"
+                size="icon"
+                className="h-8 w-8 shrink-0"
                 disabled={aiBusy}
                 onClick={() => runAi('polish')}
+                aria-label="Teksten verfijnen met AI"
+                title="Teksten verfijnen met AI"
               >
                 <Wand2 className="h-4 w-4" />
-                Teksten verfijnen
               </Button>
-              {aiError && <span className="max-w-[min(100%,12rem)] text-xs text-red-600">{aiError}</span>}
+              {aiError ? (
+                <span
+                  className="ml-1 max-w-[9rem] shrink-0 truncate text-xs text-red-600"
+                  role="alert"
+                  title={aiError}
+                >
+                  {aiError}
+                </span>
+              ) : null}
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-4">
-              <AccentColorPicker value={accentColor} onChange={setAccentColor} />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Template:</span>
-                <Select
-                  value={templateKey}
-                  onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
+              <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
+              <Button
+                type="button"
+                variant={includePhoto ? 'secondary' : 'outline'}
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label={includePhoto ? 'Foto verbergen op CV' : 'Foto tonen op CV'}
+                title={includePhoto ? 'Foto verbergen op CV' : 'Foto tonen op CV'}
+                aria-pressed={includePhoto}
+                onClick={() => updateOptions({ includePhotoInCv: !includePhoto })}
+              >
+                {includePhoto ? <Image className="h-4 w-4" /> : <ImageOff className="h-4 w-4" />}
+              </Button>
+              <input
+                ref={photoFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={onPhotoSelected}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                disabled={saving}
+                onClick={() => photoFileRef.current?.click()}
+                aria-label="Foto uploaden"
+                title="Foto uploaden"
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+              {cvData.personal.photoStoragePath ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    disabled={saving || !photoDisplayUrl}
+                    onClick={() => setCropOpen(true)}
+                    aria-label="Foto uitsnede bewerken"
+                    title="Foto uitsnede bewerken"
+                  >
+                    <Crop className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-red-700 hover:bg-red-50 hover:text-red-700"
+                    onClick={removePhoto}
+                    aria-label="Foto verwijderen"
+                    title="Foto verwijderen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
+              {photoError ? (
+                <span className="max-w-[8rem] shrink-0 truncate text-xs text-red-600" role="alert" title={photoError}>
+                  {photoError}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
+              <span id="cv-editor-template-label" className="sr-only">
+                Template
+              </span>
+              <Select value={templateKey} onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}>
+                <SelectTrigger
+                  className="h-8 w-[min(11rem,46vw)] text-xs"
+                  aria-labelledby="cv-editor-template-label"
                 >
-                  <SelectTrigger className="w-[min(100%,280px)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="modern_professional">Modern zakelijk (zijbalk)</SelectItem>
-                    <SelectItem value="creative_bold">Creatief & opvallend</SelectItem>
-                    <SelectItem value="corporate_minimal">Formeel executive</SelectItem>
-                    <SelectItem value="linear_timeline">Chronologische tijdlijn</SelectItem>
-                    <SelectItem value="balanced_split">Evenwichtig tweeluik</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-2 sm:border-t-0 sm:pt-0">
-                <span className="text-xs font-medium text-gray-500">Foto</span>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
-                    checked={includePhoto}
-                    onChange={(e) => updateOptions({ includePhotoInCv: e.target.checked })}
-                  />
-                  Tonen op CV
-                </label>
-                <input
-                  ref={photoFileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={onPhotoSelected}
-                />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="modern_professional">Modern (zijbalk)</SelectItem>
+                  <SelectItem value="creative_bold">Creatief</SelectItem>
+                  <SelectItem value="corporate_minimal">Formeel</SelectItem>
+                  <SelectItem value="linear_timeline">Tijdlijn</SelectItem>
+                  <SelectItem value="balanced_split">Tweeluik</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={handlePrint}
+                aria-label="Afdrukken"
+                title="Afdrukken"
+              >
+                <Printer className="h-4 w-4" />
+              </Button>
+              {cvData.personal.email ? (
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" asChild>
+                  <a href={mailto} aria-label="E-mail CV" title="E-mail CV">
+                    <Mail className="h-4 w-4" />
+                  </a>
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  disabled={saving}
-                  onClick={() => photoFileRef.current?.click()}
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  disabled
+                  aria-label="Geen e-mailadres op CV"
+                  title="Geen e-mailadres op CV"
                 >
-                  Upload
-                </Button>
-                {cvData.personal.photoStoragePath ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={saving || !photoDisplayUrl}
-                      onClick={() => setCropOpen(true)}
-                    >
-                      Bewerken
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" className="text-red-700" onClick={removePhoto}>
-                      Verwijderen
-                    </Button>
-                  </>
-                ) : null}
-                {photoError ? (
-                  <span className="text-xs text-red-600">{photoError}</span>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={handlePrint}>
-                <Printer className="h-4 w-4" />
-                Print
-              </Button>
-              <Button type="button" variant="outline" size="sm" className="gap-1" asChild>
-                <a href={mailto}>
                   <Mail className="h-4 w-4" />
-                  E-mail
-                </a>
-              </Button>
-              <ExportCVButton employeeId={employeeId} cvId={cvId} />
+                </Button>
+              )}
+              <ExportCVButton employeeId={employeeId} cvId={cvId} variant="icon" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <p className="cv-no-print mb-4 text-center text-sm text-gray-500">
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <p className="cv-no-print mb-2 text-center text-xs text-gray-500">
           {employeeLabel} — klik op tekst om te bewerken.
         </p>
         <div className="flex justify-center overflow-x-auto">

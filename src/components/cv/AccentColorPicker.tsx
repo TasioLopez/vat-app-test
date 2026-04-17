@@ -15,21 +15,40 @@ type Props = {
   value: string;
   onChange: (hex: string) => void;
   className?: string;
+  /** compact: smaller swatches, no visible label (sr-only), single row */
+  variant?: 'default' | 'compact';
 };
 
-export default function AccentColorPicker({ value, onChange, className }: Props) {
+export default function AccentColorPicker({
+  value,
+  onChange,
+  className,
+  variant = 'default',
+}: Props) {
+  const compact = variant === 'compact';
+  const dot = compact ? 'h-7 w-7' : 'h-8 w-8';
+  const gap = compact ? 'gap-1' : 'gap-1.5';
+
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      <span className="text-sm text-gray-600">Accentkleur:</span>
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div
+      className={cn(
+        'flex flex-nowrap items-center',
+        compact ? 'gap-1' : 'gap-2 flex-wrap',
+        className
+      )}
+    >
+      <span className={cn(compact ? 'sr-only' : 'text-sm text-gray-600')}>Accentkleur</span>
+      <div className={cn('flex flex-nowrap items-center', gap)}>
         {PRESETS.map((p) => (
           <button
             key={p.id}
             type="button"
             title={p.id}
+            aria-label={`Accentkleur ${p.id}`}
             onClick={() => onChange(p.hex)}
             className={cn(
-              'h-8 w-8 rounded-full border-2 transition-transform hover:scale-105',
+              'shrink-0 rounded-full border-2 transition-transform hover:scale-105',
+              dot,
               value.toLowerCase() === p.hex.toLowerCase()
                 ? 'border-gray-900 ring-2 ring-offset-1'
                 : 'border-transparent'
@@ -37,13 +56,18 @@ export default function AccentColorPicker({ value, onChange, className }: Props)
             style={{ backgroundColor: p.hex }}
           />
         ))}
-        <label className="relative flex h-8 w-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-white hover:border-gray-400">
+        <label
+          className={cn(
+            'relative flex shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-white hover:border-gray-400',
+            dot
+          )}
+        >
           <input
             type="color"
             value={value.startsWith('#') ? value : '#00A3CC'}
             onChange={(e) => onChange(e.target.value)}
             className="absolute inset-0 h-[200%] w-[200%] cursor-pointer opacity-0"
-            aria-label="Aangepaste kleur"
+            aria-label="Aangepaste accentkleur"
           />
           <span className="pointer-events-none text-[10px] font-bold text-gray-500">+</span>
         </label>
