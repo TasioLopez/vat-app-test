@@ -85,8 +85,11 @@ type Client = {
 type Document = {
     employee_id: string | null;
     id: string;
+    layout_key: string | null;
     name: string | null;
     type: string | null;
+    tp_export_id: string | null;
+    tp_instance_id: string | null;
     uploaded_at: string | null;
     url: string;
 };
