@@ -25,6 +25,7 @@ type Row = {
   employee_id: string;
   title: string;              // derived from URL if name is unreliable
   url: string;                // documents/<employee_id>/<file>.pdf
+  layout_key: string | null;
   employeeName: string;
   employeeEmail: string;
   clientName: string;
@@ -123,7 +124,7 @@ export default async function TPDocsPage() {
   // Query ONLY TP docs from the table, then we will preview those files from Storage via signed URLs
   const docsQuery = admin
     .from("documents")
-    .select("id, employee_id, type, name, url, uploaded_at")
+    .select("id, employee_id, type, name, url, uploaded_at, layout_key")
     .eq("type", "tp")
     .order("uploaded_at", { ascending: false })
     .limit(1000);
@@ -157,6 +158,7 @@ export default async function TPDocsPage() {
       employee_id: d.employee_id,
       title,
       url: d.url,                // e.g. "documents/<employee_id>/<file>.pdf"
+      layout_key: d.layout_key ?? null,
       employeeName,
       employeeEmail,
       clientName,

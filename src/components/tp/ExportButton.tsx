@@ -1,7 +1,17 @@
 'use client';
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 
-export function ExportButton({ employeeId }: { employeeId: string }) {
+export function ExportButton({
+  employeeId,
+  tpInstanceId: tpInstanceIdProp,
+  layoutKey: layoutKeyProp,
+}: {
+  employeeId: string;
+  tpInstanceId?: string;
+  layoutKey?: 'tp_legacy' | 'tp_2026';
+}) {
+  const params = useParams() as { tpInstanceId?: string };
   const [busy, setBusy] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -11,13 +21,21 @@ export function ExportButton({ employeeId }: { employeeId: string }) {
     setSavedMsg(null);
 
     try {
-      const filename = `TP-${employeeId}.pdf`;
+      const tpInstanceId = tpInstanceIdProp || params.tpInstanceId || null;
+      const layoutKey = layoutKeyProp || 'tp_legacy';
+      const filenamePrefix = layoutKey === 'tp_2026' ? 'TP-2026' : 'TP';
+      const filename = `${filenamePrefix}-${employeeId}.pdf`;
 
       // Ask the API for a signed URL that already includes Content-Disposition: attachment
+      const query = new URLSearchParams({
+        employeeId,
+        filename,
+        mode: 'json',
+      });
+      if (tpInstanceId) query.set('tpInstanceId', tpInstanceId);
+      if (layoutKey) query.set('layoutKey', layoutKey);
       const res = await fetch(
-        `/api/export-pdf?employeeId=${encodeURIComponent(employeeId)}&filename=${encodeURIComponent(
-          filename
-        )}&mode=json`,
+        `/api/export-pdf?${query.toString()}`,
         { method: 'GET' }
       );
       const data = await res.json();

@@ -17,6 +17,7 @@ type Row = {
   employee_id: string;
   title: string;
   url: string | null;         // documents/<employee_id>/<file>.pdf
+  layout_key: string | null;
   employeeName: string;
   employeeEmail: string;
   clientName: string;
@@ -131,7 +132,14 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
           <TableBody>
             {list.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.title}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>{r.title}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground">
+                      {r.layout_key === 'tp_2026' ? 'TP 2026' : 'TP (huidig)'}
+                    </span>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
                     <span>{r.employeeName}</span>

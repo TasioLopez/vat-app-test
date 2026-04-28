@@ -214,6 +214,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [docsModalOpen, setDocsModalOpen] = useState(false);
+    const [tpVariantModalOpen, setTpVariantModalOpen] = useState(false);
+    const [tpOpening, setTpOpening] = useState<null | 'tp_legacy' | 'tp_2026'>(null);
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -661,6 +663,61 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const selectFieldClass = (field: keyof EmployeeDetails) =>
         cn(SELECT_CLASS, autofilledFields.has(field) && '!border-yellow-400 bg-yellow-50/30');
 
+    const openTpBuilder = async (layoutKey: 'tp_legacy' | 'tp_2026') => {
+        setTpOpening(layoutKey);
+        try {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            const { data: existing, error: findError } = await (supabase as any)
+                .from('tp_instances')
+                .select('id')
+                .eq('employee_id', employeeId)
+                .eq('layout_key', layoutKey)
+                .eq('status', 'draft')
+                .maybeSingle();
+
+            if (findError && findError.code !== 'PGRST116') {
+                showError('Fout', 'Kon bestaande TP draft niet ophalen.');
+                return;
+            }
+
+            let tpInstanceId = existing?.id as string | undefined;
+            if (!tpInstanceId) {
+                const title = layoutKey === 'tp_2026' ? 'TP 2026' : 'Trajectplan';
+                const { data: inserted, error: insertError } = await (supabase as any)
+                    .from('tp_instances')
+                    .insert({
+                        employee_id: employeeId,
+                        layout_key: layoutKey,
+                        title,
+                        status: 'draft',
+                        data_json: {},
+                        created_by: user?.id ?? null,
+                        updated_by: user?.id ?? null,
+                    })
+                    .select('id')
+                    .single();
+
+                if (insertError || !inserted?.id) {
+                    showError('Fout', 'Kon geen TP draft aanmaken.');
+                    return;
+                }
+                tpInstanceId = inserted.id;
+            }
+
+            setTpVariantModalOpen(false);
+            setDocsModalOpen(false);
+            router.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
+        } catch (error) {
+            console.error(error);
+            showError('Fout', 'Kon TP bouwer niet openen.');
+        } finally {
+            setTpOpening(null);
+        }
+    };
+
     return (
         <div className="p-4 space-y-6">
             <h1 className="text-xl font-bold">Werknemer Details</h1>
@@ -846,7 +903,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             type="button"
                                             onClick={() => {
                                                 setDocsModalOpen(false);
-                                                router.push(`/dashboard/tp/${employeeId}`);
+                                                setTpVariantModalOpen(true);
                                             }}
                                             className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
                                         >
@@ -888,6 +945,56 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             <span className="min-w-0 flex-1">
                                                 <span className="block font-semibold text-gray-900">CV</span>
                                                 <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            <Dialog open={tpVariantModalOpen} onOpenChange={setTpVariantModalOpen}>
+                                <DialogContent className="max-w-md sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <Map className="h-5 w-5 text-indigo-600" />
+                                            Kies Trajectplan variant
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Huidige TP blijft standaard. Je kunt ook TP 2026 starten.
+                                        </p>
+                                    </DialogHeader>
+
+                                    <div className="flex flex-col gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => openTpBuilder('tp_legacy')}
+                                            disabled={tpOpening !== null}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
+                                                <Map className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">TP (huidig)</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {tpOpening === 'tp_legacy' ? 'Openen…' : 'Standaard trajectplan'}
+                                                </span>
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => openTpBuilder('tp_2026')}
+                                            disabled={tpOpening !== null}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
+                                                <Map className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">TP 2026</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {tpOpening === 'tp_2026' ? 'Openen…' : 'Nieuwe layout 2026'}
+                                                </span>
                                             </span>
                                         </button>
                                     </div>

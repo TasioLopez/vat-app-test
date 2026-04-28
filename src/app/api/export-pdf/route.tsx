@@ -6,6 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { loadTPData } from "@/lib/tp/load";
+import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,6 +82,9 @@ export async function GET(req: NextRequest) {
   const employeeId = search.get("employeeId");
   const filename = (search.get("filename") || "TP.pdf").replace(/[^\w.\-]/g, "_");
   const mode = search.get("mode") || "json";
+  const tpInstanceId = search.get("tpInstanceId");
+  const requestedLayout = search.get("layoutKey");
+  const layoutKey: TPLayoutKey = isTPLayoutKey(requestedLayout) ? requestedLayout : "tp_legacy";
 
   if (!employeeId) {
     return new Response(JSON.stringify({ error: "Missing employeeId" }), {
@@ -103,9 +108,49 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await ssr.auth.getUser();
 
   const base = getBaseUrl(req);
-  const printUrl =
-    `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1` +
-    (user?.id ? `&u=${encodeURIComponent(user.id)}` : "");
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  let resolvedLayout: TPLayoutKey = layoutKey;
+  let snapshotData: Record<string, any> = {};
+
+  if (tpInstanceId) {
+    const { data: instance, error: instanceErr } = await (supabase as any)
+      .from("tp_instances")
+      .select("id, employee_id, layout_key, data_json")
+      .eq("id", tpInstanceId)
+      .maybeSingle();
+
+    if (instanceErr || !instance || instance.employee_id !== employeeId || !isTPLayoutKey(instance.layout_key)) {
+      return new Response(JSON.stringify({ error: "Invalid tpInstanceId for employee" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    resolvedLayout = instance.layout_key as TPLayoutKey;
+    snapshotData = ((instance.data_json || {}) as Record<string, any>);
+  }
+
+  if (resolvedLayout === "tp_legacy") {
+    snapshotData = await loadTPData(employeeId, {
+      preferredConsultantUserId: user?.id,
+    });
+  }
+
+  if (resolvedLayout === "tp_2026" && !tpInstanceId) {
+    return new Response(JSON.stringify({ error: "tpInstanceId is required for TP 2026 export" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const printUrl = resolvedLayout === "tp_2026"
+    ? `${base}/tp2026/print?tpInstanceId=${encodeURIComponent(tpInstanceId || "")}`
+    : `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1` +
+      (user?.id ? `&u=${encodeURIComponent(user.id)}` : "");
 
   let browser: any = null;
 
@@ -150,21 +195,44 @@ export async function GET(req: NextRequest) {
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
-    // Upload to Supabase Storage
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
     const pathKey = `documents/${employeeId}/tp-final-${Date.now()}.pdf`;
+    let tpExportId: string | null = null;
+
+    if (tpInstanceId) {
+      const { data: exportRow, error: exportInsertErr } = await (supabase as any)
+        .from("tp_exports")
+        .insert({
+          tp_instance_id: tpInstanceId,
+          layout_key: resolvedLayout,
+          snapshot_json: snapshotData,
+          filename,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (exportInsertErr) console.error("tp_exports insert error:", exportInsertErr);
+      tpExportId = exportRow?.id ?? null;
+    }
 
     const { error: uploadErr } = await supabase.storage
       .from("documents")
       .upload(pathKey, pdfBuffer, { contentType: "application/pdf", upsert: false });
     if (uploadErr) console.error("Upload error:", uploadErr);
 
+    if (tpExportId) {
+      const { error: exportUpdateErr } = await (supabase as any)
+        .from("tp_exports")
+        .update({ storage_path: pathKey })
+        .eq("id", tpExportId);
+      if (exportUpdateErr) console.error("tp_exports update error:", exportUpdateErr);
+    }
+
     const { error: insertErr } = await supabase.from("documents").insert({
       employee_id: employeeId,
       type: "tp",
+      layout_key: resolvedLayout,
+      tp_instance_id: tpInstanceId,
+      tp_export_id: tpExportId,
       name: filename,
       url: pathKey,
       uploaded_at: new Date().toISOString(),

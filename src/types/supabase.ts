@@ -106,24 +106,33 @@ export type Database = {
         Row: {
           employee_id: string | null
           id: string
+          layout_key: string | null
           name: string | null
           type: string | null
+          tp_export_id: string | null
+          tp_instance_id: string | null
           uploaded_at: string | null
           url: string
         }
         Insert: {
           employee_id?: string | null
           id?: string
+          layout_key?: string | null
           name?: string | null
           type?: string | null
+          tp_export_id?: string | null
+          tp_instance_id?: string | null
           uploaded_at?: string | null
           url: string
         }
         Update: {
           employee_id?: string | null
           id?: string
+          layout_key?: string | null
           name?: string | null
           type?: string | null
+          tp_export_id?: string | null
+          tp_instance_id?: string | null
           uploaded_at?: string | null
           url?: string
         }
@@ -133,6 +142,20 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_tp_export_id_fkey"
+            columns: ["tp_export_id"]
+            isOneToOne: false
+            referencedRelation: "tp_exports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_tp_instance_id_fkey"
+            columns: ["tp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "tp_instances"
             referencedColumns: ["id"]
           },
         ]
@@ -414,6 +437,115 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tp_exports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          filename: string | null
+          id: string
+          layout_key: string
+          snapshot_json: Json
+          storage_path: string | null
+          tp_instance_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          filename?: string | null
+          id?: string
+          layout_key: string
+          snapshot_json?: Json
+          storage_path?: string | null
+          tp_instance_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          filename?: string | null
+          id?: string
+          layout_key?: string
+          snapshot_json?: Json
+          storage_path?: string | null
+          tp_instance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_exports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_exports_tp_instance_id_fkey"
+            columns: ["tp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "tp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tp_instances: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_json: Json
+          employee_id: string
+          id: string
+          layout_key: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          employee_id: string
+          id?: string
+          layout_key: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          employee_id?: string
+          id?: string
+          layout_key?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tp_instances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_instances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tp_instances_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
