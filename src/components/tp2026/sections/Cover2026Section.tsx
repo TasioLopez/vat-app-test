@@ -45,7 +45,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
         alt="TP 2026 cover background"
         fill
         priority
-        style={{ objectFit: 'fill' }}
+        style={{ objectFit: 'cover', objectPosition: 'center top' }}
       />
 
       <div className="absolute left-[78px] top-[58px]">
