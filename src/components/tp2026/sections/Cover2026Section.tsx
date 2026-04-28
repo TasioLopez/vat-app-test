@@ -39,13 +39,18 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
     '—';
 
   return (
-    <A4Page className="relative">
+    <A4Page className="relative bg-[#c8bd90]">
       <Image
         src="/tp2026-cover-original.svg"
         alt="TP 2026 cover background"
         fill
         priority
-        style={{ objectFit: 'cover', objectPosition: 'center top' }}
+        style={{
+          objectFit: 'fill',
+          objectPosition: 'center top',
+          transform: 'scaleX(1.4142)',
+          transformOrigin: 'center top',
+        }}
       />
 
       <div className="absolute left-[78px] top-[58px]">
