@@ -39,15 +39,15 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
     '—';
 
   return (
-    <A4Page className="relative bg-[#c8bd90]">
-      <Image
-        src="/tp2026-cover-cropped.svg"
-        alt="TP 2026 cover background"
-        fill
-        priority
+    <A4Page className="relative" style={{ backgroundColor: '#c8bd90' }}>
+      <div
+        aria-hidden
+        className="absolute inset-0"
         style={{
-          objectFit: 'contain',
-          objectPosition: 'center top',
+          backgroundImage: 'url(/tp2026-cover-original.svg)',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'auto 100%',
+          backgroundPosition: 'center top',
         }}
       />
 

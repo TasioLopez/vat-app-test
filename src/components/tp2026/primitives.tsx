@@ -8,14 +8,16 @@ export const A4_H = 1123;
 export function A4Page({
   children,
   className = '',
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
       className={`bg-white w-[794px] h-[1123px] border border-border shadow-sm print:shadow-none print:border-0 overflow-hidden ${className}`}
-      style={{ width: A4_W, height: A4_H }}
+      style={{ width: A4_W, height: A4_H, ...style }}
     >
       {children}
     </div>
