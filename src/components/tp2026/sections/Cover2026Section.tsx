@@ -46,7 +46,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
         style={{
           backgroundImage: 'url(/tp2026-cover-original.svg)',
           backgroundRepeat: 'no-repeat',
-          backgroundSize: 'auto 100%',
+          backgroundSize: 'auto 90%',
           backgroundPosition: 'center top',
         }}
       />
