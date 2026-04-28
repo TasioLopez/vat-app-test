@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { loadTPData } from "@/lib/tp/load";
 import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
+import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -132,6 +133,9 @@ export async function GET(req: NextRequest) {
 
     resolvedLayout = instance.layout_key as TPLayoutKey;
     snapshotData = ((instance.data_json || {}) as Record<string, any>);
+    if (resolvedLayout === "tp_2026") {
+      snapshotData = ensureTP2026Shape(snapshotData);
+    }
   }
 
   if (resolvedLayout === "tp_legacy") {
