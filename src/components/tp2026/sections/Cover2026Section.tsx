@@ -41,23 +41,23 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
   return (
     <A4Page className="relative">
       <Image
-        src="/tp2026-cover-z.svg"
+        src="/tp2026-cover-original.svg"
         alt="TP 2026 cover background"
         fill
         priority
-        style={{ objectFit: 'cover' }}
+        style={{ objectFit: 'fill' }}
       />
 
       <div className="absolute left-[78px] top-[58px]">
         <Image src={Logo2} alt="ValentineZ" width={165} height={42} />
       </div>
 
-      <div className="absolute left-0 right-0 top-[470px] h-[170px] bg-[#f5efe6] border-y border-[#ccb98f] flex items-center px-[70px]">
+      <div className="absolute left-0 right-0 top-[476px] h-[164px] bg-[#f5efe6] border-y border-[#ccb98f] flex items-center px-[70px]">
         <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center mr-10">
           <Image src="/tp2026-cover-icon.svg" alt="Cover icon" width={88} height={88} />
         </div>
         <div className="flex-1">
-          <h1 className="text-[38px] leading-[1] font-extrabold text-[#6d2a96] mb-3 tracking-tight">
+          <h1 className="text-[30px] leading-[1.04] font-extrabold text-[#6d2a96] mb-2 tracking-tight">
             Trajectplan Spoor 2 begeleiding
           </h1>
           <div className="max-w-[520px]">
