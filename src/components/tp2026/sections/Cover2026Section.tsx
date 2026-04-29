@@ -11,8 +11,9 @@ const COVER_LAYOUT = {
   pageBg: '#c8bd90',
   artwork: {
     image: '/tp2026-cover-original.svg',
-    size: 'auto 82%',
-    position: 'center 22px',
+    /** Width-anchored: banner strip in source aligns to full A4 width (794px). */
+    size: '100% auto',
+    position: 'center 48px',
   },
   logo: {
     x: 66,
@@ -21,7 +22,7 @@ const COVER_LAYOUT = {
     h: 41,
   },
   banner: {
-    y: 510,
+    y: 528,
     h: 102,
     px: 188,
     py: 12,
