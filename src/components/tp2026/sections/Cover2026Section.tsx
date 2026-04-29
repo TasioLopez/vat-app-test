@@ -7,6 +7,38 @@ import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 import Logo2 from '@/assets/images/logo-2.png';
 
+const COVER_LAYOUT = {
+  pageBg: '#c8bd90',
+  artwork: {
+    image: '/tp2026-cover-original.svg',
+    size: 'auto 82%',
+    position: 'center 22px',
+  },
+  logo: {
+    x: 66,
+    y: 50,
+    w: 162,
+    h: 41,
+  },
+  banner: {
+    y: 510,
+    h: 102,
+    px: 188,
+    py: 12,
+  },
+  title: {
+    size: 31,
+    lineHeight: 1.02,
+    mb: 4,
+  },
+  fields: {
+    maxW: 420,
+    gap: 2,
+    labelW: 138,
+    fontSize: 11,
+  },
+} as const;
+
 export function Cover2026Editor({
   data,
   updateField,
@@ -30,26 +62,49 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
     '—';
 
   return (
-    <A4Page className="relative" style={{ backgroundColor: '#c8bd90' }}>
+    <A4Page className="relative" style={{ backgroundColor: COVER_LAYOUT.pageBg }}>
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
-          backgroundImage: 'url(/tp2026-cover-original.svg)',
+          backgroundImage: `url(${COVER_LAYOUT.artwork.image})`,
           backgroundRepeat: 'no-repeat',
-          backgroundSize: 'auto 84%',
-          backgroundPosition: 'center top',
+          backgroundSize: COVER_LAYOUT.artwork.size,
+          backgroundPosition: COVER_LAYOUT.artwork.position,
         }}
       />
-      <div className="absolute left-[68px] top-[52px]">
-        <Image src={Logo2} alt="ValentineZ" width={162} height={41} />
+      <div
+        className="absolute"
+        style={{
+          left: COVER_LAYOUT.logo.x,
+          top: COVER_LAYOUT.logo.y,
+        }}
+      >
+        <Image src={Logo2} alt="ValentineZ" width={COVER_LAYOUT.logo.w} height={COVER_LAYOUT.logo.h} />
       </div>
 
-      <div className="absolute left-0 right-0 top-[512px] h-[98px] px-[188px] py-[12px] box-border">
-        <h1 className="text-[30px] leading-[1.02] font-extrabold text-[#6d2a96] mb-[4px] tracking-tight">
+      <div
+        className="absolute left-0 right-0 box-border"
+        style={{
+          top: COVER_LAYOUT.banner.y,
+          height: COVER_LAYOUT.banner.h,
+          paddingLeft: COVER_LAYOUT.banner.px,
+          paddingRight: COVER_LAYOUT.banner.px,
+          paddingTop: COVER_LAYOUT.banner.py,
+          paddingBottom: COVER_LAYOUT.banner.py,
+        }}
+      >
+        <h1
+          className="font-extrabold text-[#6d2a96] tracking-tight"
+          style={{
+            fontSize: COVER_LAYOUT.title.size,
+            lineHeight: COVER_LAYOUT.title.lineHeight,
+            marginBottom: COVER_LAYOUT.title.mb,
+          }}
+        >
           Trajectplan Spoor 2 begeleiding
         </h1>
-        <div className="space-y-[2px] max-w-[410px]">
+        <div style={{ maxWidth: COVER_LAYOUT.fields.maxW, rowGap: COVER_LAYOUT.fields.gap }} className="grid">
           <CoverInfoLine label="Voor" value={employeeName} />
           <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
           <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
@@ -61,7 +116,13 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
 
 function CoverInfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[138px_1fr] items-end border-b border-[#bda96f] text-[11px] text-[#6d2a96] leading-tight py-0.5">
+    <div
+      className="grid items-end border-b border-[#bda96f] text-[#6d2a96] leading-tight py-0.5"
+      style={{
+        gridTemplateColumns: `${COVER_LAYOUT.fields.labelW}px 1fr`,
+        fontSize: COVER_LAYOUT.fields.fontSize,
+      }}
+    >
       <span className="font-semibold">{label}</span>
       <span className="text-[#6b6b6b] truncate">{value || '—'}</span>
     </div>
