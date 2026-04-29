@@ -11,9 +11,13 @@ const COVER_LAYOUT = {
   pageBg: '#c8bd90',
   artwork: {
     image: '/tp2026-cover-original.svg',
-    /** Width-anchored: banner strip in source aligns to full A4 width (794px). */
-    size: '100% auto',
-    position: 'center 48px',
+    /**
+     * Fill the A4 canvas so the visible artwork (Z + banner) reaches full page width.
+     * Plain `100% auto` only matches the SVG viewBox width, which includes transparent
+     * side gutters — that leaves the cream banner narrower than the page.
+     */
+    size: 'cover',
+    position: 'center 42%',
   },
   logo: {
     x: 66,
@@ -22,10 +26,10 @@ const COVER_LAYOUT = {
     h: 41,
   },
   banner: {
-    y: 528,
-    h: 102,
+    y: 518,
+    h: 98,
     px: 188,
-    py: 12,
+    py: 10,
   },
   title: {
     size: 31,
