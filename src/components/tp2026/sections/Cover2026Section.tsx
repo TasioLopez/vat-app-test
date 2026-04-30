@@ -14,11 +14,12 @@ const COVER_LAYOUT = {
     size: '100% auto',
     position: 'center top',
   },
+  /** Tuned to match print reference: band ~45% from page top, ~17% of A4 height. */
   banner: {
-    y: 498,
-    h: 100,
+    y: 508,
+    h: 192,
     px: 188,
-    py: 10,
+    py: 14,
   },
   title: {
     size: 31,
