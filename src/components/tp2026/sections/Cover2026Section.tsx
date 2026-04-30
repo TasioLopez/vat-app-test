@@ -1,7 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026CoverFields } from '@/lib/tp2026/schema';
+import Logo2 from '@/assets/images/logo-2.png';
 import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 
@@ -9,10 +11,10 @@ import FieldControl from '@/components/tp2026/FieldControl';
  * Positive = shift artwork (and banner) slightly below strict vertical center on A4,
  * matching `01_Trajectplan_voorkant` (more margin above the Z than below).
  */
-const COVER_ARTWORK_VERTICAL_NUDGE_PX = 36;
+const COVER_ARTWORK_VERTICAL_NUDGE_PX = 44;
 
 const COVER_LAYOUT = {
-  pageBg: '#c8bd90',
+  pageBg: '#cfbf8dff',
   artwork: {
     /** Cropped vector asset (no transparent viewBox gutters). */
     image: '/tp2026-cover-visual.svg',
@@ -76,6 +78,9 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
           transform: `translateY(${COVER_ARTWORK_VERTICAL_NUDGE_PX}px)`,
         }}
       />
+      <div className="absolute left-0 top-0 z-10 pl-8 pt-7 pointer-events-none">
+        <Image src={Logo2} alt="ValentineZ" width={150} height={50} priority />
+      </div>
       <div
         className="absolute left-0 right-0 box-border"
         style={{
