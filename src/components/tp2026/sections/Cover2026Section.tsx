@@ -12,7 +12,8 @@ const COVER_LAYOUT = {
     image: '/tp2026-cover-visual.svg',
     /** Width-anchored: artwork fills page width; height follows aspect ratio. */
     size: '100% auto',
-    position: 'center top',
+    /** Vertical center: artwork is shorter than A4; top-align left the Z/cream band too high vs overlays. */
+    position: 'center center',
   },
   /** Tuned to match print reference: band ~45% from page top, ~17% of A4 height. */
   banner: {
