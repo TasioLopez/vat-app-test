@@ -5,6 +5,12 @@ import { TP2026CoverFields } from '@/lib/tp2026/schema';
 import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 
+/**
+ * Positive = shift artwork (and banner) slightly below strict vertical center on A4,
+ * matching `01_Trajectplan_voorkant` (more margin above the Z than below).
+ */
+const COVER_ARTWORK_VERTICAL_NUDGE_PX = 36;
+
 const COVER_LAYOUT = {
   pageBg: '#c8bd90',
   artwork: {
@@ -12,10 +18,10 @@ const COVER_LAYOUT = {
     image: '/tp2026-cover-visual.svg',
     /** Width-anchored: artwork fills page width; height follows aspect ratio. */
     size: '100% auto',
-    /** Vertical center: artwork is shorter than A4; top-align left the Z/cream band too high vs overlays. */
+    /** Geometric vertical center; use {@link COVER_ARTWORK_VERTICAL_NUDGE_PX} for doc-accurate offset. */
     position: 'center center',
   },
-  /** Tuned to match print reference: band ~45% from page top, ~17% of A4 height. */
+  /** Band geometry; `y` is relative to vertically centered artwork before nudge. */
   banner: {
     y: 508,
     h: 192,
@@ -67,12 +73,13 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
           backgroundRepeat: 'no-repeat',
           backgroundSize: COVER_LAYOUT.artwork.size,
           backgroundPosition: COVER_LAYOUT.artwork.position,
+          transform: `translateY(${COVER_ARTWORK_VERTICAL_NUDGE_PX}px)`,
         }}
       />
       <div
         className="absolute left-0 right-0 box-border"
         style={{
-          top: COVER_LAYOUT.banner.y,
+          top: COVER_LAYOUT.banner.y + COVER_ARTWORK_VERTICAL_NUDGE_PX,
           height: COVER_LAYOUT.banner.h,
           paddingLeft: COVER_LAYOUT.banner.px,
           paddingRight: COVER_LAYOUT.banner.px,
