@@ -1,33 +1,22 @@
 'use client';
 
-import Image from 'next/image';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026CoverFields } from '@/lib/tp2026/schema';
 import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
-import Logo2 from '@/assets/images/logo-2.png';
 
 const COVER_LAYOUT = {
   pageBg: '#c8bd90',
   artwork: {
-    image: '/tp2026-cover-original.svg',
-    /**
-     * Fill the A4 canvas so the visible artwork (Z + banner) reaches full page width.
-     * Plain `100% auto` only matches the SVG viewBox width, which includes transparent
-     * side gutters — that leaves the cream banner narrower than the page.
-     */
-    size: 'cover',
-    position: 'center 42%',
-  },
-  logo: {
-    x: 66,
-    y: 50,
-    w: 162,
-    h: 41,
+    /** Cropped vector asset (no transparent viewBox gutters). */
+    image: '/tp2026-cover-visual.svg',
+    /** Width-anchored: artwork fills page width; height follows aspect ratio. */
+    size: '100% auto',
+    position: 'center top',
   },
   banner: {
-    y: 518,
-    h: 98,
+    y: 498,
+    h: 100,
     px: 188,
     py: 10,
   },
@@ -78,16 +67,6 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
           backgroundPosition: COVER_LAYOUT.artwork.position,
         }}
       />
-      <div
-        className="absolute"
-        style={{
-          left: COVER_LAYOUT.logo.x,
-          top: COVER_LAYOUT.logo.y,
-        }}
-      >
-        <Image src={Logo2} alt="ValentineZ" width={COVER_LAYOUT.logo.w} height={COVER_LAYOUT.logo.h} />
-      </div>
-
       <div
         className="absolute left-0 right-0 box-border"
         style={{
