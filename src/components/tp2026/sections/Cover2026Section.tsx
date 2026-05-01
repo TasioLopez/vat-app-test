@@ -11,16 +11,16 @@ import FieldControl from '@/components/tp2026/FieldControl';
  * Positive = shift artwork (and banner) slightly below strict vertical center on A4,
  * matching `01_Trajectplan_voorkant` (more margin above the Z than below).
  */
-const COVER_ARTWORK_VERTICAL_NUDGE_PX = 96;
+const COVER_ARTWORK_VERTICAL_NUDGE_PX = 78;
 
 const COVER_LAYOUT = {
   pageBg: '#cfbf8dff',
   /** Top-left logo: margins + alignment with reference `01_Trajectplan_voorkant` (above Z, clear inset from page edges). */
   logo: {
-    left: 68,
-    top: 62,
-    w: 150,
-    h: 50,
+    left: 76,
+    top: 54,
+    w: 165,
+    h: 55,
   },
   artwork: {
     /** Cropped vector asset (no transparent viewBox gutters). */
