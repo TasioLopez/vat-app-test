@@ -12,6 +12,8 @@ import FieldControl from '@/components/tp2026/FieldControl';
  * matching `01_Trajectplan_voorkant` (more margin above the Z than below).
  */
 const COVER_ARTWORK_VERTICAL_NUDGE_PX = 78;
+/** Uniform scale for SVG + banner overlay (keeps cream band aligned with text). */
+const COVER_ARTWORK_SCALE = 1.04;
 
 const COVER_LAYOUT = {
   pageBg: '#cfbf8dff',
@@ -30,7 +32,7 @@ const COVER_LAYOUT = {
     /** Geometric vertical center; use {@link COVER_ARTWORK_VERTICAL_NUDGE_PX} for doc-accurate offset. */
     position: 'center center',
   },
-  /** Band geometry; `y` is relative to vertically centered artwork before nudge. */
+  /** Band geometry; `y` is page coords inside the scaled wrapper (nudge applied on wrapper, not added here). */
   banner: {
     y: 508,
     h: 192,
@@ -75,51 +77,58 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
   return (
     <A4Page className="relative" style={{ backgroundColor: COVER_LAYOUT.pageBg }}>
       <div
-        aria-hidden
         className="absolute inset-0"
         style={{
-          backgroundImage: `url(${COVER_LAYOUT.artwork.image})`,
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: COVER_LAYOUT.artwork.size,
-          backgroundPosition: COVER_LAYOUT.artwork.position,
-          transform: `translateY(${COVER_ARTWORK_VERTICAL_NUDGE_PX}px)`,
+          transformOrigin: 'center center',
+          transform: `translateY(${COVER_ARTWORK_VERTICAL_NUDGE_PX}px) scale(${COVER_ARTWORK_SCALE})`,
         }}
-      />
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url(${COVER_LAYOUT.artwork.image})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: COVER_LAYOUT.artwork.size,
+            backgroundPosition: COVER_LAYOUT.artwork.position,
+          }}
+        />
+        <div
+          className="absolute left-0 right-0 box-border"
+          style={{
+            top: COVER_LAYOUT.banner.y,
+            height: COVER_LAYOUT.banner.h,
+            paddingLeft: COVER_LAYOUT.banner.px,
+            paddingRight: COVER_LAYOUT.banner.px,
+            paddingTop: COVER_LAYOUT.banner.py,
+            paddingBottom: COVER_LAYOUT.banner.py,
+          }}
+        >
+          <h1
+            className="font-extrabold text-[#6d2a96] tracking-tight"
+            style={{
+              fontSize: COVER_LAYOUT.title.size,
+              lineHeight: COVER_LAYOUT.title.lineHeight,
+              marginBottom: COVER_LAYOUT.title.mb,
+            }}
+          >
+            Trajectplan Spoor 2 begeleiding
+          </h1>
+          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW, rowGap: COVER_LAYOUT.fields.gap }} className="grid">
+            <CoverInfoLine label="Voor" value={employeeName} />
+            <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
+            <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
+          </div>
+        </div>
+      </div>
       <div
-        className="absolute z-10 pointer-events-none"
+        className="absolute z-20 pointer-events-none"
         style={{
           left: COVER_LAYOUT.logo.left,
           top: COVER_LAYOUT.logo.top,
         }}
       >
         <Image src={Logo2} alt="ValentineZ" width={COVER_LAYOUT.logo.w} height={COVER_LAYOUT.logo.h} priority />
-      </div>
-      <div
-        className="absolute left-0 right-0 box-border"
-        style={{
-          top: COVER_LAYOUT.banner.y + COVER_ARTWORK_VERTICAL_NUDGE_PX,
-          height: COVER_LAYOUT.banner.h,
-          paddingLeft: COVER_LAYOUT.banner.px,
-          paddingRight: COVER_LAYOUT.banner.px,
-          paddingTop: COVER_LAYOUT.banner.py,
-          paddingBottom: COVER_LAYOUT.banner.py,
-        }}
-      >
-        <h1
-          className="font-extrabold text-[#6d2a96] tracking-tight"
-          style={{
-            fontSize: COVER_LAYOUT.title.size,
-            lineHeight: COVER_LAYOUT.title.lineHeight,
-            marginBottom: COVER_LAYOUT.title.mb,
-          }}
-        >
-          Trajectplan Spoor 2 begeleiding
-        </h1>
-        <div style={{ maxWidth: COVER_LAYOUT.fields.maxW, rowGap: COVER_LAYOUT.fields.gap }} className="grid">
-          <CoverInfoLine label="Voor" value={employeeName} />
-          <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
-          <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
-        </div>
       </div>
     </A4Page>
   );
