@@ -57,9 +57,9 @@ function BasisPage({
     <A4Page className="p-8 flex flex-col">
       <A4LogoHeader />
       {blocks.map((block) => (
-        <div key={block.key} className="mb-3 border border-[#b8985c]">
+        <div key={block.key} className="mb-4">
           <SectionBand title={block.title} />
-          <div className="p-3 text-[12px] leading-relaxed whitespace-pre-wrap bg-[#f5efe6]">
+          <div className="border border-[#b8985c] p-3 text-[12px] leading-relaxed whitespace-pre-wrap bg-white text-neutral-900">
             {block.text || '— nog niet ingevuld —'}
           </div>
         </div>

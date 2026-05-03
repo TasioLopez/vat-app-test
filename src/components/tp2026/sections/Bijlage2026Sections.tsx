@@ -1,6 +1,6 @@
 'use client';
 
-import { A4LogoHeader, A4Page, DataRow, FooterIdentity, SectionBand } from '@/components/tp2026/primitives';
+import { A4LogoHeader, A4Page, DataRow, FooterIdentity, SectionBand, TP2026FieldTable } from '@/components/tp2026/primitives';
 import type {
   TP2026Bijlage1Phase,
   TP2026Bijlage2Model,
@@ -114,13 +114,15 @@ export function Bijlage1A4Pages({
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 1 - Voortgang en planning</h2>
       {phases.map((phase, idx) => (
-        <div key={idx} className="mb-3 border border-[#b8985c]">
+        <div key={idx} className="mb-4">
           <SectionBand title={`Planning fase ${idx + 1}`} />
-          <DataRow label="Doel" value={phase.title || '—'} />
-          <DataRow label="Periode" value={`${formatNLDate(phase.period_from)} t/m ${formatNLDate(phase.period_to)}`} />
-          {phase.activities.map((a, i) => (
-            <DataRow key={`${idx}-${i}`} label={a.name} value={a.status} compact />
-          ))}
+          <TP2026FieldTable>
+            <DataRow label="Doel" value={phase.title || '—'} />
+            <DataRow label="Periode" value={`${formatNLDate(phase.period_from)} t/m ${formatNLDate(phase.period_to)}`} />
+            {phase.activities.map((a, i) => (
+              <DataRow key={`${idx}-${i}`} label={a.name} value={a.status} compact />
+            ))}
+          </TP2026FieldTable>
         </div>
       ))}
       <p className="text-[10px] italic">Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering</p>
@@ -206,8 +208,8 @@ export function Bijlage2A4Pages({
         </div>
       </div>
 
-      <SectionBand title="POW-meter™ Tredes" />
-      <div className="border-x border-[#b8985c]">
+      <SectionBand title="POW-meter™ Tredes" className="mt-4" />
+      <TP2026FieldTable>
         {model.powTredes.map((trede) => (
           <DataRow
             key={trede.trede}
@@ -216,7 +218,7 @@ export function Bijlage2A4Pages({
             compact
           />
         ))}
-      </div>
+      </TP2026FieldTable>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
@@ -275,8 +277,8 @@ export function Bijlage3A4Pages({
     <A4Page className="p-8 flex flex-col">
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 3 - Stroomschema POW-meter™</h2>
-      <div className="border border-[#b8985c]">
-        <SectionBand title="Vragen stroomschema" />
+      <SectionBand title="Vragen stroomschema" />
+      <TP2026FieldTable>
         {decisions.map((decision, idx) => (
           <DataRow
             key={idx}
@@ -285,7 +287,7 @@ export function Bijlage3A4Pages({
             compact
           />
         ))}
-      </div>
+      </TP2026FieldTable>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
