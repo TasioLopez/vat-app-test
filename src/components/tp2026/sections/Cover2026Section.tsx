@@ -41,7 +41,7 @@ const COVER_LAYOUT = {
     /** Symmetric; vertical balance comes from flex `my-auto` on inner block. */
     py: 0,
     /** Negative = move title+fields up inside the cream strip (optical center vs SVG + border weight). */
-    contentOpticalShiftPx: -10,
+    contentOpticalShiftPx: -22,
   },
   /** Matches Google Docs `01_Trajectplan_voorkant` (pt for print parity). */
   title: {
@@ -52,8 +52,8 @@ const COVER_LAYOUT = {
   fields: {
     maxW: 520,
     rowGap: 5,
-    /** ~width of longest label ("Datum rapportage") at 8.5pt bold */
-    labelW: 108,
+    /** Wide enough for "Datum rapportage" on one line at 8.5pt bold */
+    labelW: 132,
     fontSize: '8.5pt',
     purple: '#6d2a96',
     borderColor: '#b8985c',
@@ -167,7 +167,7 @@ function CoverInfoLine({ label, value }: { label: string; value: string }) {
         borderColor: COVER_LAYOUT.fields.borderColor,
       }}
     >
-      <span className="antialiased" style={{ fontSize: fs, color: purple, fontWeight: 800 }}>
+      <span className="antialiased whitespace-nowrap" style={{ fontSize: fs, color: purple, fontWeight: 800 }}>
         {label}
       </span>
       <span className="truncate antialiased" style={{ fontSize: fs, color: purple, fontWeight: 400 }}>
