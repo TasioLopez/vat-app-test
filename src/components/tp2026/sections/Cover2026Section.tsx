@@ -40,19 +40,20 @@ const COVER_LAYOUT = {
     px: 214,
     py: 8,
   },
+  /** Matches Google Docs `01_Trajectplan_voorkant` (pt for print parity). */
   title: {
-    size: 38,
-    lineHeight: 1.06,
-    mb: 6,
+    fontSize: '20pt',
+    lineHeight: 1.12,
+    mb: 5,
   },
   fields: {
-    maxW: 480,
+    maxW: 520,
     rowGap: 0,
-    labelW: 132,
-    labelFontSize: 11,
-    valueFontSize: 11,
-    valueColor: '#5a4a42',
-    borderColor: '#c4a574',
+    /** ~width of longest label ("Datum rapportage") at 8.5pt bold */
+    labelW: 108,
+    fontSize: '8.5pt',
+    purple: '#6d2a96',
+    borderColor: '#b8985c',
   },
 } as const;
 
@@ -110,11 +111,12 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
         >
           <div style={{ maxWidth: COVER_LAYOUT.fields.maxW }} className="w-full">
             <h1
-              className="font-extrabold text-[#6d2a96] tracking-tight"
+              className="font-bold tracking-tight text-[#6d2a96]"
               style={{
-                fontSize: COVER_LAYOUT.title.size,
+                fontSize: COVER_LAYOUT.title.fontSize,
                 lineHeight: COVER_LAYOUT.title.lineHeight,
                 marginBottom: COVER_LAYOUT.title.mb,
+                whiteSpace: 'nowrap',
               }}
             >
               Trajectplan Spoor 2 begeleiding
@@ -145,18 +147,20 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
 
 function CoverInfoLine({ label, value }: { label: string; value: string }) {
   const display = value?.trim() ? value : '—';
+  const fs = COVER_LAYOUT.fields.fontSize;
+  const purple = COVER_LAYOUT.fields.purple;
   return (
     <div
-      className="grid items-baseline border-b leading-tight py-[3px]"
+      className="grid items-baseline border-b leading-tight py-[2px]"
       style={{
         gridTemplateColumns: `${COVER_LAYOUT.fields.labelW}px 1fr`,
         borderColor: COVER_LAYOUT.fields.borderColor,
       }}
     >
-      <span className="font-semibold" style={{ fontSize: COVER_LAYOUT.fields.labelFontSize }}>
+      <span className="font-bold" style={{ fontSize: fs, color: purple }}>
         {label}
       </span>
-      <span className="truncate font-normal" style={{ fontSize: COVER_LAYOUT.fields.valueFontSize, color: COVER_LAYOUT.fields.valueColor }}>
+      <span className="truncate font-normal" style={{ fontSize: fs, color: purple }}>
         {display}
       </span>
     </div>
