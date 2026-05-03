@@ -36,19 +36,23 @@ const COVER_LAYOUT = {
   banner: {
     y: 508,
     h: 192,
-    px: 188,
-    py: 14,
+    /** More inset from the baked-in circular icon in the SVG (matches reference spacing). */
+    px: 214,
+    py: 8,
   },
   title: {
-    size: 31,
-    lineHeight: 1.02,
-    mb: 4,
+    size: 38,
+    lineHeight: 1.06,
+    mb: 6,
   },
   fields: {
-    maxW: 420,
-    gap: 2,
-    labelW: 138,
-    fontSize: 11,
+    maxW: 480,
+    rowGap: 0,
+    labelW: 132,
+    labelFontSize: 11,
+    valueFontSize: 11,
+    valueColor: '#5a4a42',
+    borderColor: '#c4a574',
   },
 } as const;
 
@@ -94,7 +98,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
           }}
         />
         <div
-          className="absolute left-0 right-0 box-border"
+          className="absolute left-0 right-0 box-border flex flex-col justify-center"
           style={{
             top: COVER_LAYOUT.banner.y,
             height: COVER_LAYOUT.banner.h,
@@ -104,20 +108,25 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
             paddingBottom: COVER_LAYOUT.banner.py,
           }}
         >
-          <h1
-            className="font-extrabold text-[#6d2a96] tracking-tight"
-            style={{
-              fontSize: COVER_LAYOUT.title.size,
-              lineHeight: COVER_LAYOUT.title.lineHeight,
-              marginBottom: COVER_LAYOUT.title.mb,
-            }}
-          >
-            Trajectplan Spoor 2 begeleiding
-          </h1>
-          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW, rowGap: COVER_LAYOUT.fields.gap }} className="grid">
-            <CoverInfoLine label="Voor" value={employeeName} />
-            <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
-            <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
+          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW }} className="w-full">
+            <h1
+              className="font-extrabold text-[#6d2a96] tracking-tight"
+              style={{
+                fontSize: COVER_LAYOUT.title.size,
+                lineHeight: COVER_LAYOUT.title.lineHeight,
+                marginBottom: COVER_LAYOUT.title.mb,
+              }}
+            >
+              Trajectplan Spoor 2 begeleiding
+            </h1>
+            <div
+              style={{ rowGap: COVER_LAYOUT.fields.rowGap }}
+              className="grid text-[#6d2a96] leading-tight"
+            >
+              <CoverInfoLine label="Voor" value={employeeName} />
+              <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
+              <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
+            </div>
           </div>
         </div>
       </div>
@@ -135,16 +144,21 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
 }
 
 function CoverInfoLine({ label, value }: { label: string; value: string }) {
+  const display = value?.trim() ? value : '—';
   return (
     <div
-      className="grid items-end border-b border-[#bda96f] text-[#6d2a96] leading-tight py-0.5"
+      className="grid items-baseline border-b leading-tight py-[3px]"
       style={{
         gridTemplateColumns: `${COVER_LAYOUT.fields.labelW}px 1fr`,
-        fontSize: COVER_LAYOUT.fields.fontSize,
+        borderColor: COVER_LAYOUT.fields.borderColor,
       }}
     >
-      <span className="font-semibold">{label}</span>
-      <span className="text-[#6b6b6b] truncate">{value || '—'}</span>
+      <span className="font-semibold" style={{ fontSize: COVER_LAYOUT.fields.labelFontSize }}>
+        {label}
+      </span>
+      <span className="truncate font-normal" style={{ fontSize: COVER_LAYOUT.fields.valueFontSize, color: COVER_LAYOUT.fields.valueColor }}>
+        {display}
+      </span>
     </div>
   );
 }
