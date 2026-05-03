@@ -11,7 +11,7 @@ import FieldControl from '@/components/tp2026/FieldControl';
  * Positive = shift artwork (and banner) slightly below strict vertical center on A4,
  * matching `01_Trajectplan_voorkant` (more margin above the Z than below).
  */
-const COVER_ARTWORK_VERTICAL_NUDGE_PX = 78;
+const COVER_ARTWORK_VERTICAL_NUDGE_PX = 64;
 /** Uniform scale for SVG + banner overlay (keeps cream band aligned with text). */
 const COVER_ARTWORK_SCALE = 1.04;
 
