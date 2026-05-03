@@ -1,3 +1,4 @@
+import { formatTP2026CoverVoorName } from '@/lib/utils';
 import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
@@ -131,7 +132,9 @@ const bijlage3Defaults: TP2026Bijlage3Decision[] = [
 export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any> {
   const next = { ...raw };
 
-  if (!next.employee_name) {
+  if (next.first_name && next.last_name) {
+    next.employee_name = formatTP2026CoverVoorName(next.first_name, next.last_name);
+  } else if (!next.employee_name?.trim()) {
     next.employee_name = [next.first_name, next.last_name].filter(Boolean).join(' ').trim();
   }
 

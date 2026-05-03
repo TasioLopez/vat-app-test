@@ -83,6 +83,22 @@ export function formatEmployeeNameWithoutPrefix(
 }
 
 /**
+ * TP 2026 voorblad cover line: initial + achternaam (voornaam), no Meneer/Mevrouw.
+ * e.g. "K. Baaijens (Kim)"
+ */
+export function formatTP2026CoverVoorName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined
+): string {
+  if (!firstName && !lastName) return '—';
+  if (!firstName || !lastName) {
+    return [firstName, lastName].filter(Boolean).join(' ').trim() || '—';
+  }
+  const initial = firstName.charAt(0).toUpperCase();
+  return `${initial}. ${lastName} (${firstName})`;
+}
+
+/**
  * Parses work_experience field that may be stored as JSON array or plain string
  * Returns a clean comma-separated string of job titles
  * 

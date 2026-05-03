@@ -18,7 +18,6 @@ import {
   Bijlage3A4Pages,
   Bijlage3Editor,
 } from '@/components/tp2026/sections/Bijlage2026Sections';
-import { resolveReferentForEmployee } from '@/lib/referents';
 
 type Props = {
   employeeId: string;
@@ -112,22 +111,20 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       if (cancelled) return;
 
       const employee = employeeRes.data || {};
-      const referent = await resolveReferentForEmployee(supabase, {
-        referent_id: employee.referent_id,
-        client_id: employee.client_id,
-      });
-      const referentDisplayName = referent
-        ? [referent.first_name, referent.last_name].filter(Boolean).join(' ').trim()
-        : '';
 
-      let clientCompanyName: string | null = null;
-      if (employee.client_id) {
-        const { data: client } = await supabase
-          .from('clients')
-          .select('name')
-          .eq('id', employee.client_id)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      let appUserDisplayName = '';
+      if (user?.id) {
+        const { data: appUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', user.id)
           .maybeSingle();
-        clientCompanyName = client?.name ?? null;
+        if (appUser) {
+          appUserDisplayName = [appUser.first_name, appUser.last_name].filter(Boolean).join(' ').trim();
+        }
       }
 
       if (cancelled) return;
@@ -143,8 +140,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           ...meta,
         });
 
-        if (referentDisplayName) next.client_name = referentDisplayName;
-        else if (clientCompanyName) next.client_name = clientCompanyName;
+        if (appUserDisplayName) next.client_name = appUserDisplayName;
 
         return next;
       });

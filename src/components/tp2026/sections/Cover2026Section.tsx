@@ -5,6 +5,7 @@ import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026CoverFields } from '@/lib/tp2026/schema';
 import Logo2 from '@/assets/images/logo-2.png';
 import { A4Page } from '@/components/tp2026/primitives';
+import { formatTP2026CoverVoorName } from '@/lib/utils';
 import FieldControl from '@/components/tp2026/FieldControl';
 
 /**
@@ -78,9 +79,11 @@ export function Cover2026Editor({
 
 export function Cover2026A4({ data }: { data: Record<string, any> }) {
   const employeeName =
-    data.employee_name ||
-    [data.first_name, data.last_name].filter(Boolean).join(' ').trim() ||
-    '—';
+    data.first_name && data.last_name
+      ? formatTP2026CoverVoorName(data.first_name, data.last_name)
+      : data.employee_name?.trim() ||
+        [data.first_name, data.last_name].filter(Boolean).join(' ').trim() ||
+        '—';
 
   return (
     <A4Page className="relative" style={{ backgroundColor: COVER_LAYOUT.pageBg }}>
