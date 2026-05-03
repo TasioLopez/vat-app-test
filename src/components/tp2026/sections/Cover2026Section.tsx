@@ -40,16 +40,18 @@ const COVER_LAYOUT = {
     px: 214,
     /** Symmetric; vertical balance comes from flex `my-auto` on inner block. */
     py: 0,
+    /** Negative = move title+fields up inside the cream strip (optical center vs SVG + border weight). */
+    contentOpticalShiftPx: -10,
   },
   /** Matches Google Docs `01_Trajectplan_voorkant` (pt for print parity). */
   title: {
     fontSize: '20pt',
     lineHeight: 1.08,
-    mb: 4,
+    mb: 14,
   },
   fields: {
     maxW: 520,
-    rowGap: 0,
+    rowGap: 5,
     /** ~width of longest label ("Datum rapportage") at 8.5pt bold */
     labelW: 108,
     fontSize: '8.5pt',
@@ -110,7 +112,13 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
             paddingBottom: COVER_LAYOUT.banner.py,
           }}
         >
-          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW }} className="w-full shrink-0 my-auto">
+          <div
+            className="w-full shrink-0 my-auto"
+            style={{
+              maxWidth: COVER_LAYOUT.fields.maxW,
+              transform: `translateY(${COVER_LAYOUT.banner.contentOpticalShiftPx}px)`,
+            }}
+          >
             <h1
               className="m-0 tracking-tight text-[#6d2a96] antialiased"
               style={{
@@ -153,7 +161,7 @@ function CoverInfoLine({ label, value }: { label: string; value: string }) {
   const purple = COVER_LAYOUT.fields.purple;
   return (
     <div
-      className="grid items-baseline border-b leading-tight py-[2px]"
+      className="grid items-baseline border-b leading-tight py-[4px]"
       style={{
         gridTemplateColumns: `${COVER_LAYOUT.fields.labelW}px 1fr`,
         borderColor: COVER_LAYOUT.fields.borderColor,
