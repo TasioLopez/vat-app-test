@@ -41,7 +41,7 @@ const COVER_LAYOUT = {
     /** Symmetric; vertical balance comes from flex `my-auto` on inner block. */
     py: 0,
     /** Negative = move title+fields up inside the cream strip (preview is scaled; needs larger steps to read). */
-    contentOpticalShiftPx: -56,
+    contentOpticalShiftPx: -40,
   },
   /** Matches Google Docs `01_Trajectplan_voorkant` (pt for print parity). */
   title: {
