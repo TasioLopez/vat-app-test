@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
@@ -18,6 +18,7 @@ import {
   Bijlage3A4Pages,
   Bijlage3Editor,
 } from '@/components/tp2026/sections/Bijlage2026Sections';
+import { resolveReferentForEmployee } from '@/lib/referents';
 
 type Props = {
   employeeId: string;
@@ -27,6 +28,7 @@ type Props = {
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
   const { tpData, setTPData, updateField, saveAll, isDirty, markSaved } = useTPInstance();
+  const employeeHydrateKeyRef = useRef<string | null>(null);
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -91,9 +93,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   ];
 
   useEffect(() => {
-    async function hydrateDefaults() {
-      if (Object.keys(tpData || {}).length > 0) return;
+    const hydrateKey = `${employeeId}:${tpInstanceId}`;
+    if (employeeHydrateKeyRef.current === hydrateKey) return;
 
+    let cancelled = false;
+
+    async function hydrateEmployeeDefaults() {
       const [employeeRes, detailsRes, metaRes] = await Promise.all([
         (supabase as any)
           .from('employees')
@@ -104,27 +109,58 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         supabase.from('tp_meta').select('*').eq('employee_id', employeeId).maybeSingle(),
       ]);
 
-      const merged: Record<string, any> = ensureTP2026Shape({
-        ...(employeeRes.data || {}),
-        ...(detailsRes.data || {}),
-        ...(metaRes.data || {}),
-      });
+      if (cancelled) return;
 
-      if (employeeRes.data?.client_id) {
+      const employee = employeeRes.data || {};
+      const referent = await resolveReferentForEmployee(supabase, {
+        referent_id: employee.referent_id,
+        client_id: employee.client_id,
+      });
+      const referentDisplayName = referent
+        ? [referent.first_name, referent.last_name].filter(Boolean).join(' ').trim()
+        : '';
+
+      let clientCompanyName: string | null = null;
+      if (employee.client_id) {
         const { data: client } = await supabase
           .from('clients')
           .select('name')
-          .eq('id', employeeRes.data.client_id)
+          .eq('id', employee.client_id)
           .maybeSingle();
-        if (client?.name) merged.client_name = client.name;
+        clientCompanyName = client?.name ?? null;
       }
 
-      setTPData(merged);
-      markSaved();
+      if (cancelled) return;
+
+      setTPData((prev) => {
+        const meta = { ...(metaRes.data || {}) };
+        delete (meta as { tp_creation_date?: unknown }).tp_creation_date;
+
+        const next = ensureTP2026Shape({
+          ...prev,
+          ...employee,
+          ...(detailsRes.data || {}),
+          ...meta,
+        });
+
+        if (referentDisplayName) next.client_name = referentDisplayName;
+        else if (clientCompanyName) next.client_name = clientCompanyName;
+
+        return next;
+      });
+
+      if (!cancelled) {
+        employeeHydrateKeyRef.current = hydrateKey;
+        markSaved();
+      }
     }
 
-    hydrateDefaults();
-  }, [employeeId, markSaved, setTPData, supabase, tpData]);
+    void hydrateEmployeeDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, tpInstanceId, markSaved, setTPData, supabase]);
 
   const persist = async () => {
     setSaving(true);
