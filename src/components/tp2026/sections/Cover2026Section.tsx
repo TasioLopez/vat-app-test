@@ -38,13 +38,14 @@ const COVER_LAYOUT = {
     h: 192,
     /** More inset from the baked-in circular icon in the SVG (matches reference spacing). */
     px: 214,
-    py: 8,
+    /** Symmetric; vertical balance comes from flex `my-auto` on inner block. */
+    py: 0,
   },
   /** Matches Google Docs `01_Trajectplan_voorkant` (pt for print parity). */
   title: {
     fontSize: '20pt',
-    lineHeight: 1.12,
-    mb: 5,
+    lineHeight: 1.08,
+    mb: 4,
   },
   fields: {
     maxW: 520,
@@ -99,7 +100,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
           }}
         />
         <div
-          className="absolute left-0 right-0 box-border flex flex-col justify-center"
+          className="absolute left-0 right-0 box-border flex min-h-0 flex-col"
           style={{
             top: COVER_LAYOUT.banner.y,
             height: COVER_LAYOUT.banner.h,
@@ -109,14 +110,15 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
             paddingBottom: COVER_LAYOUT.banner.py,
           }}
         >
-          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW }} className="w-full">
+          <div style={{ maxWidth: COVER_LAYOUT.fields.maxW }} className="w-full shrink-0 my-auto">
             <h1
-              className="font-bold tracking-tight text-[#6d2a96]"
+              className="m-0 tracking-tight text-[#6d2a96] antialiased"
               style={{
                 fontSize: COVER_LAYOUT.title.fontSize,
                 lineHeight: COVER_LAYOUT.title.lineHeight,
                 marginBottom: COVER_LAYOUT.title.mb,
                 whiteSpace: 'nowrap',
+                fontWeight: 900,
               }}
             >
               Trajectplan Spoor 2 begeleiding
@@ -157,10 +159,10 @@ function CoverInfoLine({ label, value }: { label: string; value: string }) {
         borderColor: COVER_LAYOUT.fields.borderColor,
       }}
     >
-      <span className="font-bold" style={{ fontSize: fs, color: purple }}>
+      <span className="antialiased" style={{ fontSize: fs, color: purple, fontWeight: 800 }}>
         {label}
       </span>
-      <span className="truncate font-normal" style={{ fontSize: fs, color: purple }}>
+      <span className="truncate antialiased" style={{ fontSize: fs, color: purple, fontWeight: 400 }}>
         {display}
       </span>
     </div>
