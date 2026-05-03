@@ -18,6 +18,7 @@ import {
   Bijlage3A4Pages,
   Bijlage3Editor,
 } from '@/components/tp2026/sections/Bijlage2026Sections';
+import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
 
 type Props = {
   employeeId: string;
@@ -112,18 +113,38 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
       const employee = employeeRes.data || {};
 
+      let clientCompanyName: string | null = null;
+      if (employee.client_id) {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('name')
+          .eq('id', employee.client_id)
+          .maybeSingle();
+        clientCompanyName = client?.name ?? null;
+      }
+
+      const referent = await resolveReferentForEmployee(supabase, {
+        referent_id: employee.referent_id,
+        client_id: employee.client_id,
+      });
+      const refFields = referentToClientReferentFields(referent);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
       let appUserDisplayName = '';
+      let appUserPhone = '';
+      let appUserEmail = '';
       if (user?.id) {
         const { data: appUser } = await supabase
           .from('users')
-          .select('first_name, last_name')
+          .select('first_name, last_name, phone, email')
           .eq('id', user.id)
           .maybeSingle();
         if (appUser) {
           appUserDisplayName = [appUser.first_name, appUser.last_name].filter(Boolean).join(' ').trim();
+          appUserPhone = (appUser.phone || '').trim();
+          appUserEmail = (appUser.email || '').trim();
         }
       }
 
@@ -140,7 +161,31 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           ...meta,
         });
 
+        if (clientCompanyName) next.employer_name = clientCompanyName;
+
         if (appUserDisplayName) next.client_name = appUserDisplayName;
+        if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
+          next.consultant_name = appUserDisplayName;
+        }
+        if (!String(next.consultant_phone || '').trim() && appUserPhone) {
+          next.consultant_phone = appUserPhone;
+        }
+        if (!String(next.consultant_email || '').trim() && appUserEmail) {
+          next.consultant_email = appUserEmail;
+        }
+
+        if (!String(next.client_referent_name || '').trim() && refFields.client_referent_name) {
+          next.client_referent_name = refFields.client_referent_name;
+        }
+        if (!String(next.client_referent_phone || '').trim() && refFields.client_referent_phone) {
+          next.client_referent_phone = refFields.client_referent_phone;
+        }
+        if (!String(next.client_referent_email || '').trim() && refFields.client_referent_email) {
+          next.client_referent_email = refFields.client_referent_email;
+        }
+        if (!String(next.client_referent_function || '').trim() && refFields.client_referent_function) {
+          next.client_referent_function = refFields.client_referent_function;
+        }
 
         return next;
       });

@@ -5,6 +5,38 @@ import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026GegevensFields, boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
 import { A4LogoHeader, A4Page, DataRow, FooterIdentity, SectionBand } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
+import { formatTP2026CoverVoorName } from '@/lib/utils';
+
+function GegevensNaamBlock({ data }: { data: Record<string, any> }) {
+  const naam =
+    data.first_name && data.last_name
+      ? formatTP2026CoverVoorName(data.first_name, data.last_name)
+      : [data.last_name, data.first_name].filter(Boolean).join(' ').trim() || '—';
+  const g = (data.gender || '').toString().toLowerCase();
+  const man = g === 'man' || g === 'male';
+  const vrouw = g === 'vrouw' || g === 'female';
+  return (
+    <div className="space-y-1.5">
+      <div>{naam}</div>
+      <div className="flex flex-wrap items-center gap-6 text-[11px] font-medium text-[#6d2a96]">
+        <span className="inline-flex items-center gap-2">
+          <span
+            className={`inline-block h-3 w-3 shrink-0 border-2 border-[#6d2a96] ${man ? 'bg-[#6d2a96]' : 'bg-white'}`}
+            aria-hidden
+          />
+          man
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span
+            className={`inline-block h-3 w-3 shrink-0 border-2 border-[#6d2a96] ${vrouw ? 'bg-[#6d2a96]' : 'bg-white'}`}
+            aria-hidden
+          />
+          vrouw
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function Gegevens2026Editor({
   data,
@@ -27,16 +59,15 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
     <A4Page className="p-8 flex flex-col">
       <A4LogoHeader />
       <SectionBand title="Gegevens werknemer" />
-      <div className="border-x border-[#d7c8a2]">
-        <DataRow label="Naam" value={`${data.last_name || '—'} (${data.first_name || '—'})`} />
-        <DataRow label="Geslacht" value={data.gender || '—'} />
+      <div className="border-x border-[#b8985c]">
+        <DataRow label="Naam" value={<GegevensNaamBlock data={data} />} />
         <DataRow label="Telefoon" value={data.phone || '—'} />
         <DataRow label="E-mail" value={data.email || '—'} />
         <DataRow label="Geboortedatum" value={formatNLDate(data.date_of_birth)} />
       </div>
 
       <SectionBand title="Gegevens re-integratietraject 2e spoor" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         <DataRow label="Eerste ziektedag" value={formatNLDate(data.first_sick_day)} />
         <DataRow label="Datum aanmelding" value={formatNLDate(data.registration_date)} />
         <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
@@ -49,15 +80,15 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
       </div>
 
       <SectionBand title="Gegevens opdrachtgever" />
-      <div className="border-x border-[#d7c8a2]">
-        <DataRow label="Werkgever" value={data.client_name || '—'} />
+      <div className="border-x border-[#b8985c]">
+        <DataRow label="Werkgever" value={data.employer_name || '—'} />
         <DataRow label="Contactpersoon" value={data.client_referent_name || '—'} />
         <DataRow label="Telefoon" value={data.client_referent_phone || '—'} />
         <DataRow label="E-mail" value={data.client_referent_email || '—'} />
       </div>
 
       <SectionBand title="Basisgegevens re-integratie werknemer" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         <DataRow label="Opdrachtnemer" value="ValentineZ" />
         <DataRow label="Loopbaanadviseur" value={data.consultant_name || '—'} />
         <DataRow label="Telefoon" value={data.consultant_phone || '—'} />
@@ -82,7 +113,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
       <A4LogoHeader />
 
       <SectionBand title="Gegevens re-integratietraject 2e spoor" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         <DataRow label="Huidige functie" value={data.current_job || '—'} />
         <DataRow label="Werkervaring" value={data.work_experience || '—'} />
         <DataRow label="Opleidingsniveau" value={data.education_level || '—'} />
@@ -98,7 +129,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
       </div>
 
       <SectionBand title="Opdrachtinformatie" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         <DataRow label="Trajectsoort" value="Spoor 2 begeleiding" />
         <DataRow
           label="Doelstelling"
@@ -109,7 +140,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
         <DataRow label="Einddatum (planning)" value={formatNLDate(data.tp_end_date)} />
       </div>
 
-      <p className="text-[11px] italic text-[#6d2a96] mt-3">
+      <p className="text-[11px] italic text-[#6d2a96]/90 mt-3 leading-snug">
         NB: in het kader van de algemene verordening gegevensbescherming (AVG) worden in deze rapportage geen medische termen en diagnoses vermeld.
       </p>
 
@@ -128,7 +159,7 @@ function GegevensPage3({ data }: { data: Record<string, any> }) {
     <A4Page className="p-8 flex flex-col">
       <A4LogoHeader />
       <SectionBand title="Legenda" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         {[
           ['AO', 'Arbeidsdeskundig onderzoek'],
           ['AD', 'Arbeidsdeskundig'],

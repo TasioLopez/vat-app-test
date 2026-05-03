@@ -114,7 +114,7 @@ export function Bijlage1A4Pages({
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 1 - Voortgang en planning</h2>
       {phases.map((phase, idx) => (
-        <div key={idx} className="mb-3 border border-[#d7c8a2]">
+        <div key={idx} className="mb-3 border border-[#b8985c]">
           <SectionBand title={`Planning fase ${idx + 1}`} />
           <DataRow label="Doel" value={phase.title || '—'} />
           <DataRow label="Periode" value={`${formatNLDate(phase.period_from)} t/m ${formatNLDate(phase.period_to)}`} />
@@ -188,26 +188,26 @@ export function Bijlage2A4Pages({
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 2 - ValentineZ leernavigator</h2>
       <div className="grid grid-cols-2 gap-3">
-        <div className="border border-[#d7c8a2] bg-[#f5efe6] p-3">
+        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
           <h4 className="font-bold mb-2">Willen</h4>
           <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.willen)}</pre>
         </div>
-        <div className="border border-[#d7c8a2] bg-[#f5efe6] p-3">
+        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
           <h4 className="font-bold mb-2">Weten</h4>
           <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.weten)}</pre>
         </div>
-        <div className="border border-[#d7c8a2] bg-[#f5efe6] p-3">
+        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
           <h4 className="font-bold mb-2">Kunnen</h4>
           <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.kunnen)}</pre>
         </div>
-        <div className="border border-[#d7c8a2] bg-[#f5efe6] p-3">
+        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
           <h4 className="font-bold mb-2">Doen</h4>
           <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.doen)}</pre>
         </div>
       </div>
 
       <SectionBand title="POW-meter™ Tredes" />
-      <div className="border-x border-[#d7c8a2]">
+      <div className="border-x border-[#b8985c]">
         {model.powTredes.map((trede) => (
           <DataRow
             key={trede.trede}
@@ -275,7 +275,7 @@ export function Bijlage3A4Pages({
     <A4Page className="p-8 flex flex-col">
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 3 - Stroomschema POW-meter™</h2>
-      <div className="border border-[#d7c8a2]">
+      <div className="border border-[#b8985c]">
         <SectionBand title="Vragen stroomschema" />
         {decisions.map((decision, idx) => (
           <DataRow

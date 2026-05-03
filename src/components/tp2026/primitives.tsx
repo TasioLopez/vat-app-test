@@ -45,22 +45,24 @@ export function FooterIdentity({
 }) {
   const name = [lastName, firstName].filter(Boolean).join(' ') || '—';
   return (
-    <div className="mt-auto border-t border-[#c9b88a] text-[10px] text-[#4b4b4b] px-8 py-2 flex items-center justify-between">
+    <div className="mt-auto border-t border-[#b8985c] text-[10px] text-[#5a4a66] px-8 py-2 flex items-center justify-between">
       <div>Naam: {name}</div>
-      <div>{typeof pageNumber === 'number' ? pageNumber : ''}</div>
+      <div className="text-[#6d2a96] font-semibold">{typeof pageNumber === 'number' ? pageNumber : ''}</div>
       <div>Geboortedatum: {dateOfBirth || '—'}</div>
     </div>
   );
 }
 
+/** Section header strip aligned with TP 2026 print template (tan + purple). */
 export function SectionBand({ title }: { title: string }) {
   return (
-    <div className="bg-[#f5efe6] text-[#6b2392] font-bold px-4 py-1.5 border-y border-[#c9b88a]">
+    <div className="bg-[#ebe1cf] text-[#6d2a96] font-bold text-[12px] tracking-tight px-3 py-2 border-y border-[#b8985c]">
       {title}
     </div>
   );
 }
 
+/** Two-column form row for TP 2026 A4 (purple labels, tan rules). */
 export function DataRow({
   label,
   value,
@@ -71,9 +73,13 @@ export function DataRow({
   compact?: boolean;
 }) {
   return (
-    <div className={`grid grid-cols-[260px_1fr] border-b border-[#d7c8a2] ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
-      <div className="px-3 py-1.5 font-semibold text-[#333] bg-[#f9f6f0]">{label}</div>
-      <div className="px-3 py-1.5 text-[#222]">{value}</div>
+    <div
+      className={`grid grid-cols-[220px_1fr] border-b border-[#b8985c] ${compact ? 'text-[11px]' : 'text-[12px]'} leading-snug`}
+    >
+      <div className="px-3 py-1.5 font-semibold text-[#6d2a96] bg-[#f5efe6] border-r border-[#b8985c]/80">
+        {label}
+      </div>
+      <div className="px-3 py-1.5 text-[#4a3a52] bg-white">{value}</div>
     </div>
   );
 }
