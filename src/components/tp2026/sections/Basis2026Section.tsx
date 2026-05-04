@@ -2,7 +2,7 @@
 
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026BasisFields, formatNLDate } from '@/lib/tp2026/schema';
-import { A4LogoHeader, A4Page, FooterIdentity, SectionBand } from '@/components/tp2026/primitives';
+import { A4LogoHeader, A4Page, FooterIdentity, SectionBand, TP2026_A4_PAGE_CLASS } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 
 type Block = { key: string; title: string; text: string };
@@ -54,10 +54,10 @@ function BasisPage({
   pageNumber: number;
 }) {
   return (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      {blocks.map((block) => (
-        <div key={block.key} className="mb-4">
+      {blocks.map((block, idx) => (
+        <div key={block.key} className={`mb-4 ${idx > 0 ? 'mt-7' : ''}`}>
           <SectionBand title={block.title} />
           <div className="border border-[#b8985c] p-3 text-[12px] leading-relaxed whitespace-pre-wrap bg-white text-neutral-900">
             {block.text || '— nog niet ingevuld —'}

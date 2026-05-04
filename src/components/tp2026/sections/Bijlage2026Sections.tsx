@@ -1,6 +1,14 @@
 'use client';
 
-import { A4LogoHeader, A4Page, DataRow, FooterIdentity, SectionBand, TP2026FieldTable } from '@/components/tp2026/primitives';
+import {
+  A4LogoHeader,
+  A4Page,
+  DataRow,
+  FooterIdentity,
+  SectionBand,
+  TP2026_A4_PAGE_CLASS,
+  TP2026FieldTable,
+} from '@/components/tp2026/primitives';
 import type {
   TP2026Bijlage1Phase,
   TP2026Bijlage2Model,
@@ -110,11 +118,11 @@ export function Bijlage1A4Pages({
   printMode?: boolean;
 }) {
   const page = (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 1 - Voortgang en planning</h2>
       {phases.map((phase, idx) => (
-        <div key={idx} className="mb-4">
+        <div key={idx} className={`mb-4 ${idx > 0 ? 'mt-7' : ''}`}>
           <SectionBand title={`Planning fase ${idx + 1}`} />
           <TP2026FieldTable>
             <DataRow label="Doel" value={phase.title || '—'} />
@@ -186,7 +194,7 @@ export function Bijlage2A4Pages({
     rows.map((row) => `${row.checked ? '☑' : '☐'} ${row.label}`).join('\n');
 
   const page = (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 2 - ValentineZ leernavigator</h2>
       <div className="grid grid-cols-2 gap-3">
@@ -274,7 +282,7 @@ export function Bijlage3A4Pages({
   printMode?: boolean;
 }) {
   const page = (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
       <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 3 - Stroomschema POW-meter™</h2>
       <SectionBand title="Vragen stroomschema" />

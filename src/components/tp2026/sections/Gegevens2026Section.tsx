@@ -3,9 +3,39 @@
 import React from 'react';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026GegevensFields, boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
-import { A4LogoHeader, A4Page, DataRow, FooterIdentity, SectionBand, TP2026FieldTable } from '@/components/tp2026/primitives';
+import {
+  A4LogoHeader,
+  A4Page,
+  DataRow,
+  FooterIdentity,
+  SectionBand,
+  TP2026_A4_PAGE_CLASS,
+  TP2026FieldTable,
+} from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { formatTP2026CoverVoorName } from '@/lib/utils';
+
+/** Ja/nee checkboxes for print layout (matches Word template). */
+function JaNeeReportChecks({ value }: { value: boolean | null | undefined }) {
+  const ja = value === true;
+  const nee = value === false;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-5 text-[12px] text-neutral-900">
+      <span className="inline-flex items-center gap-1">
+        <span className="select-none font-sans leading-none" aria-hidden>
+          {ja ? '☑' : '☐'}
+        </span>
+        ja
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span className="select-none font-sans leading-none" aria-hidden>
+          {nee ? '☑' : '☐'}
+        </span>
+        nee
+      </span>
+    </span>
+  );
+}
 
 function GegevensNaamBlock({ data }: { data: Record<string, any> }) {
   const naam =
@@ -54,9 +84,9 @@ export function Gegevens2026Editor({
 
 function GegevensPage1({ data }: { data: Record<string, any> }) {
   return (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="flex flex-col gap-4 flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0">
         <div>
           <SectionBand title="Gegevens werknemer" />
           <TP2026FieldTable>
@@ -67,14 +97,14 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
           </TP2026FieldTable>
         </div>
 
-        <div>
+        <div className="mt-7">
           <SectionBand title="Gegevens re-integratietraject 2e spoor" />
           <TP2026FieldTable>
             <DataRow label="Eerste ziektedag" value={formatNLDate(data.first_sick_day)} />
             <DataRow label="Datum aanmelding" value={formatNLDate(data.registration_date)} />
             <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
             <DataRow label="Datum opmaak trajectplan" value={formatNLDate(data.tp_creation_date)} />
-            <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={boolToJaNee(data.has_ad_report)} />
+            <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={<JaNeeReportChecks value={data.has_ad_report} />} />
             <DataRow label="Datum AD rapportage" value={formatNLDate(data.ad_report_date)} />
             <DataRow label="Arbeidsdeskundige" value={data.occupational_doctor_name || '—'} />
             <DataRow label="Bedrijfsarts" value={data.occupational_doctor_org || '—'} />
@@ -82,7 +112,7 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
           </TP2026FieldTable>
         </div>
 
-        <div>
+        <div className="mt-7">
           <SectionBand title="Gegevens opdrachtgever" />
           <TP2026FieldTable>
             <DataRow label="Werkgever" value={data.employer_name || '—'} />
@@ -92,7 +122,7 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
           </TP2026FieldTable>
         </div>
 
-        <div>
+        <div className="mt-7">
           <SectionBand title="Basisgegevens re-integratie werknemer" />
           <TP2026FieldTable>
             <DataRow label="Opdrachtnemer" value="ValentineZ" />
@@ -117,10 +147,10 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
   const vervoertekst = Array.isArray(data.transport_type) ? data.transport_type.join(', ') : data.transport_type || '—';
   const rijbewijs = data.drivers_license ? 'Ja' : 'Nee';
   return (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
 
-      <div className="flex flex-col gap-4 flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0">
         <div>
           <SectionBand title="Gegevens re-integratietraject 2e spoor" />
           <TP2026FieldTable>
@@ -139,7 +169,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
           </TP2026FieldTable>
         </div>
 
-        <div>
+        <div className="mt-7">
           <SectionBand title="Opdrachtinformatie" />
           <TP2026FieldTable>
             <DataRow label="Trajectsoort" value="Spoor 2 begeleiding" />
@@ -170,7 +200,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
 
 function GegevensPage3({ data }: { data: Record<string, any> }) {
   return (
-    <A4Page className="p-8 flex flex-col">
+    <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
       <div className="flex-1 min-h-0">
         <SectionBand title="Legenda" />
