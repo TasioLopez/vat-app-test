@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026CoverFields } from '@/lib/tp2026/schema';
 import Logo2 from '@/assets/images/logo-2.png';
+import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
 import { formatTP2026CoverVoorName } from '@/lib/utils';
 import FieldControl from '@/components/tp2026/FieldControl';
@@ -18,12 +19,12 @@ const COVER_ARTWORK_SCALE = 1.04;
 
 const COVER_LAYOUT = {
   pageBg: '#cfbf8dff',
-  /** Top-left logo: margins + alignment with reference `01_Trajectplan_voorkant` (above Z, clear inset from page edges). */
+  /** Top-left logo: same geometry as body pages (`TP2026_LOGO`). */
   logo: {
-    left: 76,
-    top: 54,
-    w: 165,
-    h: 55,
+    left: TP2026_LOGO.leftPx,
+    top: TP2026_LOGO.topPx,
+    w: TP2026_LOGO.widthPx,
+    h: TP2026_LOGO.heightPx,
   },
   artwork: {
     /** Cropped vector asset (no transparent viewBox gutters). */

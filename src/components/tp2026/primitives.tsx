@@ -1,12 +1,16 @@
 import React from 'react';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
+import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
 
 export const A4_W = 794;
 export const A4_H = 1123;
 
-/** Default padding for TP 2026 body pages (~Word margins). */
-export const TP2026_A4_PAGE_CLASS = 'py-8 px-12 flex flex-col';
+/**
+ * Body pages: ~1in horizontal margins (`px-24` = {@link TP2026_BODY_MARGIN_X_PX}),
+ * cover-aligned absolute logo (no top padding — logo uses `TP2026_LOGO.topPx`).
+ */
+export const TP2026_A4_PAGE_CLASS = 'relative flex flex-col min-h-0 pb-8 px-24';
 
 export function A4Page({
   children,
@@ -31,13 +35,26 @@ export function A4Page({
 }
 
 export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="mb-2 flex w-full justify-start">
+        <Image src={Logo2} alt="ValentineZ" width={120} height={40} />
+      </div>
+    );
+  }
+
+  const { leftPx, topPx, widthPx, heightPx } = TP2026_LOGO;
   return (
-    <div className={`w-full flex flex-col items-start ${compact ? 'mb-2' : 'mb-4'}`}>
-      <Image src={Logo2} alt="ValentineZ" width={compact ? 120 : 150} height={compact ? 40 : 50} />
-      {!compact && (
-        <p className="mt-1.5 text-[10px] leading-tight text-[#6d2a96] tracking-wide">jouw werk is ons werk</p>
-      )}
-    </div>
+    <>
+      <div
+        className="pointer-events-none absolute z-10 flex flex-col items-start"
+        style={{ left: leftPx, top: topPx }}
+      >
+        <Image src={Logo2} alt="ValentineZ" width={widthPx} height={heightPx} />
+        <p className="mt-1.5 text-[10px] leading-tight tracking-wide text-[#6d2a96]">jouw werk is ons werk</p>
+      </div>
+      <div className="shrink-0" style={{ height: TP2026_BODY_FLOW_START_SPACER_PX }} aria-hidden />
+    </>
   );
 }
 
@@ -54,7 +71,7 @@ export function FooterIdentity({
 }) {
   const name = [lastName, firstName].filter(Boolean).join(' ') || '—';
   return (
-    <div className="mt-auto border-t border-[#b8985c] px-12 py-2.5">
+    <div className="mt-auto border-t border-[#b8985c] py-2.5">
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 text-[10px] leading-tight text-neutral-900">
         <div className="flex flex-col gap-1 text-left">
           <div>
