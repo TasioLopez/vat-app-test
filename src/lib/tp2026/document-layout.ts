@@ -13,8 +13,8 @@ export const TP2026_LOGO = {
 export const TP2026_BODY_MARGIN_X_PX = 96;
 
 /**
- * In-flow spacer height so first section starts below logo + tagline + gap
- * (logo is `position: absolute` and does not reserve space).
+ * In-flow spacer so first section starts below the logo asset + gap
+ * (logo is `position: absolute` and does not reserve space; tagline is in the PNG).
  */
 export const TP2026_BODY_FLOW_START_SPACER_PX =
-  TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 22 + 40;
+  TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 12 + 40;

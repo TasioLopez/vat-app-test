@@ -51,7 +51,6 @@ export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
         style={{ left: leftPx, top: topPx }}
       >
         <Image src={Logo2} alt="ValentineZ" width={widthPx} height={heightPx} />
-        <p className="mt-1.5 text-[10px] leading-tight tracking-wide text-[#6d2a96]">jouw werk is ons werk</p>
       </div>
       <div className="shrink-0" style={{ height: TP2026_BODY_FLOW_START_SPACER_PX }} aria-hidden />
     </>
