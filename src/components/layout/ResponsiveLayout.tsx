@@ -73,7 +73,7 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
 
       {/* Main content */}
       <div className={cn(
-        "flex-1 flex flex-col min-w-0 h-screen",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-screen",
         !isMobile && (collapsed ? "ml-16" : "ml-64")
       )}>
         {/* Mobile header */}
@@ -95,7 +95,7 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
         )}
 
         {/* Content - removed default padding, pages handle their own */}
-        <main className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
+        <main className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto', className)}>
           {children}
         </main>
       </div>
