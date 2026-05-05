@@ -45,7 +45,7 @@ const components: Components = {
   hr: () => <hr className="my-4 border-0 border-t border-[#b8985c]/60" />,
   br: () => <br />,
   code: ({ children }) => (
-    <code className="rounded bg-white/80 px-1 py-0.5 font-mono text-[11px] text-neutral-800">{children}</code>
+    <code className="rounded bg-white/80 px-1 py-0.5 font-sans text-[11px] text-neutral-800">{children}</code>
   ),
 };
 

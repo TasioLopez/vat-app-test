@@ -405,9 +405,9 @@ export function Bijlage1A4Pages({
   const page = (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="mb-4">
-        <div className="text-[19px] leading-[1.15] font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
-        <div className="mt-0.5 text-[27px] leading-[1.15] font-bold tracking-tight text-[#2d8f82]">
+      <div className="mb-3">
+        <div className="text-[14px] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
+        <div className="mt-1 text-[22px] leading-tight font-bold tracking-tight text-[#2d8f82]">
           Voortgang en planning
         </div>
       </div>
@@ -429,16 +429,16 @@ export function Bijlage1A4Pages({
                 </td>
               </tr>
               <tr>
-                <td className="border border-[#b8985c] bg-[#f4ecd9] px-2 py-1 text-[#6d2a96] font-bold align-top">Doel</td>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 align-top" colSpan={2}>
+                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">Doel</td>
+                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] align-top" colSpan={2}>
                   {phase.title || '—'}
                 </td>
               </tr>
               <tr>
-                <td className="border border-[#b8985c] bg-[#f4ecd9] px-2 py-1 text-[#6d2a96] font-bold align-top">
+                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">
                   Periode
                 </td>
-                <td className="border border-[#b8985c] bg-[#fff59a] px-2 py-1 align-top" colSpan={2}>
+                <td className="border border-[#b8985c] bg-white px-2 py-1 align-top" colSpan={2}>
                   {renderPeriodeText(phase, idx)}
                 </td>
               </tr>
@@ -447,7 +447,7 @@ export function Bijlage1A4Pages({
                   {rowIdx === 0 ? (
                     <td
                       rowSpan={rows.length}
-                      className="border border-[#b8985c] bg-[#f4ecd9] px-2 py-1 text-[#6d2a96] font-bold align-top"
+                      className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top"
                     >
                       Activiteiten
                     </td>

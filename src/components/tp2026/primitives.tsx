@@ -25,7 +25,7 @@ export function A4Page({
     <div
       className={`bg-white w-[794px] h-[1123px] border border-zinc-300 shadow-sm print:shadow-none print:border-0 overflow-hidden ${className}`}
       style={{
-        fontFamily: 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+        fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif',
         ...style,
       }}
     >
