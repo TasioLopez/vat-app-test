@@ -406,14 +406,15 @@ export function Bijlage1A4Pages({
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
       <div className="mb-3">
-        <div className="text-[14px] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
-        <div className="mt-1 text-[22px] leading-tight font-bold tracking-tight text-[#2d8f82]">
+        {/* Google Doc: "Bijlage 1" 11 pt; subtitle "Voortgang en planning" 10 pt (smaller). */}
+        <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
+        <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
           Voortgang en planning
         </div>
       </div>
-      <div className="flex-1 space-y-3">
+      <div className="flex-1 space-y-3 text-[10pt] leading-tight text-neutral-900">
         {normalized.map((phase, idx) => (
-          <table key={idx} className="w-full border border-[#b8985c] border-collapse table-fixed text-[11px] leading-tight">
+          <table key={idx} className="w-full border border-[#b8985c] border-collapse table-fixed bg-white">
             <colgroup>
               <col style={{ width: '22%' }} />
               <col style={{ width: '68%' }} />
@@ -421,24 +422,24 @@ export function Bijlage1A4Pages({
             </colgroup>
             <tbody>
               <tr>
-                <td colSpan={2} className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold">
+                <td colSpan={2} className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold">
                   Planning fase {idx + 1}
                 </td>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold text-center">
+                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold text-center">
                   Status
                 </td>
               </tr>
               <tr>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">Doel</td>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] align-top" colSpan={2}>
+                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">Doel</td>
+                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] align-top" colSpan={2}>
                   {phase.title || '—'}
                 </td>
               </tr>
               <tr>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">
+                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">
                   Periode
                 </td>
-                <td className="border border-[#b8985c] bg-white px-2 py-1 align-top" colSpan={2}>
+                <td className="border border-[#b8985c] !bg-white px-2 py-1 align-top text-neutral-900" colSpan={2}>
                   {renderPeriodeText(phase, idx)}
                 </td>
               </tr>
@@ -447,20 +448,24 @@ export function Bijlage1A4Pages({
                   {rowIdx === 0 ? (
                     <td
                       rowSpan={rows.length}
-                      className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold align-top"
+                      className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top"
                     >
                       Activiteiten
                     </td>
                   ) : null}
-                  <td className="border border-[#b8985c] bg-white px-2 py-1 align-top">{activity.name}</td>
-                  <td className="border border-[#b8985c] bg-white px-2 py-1 text-center align-top">{activity.status}</td>
+                  <td className="border border-[#b8985c] !bg-white px-2 py-1 align-top text-neutral-900">{activity.name}</td>
+                  <td className="border border-[#b8985c] !bg-white px-2 py-1 text-center align-top text-neutral-900">
+                    {activity.status}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         ))}
       </div>
-      <p className="mt-2 text-[9px] italic text-neutral-700">Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering</p>
+      <p className="mt-2 text-[10pt] italic text-neutral-700">
+        Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering
+      </p>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
