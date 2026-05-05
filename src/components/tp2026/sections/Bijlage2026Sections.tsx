@@ -389,6 +389,9 @@ export function Bijlage1Editor({
   );
 }
 
+/** Left-column label cells (Doel / Periode / Activiteiten) — Word template orange tint */
+const BIJLAGE1_LABEL_ORANGE = 'bg-[#fcd8b8]';
+
 export function Bijlage1A4Pages({
   data,
   phases,
@@ -403,69 +406,82 @@ export function Bijlage1A4Pages({
     `van datum ${formatNLDate(phase.period_from)} - einddatum fase ${idx === 0 ? '1' : idx === 1 ? '2' : idx} (duur 3 maanden)`;
 
   const page = (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
-      <A4LogoHeader />
-      <div className="mb-3">
-        {/* Google Doc: "Bijlage 1" 11 pt; subtitle "Voortgang en planning" 10 pt (smaller). */}
-        <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
-        <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
-          Voortgang en planning
+    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex h-full min-h-0 flex-col overflow-hidden`}>
+      {/* Scroll main body; footer stays pinned to bottom of A4 (avoids clipped fase 3 + stray gap). */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <A4LogoHeader />
+        <div className="mb-2 shrink-0">
+          {/* Google Doc: "Bijlage 1" 11 pt; subtitle "Voortgang en planning" 10 pt (smaller). */}
+          <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
+          <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
+            Voortgang en planning
+          </div>
         </div>
-      </div>
-      <div className="flex-1 space-y-3 text-[10pt] leading-tight text-neutral-900">
-        {normalized.map((phase, idx) => (
-          <table key={idx} className="w-full border border-[#b8985c] border-collapse table-fixed bg-white">
-            <colgroup>
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '68%' }} />
-              <col style={{ width: '10%' }} />
-            </colgroup>
-            <tbody>
-              <tr>
-                <td colSpan={2} className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold">
-                  Planning fase {idx + 1}
-                </td>
-                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold text-center">
-                  Status
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">Doel</td>
-                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] align-top" colSpan={2}>
-                  {phase.title || '—'}
-                </td>
-              </tr>
-              <tr>
-                <td className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top">
-                  Periode
-                </td>
-                <td className="border border-[#b8985c] !bg-white px-2 py-1 align-top text-neutral-900" colSpan={2}>
-                  {renderPeriodeText(phase, idx)}
-                </td>
-              </tr>
-              {(phase.activities.length ? phase.activities : [{ name: '—', status: 'P' as const }]).map((activity, rowIdx, rows) => (
-                <tr key={`${idx}-${rowIdx}`}>
-                  {rowIdx === 0 ? (
-                    <td
-                      rowSpan={rows.length}
-                      className="border border-[#b8985c] !bg-white px-2 py-1 text-[#6d2a96] font-bold align-top"
-                    >
-                      Activiteiten
-                    </td>
-                  ) : null}
-                  <td className="border border-[#b8985c] !bg-white px-2 py-1 align-top text-neutral-900">{activity.name}</td>
-                  <td className="border border-[#b8985c] !bg-white px-2 py-1 text-center align-top text-neutral-900">
-                    {activity.status}
+        <div className="shrink-0 space-y-1.5 text-[10pt] leading-snug text-neutral-900">
+          {normalized.map((phase, idx) => (
+            <table key={idx} className="w-full border border-[#b8985c] border-collapse table-fixed bg-white">
+              <colgroup>
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '68%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
+              <tbody>
+                <tr>
+                  <td colSpan={2} className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
+                    Planning fase {idx + 1}
+                  </td>
+                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
+                    Status
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+                <tr>
+                  <td
+                    className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                  >
+                    Doel
+                  </td>
+                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] align-top" colSpan={2}>
+                    {phase.title || '—'}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                  >
+                    Periode
+                  </td>
+                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top text-neutral-900" colSpan={2}>
+                    {renderPeriodeText(phase, idx)}
+                  </td>
+                </tr>
+                {(phase.activities.length ? phase.activities : [{ name: '—', status: 'P' as const }]).map(
+                  (activity, rowIdx, rows) => (
+                    <tr key={`${idx}-${rowIdx}`}>
+                      {rowIdx === 0 ? (
+                        <td
+                          rowSpan={rows.length}
+                          className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                        >
+                          Activiteiten
+                        </td>
+                      ) : null}
+                      <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top text-neutral-900">
+                        {activity.name}
+                      </td>
+                      <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-center align-top text-neutral-900">
+                        {activity.status}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          ))}
+        </div>
+        <p className="mt-1.5 shrink-0 pb-1 text-[10pt] italic text-neutral-700">
+          Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering
+        </p>
       </div>
-      <p className="mt-2 text-[10pt] italic text-neutral-700">
-        Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering
-      </p>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
