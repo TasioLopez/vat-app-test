@@ -182,6 +182,30 @@ body {
   pointer-events: none; /* Optional: prevents interference during drag */
 }
 
+/*
+ * MDXEditor portals use `.mdxeditor-popup-container`. In some versions those nodes inherit the
+ * editor root class list and remain in normal document flow, leaving a ~2px tall bordered strip
+ * (e.g. `border-[#b8985c]`) at the bottom and making the page slightly scrollable after hydrate.
+ * Keep the layer out of layout flow; dialogs inside still receive pointer events.
+ */
+.mdxeditor-popup-container {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 10050;
+}
+
+.mdxeditor-popup-container > * {
+  pointer-events: auto;
+}
 
 /* Reset page for print */
 @page {

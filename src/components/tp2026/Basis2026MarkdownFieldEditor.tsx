@@ -62,14 +62,16 @@ export function Basis2026MarkdownFieldEditor({
   );
 
   return (
-    <MDXEditor
-      markdown={markdown}
-      onChange={(md) => onChange(md)}
-      plugins={plugins}
-      suppressHtmlProcessing
-      className="rounded-md border border-[#b8985c] bg-white"
-      contentEditableClassName={`prose prose-sm max-w-none px-3 py-2 text-neutral-900 ${minHeightClassName}`}
-      placeholder={placeholder}
-    />
+    <div className="overflow-hidden rounded-md border border-[#b8985c] bg-white">
+      <MDXEditor
+        markdown={markdown}
+        onChange={(md) => onChange(md)}
+        plugins={plugins}
+        suppressHtmlProcessing
+        className="bg-white"
+        contentEditableClassName={`prose prose-sm max-w-none px-3 py-2 text-neutral-900 ${minHeightClassName}`}
+        placeholder={placeholder}
+      />
+    </div>
   );
 }
