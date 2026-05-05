@@ -58,17 +58,18 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
 
 export const TP2026BasisFields: TP2026FieldDef[] = [
   { key: 'inleiding', label: 'Inleiding', type: 'multiline' },
-  { key: 'inleiding_sub', label: 'Inleiding subtekst', type: 'multiline' },
+  { key: 'inleiding_sub', label: 'Toelichting (bij inleiding)', type: 'multiline' },
+  { key: 'wettelijke_kaders', label: 'Wettelijke kaders en terminologie', type: 'multiline' },
   { key: 'sociale_achtergrond', label: 'Sociale achtergrond & maatschappelijke context', type: 'multiline' },
   { key: 'visie_werknemer', label: 'Visie van werknemer', type: 'multiline' },
+  { key: 'visie_loopbaanadviseur', label: 'Visie van loopbaanadviseur', type: 'multiline' },
+  { key: 'prognose_bedrijfsarts', label: 'Prognose van de bedrijfsarts', type: 'multiline' },
   { key: 'persoonlijk_profiel', label: 'Persoonlijk profiel', type: 'multiline' },
-  { key: 'prognose_bedrijfsarts', label: 'Belastbaarheidsprofiel: prognose', type: 'multiline' },
-  { key: 'praktische_belemmeringen', label: 'Praktische belemmeringen', type: 'multiline' },
-  { key: 'advies_ad_passende_arbeid', label: 'Advies passende arbeid', type: 'multiline' },
-  { key: 'pow_meter', label: 'POW-meter', type: 'multiline' },
-  { key: 'visie_plaatsbaarheid', label: 'Visie op plaatsbaarheid', type: 'multiline' },
-  { key: 'visie_loopbaanadviseur', label: 'Visie loopbaanadviseur', type: 'multiline' },
   { key: 'zoekprofiel', label: 'Zoekprofiel', type: 'multiline' },
+  { key: 'praktische_belemmeringen', label: 'Praktische belemmeringen', type: 'multiline' },
+  { key: 'advies_ad_passende_arbeid', label: 'Advies passende arbeid (AD)', type: 'multiline' },
+  { key: 'pow_meter', label: 'Perspectief op Werk (PoW-meter)', type: 'multiline' },
+  { key: 'visie_plaatsbaarheid', label: 'Visie op plaatsbaarheid', type: 'multiline' },
 ];
 
 export type TP2026Bijlage1Activity = {

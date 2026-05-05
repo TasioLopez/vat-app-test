@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
+import { TP2026_BASIS_AUTOFILL_ENDPOINTS } from '@/lib/tp2026/basis-autofill-endpoints';
 import { Cover2026A4, Cover2026Editor } from '@/components/tp2026/sections/Cover2026Section';
 import { Gegevens2026A4Pages, Gegevens2026Editor } from '@/components/tp2026/sections/Gegevens2026Section';
 import { Basis2026A4Pages, Basis2026Editor } from '@/components/tp2026/sections/Basis2026Section';
@@ -41,6 +42,29 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [saving, setSaving] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
 
+  const autofillBasisField = useCallback(
+    async (fieldKey: string) => {
+      const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
+      if (!endpoint) return;
+      try {
+        const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
+        const json = await res.json();
+        if (!res.ok) return;
+        setTPData((prev) => {
+          let next: Record<string, any> = { ...prev };
+          if (json?.details && typeof json.details === 'object') {
+            next = mergeAutofillIntoTP2026(next, json.details);
+          }
+          if (json?.data?.pow_meter) next.pow_meter = json.data.pow_meter;
+          return ensureTP2026Shape(next);
+        });
+      } catch (e) {
+        console.error('Basis field autofill failed', fieldKey, e);
+      }
+    },
+    [employeeId, setTPData]
+  );
+
   const sections = [
     {
       id: 1,
@@ -57,7 +81,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     {
       id: 3,
       title: '03 Basisdocument',
-      renderEditor: () => <Basis2026Editor data={tpData} updateField={updateField} />,
+      renderEditor: () => (
+        <Basis2026Editor data={tpData} updateField={updateField} onAutofillField={autofillBasisField} />
+      ),
       renderPreview: () => <Basis2026A4Pages data={tpData} />,
     },
     {
@@ -67,6 +93,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         <Bijlage1Editor
           phases={tpData.bijlage1_phases || []}
           setPhases={(next) => updateField('bijlage1_phases', next)}
+          planStartDate={tpData.tp_start_date || tpData.intake_date}
+          planEndDate={tpData.tp_end_date}
         />
       ),
       renderPreview: () => <Bijlage1A4Pages data={tpData} phases={tpData.bijlage1_phases || []} />,
@@ -238,20 +266,22 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         next = mergeAutofillIntoTP2026(next, tp2Json.details);
       }
 
-      const tp3Endpoints = [
-        '/api/autofill-tp-3/inleiding',
-        '/api/autofill-tp-3/sociale-achtergrond',
-        '/api/autofill-tp-3/visie-werknemer',
-        '/api/autofill-tp-3/visie-adviseur',
-        '/api/autofill-tp-3/prognose-bedrijfsarts',
-        '/api/autofill-tp-3/persoonlijk-profiel',
-        '/api/autofill-tp-3/zoekprofiel',
-        '/api/autofill-tp-3/ad-advies-passende-arbeid',
-        '/api/autofill-tp-3/visie-plaatsbaarheid',
-        '/api/autofill-tp-3/pow-meter',
-      ];
+      const tp3FieldOrder = [
+        'inleiding',
+        'sociale_achtergrond',
+        'visie_werknemer',
+        'visie_loopbaanadviseur',
+        'prognose_bedrijfsarts',
+        'persoonlijk_profiel',
+        'zoekprofiel',
+        'advies_ad_passende_arbeid',
+        'visie_plaatsbaarheid',
+        'pow_meter',
+      ] as const;
 
-      for (const endpoint of tp3Endpoints) {
+      for (const fieldKey of tp3FieldOrder) {
+        const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
+        if (!endpoint) continue;
         try {
           const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
           const json = await res.json();
@@ -300,11 +330,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
-        <div className="h-full p-6 relative">
+        <div className="h-full min-h-0 p-6 relative">
           {sections.map((section, index) => (
-            <div key={section.id} style={{ display: currentStep === index + 1 ? 'block' : 'none' }} className="h-full">
-              <div className="flex gap-10 h-full items-start overflow-hidden">
-                <div className="w-[50%] space-y-3 overflow-y-auto max-h-full pr-2">
+            <div key={section.id} style={{ display: currentStep === index + 1 ? 'block' : 'none' }} className="h-full min-h-0">
+              <div className="flex min-h-0 h-full gap-10 items-stretch">
+                <div className="flex w-[50%] min-h-0 flex-col space-y-3 overflow-y-auto pr-2">
                   {section.renderEditor()}
                 </div>
                 <TPPreviewWrapper>

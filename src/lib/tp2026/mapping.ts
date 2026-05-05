@@ -1,4 +1,5 @@
 import { formatTP2026CoverVoorName } from '@/lib/utils';
+import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
 import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
@@ -129,6 +130,30 @@ const bijlage3Defaults: TP2026Bijlage3Decision[] = [
   },
 ];
 
+function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((phase) => phase && typeof phase === 'object')
+    .map((phase, index) => {
+      const typedPhase = phase as Record<string, any>;
+      const activities = Array.isArray(typedPhase.activities) ? typedPhase.activities : [];
+      return {
+        title: String(typedPhase.title || `Planning fase ${index + 1}`),
+        period_from: String(typedPhase.period_from || typedPhase.periode?.from || ''),
+        period_to: String(typedPhase.period_to || typedPhase.periode?.to || ''),
+        activities: activities
+          .filter((activity) => activity && typeof activity === 'object' && typeof activity.name === 'string')
+          .map((activity) => ({
+            name: String(activity.name || ''),
+            status:
+              activity.status === 'G' || activity.status === 'P' || activity.status === 'N' || activity.status === 'U'
+                ? activity.status
+                : 'P',
+          })),
+      };
+    });
+}
+
 export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any> {
   const next = { ...raw };
 
@@ -138,11 +163,14 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
     next.employee_name = [next.first_name, next.last_name].filter(Boolean).join(' ').trim();
   }
 
-  const fromLegacy = Array.isArray(next.bijlage_fases) ? next.bijlage_fases : [];
+  const fromLegacy = normalizeBijlage1Phases(next.bijlage_fases);
+  const currentBijlage1 = normalizeBijlage1Phases(next.bijlage1_phases);
   if (!Array.isArray(next.bijlage1_phases) || next.bijlage1_phases.length === 0) {
     next.bijlage1_phases = (fromLegacy.length > 0
       ? fromLegacy
       : bijlage1PhaseDefaults) as TP2026Bijlage1Phase[];
+  } else {
+    next.bijlage1_phases = currentBijlage1.length > 0 ? currentBijlage1 : bijlage1PhaseDefaults;
   }
 
   if (!next.bijlage2_model || typeof next.bijlage2_model !== 'object') {
@@ -151,6 +179,17 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   if (!Array.isArray(next.bijlage3_decisions) || next.bijlage3_decisions.length === 0) {
     next.bijlage3_decisions = bijlage3Defaults;
+  }
+
+  if (!String(next.wettelijke_kaders || '').trim()) {
+    next.wettelijke_kaders = WETTELIJKE_KADERS;
+  }
+  if (!String(next.visie_loopbaanadviseur || '').trim()) {
+    next.visie_loopbaanadviseur = VISIE_LOOPBAANADVISEUR_BASIS;
+  }
+  if (!String(next.praktische_belemmeringen || '').trim()) {
+    next.praktische_belemmeringen =
+      'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
   }
 
   return next;

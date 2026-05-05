@@ -21,7 +21,7 @@ interface TPPreviewWrapperProps {
 export default function TPPreviewWrapper({ children, className }: TPPreviewWrapperProps) {
   return (
     <div className={cn(
-      "w-[50%] flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden h-full",
+      "w-[50%] min-h-0 flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden h-full",
       className
     )}>
       <div className="transform scale-[0.65] origin-top">
