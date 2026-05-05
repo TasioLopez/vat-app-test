@@ -95,7 +95,7 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
         )}
 
         {/* Content - removed default padding, pages handle their own */}
-        <main className={cn('flex-1 overflow-y-auto', className)}>
+        <main className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
           {children}
         </main>
       </div>

@@ -54,7 +54,7 @@ export default function LegacyTPBuilder({ employeeId }: { employeeId: string }) 
   return (
     <TPProvider>
       <TPSyncGuard />
-      <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-purple-50/20">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-purple-50/20">
         <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-purple-200/50 bg-white/80 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
