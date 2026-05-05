@@ -91,9 +91,20 @@ export function FooterIdentity({
 }
 
 /** Section title: plain bold purple on white (Word template style, no tan band). */
-export function SectionBand({ title, className = '' }: { title: string; className?: string }) {
+export function SectionBand({
+  title,
+  className = '',
+  underline = false,
+}: {
+  title: string;
+  className?: string;
+  /** Basisdocument (step 3): match Word underlined section titles. */
+  underline?: boolean;
+}) {
   return (
-    <div className={`text-[#6d2a96] font-bold text-[12px] leading-tight mb-1.5 ${className}`}>
+    <div
+      className={`text-[#6d2a96] font-bold text-[12px] leading-tight mb-1.5 ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
+    >
       {title}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026BasisFields, formatNLDate } from '@/lib/tp2026/schema';
+import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { A4LogoHeader, A4Page, FooterIdentity, SectionBand, TP2026_A4_PAGE_CLASS } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 
@@ -56,14 +57,16 @@ function BasisPage({
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      {blocks.map((block, idx) => (
-        <div key={block.key} className={`mb-4 ${idx > 0 ? 'mt-7' : ''}`}>
-          <SectionBand title={block.title} />
-          <div className="border border-[#b8985c] p-3 text-[12px] leading-relaxed whitespace-pre-wrap bg-white text-neutral-900">
-            {block.text || '— nog niet ingevuld —'}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {blocks.map((block, idx) => (
+          <div key={block.key} className={`mb-4 ${idx > 0 ? 'mt-7' : ''}`}>
+            <SectionBand title={block.title} underline />
+            <div className="border border-[#b8985c] bg-[#f5efe6] p-3 text-neutral-900">
+              {block.text.trim() ? <Basis2026MarkdownBody markdown={block.text} /> : '— nog niet ingevuld —'}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <FooterIdentity
         lastName={data.last_name}
