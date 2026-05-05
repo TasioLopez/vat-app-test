@@ -405,9 +405,11 @@ export function Bijlage1A4Pages({
   const page = (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="mb-3">
-        <div className="text-[23px] leading-tight font-bold text-[#8f8f8f]">Bijlage 1</div>
-        <div className="text-[24px] leading-tight font-bold text-[#6f6f6f]">Voortgang en planning</div>
+      <div className="mb-4">
+        <div className="text-[19px] leading-[1.15] font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
+        <div className="mt-0.5 text-[27px] leading-[1.15] font-bold tracking-tight text-[#2d8f82]">
+          Voortgang en planning
+        </div>
       </div>
       <div className="flex-1 space-y-3">
         {normalized.map((phase, idx) => (
@@ -419,10 +421,10 @@ export function Bijlage1A4Pages({
             </colgroup>
             <tbody>
               <tr>
-                <td colSpan={2} className="border border-[#b8985c] bg-[#f7f4ee] px-2 py-1 text-[#6d2a96] font-bold">
+                <td colSpan={2} className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold">
                   Planning fase {idx + 1}
                 </td>
-                <td className="border border-[#b8985c] bg-[#f7f4ee] px-2 py-1 text-[#6d2a96] font-bold text-center">
+                <td className="border border-[#b8985c] bg-white px-2 py-1 text-[#6d2a96] font-bold text-center">
                   Status
                 </td>
               </tr>
