@@ -89,15 +89,18 @@ export type TP2026BijlageChecklistRow = {
   checked: boolean;
 };
 
+export type TP2026Bijlage2PowTrede = {
+  trede: number;
+  /** Completion criteria from the official Bijlage 2 template (checkbox each). */
+  criteria: TP2026BijlageChecklistRow[];
+};
+
 export type TP2026Bijlage2Model = {
   willen: TP2026BijlageChecklistRow[];
   weten: TP2026BijlageChecklistRow[];
   kunnen: TP2026BijlageChecklistRow[];
   doen: TP2026BijlageChecklistRow[];
-  powTredes: Array<{
-    trede: number;
-    checks: TP2026BijlageChecklistRow[];
-  }>;
+  powTredes: TP2026Bijlage2PowTrede[];
 };
 
 export type TP2026Bijlage3Decision = {

@@ -4,8 +4,11 @@ import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
   TP2026Bijlage2Model,
+  TP2026Bijlage2PowTrede,
   TP2026Bijlage3Decision,
+  TP2026BijlageChecklistRow,
 } from './schema';
+import { createOfficialBijlage2Model } from '@/lib/tp2026/bijlage2-official';
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -54,36 +57,101 @@ const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   },
 ];
 
-const bijlage2Default: TP2026Bijlage2Model = {
-  willen: [
-    'Empowerment',
-    'Dagstructuur',
-    'Rouwverwerking en acceptatie',
-    'Fit en vitaliteit/ lifestyle coaching',
-  ].map((label) => ({ label, checked: false })),
-  weten: [
-    'Wet- en regelgeving spoor 2',
-    'Arbeidsmarkt oriëntatie',
-    'Kennis welke beroepen passend zijn',
-    'Inzicht in zoekprofiel',
-  ].map((label) => ({ label, checked: false })),
-  kunnen: [
-    'Opstellen verzorgd cv',
-    'Schrijven open sollicitatiebrief',
-    'Vacatures zoeken en beoordelen',
-    'LinkedIn gebruiken voor netwerken en solliciteren',
-  ].map((label) => ({ label, checked: false })),
-  doen: [
-    'Sollicitatieactiviteit (1 x per week)',
-    '(Werk)ervaring via spoor 1',
-    '(Werk)ervaring via stage/WEP',
-    'Jobhunting/actieve bemiddeling',
-  ].map((label) => ({ label, checked: false })),
-  powTredes: [1, 2, 3, 4, 5, 6].map((trede) => ({
-    trede,
-    checks: [{ label: `Trede ${trede} behaald`, checked: false }],
-  })),
+const bijlage2Default: TP2026Bijlage2Model = createOfficialBijlage2Model();
+
+function normChecklistLabel(label: string): string {
+  return String(label || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\u2019/g, "'");
+}
+
+/** Map legacy dev labels to official PDF labels so checked state is preserved. */
+const BIJLAGE2_CHECKLIST_LEGACY: Record<string, string> = {
+  'Opstellen verzorgd cv': 'Opstellen verzorgd c.v.',
+  '(Werk)ervaring via spoor 1': '(Werk)ervaring opgedaan via Spoor 1',
+  '(Werk)ervaring via stage/WEP': '(Werk)ervaring opgedaan via een werkervaringsplaats/ stage (WEP)',
+  'Jobhunting/actieve bemiddeling': 'Jobhunting/ actieve bemiddeling',
 };
+
+function canonicalChecklistLabel(label: string): string {
+  const n = normChecklistLabel(label);
+  const mapped = BIJLAGE2_CHECKLIST_LEGACY[n];
+  return mapped ? normChecklistLabel(mapped) : n;
+}
+
+function mergeChecklistGroup(
+  defaults: TP2026BijlageChecklistRow[],
+  saved: unknown
+): TP2026BijlageChecklistRow[] {
+  const savedArr = Array.isArray(saved) ? saved : [];
+  const checkedByCanonical = new Map<string, boolean>();
+  for (const row of savedArr) {
+    if (!row || typeof row !== 'object' || typeof (row as { label?: unknown }).label !== 'string') continue;
+    const r = row as TP2026BijlageChecklistRow;
+    const key = canonicalChecklistLabel(r.label);
+    checkedByCanonical.set(key, checkedByCanonical.get(key) || Boolean(r.checked));
+  }
+  return defaults.map((d) => ({
+    label: d.label,
+    checked: checkedByCanonical.get(normChecklistLabel(d.label)) ?? false,
+  }));
+}
+
+function isLegacyPowPlaceholder(row: Record<string, unknown>): boolean {
+  const raw = row.criteria ?? row.checks;
+  if (!Array.isArray(raw) || raw.length !== 1) return false;
+  const first = raw[0] as { label?: unknown };
+  return typeof first?.label === 'string' && /behaald/i.test(first.label);
+}
+
+function normalizePowTredes(savedPow: unknown): TP2026Bijlage2PowTrede[] {
+  const defaults = createOfficialBijlage2Model().powTredes;
+  if (!Array.isArray(savedPow)) return defaults;
+
+  const savedRows = savedPow
+    .filter((x) => x && typeof x === 'object')
+    .map((x) => x as Record<string, unknown>);
+
+  return defaults.map((def) => {
+    const tredeNum = def.trede;
+    const saved = savedRows.find((r) => Number(r.trede) === tredeNum);
+    if (!saved) return def;
+    if (isLegacyPowPlaceholder(saved)) return def;
+
+    const src = (saved.criteria ?? saved.checks) as unknown;
+    if (!Array.isArray(src)) return def;
+
+    const checkedByLabel = new Map<string, boolean>();
+    for (const c of src) {
+      if (!c || typeof c !== 'object' || typeof (c as { label?: unknown }).label !== 'string') continue;
+      const cr = c as TP2026BijlageChecklistRow;
+      checkedByLabel.set(normChecklistLabel(cr.label), Boolean(cr.checked));
+    }
+
+    return {
+      trede: tredeNum,
+      criteria: def.criteria.map((cr) => ({
+        label: cr.label,
+        checked: checkedByLabel.get(normChecklistLabel(cr.label)) ?? false,
+      })),
+    };
+  });
+}
+
+export function normalizeBijlage2Model(raw: unknown): TP2026Bijlage2Model {
+  const base = createOfficialBijlage2Model();
+  if (!raw || typeof raw !== 'object') return base;
+
+  const m = raw as Record<string, unknown>;
+  return {
+    willen: mergeChecklistGroup(base.willen, m.willen),
+    weten: mergeChecklistGroup(base.weten, m.weten),
+    kunnen: mergeChecklistGroup(base.kunnen, m.kunnen),
+    doen: mergeChecklistGroup(base.doen, m.doen),
+    powTredes: normalizePowTredes(m.powTredes),
+  };
+}
 
 const bijlage3Defaults: TP2026Bijlage3Decision[] = [
   {
@@ -175,6 +243,8 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   if (!next.bijlage2_model || typeof next.bijlage2_model !== 'object') {
     next.bijlage2_model = bijlage2Default;
+  } else {
+    next.bijlage2_model = normalizeBijlage2Model(next.bijlage2_model);
   }
 
   if (!Array.isArray(next.bijlage3_decisions) || next.bijlage3_decisions.length === 0) {

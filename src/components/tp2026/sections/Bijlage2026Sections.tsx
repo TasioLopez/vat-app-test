@@ -13,8 +13,10 @@ import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
   TP2026Bijlage2Model,
+  TP2026Bijlage2PowTrede,
   TP2026Bijlage3Decision,
 } from '@/lib/tp2026/schema';
+import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -493,6 +495,8 @@ export function Bijlage1A4Pages({
   return printMode ? <section className="print-page">{page}</section> : page;
 }
 
+const BIJLAGE2_CHECKLIST_GROUPS = ['willen', 'weten', 'kunnen', 'doen'] as const;
+
 export function Bijlage2Editor({
   model,
   setModel,
@@ -500,32 +504,192 @@ export function Bijlage2Editor({
   model: TP2026Bijlage2Model;
   setModel: (next: TP2026Bijlage2Model) => void;
 }) {
-  const groups: Array<keyof TP2026Bijlage2Model> = ['willen', 'weten', 'kunnen', 'doen'];
+  const sortedPow = useMemo(
+    () => [...model.powTredes].sort((a, b) => a.trede - b.trede),
+    [model.powTredes]
+  );
+
+  const updateChecklist = (group: (typeof BIJLAGE2_CHECKLIST_GROUPS)[number], idx: number, checked: boolean) => {
+    setModel({
+      ...model,
+      [group]: model[group].map((r, i) => (i === idx ? { ...r, checked } : r)),
+    });
+  };
+
+  const updatePowCriterion = (trede: number, critIdx: number, checked: boolean) => {
+    setModel({
+      ...model,
+      powTredes: model.powTredes.map((t) =>
+        t.trede === trede
+          ? { ...t, criteria: t.criteria.map((c, i) => (i === critIdx ? { ...c, checked } : c)) }
+          : t
+      ),
+    });
+  };
+
   return (
     <div className="space-y-4">
-      {groups.map((group) => (
+      {BIJLAGE2_CHECKLIST_GROUPS.map((group) => (
         <div key={group} className="border border-border rounded-md p-3">
-          <h4 className="font-semibold capitalize mb-2">{group}</h4>
-          {(model[group] as any[]).map((row, idx) => (
-            <label key={idx} className="flex items-center gap-2 py-1">
-              <input
-                type="checkbox"
-                checked={row.checked}
-                onChange={(e) =>
-                  setModel({
-                    ...model,
-                    [group]: (model[group] as any[]).map((r, i) =>
-                      i === idx ? { ...r, checked: e.target.checked } : r
-                    ),
-                  })
-                }
-              />
-              <span>{row.label}</span>
-            </label>
-          ))}
+          <h4 className="font-semibold capitalize mb-2 text-[#6d2a96]">{group}</h4>
+          <div className="max-h-[320px] space-y-1 overflow-y-auto pr-1">
+            {model[group].map((row, idx) => (
+              <label key={idx} className="flex items-start gap-2 py-1 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 shrink-0"
+                  checked={row.checked}
+                  onChange={(e) => updateChecklist(group, idx, e.target.checked)}
+                />
+                <span>{row.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
       ))}
+
+      <div className="border border-border rounded-md p-3">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <h4 className="font-semibold text-[#6d2a96]">Activeringsinterventies</h4>
+          <span className="text-sm font-semibold text-[#6d2a96]">POW-meter™</span>
+        </div>
+        <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
+          {sortedPow.map((t) => (
+            <details
+              key={t.trede}
+              className="rounded border border-border bg-muted/15 open:bg-white"
+              open={t.trede <= 2}
+            >
+              <summary className="cursor-pointer px-2 py-1.5 text-sm font-semibold text-[#6d2a96]">
+                Trede {t.trede}
+              </summary>
+              <div className="space-y-1 px-2 pb-2">
+                <p className="text-xs text-muted-foreground">
+                  Trede {t.trede} is succesvol afgerond wanneer:
+                </p>
+                {t.criteria.map((c, i) => (
+                  <label key={i} className="flex items-start gap-2 py-0.5 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 shrink-0"
+                      checked={c.checked}
+                      onChange={(e) => updatePowCriterion(t.trede, i, e.target.checked)}
+                    />
+                    <span>{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+        <p className="mt-3 text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[0]}</p>
+        <p className="text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[1]}</p>
+      </div>
     </div>
+  );
+}
+
+const BIJLAGE2_TREDE_BADGE: Record<number, string> = {
+  1: 'bg-[#ebe1cf] text-[#3d2f1f]',
+  2: 'bg-[#c8e6c9] text-[#1b3d1c]',
+  3: 'bg-[#a8d5cf] text-[#0d3d38]',
+  4: 'bg-[#e6d5a8] text-[#4a3d12]',
+  5: 'bg-[#e8b89a] text-[#4a2612]',
+  6: 'bg-[#7d5a96] text-white',
+};
+
+function Bijlage2TitleBlock() {
+  return (
+    <div className="mb-2 shrink-0">
+      <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 2</div>
+      <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
+        ValentineZ leernavigator
+      </div>
+      <div className="mt-2 text-[10pt] font-bold leading-tight text-[#6d2a96]">{BIJLAGE2_SECTION_BASIS}</div>
+    </div>
+  );
+}
+
+function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
+  const cols = [model.willen, model.weten, model.kunnen, model.doen] as const;
+  const maxRows = Math.max(...cols.map((c) => c.length), 1);
+  const headers = ['WILLEN', 'WETEN', 'KUNNEN', 'DOEN'] as const;
+
+  return (
+    <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[10pt] leading-snug text-neutral-900">
+      <colgroup>
+        <col style={{ width: '25%' }} />
+        <col style={{ width: '25%' }} />
+        <col style={{ width: '25%' }} />
+        <col style={{ width: '25%' }} />
+      </colgroup>
+      <thead>
+        <tr>
+          {headers.map((h) => (
+            <th
+              key={h}
+              className="border border-[#b8985c] bg-[#ebe1cf] px-1.5 py-1 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]"
+            >
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: maxRows }).map((_, i) => (
+          <tr key={i}>
+            {cols.map((col, ci) => (
+              <td key={ci} className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
+                {col[i] ? (
+                  <span className="break-words">
+                    {col[i].checked ? '☑' : '☐'} {col[i].label}
+                  </span>
+                ) : null}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function Bijlage2PowHeaderRow() {
+  return (
+    <div className="mt-3 mb-1 flex w-full shrink-0 items-baseline justify-between text-[10pt] font-bold text-[#6d2a96]">
+      <span>Activeringsinterventies</span>
+      <span className="pr-1">POW-meter™</span>
+    </div>
+  );
+}
+
+function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
+  return (
+    <table className="w-full border-collapse border border-[#b8985c] text-[10pt] leading-snug">
+      <tbody>
+        {tredes.map((t) => (
+          <tr key={t.trede}>
+            <td className="w-[78%] border border-[#b8985c] bg-white px-2 py-1 align-top">
+              <div className="mb-0.5 font-bold text-[#6d2a96]">
+                Trede {t.trede} is succesvol afgerond wanneer:
+              </div>
+              <div className="space-y-0.5 text-neutral-900">
+                {t.criteria.map((c, idx) => (
+                  <div key={idx} className="break-words">
+                    {c.checked ? '☑' : '☐'} {c.label}
+                  </div>
+                ))}
+              </div>
+            </td>
+            <td
+              className={`w-[22%] border border-[#b8985c] px-1 py-2 align-middle text-center text-[10pt] font-bold ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
+            >
+              Trede {t.trede}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -538,43 +702,24 @@ export function Bijlage2A4Pages({
   model: TP2026Bijlage2Model;
   printMode?: boolean;
 }) {
-  const renderChecks = (rows: Array<{ label: string; checked: boolean }>) =>
-    rows.map((row) => `${row.checked ? '☑' : '☐'} ${row.label}`).join('\n');
+  const powSorted = useMemo(
+    () => [...model.powTredes].sort((a, b) => a.trede - b.trede),
+    [model.powTredes]
+  );
+  const powPage1 = powSorted.filter((t) => t.trede <= 4);
+  const powPage2 = powSorted.filter((t) => t.trede >= 5);
 
-  const page = (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
-      <A4LogoHeader />
-      <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 2 - ValentineZ leernavigator</h2>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
-          <h4 className="font-bold mb-2">Willen</h4>
-          <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.willen)}</pre>
-        </div>
-        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
-          <h4 className="font-bold mb-2">Weten</h4>
-          <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.weten)}</pre>
-        </div>
-        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
-          <h4 className="font-bold mb-2">Kunnen</h4>
-          <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.kunnen)}</pre>
-        </div>
-        <div className="border border-[#b8985c] bg-[#f5efe6] p-3">
-          <h4 className="font-bold mb-2">Doen</h4>
-          <pre className="whitespace-pre-wrap text-[11px] font-sans">{renderChecks(model.doen)}</pre>
-        </div>
+  const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex h-full min-h-0 flex-col overflow-hidden`;
+
+  const page1 = (
+    <A4Page key="b2-p1" className={pageShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <A4LogoHeader />
+        <Bijlage2TitleBlock />
+        <Bijlage2BasisTable model={model} />
+        <Bijlage2PowHeaderRow />
+        <Bijlage2PowRows tredes={powPage1} />
       </div>
-
-      <SectionBand title="POW-meter™ Tredes" className="mt-4" />
-      <TP2026FieldTable>
-        {model.powTredes.map((trede) => (
-          <DataRow
-            key={trede.trede}
-            label={`Trede ${trede.trede}`}
-            value={trede.checks.some((x) => x.checked) ? 'Behaald' : 'Niet behaald'}
-            compact
-          />
-        ))}
-      </TP2026FieldTable>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
@@ -583,7 +728,42 @@ export function Bijlage2A4Pages({
       />
     </A4Page>
   );
-  return printMode ? <section className="print-page">{page}</section> : page;
+
+  const page2 = (
+    <A4Page key="b2-p2" className={pageShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <A4LogoHeader />
+        <Bijlage2PowRows tredes={powPage2} />
+        <div className="mt-3 shrink-0 space-y-0.5 text-[9pt] italic leading-snug text-neutral-800">
+          {BIJLAGE2_FOOTNOTES.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      </div>
+      <FooterIdentity
+        lastName={data.last_name}
+        firstName={data.first_name}
+        dateOfBirth={formatNLDate(data.date_of_birth)}
+        pageNumber={2}
+      />
+    </A4Page>
+  );
+
+  if (printMode) {
+    return (
+      <>
+        <section className="print-page">{page1}</section>
+        <section className="print-page">{page2}</section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {page1}
+      {page2}
+    </>
+  );
 }
 
 export function Bijlage3Editor({
