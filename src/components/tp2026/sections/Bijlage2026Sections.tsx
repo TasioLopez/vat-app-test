@@ -18,7 +18,7 @@ import type {
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 
 function TextInput({
@@ -610,9 +610,30 @@ function Bijlage2TitleBlock() {
   );
 }
 
-function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
+/** Max checklist body rows per A4 sheet (basis section only) — avoids in-page scroll; extra rows continue on next page. */
+const BIJLAGE2_BASIS_ROWS_PER_PAGE = 6;
+
+function bijlage2BasisMaxRows(model: TP2026Bijlage2Model): number {
+  const cols = [model.willen, model.weten, model.kunnen, model.doen];
+  return Math.max(...cols.map((c) => c.length), 1);
+}
+
+function Bijlage2BasisTable({
+  model,
+  rowStart = 0,
+  rowEnd,
+}: {
+  model: TP2026Bijlage2Model;
+  /** Inclusive start index into the longest column (0-based). */
+  rowStart?: number;
+  /** Exclusive end index; defaults to full table. */
+  rowEnd?: number;
+}) {
   const cols = [model.willen, model.weten, model.kunnen, model.doen] as const;
-  const maxRows = Math.max(...cols.map((c) => c.length), 1);
+  const maxRows = bijlage2BasisMaxRows(model);
+  const end = rowEnd ?? maxRows;
+  const start = Math.max(0, Math.min(rowStart, maxRows));
+  const safeEnd = Math.max(start, Math.min(end, maxRows));
   const headers = ['WILLEN', 'WETEN', 'KUNNEN', 'DOEN'] as const;
 
   return (
@@ -636,7 +657,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
         </tr>
       </thead>
       <tbody>
-        {Array.from({ length: maxRows }).map((_, i) => (
+        {Array.from({ length: safeEnd - start }, (_, j) => start + j).map((i) => (
           <tr key={i}>
             {cols.map((col, ci) => (
               <td key={ci} className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
@@ -693,6 +714,8 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
   );
 }
 
+const bijlage2BodyClass = 'flex min-h-0 flex-1 flex-col overflow-x-hidden';
+
 export function Bijlage2A4Pages({
   data,
   model,
@@ -706,64 +729,110 @@ export function Bijlage2A4Pages({
     () => [...model.powTredes].sort((a, b) => a.trede - b.trede),
     [model.powTredes]
   );
-  const powPage1 = powSorted.filter((t) => t.trede <= 4);
-  const powPage2 = powSorted.filter((t) => t.trede >= 5);
 
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
-  const page1 = (
-    <A4Page key="b2-p1" className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-        <A4LogoHeader />
-        <Bijlage2TitleBlock />
-        <Bijlage2BasisTable model={model} />
-        <Bijlage2PowHeaderRow />
-        <Bijlage2PowRows tredes={powPage1} />
-      </div>
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={1}
-      />
-    </A4Page>
-  );
+  const basisSlices = useMemo(() => {
+    const maxRows = bijlage2BasisMaxRows(model);
+    const slices: Array<{ start: number; end: number }> = [];
+    for (let start = 0; start < maxRows; start += BIJLAGE2_BASIS_ROWS_PER_PAGE) {
+      slices.push({
+        start,
+        end: Math.min(start + BIJLAGE2_BASIS_ROWS_PER_PAGE, maxRows),
+      });
+    }
+    return slices;
+  }, [model]);
 
-  const page2 = (
-    <A4Page key="b2-p2" className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-        <A4LogoHeader />
-        <Bijlage2PowRows tredes={powPage2} />
-        <div className="mt-3 shrink-0 space-y-0.5 text-[9pt] italic leading-snug text-neutral-800">
-          {BIJLAGE2_FOOTNOTES.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+  const pages = useMemo(() => {
+    const powPage1 = powSorted.filter((t) => t.trede <= 4);
+    const powPage2 = powSorted.filter((t) => t.trede >= 5);
+    const out: ReactNode[] = [];
+    let pageNumber = 0;
+
+    basisSlices.forEach((slice, sliceIdx) => {
+      pageNumber += 1;
+      const isFirstBasis = sliceIdx === 0;
+      out.push(
+        <A4Page key={`b2-basis-${slice.start}`} className={pageShellClass}>
+          <div className={bijlage2BodyClass}>
+            <A4LogoHeader />
+            {isFirstBasis ? (
+              <Bijlage2TitleBlock />
+            ) : (
+              <div className="mb-2 shrink-0">
+                <div className="text-[10pt] font-bold leading-tight text-[#6d2a96]">
+                  {BIJLAGE2_SECTION_BASIS}{' '}
+                  <span className="font-normal text-neutral-600">(vervolg)</span>
+                </div>
+              </div>
+            )}
+            <Bijlage2BasisTable model={model} rowStart={slice.start} rowEnd={slice.end} />
+          </div>
+          <FooterIdentity
+            lastName={data.last_name}
+            firstName={data.first_name}
+            dateOfBirth={formatNLDate(data.date_of_birth)}
+            pageNumber={pageNumber}
+          />
+        </A4Page>
+      );
+    });
+
+    pageNumber += 1;
+    out.push(
+      <A4Page key="b2-pow-1-4" className={pageShellClass}>
+        <div className={bijlage2BodyClass}>
+          <A4LogoHeader />
+          <Bijlage2PowHeaderRow />
+          <Bijlage2PowRows tredes={powPage1} />
         </div>
-      </div>
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={2}
-      />
-    </A4Page>
-  );
+        <FooterIdentity
+          lastName={data.last_name}
+          firstName={data.first_name}
+          dateOfBirth={formatNLDate(data.date_of_birth)}
+          pageNumber={pageNumber}
+        />
+      </A4Page>
+    );
+
+    pageNumber += 1;
+    out.push(
+      <A4Page key="b2-pow-5-6" className={pageShellClass}>
+        <div className={bijlage2BodyClass}>
+          <A4LogoHeader />
+          <Bijlage2PowRows tredes={powPage2} />
+          <div className="mt-3 shrink-0 space-y-0.5 text-[9pt] italic leading-snug text-neutral-800">
+            {BIJLAGE2_FOOTNOTES.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </div>
+        <FooterIdentity
+          lastName={data.last_name}
+          firstName={data.first_name}
+          dateOfBirth={formatNLDate(data.date_of_birth)}
+          pageNumber={pageNumber}
+        />
+      </A4Page>
+    );
+
+    return out;
+  }, [basisSlices, data, model, pageShellClass, powSorted]);
 
   if (printMode) {
     return (
       <>
-        <section className="print-page">{page1}</section>
-        <section className="print-page">{page2}</section>
+        {pages.map((node, idx) => (
+          <section className="print-page" key={`print-b2-${idx}`}>
+            {node}
+          </section>
+        ))}
       </>
     );
   }
 
-  return (
-    <>
-      {page1}
-      {page2}
-    </>
-  );
+  return <>{pages}</>;
 }
 
 export function Bijlage3Editor({
