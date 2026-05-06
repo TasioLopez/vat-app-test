@@ -950,13 +950,13 @@ function estimateBijlage3StepHeightPx(d: TP2026Bijlage3Decision): number {
   const books = d.werkboeken ?? [];
   const wbChars = books.reduce((n, w) => n + String(w).length, 0);
   return (
-    58 +
-    qLen * 0.36 +
-    hintLen * 0.3 +
-    neeLen * 0.22 +
-    books.length * 19 +
-    wbChars * 0.14 +
-    32
+    44 +
+    qLen * 0.28 +
+    hintLen * 0.22 +
+    neeLen * 0.17 +
+    books.length * 14 +
+    wbChars * 0.1 +
+    24
   );
 }
 
@@ -995,8 +995,10 @@ function chunkBijlage3Decisions(
 }
 
 /** Tbody vertical budget after logo + title + 5-col thead (approx.). */
-const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 560;
-const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 820;
+const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 1180;
+const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 1280;
+/** If summed row estimates stay under this, keep all steps on one sheet (official PDF layout). */
+const BIJLAGE3_SINGLE_PAGE_TOTAL_ESTIMATE_MAX = 2100;
 
 /** Page 2 only: final JA branch + Trede 6 (always last bijlage-3 sheet; page number follows stroomschema chunks). */
 function Bijlage3Page2Only({
@@ -1013,7 +1015,7 @@ function Bijlage3Page2Only({
 
   return (
     <A4Page className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-col overflow-hidden">
         <A4LogoHeader />
         <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
           <colgroup>
@@ -1200,19 +1202,22 @@ export function Bijlage3A4Pages({
   const p2 = page2 || { doelJa: false, doelNee: false };
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
-  const mainChunks = useMemo(
-    () =>
-      chunkBijlage3Decisions(
-        decisions,
-        BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX,
-        BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX
-      ),
-    [decisions]
-  );
+  const mainChunks = useMemo(() => {
+    if (!decisions.length) return [[]] as TP2026Bijlage3Decision[][];
+    const totalEst = decisions.reduce((s, d) => s + estimateBijlage3StepHeightPx(d), 0);
+    if (totalEst <= BIJLAGE3_SINGLE_PAGE_TOTAL_ESTIMATE_MAX) {
+      return [decisions];
+    }
+    return chunkBijlage3Decisions(
+      decisions,
+      BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX,
+      BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX
+    );
+  }, [decisions]);
 
   const mainPages = mainChunks.map((chunk, idx) => (
     <A4Page key={`b3-main-${idx}`} className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-col overflow-hidden">
         <A4LogoHeader />
         <Bijlage3TitleBlock continued={idx > 0} />
         <Bijlage3StroomTable decisions={chunk} />

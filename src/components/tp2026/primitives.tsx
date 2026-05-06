@@ -107,7 +107,7 @@ export function SectionBand({
 }) {
   return (
     <div
-      className={`text-[#6d2a96] font-bold text-[12px] leading-tight mb-1.5 ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
+      className={`text-[#6d2a96] font-bold text-[12px] leading-tight mb-1 ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
     >
       {title}
     </div>

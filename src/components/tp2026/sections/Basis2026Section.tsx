@@ -27,7 +27,7 @@ import TP_ACTIVITIES, { getBodyMain, normalizeTp3Activities } from '@/lib/tp/tp_
 
 const INLEIDING_SUB_DELIM = 'staat het volgende:';
 
-const boxClass = 'border border-[#b8985c] bg-[#f5efe6] p-3 text-neutral-900';
+const boxClass = 'border border-[#b8985c] bg-[#f5efe6] p-2.5 text-neutral-900';
 
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
@@ -43,16 +43,16 @@ function rowCost(row: PreviewRow, data: Record<string, any>): number {
   switch (row.t) {
     case 'inleiding':
       return Math.ceil(
-        (String(data.inleiding || '').length + String(data.inleiding_sub || '').length) * 1.15 + 900
+        String(data.inleiding || '').length + String(data.inleiding_sub || '').length + 720
       );
     case 'text':
-      return Math.ceil(row.title.length + row.text.length * 1.25 + 420);
+      return Math.ceil(row.title.length + row.text.length + 260);
     case 'activity':
-      return Math.ceil(row.title.length + row.body.length * 1.15 + (row.subText?.length || 0) + 420);
+      return Math.ceil(row.title.length + row.body.length + (row.subText?.length || 0) + 260);
     case 'agreement':
-      return 3800;
+      return 2600;
     case 'signature':
-      return 1600;
+      return 1300;
     default:
       return 200;
   }
@@ -197,7 +197,7 @@ function InleidingPreview({ data }: { data: Record<string, any> }) {
   const useDelimiterBlock = sub.includes(INLEIDING_SUB_DELIM);
 
   return (
-    <div className="mb-3">
+    <div className="mb-2">
       <SectionBand title="Inleiding" />
       <div className={boxClass}>
         {String(data.inleiding || '').trim() ? (
@@ -205,10 +205,10 @@ function InleidingPreview({ data }: { data: Record<string, any> }) {
         ) : (
           <span className="text-[12px] text-neutral-600">— nog niet ingevuld —</span>
         )}
-        {showNb && <p className="mt-4 text-[12px] font-semibold text-neutral-900">{NB_AVG_INLEIDING}</p>}
+        {showNb && <p className="mt-3 text-[12px] font-semibold text-neutral-900">{NB_AVG_INLEIDING}</p>}
         {sub ? (
-          <div className="mt-5 border-t border-[#b8985c]/50 pt-4">
-            <h3 className="mb-2 text-[12px] font-bold text-green-800">Toelichting</h3>
+          <div className="mt-4 border-t border-[#b8985c]/50 pt-3">
+            <h3 className="mb-1.5 text-[12px] font-bold text-green-800">Toelichting</h3>
             {useDelimiterBlock ? (
               <InleidingSubBlock text={sub} className="text-[12px] leading-relaxed text-neutral-900" />
             ) : (
@@ -223,7 +223,7 @@ function InleidingPreview({ data }: { data: Record<string, any> }) {
 
 function TextBlockPreview({ title, text }: { title: string; text: string }) {
   return (
-    <div className="mb-3 mt-4">
+    <div className="mb-2 mt-3">
       <SectionBand title={title} />
       <div className={boxClass}>
         {String(text || '').trim() ? (
@@ -247,13 +247,13 @@ function ActivityBlockPreview({
 }) {
   const hasSub = typeof subText === 'string' && subText.trim().length > 0;
   return (
-    <div className="mb-3 mt-4">
+    <div className="mb-2 mt-3">
       <SectionBand title={title} />
       <div className={boxClass}>
         <div className="text-[12px] leading-relaxed">
           {String(body || '').trim() ? <Basis2026MarkdownBody markdown={String(body)} /> : <span className="text-neutral-600">—</span>}
           {hasSub ? (
-            <div className="mt-3 flex items-start gap-2">
+            <div className="mt-2 flex items-start gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-1 shrink-0" />
               <span>{subText!.trim()}</span>
@@ -277,10 +277,10 @@ function BasisPage({
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-col overflow-hidden">
         {rows.map((row, idx) => {
           const top = idx > 0 && row.t !== 'inleiding';
-          const wrapClass = top && row.t === 'text' ? 'mt-4' : top ? 'mt-4' : '';
+          const wrapClass = top && row.t === 'text' ? 'mt-3' : top ? 'mt-3' : '';
           return (
             <div key={`${row.t}-${row.t === 'text' || row.t === 'activity' ? row.key : row.t}-${idx}`} className={wrapClass}>
               {row.t === 'inleiding' ? <InleidingPreview data={data} /> : null}
@@ -388,7 +388,7 @@ export function Basis2026A4Pages({
   printMode?: boolean;
 }) {
   const allRows = useMemo(() => buildAllPreviewRows(data), [data]);
-  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 2, 3000), [allRows, data]);
+  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 5, 7200), [allRows, data]);
 
   return (
     <>

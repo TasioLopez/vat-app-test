@@ -10,11 +10,11 @@ import {
 
 const blockTitle = 'mb-1.5 text-[12px] font-bold leading-tight text-[#6d2a96]';
 const paperText =
-  'border border-[#b8985c] bg-[#f5efe6] p-3 text-[12px] leading-relaxed text-neutral-900';
+  'border border-[#b8985c] bg-[#f5efe6] p-2.5 text-[12px] leading-relaxed text-neutral-900';
 
 export function BasisAgreementBlock() {
   return (
-    <div className="mb-3 mt-4">
+    <div className="mb-2 mt-3">
       <div className={blockTitle}>Akkoordverklaring</div>
       <div className={paperText}>
         <p className="mb-2">{TP_BASIS_AGREEMENT_INTRO}</p>
@@ -56,7 +56,7 @@ export function BasisSignatureBlock({
   const line = 'inline-block min-w-[140px] border-b border-neutral-900';
   const label = 'text-[10px] font-bold text-neutral-600';
   return (
-    <div className="mb-3 mt-4">
+    <div className="mb-2 mt-3">
       <div className={blockTitle}>Ondertekening</div>
       <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
         <div className={row}>
