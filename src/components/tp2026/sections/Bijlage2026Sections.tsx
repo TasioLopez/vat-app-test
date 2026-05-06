@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  A4LogoHeader,
-  A4Page,
-  DataRow,
-  FooterIdentity,
-  SectionBand,
-  TP2026FieldTable,
-  TP2026_A4_PAGE_CLASS,
-} from '@/components/tp2026/primitives';
+import { A4LogoHeader, A4Page, FooterIdentity, TP2026_A4_PAGE_CLASS } from '@/components/tp2026/primitives';
 import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
@@ -17,6 +9,7 @@ import type {
   TP2026Bijlage3Decision,
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
+import { BIJLAGE3_PAGE2, BIJLAGE3_TABLE_HEADERS } from '@/lib/tp2026/bijlage3-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { useMemo, useState, type ReactElement } from 'react';
 import { Button } from '@/components/ui/button';
@@ -860,36 +853,272 @@ export function Bijlage2A4Pages({
   return <>{pages}</>;
 }
 
+function Bijlage3TitleBlock() {
+  return (
+    <div className="mb-2 shrink-0">
+      <div className="text-[10pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 3</div>
+      <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
+        Stroomschema POW-meter™
+      </div>
+    </div>
+  );
+}
+
+function bijlage3DoelChecksPrint(ja?: boolean, nee?: boolean) {
+  return (
+    <div className="text-[7pt] leading-tight text-neutral-900">
+      <span>{ja ? '☑' : '☐'} ja</span> <span>{nee ? '☑' : '☐'} nee</span>
+    </div>
+  );
+}
+
+function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[] }) {
+  const tredeBoxClass = (n: number) =>
+    `rounded-sm px-1.5 py-1 text-left text-[7pt] leading-[1.35] ${BIJLAGE2_TREDE_BADGE[n] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`;
+
+  return (
+    <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
+      <colgroup>
+        <col style={{ width: '30%' }} />
+        <col style={{ width: '19%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '20%' }} />
+        <col style={{ width: '14%' }} />
+      </colgroup>
+      <thead>
+        <tr>
+          {BIJLAGE3_TABLE_HEADERS.map((h) => (
+            <th
+              key={h}
+              className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
+            >
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {decisions.map((step) => (
+          <tr key={step.id}>
+            <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
+              <div className="whitespace-pre-line font-normal">{step.question}</div>
+              {step.questionSubtitle ? (
+                <div className="mt-0.5 whitespace-pre-line text-neutral-800">{step.questionSubtitle}</div>
+              ) : null}
+              {step.hint ? (
+                <div className="mt-1 whitespace-pre-line text-neutral-800">{step.hint}</div>
+              ) : null}
+              <div className="mt-1 font-bold text-[#d4694a]">NEE &gt;</div>
+              <div className="mt-3 font-bold text-[#2d8f82]">JA &gt;</div>
+            </td>
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+              <div className={tredeBoxClass(step.neeTredeNum)}>
+                <div className="font-bold">{step.neeTredeLabel}</div>
+                <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
+              </div>
+            </td>
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+              {String(step.doelUren || '').trim() ? step.doelUren : '—'}
+            </td>
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+              {step.werkboeken.map((w, wi) => (
+                <div key={wi} className="break-words pb-0.5 last:pb-0">
+                  • {w}
+                </div>
+              ))}
+            </td>
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+              {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Page 2 only: final JA branch + Trede 6 (when page 1 is split for print height — currently unused). */
+function Bijlage3Page2Only({
+  data,
+  page2,
+}: {
+  data: Record<string, any>;
+  page2: { doelJa?: boolean; doelNee?: boolean };
+}) {
+  const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
+  const tredeBoxClass = `rounded-sm px-1.5 py-1 text-left text-[7pt] leading-[1.35] ${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
+
+  return (
+    <A4Page className={pageShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
+        <A4LogoHeader />
+        <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
+          <colgroup>
+            <col style={{ width: '30%' }} />
+            <col style={{ width: '19%' }} />
+            <col style={{ width: '17%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '14%' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              {BIJLAGE3_TABLE_HEADERS.map((h) => (
+                <th
+                  key={h}
+                  className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
+                <div className="font-bold text-[#2d8f82]">{BIJLAGE3_PAGE2.jaLeadIn}</div>
+                <div className="mt-1 whitespace-pre-line">{BIJLAGE3_PAGE2.focusLine}</div>
+              </td>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+                <div className={tredeBoxClass}>
+                  <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
+                  <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
+                </div>
+              </td>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+                {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <FooterIdentity
+        lastName={data.last_name}
+        firstName={data.first_name}
+        dateOfBirth={formatNLDate(data.date_of_birth)}
+        pageNumber={2}
+      />
+    </A4Page>
+  );
+}
+
 export function Bijlage3Editor({
   decisions,
   setDecisions,
+  page2,
+  setPage2,
 }: {
   decisions: TP2026Bijlage3Decision[];
   setDecisions: (next: TP2026Bijlage3Decision[]) => void;
+  page2: { doelJa?: boolean; doelNee?: boolean };
+  setPage2: (next: { doelJa?: boolean; doelNee?: boolean }) => void;
 }) {
+  const p2 = page2 || {};
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {decisions.map((decision, idx) => (
-        <div key={idx} className="border border-border rounded-md p-3">
-          <p className="font-semibold mb-2">{decision.question}</p>
-          <select
-            className="border border-border rounded px-2 py-1 text-sm"
-            value={decision.reached || ''}
-            onChange={(e) =>
-              setDecisions(
-                decisions.map((d, i) =>
-                  i === idx ? { ...d, reached: (e.target.value || null) as 'yes' | 'no' | null } : d
+        <div key={decision.id} className="border border-border rounded-md p-3">
+          <p className="text-xs font-semibold text-muted-foreground mb-1">{decision.id}</p>
+          <p className="text-sm font-semibold text-[#6d2a96] mb-1 whitespace-pre-line">{decision.question}</p>
+          {decision.hint ? (
+            <p className="text-xs text-neutral-700 mb-2 whitespace-pre-line">{decision.hint}</p>
+          ) : null}
+          <label className="mb-2 block text-sm">
+            <span className="font-medium">Stroomschema (ja/nee)</span>
+            <select
+              className="mt-1 w-full max-w-xs border border-border rounded px-2 py-1 text-sm"
+              value={decision.reached || ''}
+              onChange={(e) =>
+                setDecisions(
+                  decisions.map((d, i) =>
+                    i === idx ? { ...d, reached: (e.target.value || null) as 'yes' | 'no' | null } : d
+                  )
                 )
-              )
-            }
-          >
-            <option value="">Geen keuze</option>
-            <option value="yes">Ja</option>
-            <option value="no">Nee</option>
-          </select>
-          <p className="text-xs mt-1 text-muted-foreground">Ja → {decision.yesOutcome} | Nee → {decision.noOutcome}</p>
+              }
+            >
+              <option value="">Geen keuze</option>
+              <option value="yes">Ja</option>
+              <option value="no">Nee</option>
+            </select>
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Ja → {decision.yesOutcome} | Nee → {decision.noOutcome}
+          </p>
+          <div className="flex flex-wrap gap-4 border-t border-border pt-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(decision.doelJa)}
+                onChange={(e) =>
+                  setDecisions(
+                    decisions.map((d, i) =>
+                      i === idx
+                        ? {
+                            ...d,
+                            doelJa: e.target.checked,
+                            doelNee: e.target.checked ? false : Boolean(d.doelNee),
+                          }
+                        : d
+                    )
+                  )
+                }
+              />
+              Doel behaald: ja
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(decision.doelNee)}
+                onChange={(e) =>
+                  setDecisions(
+                    decisions.map((d, i) =>
+                      i === idx
+                        ? {
+                            ...d,
+                            doelNee: e.target.checked,
+                            doelJa: e.target.checked ? false : Boolean(d.doelJa),
+                          }
+                        : d
+                    )
+                  )
+                }
+              />
+              Doel behaald: nee
+            </label>
+          </div>
         </div>
       ))}
+
+      <div className="rounded-md border border-border bg-muted/15 p-3">
+        <p className="text-sm font-semibold text-[#6d2a96] mb-2">Laatste stap (pagina 2) — doel behaald</p>
+        <p className="text-xs text-muted-foreground mb-2 whitespace-pre-line">
+          {BIJLAGE3_PAGE2.jaLeadIn} {BIJLAGE3_PAGE2.focusLine.replace(/\n/g, ' ')}
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(p2.doelJa)}
+              onChange={(e) =>
+                setPage2({ ...p2, doelJa: e.target.checked, doelNee: e.target.checked ? false : p2.doelNee })
+              }
+            />
+            Doel behaald: ja
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={Boolean(p2.doelNee)}
+              onChange={(e) =>
+                setPage2({ ...p2, doelNee: e.target.checked, doelJa: e.target.checked ? false : p2.doelJa })
+              }
+            />
+            Doel behaald: nee
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
@@ -897,27 +1126,24 @@ export function Bijlage3Editor({
 export function Bijlage3A4Pages({
   data,
   decisions,
+  page2,
   printMode = false,
 }: {
   data: Record<string, any>;
   decisions: TP2026Bijlage3Decision[];
+  page2?: { doelJa?: boolean; doelNee?: boolean };
   printMode?: boolean;
 }) {
-  const page = (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
-      <A4LogoHeader />
-      <h2 className="text-lg font-bold text-[#6d2a96] mb-3">Bijlage 3 - Stroomschema POW-meter™</h2>
-      <SectionBand title="Vragen stroomschema" />
-      <TP2026FieldTable>
-        {decisions.map((decision, idx) => (
-          <DataRow
-            key={idx}
-            label={decision.question}
-            value={decision.reached === 'yes' ? decision.yesOutcome : decision.reached === 'no' ? decision.noOutcome : '—'}
-            compact
-          />
-        ))}
-      </TP2026FieldTable>
+  const p2 = page2 || { doelJa: false, doelNee: false };
+  const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
+
+  const page1 = (
+    <A4Page key="b3-p1" className={pageShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
+        <A4LogoHeader />
+        <Bijlage3TitleBlock />
+        <Bijlage3StroomTable decisions={decisions} />
+      </div>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
@@ -926,5 +1152,22 @@ export function Bijlage3A4Pages({
       />
     </A4Page>
   );
-  return printMode ? <section className="print-page">{page}</section> : page;
+
+  const page2Node = <Bijlage3Page2Only key="b3-p2" data={data} page2={p2} />;
+
+  if (printMode) {
+    return (
+      <>
+        <section className="print-page">{page1}</section>
+        <section className="print-page">{page2Node}</section>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {page1}
+      {page2Node}
+    </>
+  );
 }

@@ -104,10 +104,28 @@ export type TP2026Bijlage2Model = {
 };
 
 export type TP2026Bijlage3Decision = {
+  /** Stable id for merge/migration (`b3_step_1` … `b3_step_7`). */
+  id: string;
+  /** Main question text (may contain `\n`). */
   question: string;
+  questionSubtitle?: string;
+  /** “Denk aan:” block; optional. */
+  hint?: string;
+  /** Trede number for NEE-branch styling (1–5). */
+  neeTredeNum: number;
+  neeTredeLabel: string;
+  /** Body text inside Trede-bepaling cell (line breaks preserved). */
+  neeTredeBody: string;
+  /** Doel uren % column (may be empty for early steps). */
+  doelUren: string;
+  werkboeken: string[];
+  /** Short hints for editor (Ja / Nee path). */
   yesOutcome: string;
   noOutcome: string;
   reached?: 'yes' | 'no' | null;
+  /** Doel behaald column — optional checkboxes mirroring PDF. */
+  doelJa?: boolean;
+  doelNee?: boolean;
 };
 
 export function ensureArray<T>(value: unknown, fallback: T[]): T[] {

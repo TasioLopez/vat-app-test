@@ -114,9 +114,17 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         <Bijlage3Editor
           decisions={tpData.bijlage3_decisions || []}
           setDecisions={(next) => updateField('bijlage3_decisions', next)}
+          page2={tpData.bijlage3_page2 || {}}
+          setPage2={(next) => updateField('bijlage3_page2', next)}
         />
       ),
-      renderPreview: () => <Bijlage3A4Pages data={tpData} decisions={tpData.bijlage3_decisions || []} />,
+      renderPreview: () => (
+        <Bijlage3A4Pages
+          data={tpData}
+          decisions={tpData.bijlage3_decisions || []}
+          page2={tpData.bijlage3_page2 || {}}
+        />
+      ),
     },
   ];
 

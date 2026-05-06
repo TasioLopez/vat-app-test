@@ -9,6 +9,7 @@ import type {
   TP2026BijlageChecklistRow,
 } from './schema';
 import { createOfficialBijlage2Model } from '@/lib/tp2026/bijlage2-official';
+import { createOfficialBijlage3Decisions } from '@/lib/tp2026/bijlage3-official';
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -153,50 +154,33 @@ export function normalizeBijlage2Model(raw: unknown): TP2026Bijlage2Model {
   };
 }
 
-const bijlage3Defaults: TP2026Bijlage3Decision[] = [
-  {
-    question: 'Zijn er benutbare mogelijkheden (zie advies/conclusie BA)?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 1',
-    reached: null,
-  },
-  {
-    question: 'Komt men regelmatig het huis uit (2x per week)?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 1',
-    reached: null,
-  },
-  {
-    question: 'Heeft men minimaal 2x per week activiteiten buitenshuis?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 2',
-    reached: null,
-  },
-  {
-    question: 'Is men gemotiveerd om aan het werk te gaan?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 3',
-    reached: null,
-  },
-  {
-    question: 'Kan men op intake minimaal 12 uur per week werken?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 3',
-    reached: null,
-  },
-  {
-    question: 'Kan men zonder opleiding direct aan het werk?',
-    yesOutcome: 'Ga door naar volgende vraag',
-    noOutcome: 'Trede 4',
-    reached: null,
-  },
-  {
-    question: 'Kan functie zonder aanpassingen/voorzieningen uitgevoerd worden?',
-    yesOutcome: 'Trede 6',
-    noOutcome: 'Trede 5',
-    reached: null,
-  },
-];
+function normalizeBijlage3Decisions(raw: unknown): TP2026Bijlage3Decision[] {
+  const defaults = createOfficialBijlage3Decisions();
+  if (!Array.isArray(raw) || raw.length === 0) return defaults;
+
+  return defaults.map((def, idx) => {
+    const arr = raw as Record<string, unknown>[];
+    const byId = arr.find((x) => x && typeof x === 'object' && String((x as { id?: unknown }).id) === def.id);
+    const saved = (byId ?? arr[idx]) as Record<string, unknown> | undefined;
+    if (!saved || typeof saved !== 'object') {
+      return { ...def };
+    }
+    const r = saved.reached;
+    const reached = r === 'yes' || r === 'no' ? r : null;
+    return {
+      ...def,
+      reached,
+      doelJa: Boolean(saved.doelJa),
+      doelNee: Boolean(saved.doelNee),
+    };
+  });
+}
+
+function normalizeBijlage3Page2(raw: unknown): { doelJa: boolean; doelNee: boolean } {
+  if (!raw || typeof raw !== 'object') return { doelJa: false, doelNee: false };
+  const o = raw as Record<string, unknown>;
+  return { doelJa: Boolean(o.doelJa), doelNee: Boolean(o.doelNee) };
+}
 
 function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
   if (!Array.isArray(raw)) return [];
@@ -248,8 +232,11 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   }
 
   if (!Array.isArray(next.bijlage3_decisions) || next.bijlage3_decisions.length === 0) {
-    next.bijlage3_decisions = bijlage3Defaults;
+    next.bijlage3_decisions = createOfficialBijlage3Decisions();
+  } else {
+    next.bijlage3_decisions = normalizeBijlage3Decisions(next.bijlage3_decisions);
   }
+  next.bijlage3_page2 = normalizeBijlage3Page2(next.bijlage3_page2);
 
   if (!String(next.wettelijke_kaders || '').trim()) {
     next.wettelijke_kaders = WETTELIJKE_KADERS;
