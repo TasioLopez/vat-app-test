@@ -9,7 +9,7 @@ const basisSanitizeSchema = defaultSchema;
 
 const components: Components = {
   p: ({ children }) => (
-    <p className="mb-3 whitespace-pre-line text-[12px] leading-relaxed text-neutral-900 last:mb-0">{children}</p>
+    <p className="mb-2 whitespace-pre-line text-[12px] leading-relaxed text-neutral-900 last:mb-0">{children}</p>
   ),
   strong: ({ children }) => <strong className="font-bold text-neutral-900">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
@@ -22,9 +22,9 @@ const components: Components = {
   h3: ({ children }) => (
     <h3 className="mb-1.5 mt-2 text-[12px] font-bold leading-tight text-green-800 first:mt-0">{children}</h3>
   ),
-  ul: ({ children }) => <ul className="my-2 list-disc pl-5 text-[12px] text-neutral-900">{children}</ul>,
-  ol: ({ children }) => <ol className="my-2 list-decimal pl-5 text-[12px] text-neutral-900">{children}</ol>,
-  li: ({ children }) => <li className="my-0.5 leading-relaxed">{children}</li>,
+  ul: ({ children }) => <ul className="my-1 list-disc pl-5 text-[12px] text-neutral-900">{children}</ul>,
+  ol: ({ children }) => <ol className="my-1 list-decimal pl-5 text-[12px] text-neutral-900">{children}</ol>,
+  li: ({ children }) => <li className="my-0 leading-relaxed">{children}</li>,
   a: ({ href, children, ...rest }) =>
     href ? (
       <a

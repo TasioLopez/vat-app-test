@@ -195,7 +195,7 @@ function InleidingPreview({ data }: { data: Record<string, any> }) {
   const useDelimiterBlock = sub.includes(INLEIDING_SUB_DELIM);
 
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       <SectionBand title="Inleiding" />
       <div className={boxClass}>
         {String(data.inleiding || '').trim() ? (
@@ -221,7 +221,7 @@ function InleidingPreview({ data }: { data: Record<string, any> }) {
 
 function TextBlockPreview({ title, text }: { title: string; text: string }) {
   return (
-    <div className="mb-4 mt-7">
+    <div className="mb-3 mt-4">
       <SectionBand title={title} />
       <div className={boxClass}>
         {String(text || '').trim() ? (
@@ -245,7 +245,7 @@ function ActivityBlockPreview({
 }) {
   const hasSub = typeof subText === 'string' && subText.trim().length > 0;
   return (
-    <div className="mb-4 mt-7">
+    <div className="mb-3 mt-4">
       <SectionBand title={title} />
       <div className={boxClass}>
         <div className="text-[12px] leading-relaxed">
@@ -275,10 +275,10 @@ function BasisPage({
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         {rows.map((row, idx) => {
           const top = idx > 0 && row.t !== 'inleiding';
-          const wrapClass = top && row.t === 'text' ? 'mt-7' : top ? 'mt-7' : '';
+          const wrapClass = top && row.t === 'text' ? 'mt-4' : top ? 'mt-4' : '';
           return (
             <div key={`${row.t}-${row.t === 'text' || row.t === 'activity' ? row.key : row.t}-${idx}`} className={wrapClass}>
               {row.t === 'inleiding' ? <InleidingPreview data={data} /> : null}
@@ -386,7 +386,7 @@ export function Basis2026A4Pages({
   printMode?: boolean;
 }) {
   const allRows = useMemo(() => buildAllPreviewRows(data), [data]);
-  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 2, 3800), [allRows, data]);
+  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 3, 4400), [allRows, data]);
 
   return (
     <>

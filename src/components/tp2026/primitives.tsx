@@ -74,7 +74,7 @@ export function FooterIdentity({
 }) {
   const name = [lastName, firstName].filter(Boolean).join(' ') || '—';
   return (
-    <div className="mt-auto border-t border-[#b8985c] py-2.5">
+    <div className="mt-auto shrink-0 border-t border-[#b8985c] py-2.5">
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 text-[10pt] leading-tight text-neutral-900">
         <div className="flex flex-col gap-1 text-left">
           <div>

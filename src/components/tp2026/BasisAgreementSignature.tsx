@@ -14,11 +14,11 @@ const paperText =
 
 export function BasisAgreementBlock() {
   return (
-    <div className="mb-4 mt-7">
+    <div className="mb-3 mt-4">
       <div className={blockTitle}>Akkoordverklaring</div>
       <div className={paperText}>
         <p className="mb-2">{TP_BASIS_AGREEMENT_INTRO}</p>
-        <div className="ml-1 space-y-2">
+        <div className="ml-1 space-y-1.5">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
             <div key={i} className="flex items-start gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -56,7 +56,7 @@ export function BasisSignatureBlock({
   const line = 'inline-block min-w-[140px] border-b border-neutral-900';
   const label = 'text-[10px] font-bold text-neutral-600';
   return (
-    <div className="mb-4 mt-7">
+    <div className="mb-3 mt-4">
       <div className={blockTitle}>Ondertekening</div>
       <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
         <div className={row}>
