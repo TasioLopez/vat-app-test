@@ -18,7 +18,7 @@ import type {
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { Button } from '@/components/ui/button';
 
 function TextInput({
@@ -654,10 +654,13 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
   );
 }
 
-function Bijlage2PowHeaderRow() {
+function Bijlage2PowHeaderRow({ continued = false }: { continued?: boolean }) {
   return (
     <div className="mt-3 mb-1 flex w-full shrink-0 items-baseline justify-between text-[10pt] font-bold text-[#6d2a96]">
-      <span>Activeringsinterventies</span>
+      <span>
+        Activeringsinterventies
+        {continued ? <span className="font-normal text-neutral-600"> (vervolg)</span> : null}
+      </span>
       <span className="pr-1">POW-meter™</span>
     </div>
   );
@@ -695,6 +698,61 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
 
 const bijlage2BodyClass = 'flex min-h-0 flex-1 flex-col overflow-x-hidden';
 
+/** Rough height (px) for one POW trede row — packs whole tredes only; split between pages at row boundaries. */
+function estimatePowTredeHeightPx(t: TP2026Bijlage2PowTrede): number {
+  const criteria = t.criteria?.length ?? 0;
+  const textChars = (t.criteria ?? []).reduce((n, c) => n + String(c.label || '').length, 0);
+  return 48 + criteria * 17 + Math.min(textChars * 0.3, 110);
+}
+
+/**
+ * Split all tredes into consecutive chunks for A4 pages. First chunk shares page 1 with basis + header;
+ * later chunks get full pages. Smallest unit = one trede (one table row).
+ */
+function chunkPowTredesForA4(
+  tredes: TP2026Bijlage2PowTrede[],
+  firstPageBudgetPx: number,
+  continuationPageBudgetPx: number
+): TP2026Bijlage2PowTrede[][] {
+  if (!tredes.length) return [];
+  const chunks: TP2026Bijlage2PowTrede[][] = [];
+  let i = 0;
+  let pageIdx = 0;
+  while (i < tredes.length) {
+    const budget = pageIdx === 0 ? firstPageBudgetPx : continuationPageBudgetPx;
+    const slice: TP2026Bijlage2PowTrede[] = [];
+    let used = 0;
+    while (i < tredes.length) {
+      const cost = estimatePowTredeHeightPx(tredes[i]);
+      if (slice.length > 0 && used + cost > budget) break;
+      slice.push(tredes[i]);
+      used += cost;
+      i += 1;
+    }
+    if (slice.length === 0) {
+      slice.push(tredes[i]);
+      i += 1;
+    }
+    chunks.push(slice);
+    pageIdx += 1;
+  }
+  return chunks;
+}
+
+function Bijlage2FootnotesBlock() {
+  return (
+    <div className="mt-2 shrink-0 space-y-0.5 text-[7pt] italic leading-snug text-neutral-800">
+      {BIJLAGE2_FOOTNOTES.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
+/** Space left on page 1 after logo, titles, basis table, and POW band — heuristic for trede rows. */
+const BIJLAGE2_POW_BUDGET_AFTER_BASIS_PX = 380;
+const BIJLAGE2_POW_BUDGET_FULL_PAGE_PX = 760;
+
 export function Bijlage2A4Pages({
   data,
   model,
@@ -708,64 +766,98 @@ export function Bijlage2A4Pages({
     () => [...model.powTredes].sort((a, b) => a.trede - b.trede),
     [model.powTredes]
   );
-  const powPage1 = powSorted.filter((t) => t.trede <= 4);
-  const powPage2 = powSorted.filter((t) => t.trede >= 5);
+
+  const powChunks = useMemo(
+    () => chunkPowTredesForA4(powSorted, BIJLAGE2_POW_BUDGET_AFTER_BASIS_PX, BIJLAGE2_POW_BUDGET_FULL_PAGE_PX),
+    [powSorted]
+  );
 
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
-  const page1 = (
-    <A4Page key="b2-p1" className={pageShellClass}>
-      <div className={bijlage2BodyClass}>
-        <A4LogoHeader />
-        <Bijlage2TitleBlock />
-        <Bijlage2BasisTable model={model} />
-        <Bijlage2PowHeaderRow />
-        <Bijlage2PowRows tredes={powPage1} />
-      </div>
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={1}
-      />
-    </A4Page>
-  );
+  const pages = useMemo(() => {
+    const out: ReactElement[] = [];
+    let pageNumber = 0;
 
-  const page2 = (
-    <A4Page key="b2-p2" className={pageShellClass}>
-      <div className={bijlage2BodyClass}>
-        <A4LogoHeader />
-        <Bijlage2PowRows tredes={powPage2} />
-        <div className="mt-2 shrink-0 space-y-0.5 text-[7pt] italic leading-snug text-neutral-800">
-          {BIJLAGE2_FOOTNOTES.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+    if (powChunks.length === 0) {
+      pageNumber += 1;
+      out.push(
+        <A4Page key="b2-only-basis" className={pageShellClass}>
+          <div className={bijlage2BodyClass}>
+            <A4LogoHeader />
+            <Bijlage2TitleBlock />
+            <Bijlage2BasisTable model={model} />
+            <Bijlage2FootnotesBlock />
+          </div>
+          <FooterIdentity
+            lastName={data.last_name}
+            firstName={data.first_name}
+            dateOfBirth={formatNLDate(data.date_of_birth)}
+            pageNumber={pageNumber}
+          />
+        </A4Page>
+      );
+      return out;
+    }
+
+    const lastChunkIdx = powChunks.length - 1;
+
+    pageNumber += 1;
+    out.push(
+      <A4Page key="b2-p1" className={pageShellClass}>
+        <div className={bijlage2BodyClass}>
+          <A4LogoHeader />
+          <Bijlage2TitleBlock />
+          <Bijlage2BasisTable model={model} />
+          <Bijlage2PowHeaderRow />
+          <Bijlage2PowRows tredes={powChunks[0]} />
+          {lastChunkIdx === 0 ? <Bijlage2FootnotesBlock /> : null}
         </div>
-      </div>
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={2}
-      />
-    </A4Page>
-  );
+        <FooterIdentity
+          lastName={data.last_name}
+          firstName={data.first_name}
+          dateOfBirth={formatNLDate(data.date_of_birth)}
+          pageNumber={pageNumber}
+        />
+      </A4Page>
+    );
+
+    for (let ci = 1; ci < powChunks.length; ci++) {
+      pageNumber += 1;
+      const isLast = ci === lastChunkIdx;
+      out.push(
+        <A4Page key={`b2-pow-${ci}`} className={pageShellClass}>
+          <div className={bijlage2BodyClass}>
+            <A4LogoHeader />
+            <Bijlage2PowHeaderRow continued />
+            <Bijlage2PowRows tredes={powChunks[ci]} />
+            {isLast ? <Bijlage2FootnotesBlock /> : null}
+          </div>
+          <FooterIdentity
+            lastName={data.last_name}
+            firstName={data.first_name}
+            dateOfBirth={formatNLDate(data.date_of_birth)}
+            pageNumber={pageNumber}
+          />
+        </A4Page>
+      );
+    }
+
+    return out;
+  }, [data, model, pageShellClass, powChunks]);
 
   if (printMode) {
     return (
       <>
-        <section className="print-page">{page1}</section>
-        <section className="print-page">{page2}</section>
+        {pages.map((node, idx) => (
+          <section className="print-page" key={`print-b2-${idx}`}>
+            {node}
+          </section>
+        ))}
       </>
     );
   }
 
-  return (
-    <>
-      {page1}
-      {page2}
-    </>
-  );
+  return <>{pages}</>;
 }
 
 export function Bijlage3Editor({
