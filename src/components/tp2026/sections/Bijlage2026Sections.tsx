@@ -408,7 +408,7 @@ export function Bijlage1A4Pages({
     `van datum ${formatNLDate(phase.period_from)} - einddatum fase ${idx === 0 ? '1' : idx === 1 ? '2' : idx} (duur 3 maanden)`;
 
   const page = (
-    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex h-full min-h-0 flex-col overflow-hidden`}>
+    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       {/* Scroll main body; footer stays pinned to bottom of A4 (avoids clipped fase 3 + stray gap). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <A4LogoHeader />
@@ -709,7 +709,7 @@ export function Bijlage2A4Pages({
   const powPage1 = powSorted.filter((t) => t.trede <= 4);
   const powPage2 = powSorted.filter((t) => t.trede >= 5);
 
-  const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex h-full min-h-0 flex-col overflow-hidden`;
+  const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
   const page1 = (
     <A4Page key="b2-p1" className={pageShellClass}>
