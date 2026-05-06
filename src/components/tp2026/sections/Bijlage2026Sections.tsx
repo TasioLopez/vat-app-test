@@ -689,13 +689,13 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
   );
 }
 
-const bijlage2BodyClass = 'flex min-h-0 flex-1 flex-col overflow-x-hidden';
+const bijlage2BodyClass = 'flex min-h-0 flex-1 flex-col overflow-hidden';
 
 /** Rough height (px) for one POW trede row — packs whole tredes only; split between pages at row boundaries. */
 function estimatePowTredeHeightPx(t: TP2026Bijlage2PowTrede): number {
   const criteria = t.criteria?.length ?? 0;
   const textChars = (t.criteria ?? []).reduce((n, c) => n + String(c.label || '').length, 0);
-  return 48 + criteria * 17 + Math.min(textChars * 0.3, 110);
+  return 40 + criteria * 15 + Math.min(textChars * 0.26, 100);
 }
 
 /**
@@ -742,9 +742,13 @@ function Bijlage2FootnotesBlock() {
   );
 }
 
-/** Space left on page 1 after logo, titles, basis table, and POW band — heuristic for trede rows. */
-const BIJLAGE2_POW_BUDGET_AFTER_BASIS_PX = 380;
-const BIJLAGE2_POW_BUDGET_FULL_PAGE_PX = 760;
+/**
+ * Vertical budget (px) for POW trede rows after fixed chrome on the page.
+ * A4 body is ~1123px; logo flow spacer + titles + 4-col basis + POW header consume the rest — 380 was far too low
+ * (left half a page empty). Values are heuristics aligned with print preview.
+ */
+const BIJLAGE2_POW_BUDGET_AFTER_BASIS_PX = 640;
+const BIJLAGE2_POW_BUDGET_FULL_PAGE_PX = 900;
 
 export function Bijlage2A4Pages({
   data,
@@ -853,12 +857,13 @@ export function Bijlage2A4Pages({
   return <>{pages}</>;
 }
 
-function Bijlage3TitleBlock() {
+function Bijlage3TitleBlock({ continued = false }: { continued?: boolean }) {
   return (
     <div className="mb-2 shrink-0">
       <div className="text-[10pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 3</div>
       <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
         Stroomschema POW-meter™
+        {continued ? <span className="font-normal text-neutral-600"> (vervolg)</span> : null}
       </div>
     </div>
   );
@@ -937,20 +942,78 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
   );
 }
 
-/** Page 2 only: final JA branch + Trede 6 (when page 1 is split for print height — currently unused). */
+/** Heuristic tbody height (px) for one stroomschema row — whole steps only; split at row boundaries. */
+function estimateBijlage3StepHeightPx(d: TP2026Bijlage3Decision): number {
+  const qLen = String(d.question ?? '').length + String(d.questionSubtitle ?? '').length;
+  const hintLen = String(d.hint ?? '').length;
+  const neeLen = String(d.neeTredeBody ?? '').length + String(d.neeTredeLabel ?? '').length;
+  const books = d.werkboeken ?? [];
+  const wbChars = books.reduce((n, w) => n + String(w).length, 0);
+  return (
+    58 +
+    qLen * 0.36 +
+    hintLen * 0.3 +
+    neeLen * 0.22 +
+    books.length * 19 +
+    wbChars * 0.14 +
+    32
+  );
+}
+
+/**
+ * Split official stroomschema steps across A4 pages (each page repeats thead).
+ * Budgets are for tbody rows only; logo + title + table header sit outside the budget.
+ */
+function chunkBijlage3Decisions(
+  decisions: TP2026Bijlage3Decision[],
+  firstPageBudgetPx: number,
+  continuationPageBudgetPx: number
+): TP2026Bijlage3Decision[][] {
+  if (!decisions.length) return [[]];
+  const chunks: TP2026Bijlage3Decision[][] = [];
+  let i = 0;
+  let pageIdx = 0;
+  while (i < decisions.length) {
+    const budget = pageIdx === 0 ? firstPageBudgetPx : continuationPageBudgetPx;
+    const slice: TP2026Bijlage3Decision[] = [];
+    let used = 0;
+    while (i < decisions.length) {
+      const cost = estimateBijlage3StepHeightPx(decisions[i]);
+      if (slice.length > 0 && used + cost > budget) break;
+      slice.push(decisions[i]);
+      used += cost;
+      i += 1;
+    }
+    if (slice.length === 0) {
+      slice.push(decisions[i]);
+      i += 1;
+    }
+    chunks.push(slice);
+    pageIdx += 1;
+  }
+  return chunks;
+}
+
+/** Tbody vertical budget after logo + title + 5-col thead (approx.). */
+const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 560;
+const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 820;
+
+/** Page 2 only: final JA branch + Trede 6 (always last bijlage-3 sheet; page number follows stroomschema chunks). */
 function Bijlage3Page2Only({
   data,
   page2,
+  pageNumber = 2,
 }: {
   data: Record<string, any>;
   page2: { doelJa?: boolean; doelNee?: boolean };
+  pageNumber?: number;
 }) {
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
   const tredeBoxClass = `rounded-sm px-1.5 py-1 text-left text-[7pt] leading-[1.35] ${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
 
   return (
     <A4Page className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <A4LogoHeader />
         <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
           <colgroup>
@@ -997,7 +1060,7 @@ function Bijlage3Page2Only({
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={2}
+        pageNumber={pageNumber}
       />
     </A4Page>
   );
@@ -1137,28 +1200,44 @@ export function Bijlage3A4Pages({
   const p2 = page2 || { doelJa: false, doelNee: false };
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
-  const page1 = (
-    <A4Page key="b3-p1" className={pageShellClass}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
+  const mainChunks = useMemo(
+    () =>
+      chunkBijlage3Decisions(
+        decisions,
+        BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX,
+        BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX
+      ),
+    [decisions]
+  );
+
+  const mainPages = mainChunks.map((chunk, idx) => (
+    <A4Page key={`b3-main-${idx}`} className={pageShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <A4LogoHeader />
-        <Bijlage3TitleBlock />
-        <Bijlage3StroomTable decisions={decisions} />
+        <Bijlage3TitleBlock continued={idx > 0} />
+        <Bijlage3StroomTable decisions={chunk} />
       </div>
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={1}
+        pageNumber={idx + 1}
       />
     </A4Page>
-  );
+  ));
 
-  const page2Node = <Bijlage3Page2Only key="b3-p2" data={data} page2={p2} />;
+  const page2Node = (
+    <Bijlage3Page2Only key="b3-p2" data={data} page2={p2} pageNumber={mainChunks.length + 1} />
+  );
 
   if (printMode) {
     return (
       <>
-        <section className="print-page">{page1}</section>
+        {mainPages.map((node, i) => (
+          <section className="print-page" key={`print-b3-main-${i}`}>
+            {node}
+          </section>
+        ))}
         <section className="print-page">{page2Node}</section>
       </>
     );
@@ -1166,7 +1245,7 @@ export function Bijlage3A4Pages({
 
   return (
     <>
-      {page1}
+      {mainPages}
       {page2Node}
     </>
   );

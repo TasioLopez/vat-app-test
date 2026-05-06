@@ -42,15 +42,17 @@ type PreviewRow =
 function rowCost(row: PreviewRow, data: Record<string, any>): number {
   switch (row.t) {
     case 'inleiding':
-      return (String(data.inleiding || '').length + String(data.inleiding_sub || '').length + 800);
+      return Math.ceil(
+        (String(data.inleiding || '').length + String(data.inleiding_sub || '').length) * 1.15 + 900
+      );
     case 'text':
-      return row.title.length + row.text.length + 200;
+      return Math.ceil(row.title.length + row.text.length * 1.25 + 420);
     case 'activity':
-      return row.title.length + row.body.length + (row.subText?.length || 0) + 200;
+      return Math.ceil(row.title.length + row.body.length * 1.15 + (row.subText?.length || 0) + 420);
     case 'agreement':
-      return 2200;
+      return 3800;
     case 'signature':
-      return 1400;
+      return 1600;
     default:
       return 200;
   }
@@ -275,7 +277,7 @@ function BasisPage({
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {rows.map((row, idx) => {
           const top = idx > 0 && row.t !== 'inleiding';
           const wrapClass = top && row.t === 'text' ? 'mt-4' : top ? 'mt-4' : '';
@@ -386,7 +388,7 @@ export function Basis2026A4Pages({
   printMode?: boolean;
 }) {
   const allRows = useMemo(() => buildAllPreviewRows(data), [data]);
-  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 3, 4400), [allRows, data]);
+  const pages = useMemo(() => splitRowsIntoPages(allRows, data, 2, 3000), [allRows, data]);
 
   return (
     <>
