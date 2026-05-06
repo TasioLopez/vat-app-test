@@ -18,7 +18,7 @@ import type {
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 function TextInput({
@@ -602,7 +602,7 @@ function Bijlage2TitleBlock() {
   return (
     <div className="mb-2 shrink-0">
       <div className="text-[10pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 2</div>
-      <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82] underline underline-offset-2">
+      <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
         ValentineZ leernavigator
       </div>
       <div className="mt-2 text-[10pt] font-bold leading-tight text-[#6d2a96]">{BIJLAGE2_SECTION_BASIS}</div>
@@ -639,15 +639,12 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
           {cols.map((col, ci) => (
             <td
               key={ci}
-              className="border border-[#b8985c] bg-white px-1 py-0.5 align-top text-[7pt] leading-[1.2] text-neutral-900"
+              className="border border-[#b8985c] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
             >
               {col.map((row, ri) => (
-                <Fragment key={ri}>
-                  {ri > 0 ? <br /> : null}
-                  <span className="break-words">
-                    {row.checked ? '☑' : '☐'} {row.label}
-                  </span>
-                </Fragment>
+                <div key={ri} className="break-words pb-1 last:pb-0">
+                  {row.checked ? '☑' : '☐'} {row.label}
+                </div>
               ))}
             </td>
           ))}
@@ -668,27 +665,24 @@ function Bijlage2PowHeaderRow() {
 
 function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
   return (
-    <table className="w-full border-collapse border border-[#b8985c] text-[7pt] leading-[1.2]">
+    <table className="w-full border-collapse border border-[#b8985c] text-[7pt] leading-[1.45]">
       <tbody>
         {tredes.map((t) => (
           <tr key={t.trede}>
-            <td className="w-[78%] border border-[#b8985c] bg-white px-1.5 py-0.5 align-top text-neutral-900">
-              <div className="mb-0.5 font-bold text-[#6d2a96]">
+            <td className="w-[78%] border border-[#b8985c] bg-white px-1.5 py-1 align-top text-neutral-900">
+              <div className="mb-1 font-bold text-[#6d2a96]">
                 Trede {t.trede} is succesvol afgerond wanneer:
               </div>
               <div>
                 {t.criteria.map((c, idx) => (
-                  <Fragment key={idx}>
-                    {idx > 0 ? <br /> : null}
-                    <span className="break-words">
-                      {c.checked ? '☑' : '☐'} {c.label}
-                    </span>
-                  </Fragment>
+                  <div key={idx} className="break-words pb-1 last:pb-0">
+                    {c.checked ? '☑' : '☐'} {c.label}
+                  </div>
                 ))}
               </div>
             </td>
             <td
-              className={`w-[22%] border border-[#b8985c] px-1 py-1 align-middle text-center text-[8pt] font-bold leading-tight ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
+              className={`w-[22%] border border-[#b8985c] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
             >
               Trede {t.trede}
             </td>
