@@ -15,7 +15,7 @@ const paperText =
 export function BasisAgreementBlock() {
   return (
     <div className="mb-2 mt-3">
-      <SectionBand title="Akkoordverklaring" underline />
+      <SectionBand title="Akkoordverklaring" />
       <div className={paperText}>
         <p className="mb-2">{TP_BASIS_AGREEMENT_INTRO}</p>
         <div className="ml-1 space-y-1.5">
@@ -57,7 +57,7 @@ export function BasisSignatureBlock({
   const label = 'text-[10px] font-bold text-neutral-600';
   return (
     <div className="mb-2 mt-3">
-      <SectionBand title="Ondertekening" underline />
+      <SectionBand title="Ondertekening" />
       <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
         <div className={row}>
           <div className={cell}>

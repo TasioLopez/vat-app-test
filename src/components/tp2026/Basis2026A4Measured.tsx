@@ -92,6 +92,33 @@ function bisectMarkdown(md: string): [string, string] | null {
   return [a, b];
 }
 
+function fallbackSplitByLinesOrWords(text: string): [string, string] | null {
+  const src = text.trim();
+  if (!src) return null;
+
+  const lines = src.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 4) {
+    const mid = Math.floor(lines.length / 2);
+    const a = lines.slice(0, mid).join('\n').trim();
+    const b = lines.slice(mid).join('\n').trim();
+    if (a.length > 20 && b.length > 20) return [a, b];
+  }
+
+  const words = src.split(/\s+/).filter(Boolean);
+  if (words.length >= 18) {
+    const mid = Math.floor(words.length / 2);
+    const a = words.slice(0, mid).join(' ').trim();
+    const b = words.slice(mid).join(' ').trim();
+    if (a.length > 15 && b.length > 15) return [a, b];
+  }
+
+  return null;
+}
+
+function splitTextAggressive(text: string): [string, string] | null {
+  return bisectMarkdown(text) ?? fallbackSplitByLinesOrWords(text);
+}
+
 function textVariant(key: string, text: string): BasisTextVariant {
   const t = text.trim();
   if (key === 'pow') return 'pow';
@@ -223,9 +250,11 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   if (!atom) return null;
 
   if (atom.kind === 'text') {
-    const parts = bisectMarkdown(atom.md);
+    const parts = splitTextAggressive(atom.md);
     if (!parts) return null;
     const [a, b] = parts;
+    const nextVariantA = atom.key === 'pow' ? 'pow' : textVariant(atom.key, a);
+    const nextVariantB = atom.key === 'pow' ? 'markdown' : textVariant(atom.key, b);
     return [
       ...atoms.slice(0, idx),
       {
@@ -233,21 +262,21 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
         id: `${atom.id}-a`,
         md: a,
         showSectionTitle: atom.showSectionTitle,
-        variant: textVariant(atom.key, a),
+        variant: nextVariantA,
       },
       {
         ...atom,
         id: `${atom.id}-b`,
         md: b,
         showSectionTitle: false,
-        variant: textVariant(atom.key, b),
+        variant: nextVariantB,
       },
       ...atoms.slice(idx + 1),
     ];
   }
 
   if (atom.kind === 'inleiding') {
-    const parts = bisectMarkdown(atom.md);
+    const parts = splitTextAggressive(atom.md);
     if (!parts) return null;
     const [a, b] = parts;
     const hadFooter = atom.showToelichting;
@@ -275,7 +304,7 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   }
 
   if (atom.kind === 'activity') {
-    const parts = bisectMarkdown(atom.body);
+    const parts = splitTextAggressive(atom.body);
     if (!parts) return null;
     const [a, b] = parts;
     return [
@@ -341,7 +370,7 @@ function Basis2026FrontPage({
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
       <div className="flex min-h-0 flex-1 flex-col">
-        <SectionBand title={BASIS_DOCUMENT_FRONT_TITLE} underline />
+        <SectionBand title={BASIS_DOCUMENT_FRONT_TITLE} />
         <p className="mt-3 text-[13px] font-bold leading-tight text-[#6d2a96]">{BASIS_DOCUMENT_FRONT_SUBTITLE}</p>
         <div className="mt-4 space-y-3 text-[12px] leading-relaxed text-neutral-900">
           {BASIS_DOCUMENT_FRONT_PARAGRAPHS.map((para, i) => (
@@ -371,7 +400,7 @@ function InleidingAtomPreview({
 
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title="Inleiding" underline /> : null}
+      {atom.showSectionTitle ? <SectionBand title="Inleiding" /> : null}
       <div className={boxClass}>
         {String(atom.md || '').trim() ? (
           <Basis2026MarkdownBody markdown={String(atom.md)} />
@@ -450,7 +479,7 @@ function TextAtomPreview({
 }) {
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
+      {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
       <div className={boxClass}>
         <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
       </div>
@@ -462,7 +491,7 @@ function ActivityAtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'activ
   const hasSub = typeof atom.subText === 'string' && atom.subText.trim().length > 0;
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
+      {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
       <div className={boxClass}>
         <div className="text-[12px] leading-relaxed">
           {String(atom.body || '').trim() ? (
