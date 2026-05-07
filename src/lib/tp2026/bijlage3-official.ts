@@ -11,6 +11,9 @@ export const BIJLAGE3_TABLE_HEADERS = [
 
 export type Bijlage3OfficialStepDef = Omit<TP2026Bijlage3Decision, 'reached' | 'doelJa' | 'doelNee'>;
 
+/** Trede 5 row (`Kan een functie zonder aanpassingen…`) — always starts its own page chunk after Trede 4. */
+export const BIJLAGE3_STEP_7_ID = 'b3_step_7' as const;
+
 export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
   {
     id: 'b3_step_1',
@@ -18,7 +21,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 1,
     neeTredeLabel: 'Trede 1',
     neeTredeBody: 'Geïsoleerd < 2 uur actief binnenshuis',
-    doelUren: '',
+    doelUren: '> 2 uur per week actief (ook bij eigen werkgever) en/of traject on hold',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Zelfkennis'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 1',
@@ -31,7 +34,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 1,
     neeTredeLabel: 'Trede 1',
     neeTredeBody: 'Deelname aan een activiteit buitenshuis < 2 uur',
-    doelUren: '',
+    doelUren: '> 2 uur per week actief (ook bij eigen werkgever) en/of traject on hold',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Zelfkennis'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 1',
@@ -44,7 +47,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 2,
     neeTredeLabel: 'Trede 2',
     neeTredeBody: 'Deelname aan een activiteit buitenshuis < 4 uur',
-    doelUren: '',
+    doelUren: '> 4 uur per week actief (ook bij eigen werkgever)',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 2',
@@ -57,7 +60,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 3,
     neeTredeLabel: 'Trede 3:',
     neeTredeBody: 'Activering of spoor 1 < 10 uur',
-    doelUren: '',
+    doelUren: '> 10 uur per week een activeringsplek (ook eigen werkgever)',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 3',
@@ -70,7 +73,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 3,
     neeTredeLabel: 'Trede 3:',
     neeTredeBody: 'Activering of spoor 1 < 10 uur',
-    doelUren: '',
+    doelUren: '> 10 uur per week een activeringsplek (ook eigen werkgever)',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 3',
@@ -83,7 +86,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 4,
     neeTredeLabel: 'Trede 4:',
     neeTredeBody: 'Stage/WEP/Re-integratie spoor 1 < 20 uur\nof < 50%',
-    doelUren: '> 20 uur per week of\n50% van de\ncontracturen',
+    doelUren: '> 20 uur per week of 50% van de contracturen',
     werkboeken: ['Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
     noOutcome: 'Trede 4',
@@ -97,7 +100,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     neeTredeNum: 5,
     neeTredeLabel: 'Trede 5:',
     neeTredeBody: 'Parttime betaald werk, detacheren, voorziening of eigen werkgever',
-    doelUren: '> 50% van de\ncontracturen\n(minimaal 11 uur)',
+    doelUren: '> 50% van de contracturen (minimaal 11 uur)',
     werkboeken: ['Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Trede 6 (pagina 2)',
     noOutcome: 'Trede 5',
@@ -110,6 +113,8 @@ export const BIJLAGE3_PAGE2 = {
   tredeNum: 6 as const,
   tredeLabel: 'Trede 6:',
   tredeBody: 'Weer volledig werkzaam binnen of buiten de organisatie',
+  /** Doel uren % column — voltijd / duurzaam betaald werk. */
+  doelUren: '≥ 100% van het contract (duurzaam voltijd)',
 } as const;
 
 export function createOfficialBijlage3Decisions(): TP2026Bijlage3Decision[] {

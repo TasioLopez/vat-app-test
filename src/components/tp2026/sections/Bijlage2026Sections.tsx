@@ -16,7 +16,7 @@ import type {
   TP2026Bijlage3Decision,
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
-import { BIJLAGE3_PAGE2 } from '@/lib/tp2026/bijlage3-official';
+import { BIJLAGE3_PAGE2, BIJLAGE3_STEP_7_ID } from '@/lib/tp2026/bijlage3-official';
 import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
@@ -1018,7 +1018,9 @@ function Bijlage3Trede6Table({ page2 }: { page2: { doelJa?: boolean; doelNee?: b
             <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
             <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
           </td>
-          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">—</td>
+          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+            {BIJLAGE3_PAGE2.doelUren}
+          </td>
           <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
           <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
             {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
@@ -1098,23 +1100,34 @@ function computeBijlage3PackingFromMeasurements(
   const usableFirst = Math.max(120, usableFirstPx);
   const usableCont = Math.max(120, usableContPx);
 
-  const chunks: TP2026Bijlage3Decision[][] = [];
-  let cur: TP2026Bijlage3Decision[] = [];
-  let used = 0;
-  let budget = usableFirst;
+  const splitIdx = decisions.findIndex((d) => d.id === BIJLAGE3_STEP_7_ID);
+  const earlySteps = splitIdx >= 0 ? decisions.slice(0, splitIdx) : decisions;
+  const lateSteps = splitIdx >= 0 ? decisions.slice(splitIdx) : [];
 
-  for (const step of decisions) {
-    const h = bijlage3StepHeightOf(step.id, stepHeights);
-    if (cur.length > 0 && used + h > budget) {
-      chunks.push(cur);
-      cur = [];
-      used = 0;
-      budget = usableCont;
+  const packSegment = (segment: TP2026Bijlage3Decision[]): TP2026Bijlage3Decision[][] => {
+    if (!segment.length) return [];
+    const out: TP2026Bijlage3Decision[][] = [];
+    let cur: TP2026Bijlage3Decision[] = [];
+    let used = 0;
+    let budget = usableFirst;
+    for (const step of segment) {
+      const h = bijlage3StepHeightOf(step.id, stepHeights);
+      if (cur.length > 0 && used + h > budget) {
+        out.push(cur);
+        cur = [];
+        used = 0;
+        budget = usableCont;
+      }
+      cur.push(step);
+      used += h;
     }
-    cur.push(step);
-    used += h;
-  }
-  if (cur.length) chunks.push(cur);
+    if (cur.length) out.push(cur);
+    return out;
+  };
+
+  const earlyChunks = packSegment(earlySteps);
+  const chunks =
+    lateSteps.length > 0 ? [...earlyChunks, lateSteps] : earlyChunks.length ? earlyChunks : [[]];
 
   const mergeTrede6 = bijlage3ComputeMergeTrede6(
     chunks,
@@ -1414,8 +1427,15 @@ export function Bijlage3A4Pages({
           const ch = nextChunks[i];
           if (!ch || ch.length <= 1) return prev;
           const moved = ch.pop()!;
-          if (nextChunks[i + 1]) nextChunks[i + 1].unshift(moved);
-          else nextChunks.push([moved]);
+          const nextChunk = nextChunks[i + 1];
+          const nextStartsStep7 = nextChunk?.[0]?.id === BIJLAGE3_STEP_7_ID;
+          if (nextStartsStep7) {
+            nextChunks.splice(i + 1, 0, [moved]);
+          } else if (nextChunk) {
+            nextChunk.unshift(moved);
+          } else {
+            nextChunks.push([moved]);
+          }
 
           const mergeTrede6Next = bijlage3ComputeMergeTrede6(
             nextChunks,
