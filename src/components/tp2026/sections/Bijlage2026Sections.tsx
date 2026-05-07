@@ -397,8 +397,8 @@ export function Bijlage1A4Pages({
   printMode?: boolean;
 }) {
   const normalized = phases.map((phase, index) => normalizePhase(phase, index));
-  const renderPeriodeText = (phase: TP2026Bijlage1Phase, idx: number) =>
-    `van datum ${formatNLDate(phase.period_from)} - einddatum fase ${idx === 0 ? '1' : idx === 1 ? '2' : idx} (duur 3 maanden)`;
+  const renderPeriodeText = (phase: TP2026Bijlage1Phase) =>
+    `Van ${formatNLDate(phase.period_from)} tot ${formatNLDate(phase.period_to)}`;
 
   const page = (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
@@ -445,8 +445,8 @@ export function Bijlage1A4Pages({
                   >
                     Periode
                   </td>
-                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top text-neutral-900" colSpan={2}>
-                    {renderPeriodeText(phase, idx)}
+                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
+                    {renderPeriodeText(phase)}
                   </td>
                 </tr>
                 {(phase.activities.length ? phase.activities : [{ name: '—', status: 'P' as const }]).map(
@@ -473,9 +473,18 @@ export function Bijlage1A4Pages({
             </table>
           ))}
         </div>
-        <p className="mt-1.5 shrink-0 pb-1 text-[10pt] italic text-neutral-700">
-          Legenda: G gedaan / P gepland / N niet gedaan / U in uitvoering
-        </p>
+        <div className="mt-1.5 shrink-0 pb-1 text-neutral-700">
+          <p className="text-[8pt] leading-tight italic">
+            * Het solliciteren geschiedt volgens planning, aanvang sollicitatiefase wordt vervroegd indien werknemer
+            daar eerder klaar voor is.
+          </p>
+          <p className="text-[10pt] leading-tight">
+            <span className="font-bold text-[#6d2a96]">G</span> gedaan / succesvol uitgevoerd -{' '}
+            <span className="font-bold text-[#6d2a96]">P</span> nog in planning -{' '}
+            <span className="font-bold text-[#6d2a96]">N</span> niet gedaan / geen succes -{' '}
+            <span className="font-bold text-[#6d2a96]">U</span> in uitvoering
+          </p>
+        </div>
       </div>
       <FooterIdentity
         lastName={data.last_name}
