@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import TP2026Printable from '@/components/tp2026/TP2026Printable';
+import TP2026PrintableClient from '@/components/tp2026/TP2026PrintableClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,5 +33,5 @@ export default async function Page(props: { searchParams: Promise<SearchParams> 
 
   if (error || !instance) throw new Error('TP 2026 instance not found');
 
-  return <TP2026Printable data={(instance.data_json || {}) as Record<string, any>} />;
+  return <TP2026PrintableClient data={(instance.data_json || {}) as Record<string, any>} />;
 }

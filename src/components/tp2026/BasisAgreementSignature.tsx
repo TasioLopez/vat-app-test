@@ -7,15 +7,15 @@ import {
   TP_BASIS_AGREEMENT_INTRO,
   TP_BASIS_AGREEMENT_POINTS,
 } from '@/lib/tp2026/basis-document-agreement';
+import { SectionBand } from '@/components/tp2026/primitives';
 
-const blockTitle = 'mb-1.5 text-[12px] font-bold leading-tight text-[#6d2a96]';
 const paperText =
   'border border-[#b8985c] bg-[#f5efe6] p-2.5 text-[12px] leading-relaxed text-neutral-900';
 
 export function BasisAgreementBlock() {
   return (
     <div className="mb-2 mt-3">
-      <div className={blockTitle}>Akkoordverklaring</div>
+      <SectionBand title="Akkoordverklaring" underline />
       <div className={paperText}>
         <p className="mb-2">{TP_BASIS_AGREEMENT_INTRO}</p>
         <div className="ml-1 space-y-1.5">
@@ -57,7 +57,7 @@ export function BasisSignatureBlock({
   const label = 'text-[10px] font-bold text-neutral-600';
   return (
     <div className="mb-2 mt-3">
-      <div className={blockTitle}>Ondertekening</div>
+      <SectionBand title="Ondertekening" underline />
       <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
         <div className={row}>
           <div className={cell}>
