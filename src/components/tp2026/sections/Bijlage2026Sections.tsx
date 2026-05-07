@@ -9,7 +9,7 @@ import type {
   TP2026Bijlage3Decision,
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
-import { BIJLAGE3_PAGE2, BIJLAGE3_TABLE_HEADERS } from '@/lib/tp2026/bijlage3-official';
+import { BIJLAGE3_PAGE2 } from '@/lib/tp2026/bijlage3-official';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { useMemo, useState, type ReactElement } from 'react';
 import { Button } from '@/components/ui/button';
@@ -887,11 +887,17 @@ const BIJLAGE3_PRINT_HEADERS = [
 ] as const;
 
 function renderBijlage3QuestionCell(step: TP2026Bijlage3Decision) {
+  const normalize = (t?: string) => String(t || '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const question = normalize(step.question);
+  const subtitle = normalize(step.questionSubtitle);
+  const hint = normalize(step.hint);
+
   return (
     <>
-      <div className="whitespace-pre-line font-bold">{step.question}</div>
-      {step.questionSubtitle ? <div className="mt-0.5 whitespace-pre-line text-neutral-800">{step.questionSubtitle}</div> : null}
-      {step.hint ? <div className="mt-1 whitespace-pre-line font-normal text-neutral-800">{step.hint}</div> : null}
+      <div className="font-bold leading-snug">{question}</div>
+      {subtitle ? <div className="mt-0.5 leading-snug text-neutral-800">{subtitle}</div> : null}
+      {hint ? <div className="mt-1 leading-snug font-normal text-neutral-800">{hint}</div> : null}
+      <div className="mt-1.5 border-t border-[#b8985c]/40 pt-0.5 font-bold text-[#2d8f82]">JA &gt;</div>
     </>
   );
 }
@@ -923,8 +929,8 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
         </tr>
       </thead>
       <tbody>
-        {decisions.flatMap((step) => [
-          <tr key={`${step.id}-nee`}>
+        {decisions.map((step) => (
+          <tr key={step.id}>
             <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
               {renderBijlage3QuestionCell(step)}
             </td>
@@ -948,18 +954,8 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
             <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
               {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
             </td>
-          </tr>,
-          <tr key={`${step.id}-ja`}>
-            <td className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
-              <div className="font-bold text-[#2d8f82]">JA &gt;</div>
-            </td>
-            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
-            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
-            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
-            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
-            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
-          </tr>,
-        ])}
+          </tr>
+        ))}
       </tbody>
     </table>
   );
@@ -1018,8 +1014,8 @@ function chunkBijlage3Decisions(
 }
 
 /** Tbody vertical budget after logo + title + 5-col thead (approx.). */
-const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 1900;
-const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 1900;
+const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 1260;
+const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 1260;
 
 /** Page 2 only: final JA branch + Trede 6 (always last bijlage-3 sheet; page number follows stroomschema chunks). */
 function Bijlage3Page2Only({
