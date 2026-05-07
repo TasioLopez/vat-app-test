@@ -33,7 +33,7 @@ function TocSectionBar({
 }) {
   return (
     <div
-      className={`px-5 py-3 text-[15px] font-bold leading-tight text-white ${BAR_BG[variant]}`}
+      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white ${BAR_BG[variant]}`}
     >
       {title}
     </div>
