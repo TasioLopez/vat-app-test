@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { BasisAgreementBlock, BasisSignatureBlock } from '@/components/tp2026/BasisAgreementSignature';
 import {
   A4LogoHeader,
   A4Page,
-  A4_H,
   FooterIdentity,
   SectionBand,
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import {
   BASIS_DOCUMENT_FRONT_PARAGRAPHS,
   BASIS_DOCUMENT_FRONT_SUBTITLE,
@@ -30,11 +30,6 @@ const boxClass = 'border border-[#b8985c] bg-[#f5efe6] p-2.5 text-neutral-900';
 
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
-
-const BLOCK_SPACING_PX = 12;
-const FOOTER_RESERVE_PX = 76;
-const PAGE_BOTTOM_PAD_PX = 32;
-const SAFETY_PX = 120;
 
 export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb';
 
@@ -338,69 +333,6 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   return null;
 }
 
-function packIntoPages(heights: number[], maxUsable: number): number[][] {
-  const pages: number[][] = [];
-  let cur: number[] = [];
-  let used = 0;
-
-  heights.forEach((h, idx) => {
-    const add = (cur.length ? BLOCK_SPACING_PX : 0) + h;
-    if (h > maxUsable) {
-      if (cur.length) {
-        pages.push(cur);
-        cur = [];
-        used = 0;
-      }
-      pages.push([idx]);
-      return;
-    }
-    if (used + add > maxUsable && cur.length) {
-      pages.push(cur);
-      cur = [idx];
-      used = h;
-    } else {
-      used += add;
-      cur.push(idx);
-    }
-  });
-  if (cur.length) pages.push(cur);
-  return pages;
-}
-
-function pageUsedHeight(indices: number[], heights: number[]): number {
-  if (!indices.length) return 0;
-  const blocks = indices.reduce((sum, i) => sum + (heights[i] ?? 0), 0);
-  const gaps = Math.max(0, indices.length - 1) * BLOCK_SPACING_PX;
-  return blocks + gaps;
-}
-
-function rebalancePackedPages(pages: number[][], heights: number[], maxUsable: number): number[][] {
-  const out = pages.map((p) => [...p]).filter((p) => p.length > 0);
-  if (!out.length) return out;
-
-  let guard = 0;
-  let changed = true;
-  while (changed && guard < 2000) {
-    guard += 1;
-    changed = false;
-
-    for (let i = 0; i < out.length; i++) {
-      const used = pageUsedHeight(out[i], heights);
-      if (used <= maxUsable) continue;
-
-      if (out[i].length <= 1) continue;
-
-      const moved = out[i].pop();
-      if (typeof moved !== 'number') continue;
-      if (!out[i + 1]) out[i + 1] = [];
-      out[i + 1].unshift(moved);
-      changed = true;
-    }
-  }
-
-  return out.filter((p) => p.length > 0);
-}
-
 function Basis2026FrontPage({
   data,
   pageNumber,
@@ -592,7 +524,10 @@ function BasisBodyPage({
   return (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        data-basis-body
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      >
         {atoms.map((atom, idx) => (
           <div key={`${atom.id}-${idx}`} className={idx > 0 ? 'mt-3' : ''}>
             {renderBodyAtom(data, atom)}
@@ -609,22 +544,95 @@ function BasisBodyPage({
   );
 }
 
-function waitImagesIn(el: HTMLElement | null): Promise<void> {
-  if (!el) return Promise.resolve();
-  const imgs = Array.from(el.querySelectorAll('img'));
+const BASIS_PRELOAD_IMG_SRC = ['/pow-meter.png', '/val-logo.jpg'] as const;
+
+function preloadImages(srcs: readonly string[]): Promise<void> {
   return Promise.all(
-    imgs.map(
-      (img) =>
+    srcs.map(
+      (src) =>
         new Promise<void>((resolve) => {
-          if (img.complete) resolve();
-          else {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            window.setTimeout(resolve, 2500);
-          }
+          const i = new Image();
+          i.onload = () => resolve();
+          i.onerror = () => resolve();
+          i.src = src;
         })
     )
   ).then(() => undefined);
+}
+
+type PackBasisPagesResult =
+  | { ok: true; pages: number[][] }
+  | { ok: false; reason: 'split_retry' }
+  | { ok: false; reason: 'unsplittable'; atomIndex: number };
+
+/** True when the basis body column content fits without vertical overflow (same shell as visible pages). */
+function doesBasisPageFitDom(
+  data: Record<string, any>,
+  bodyAtoms: BasisAtom[],
+  atomIndices: number[]
+): boolean {
+  if (atomIndices.length === 0) return true;
+
+  const mount = document.createElement('div');
+  mount.setAttribute('aria-hidden', 'true');
+  mount.style.cssText =
+    'position:fixed;left:-12000px;top:0;width:794px;max-width:794px;pointer-events:none;visibility:hidden;z-index:-9999;';
+  document.body.appendChild(mount);
+
+  const root = createRoot(mount);
+  const atoms = atomIndices.map((i) => bodyAtoms[i]).filter(Boolean);
+
+  try {
+    flushSync(() => {
+      root.render(<BasisBodyPage data={data} atoms={atoms} pageNumber={1} />);
+    });
+    const bodyEl = mount.querySelector('[data-basis-body]') as HTMLElement | null;
+    if (!bodyEl) return true;
+    const room = 4;
+    return bodyEl.scrollHeight <= bodyEl.clientHeight + room;
+  } finally {
+    root.unmount();
+    mount.remove();
+  }
+}
+
+/**
+ * Packs atom indices into pages using the real DOM (same BasisBodyPage layout as preview).
+ * Sum-of-block-heights was unreliable (margins, flex); this matches what users see.
+ */
+function packPagesWithDomMeasure(
+  data: Record<string, any>,
+  bodyAtoms: BasisAtom[],
+  onNeedSplit: (atomIndex: number) => boolean
+): PackBasisPagesResult {
+  const n = bodyAtoms.length;
+  if (n === 0) return { ok: true, pages: [] };
+
+  for (let i = 0; i < n; i++) {
+    if (!doesBasisPageFitDom(data, bodyAtoms, [i])) {
+      if (onNeedSplit(i)) return { ok: false, reason: 'split_retry' };
+      return { ok: false, reason: 'unsplittable', atomIndex: i };
+    }
+  }
+
+  const pages: number[][] = [];
+  let current: number[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const trial = [...current, i];
+    if (doesBasisPageFitDom(data, bodyAtoms, trial)) {
+      current = trial;
+    } else {
+      if (current.length) pages.push(current);
+      current = [i];
+      if (!doesBasisPageFitDom(data, bodyAtoms, [i])) {
+        if (onNeedSplit(i)) return { ok: false, reason: 'split_retry' };
+        return { ok: false, reason: 'unsplittable', atomIndex: i };
+      }
+    }
+  }
+  if (current.length) pages.push(current);
+  return { ok: true, pages };
 }
 
 export function Basis2026A4Pages({
@@ -640,18 +648,13 @@ export function Basis2026A4Pages({
   const [bodyAtoms, setBodyAtoms] = useState<BasisAtom[]>(baseline);
   const [bodyPages, setBodyPages] = useState<number[][]>([]);
   const [isPaginating, setIsPaginating] = useState(true);
-  const measureRootRef = useRef<HTMLDivElement | null>(null);
-  const measureBodyRef = useRef<HTMLDivElement | null>(null);
-  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const readySentRef = useRef(false);
-  const measureRetriesRef = useRef(0);
 
   useEffect(() => {
     setBodyAtoms(baseline);
     setBodyPages([]);
     setIsPaginating(true);
     readySentRef.current = false;
-    measureRetriesRef.current = 0;
   }, [baseline]);
 
   const emitReady = useCallback(() => {
@@ -662,54 +665,41 @@ export function Basis2026A4Pages({
   }, [onPaginationReady]);
 
   const measureAndPaginate = useCallback(async () => {
-    // Ensure web fonts are loaded; measuring before this tends to under-estimate line wrapping.
-    if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
-      await (document as any).fonts.ready;
+    if (typeof document === 'undefined') return;
+
+    const fontsApi = document.fonts;
+    if (fontsApi) {
+      await fontsApi.ready;
     }
-
-    const root = measureRootRef.current;
-    itemRefs.current = itemRefs.current.slice(0, bodyAtoms.length);
-    await waitImagesIn(root);
-
+    await preloadImages(BASIS_PRELOAD_IMG_SRC);
     await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-    const fallbackMaxUsable =
-      A4_H - TP2026_BODY_FLOW_START_SPACER_PX - FOOTER_RESERVE_PX - PAGE_BOTTOM_PAD_PX - SAFETY_PX;
-    const measuredBodyPx = measureBodyRef.current?.clientHeight ?? 0;
-    const maxUsablePx = measuredBodyPx > 0 ? Math.max(120, measuredBodyPx - SAFETY_PX) : fallbackMaxUsable;
-
-    const heights = bodyAtoms.map((_, i) => itemRefs.current[i]?.getBoundingClientRect().height ?? 0);
-
-    if (heights.some((h) => h <= 0) && bodyAtoms.length > 0) {
-      if (measureRetriesRef.current < 30) {
-        measureRetriesRef.current += 1;
-        window.requestAnimationFrame(() => void measureAndPaginate());
-        return;
+    const result = packPagesWithDomMeasure(data, bodyAtoms, (idx) => {
+      const split = trySplitAtom(bodyAtoms, idx);
+      if (split) {
+        setBodyAtoms(split);
+        return true;
       }
-      console.warn('Basis2026A4Pages: measure heights still zero, using single-page fallback');
-      // Fail-safe: one atom per page avoids clipping if we cannot trust measurements.
+      return false;
+    });
+
+    if (!result.ok && result.reason === 'split_retry') {
+      return;
+    }
+
+    if (!result.ok && result.reason === 'unsplittable') {
+      console.warn(
+        `Basis2026A4Pages: atom ${result.atomIndex} does not fit on one page and could not be split; using one atom per page.`
+      );
       setBodyPages(bodyAtoms.map((_, i) => [i]));
       emitReady();
       return;
     }
 
-    measureRetriesRef.current = 0;
-
-    for (let i = 0; i < heights.length; i++) {
-      if (heights[i] > maxUsablePx) {
-        const split = trySplitAtom(bodyAtoms, i);
-        if (split) {
-          setBodyAtoms(split);
-          return;
-        }
-      }
-    }
-
-    const packed = packIntoPages(heights, maxUsablePx);
-    const balanced = rebalancePackedPages(packed, heights, maxUsablePx);
-    setBodyPages(balanced.length ? balanced : bodyAtoms.map((_, i) => [i]));
+    const packed = result.pages;
+    setBodyPages(packed.length ? packed : bodyAtoms.map((_, i) => [i]));
     emitReady();
-  }, [bodyAtoms, emitReady]);
+  }, [bodyAtoms, data, emitReady]);
 
   useLayoutEffect(() => {
     void measureAndPaginate();
@@ -726,55 +716,19 @@ export function Basis2026A4Pages({
       <div key={key}>{node}</div>
     );
 
-  const measureTree = (
-    <div
-      ref={measureRootRef}
-      className="pointer-events-none fixed left-0 top-0 z-[-1] opacity-0"
-      style={{ width: 794 }}
-      aria-hidden
-    >
-      <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
-        <A4LogoHeader />
-        <div ref={measureBodyRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {bodyAtoms.map((atom, idx) => (
-            <div
-              key={atom.id}
-              ref={(el) => {
-                itemRefs.current[idx] = el;
-              }}
-              className={idx > 0 ? 'mt-3' : ''}
-            >
-              {renderBodyAtom(data, atom)}
-            </div>
-          ))}
-        </div>
-        <FooterIdentity
-          lastName={data.last_name}
-          firstName={data.first_name}
-          dateOfBirth={formatNLDate(data.date_of_birth)}
-          pageNumber={1}
-        />
-      </A4Page>
-    </div>
-  );
-
   const pages = bodyPages;
   let pageNumber = 1;
 
-  if (isPaginating || pages.length === 0) {
+  if (isPaginating) {
     return (
-      <>
-        {measureTree}
-        <div className="flex items-center justify-center p-8">
-          <p className="text-muted-foreground">Pagineren...</p>
-        </div>
-      </>
+      <div className="flex items-center justify-center p-8">
+        <p className="text-muted-foreground">Pagineren...</p>
+      </div>
     );
   }
 
   return (
     <>
-      {measureTree}
       {wrap(<Basis2026FrontPage data={data} pageNumber={pageNumber++} />, 'basis-front')}
       {pages.map((idxs, pi) =>
         wrap(
