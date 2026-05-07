@@ -1126,7 +1126,6 @@ export function Bijlage3Editor({
     <div className="space-y-4">
       {decisions.map((decision, idx) => (
         <div key={decision.id} className="border border-border rounded-md p-3">
-          <p className="text-xs font-semibold text-muted-foreground mb-1">{decision.id}</p>
           <p className="text-sm font-semibold text-[#6d2a96] mb-1 whitespace-pre-line">{decision.question}</p>
           {decision.hint ? (
             <p className="text-xs text-neutral-700 mb-2 whitespace-pre-line">{decision.hint}</p>
