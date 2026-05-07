@@ -34,7 +34,7 @@ const NB_AVG_INLEIDING =
 const BLOCK_SPACING_PX = 12;
 const FOOTER_RESERVE_PX = 76;
 const PAGE_BOTTOM_PAD_PX = 32;
-const SAFETY_PX = 44;
+const SAFETY_PX = 64;
 
 export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb';
 
@@ -370,7 +370,7 @@ function InleidingAtomPreview({
   const useDelimiterBlock = sub.includes(INLEIDING_SUB_DELIM);
 
   return (
-    <div className="mb-2">
+    <div>
       {atom.showSectionTitle ? <SectionBand title="Inleiding" underline /> : null}
       <div className={boxClass}>
         {String(atom.md || '').trim() ? (
@@ -449,7 +449,7 @@ function TextAtomPreview({
   atom: Extract<BasisAtom, { kind: 'text' }>;
 }) {
   return (
-    <div className={`mb-2 ${atom.showSectionTitle ? 'mt-3' : 'mt-2'}`}>
+    <div>
       {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
       <div className={boxClass}>
         <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
@@ -461,7 +461,7 @@ function TextAtomPreview({
 function ActivityAtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'activity' }> }) {
   const hasSub = typeof atom.subText === 'string' && atom.subText.trim().length > 0;
   return (
-    <div className={`mb-2 ${atom.showSectionTitle ? 'mt-3' : 'mt-2'}`}>
+    <div>
       {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
       <div className={boxClass}>
         <div className="text-[12px] leading-relaxed">
@@ -521,7 +521,7 @@ function BasisBodyPage({
   return (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {atoms.map((atom, idx) => (
           <div key={`${atom.id}-${idx}`} className={idx > 0 ? 'mt-3' : ''}>
             {renderBodyAtom(data, atom)}
@@ -569,6 +569,7 @@ export function Basis2026A4Pages({
   const [bodyAtoms, setBodyAtoms] = useState<BasisAtom[]>(baseline);
   const [bodyPages, setBodyPages] = useState<number[][]>([]);
   const measureRootRef = useRef<HTMLDivElement | null>(null);
+  const measureBodyRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const readySentRef = useRef(false);
   const measureRetriesRef = useRef(0);
@@ -578,11 +579,6 @@ export function Basis2026A4Pages({
     readySentRef.current = false;
     measureRetriesRef.current = 0;
   }, [baseline]);
-
-  const maxUsablePx = useMemo(
-    () => A4_H - TP2026_BODY_FLOW_START_SPACER_PX - FOOTER_RESERVE_PX - PAGE_BOTTOM_PAD_PX - SAFETY_PX,
-    []
-  );
 
   const emitReady = useCallback(() => {
     if (readySentRef.current) return;
@@ -596,6 +592,11 @@ export function Basis2026A4Pages({
     await waitImagesIn(root);
 
     await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+    const fallbackMaxUsable =
+      A4_H - TP2026_BODY_FLOW_START_SPACER_PX - FOOTER_RESERVE_PX - PAGE_BOTTOM_PAD_PX - SAFETY_PX;
+    const measuredBodyPx = measureBodyRef.current?.clientHeight ?? 0;
+    const maxUsablePx = measuredBodyPx > 0 ? Math.max(120, measuredBodyPx - SAFETY_PX) : fallbackMaxUsable;
 
     const heights = bodyAtoms.map((_, i) => itemRefs.current[i]?.getBoundingClientRect().height ?? 0);
 
@@ -625,7 +626,7 @@ export function Basis2026A4Pages({
 
     setBodyPages(packIntoPages(heights, maxUsablePx));
     emitReady();
-  }, [bodyAtoms, maxUsablePx, emitReady]);
+  }, [bodyAtoms, emitReady]);
 
   useLayoutEffect(() => {
     void measureAndPaginate();
@@ -649,9 +650,9 @@ export function Basis2026A4Pages({
       style={{ width: 794 }}
       aria-hidden
     >
-      <div className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
+      <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
         <A4LogoHeader />
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div ref={measureBodyRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {bodyAtoms.map((atom, idx) => (
             <div
               key={atom.id}
@@ -664,7 +665,13 @@ export function Basis2026A4Pages({
             </div>
           ))}
         </div>
-      </div>
+        <FooterIdentity
+          lastName={data.last_name}
+          firstName={data.first_name}
+          dateOfBirth={formatNLDate(data.date_of_birth)}
+          pageNumber={1}
+        />
+      </A4Page>
     </div>
   );
 
