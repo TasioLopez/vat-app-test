@@ -13,11 +13,7 @@ import {
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import {
-  BASIS_DOCUMENT_FRONT_PARAGRAPHS,
-  BASIS_DOCUMENT_FRONT_SUBTITLE,
-  BASIS_DOCUMENT_FRONT_TITLE,
-} from '@/lib/tp2026/basis-document-static';
+import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
@@ -331,35 +327,6 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   }
 
   return null;
-}
-
-function Basis2026FrontPage({
-  data,
-  pageNumber,
-}: {
-  data: Record<string, any>;
-  pageNumber: number;
-}) {
-  return (
-    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
-      <A4LogoHeader />
-      <div className="flex min-h-0 flex-1 flex-col">
-        <SectionBand title={BASIS_DOCUMENT_FRONT_TITLE} />
-        <p className="mt-3 text-[13px] font-bold leading-tight text-[#6d2a96]">{BASIS_DOCUMENT_FRONT_SUBTITLE}</p>
-        <div className="mt-4 space-y-3 text-[12px] leading-relaxed text-neutral-900">
-          {BASIS_DOCUMENT_FRONT_PARAGRAPHS.map((para, i) => (
-            <p key={i}>{para}</p>
-          ))}
-        </div>
-      </div>
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={pageNumber}
-      />
-    </A4Page>
-  );
 }
 
 function InleidingAtomPreview({
@@ -729,7 +696,7 @@ export function Basis2026A4Pages({
 
   return (
     <>
-      {wrap(<Basis2026FrontPage data={data} pageNumber={pageNumber++} />, 'basis-front')}
+      {wrap(<Basis2026InhoudsopgavePage data={data} pageNumber={pageNumber++} />, 'basis-inhoud')}
       {pages.map((idxs, pi) =>
         wrap(
           <BasisBodyPage
