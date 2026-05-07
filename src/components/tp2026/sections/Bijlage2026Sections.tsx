@@ -656,13 +656,10 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
   );
 }
 
-function Bijlage2PowHeaderRow({ continued = false }: { continued?: boolean }) {
+function Bijlage2PowHeaderRow() {
   return (
     <div className="mt-3 mb-1 flex w-full shrink-0 items-baseline justify-between text-[10pt] font-bold text-[#6d2a96]">
-      <span>
-        Activeringsinterventies
-        {continued ? <span className="font-normal text-neutral-600"> (vervolg)</span> : null}
-      </span>
+      <span>Activeringsinterventies</span>
       <span className="pr-1">POW-meter™</span>
     </div>
   );
@@ -834,7 +831,6 @@ export function Bijlage2A4Pages({
         <A4Page key={`b2-pow-${ci}`} className={pageShellClass}>
           <div className={bijlage2BodyClass}>
             <A4LogoHeader />
-            <Bijlage2PowHeaderRow continued />
             <Bijlage2PowRows tredes={powChunks[ci]} />
             {isLast ? <Bijlage2FootnotesBlock /> : null}
           </div>
