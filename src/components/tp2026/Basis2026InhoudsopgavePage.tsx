@@ -33,7 +33,7 @@ function TocSectionBar({
 }) {
   return (
     <div
-      className={`-mx-24 px-24 py-2.5 text-[12px] font-bold leading-tight text-white ${BAR_BG[variant]}`}
+      className={`py-2.5 text-[15px] font-bold leading-tight text-white ${BAR_BG[variant]}`}
     >
       {title}
     </div>
@@ -51,7 +51,7 @@ export function Basis2026InhoudsopgavePage({
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
       <div className="flex min-h-0 flex-1 flex-col text-[12px]">
-        <h1 className="text-[13px] font-bold leading-tight text-[#6d2a96]">{BASIS_INHOUDSOPGAVE_TITLE}</h1>
+        <h1 className="text-[16px] font-bold leading-tight text-[#6d2a96]">{BASIS_INHOUDSOPGAVE_TITLE}</h1>
         <ul className={`${tocListClass} mt-3`}>
           {BASIS_INHOUDSOPGAVE_INTRO_ITEMS.map((item) => (
             <li key={item}>{item}</li>
