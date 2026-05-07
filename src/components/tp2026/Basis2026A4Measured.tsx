@@ -112,6 +112,14 @@ function fallbackSplitByLinesOrWords(text: string): [string, string] | null {
     if (a.length > 15 && b.length > 15) return [a, b];
   }
 
+  // Last-resort hard split so oversized dynamic content can still continue on next page.
+  if (src.length >= 8) {
+    const mid = Math.floor(src.length / 2);
+    const a = src.slice(0, mid).trim();
+    const b = src.slice(mid).trim();
+    if (a.length > 2 && b.length > 2) return [a, b];
+  }
+
   return null;
 }
 
@@ -631,6 +639,7 @@ export function Basis2026A4Pages({
   const baseline = useMemo(() => buildBasisBodyAtoms(data), [data]);
   const [bodyAtoms, setBodyAtoms] = useState<BasisAtom[]>(baseline);
   const [bodyPages, setBodyPages] = useState<number[][]>([]);
+  const [isPaginating, setIsPaginating] = useState(true);
   const measureRootRef = useRef<HTMLDivElement | null>(null);
   const measureBodyRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -639,6 +648,8 @@ export function Basis2026A4Pages({
 
   useEffect(() => {
     setBodyAtoms(baseline);
+    setBodyPages([]);
+    setIsPaginating(true);
     readySentRef.current = false;
     measureRetriesRef.current = 0;
   }, [baseline]);
@@ -646,6 +657,7 @@ export function Basis2026A4Pages({
   const emitReady = useCallback(() => {
     if (readySentRef.current) return;
     readySentRef.current = true;
+    setIsPaginating(false);
     onPaginationReady?.();
   }, [onPaginationReady]);
 
@@ -675,7 +687,8 @@ export function Basis2026A4Pages({
         return;
       }
       console.warn('Basis2026A4Pages: measure heights still zero, using single-page fallback');
-      setBodyPages([[...bodyAtoms.map((_, i) => i)]]);
+      // Fail-safe: one atom per page avoids clipping if we cannot trust measurements.
+      setBodyPages(bodyAtoms.map((_, i) => [i]));
       emitReady();
       return;
     }
@@ -694,7 +707,7 @@ export function Basis2026A4Pages({
 
     const packed = packIntoPages(heights, maxUsablePx);
     const balanced = rebalancePackedPages(packed, heights, maxUsablePx);
-    setBodyPages(balanced);
+    setBodyPages(balanced.length ? balanced : bodyAtoms.map((_, i) => [i]));
     emitReady();
   }, [bodyAtoms, emitReady]);
 
@@ -745,8 +758,19 @@ export function Basis2026A4Pages({
     </div>
   );
 
-  const pages = bodyPages.length ? bodyPages : [[...bodyAtoms.map((_, i) => i)]];
+  const pages = bodyPages;
   let pageNumber = 1;
+
+  if (isPaginating || pages.length === 0) {
+    return (
+      <>
+        {measureTree}
+        <div className="flex items-center justify-center p-8">
+          <p className="text-muted-foreground">Pagineren...</p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
