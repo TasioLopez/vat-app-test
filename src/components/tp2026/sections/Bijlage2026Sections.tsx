@@ -1029,18 +1029,20 @@ function Bijlage3Trede6Table({ page2 }: { page2: { doelJa?: boolean; doelNee?: b
   );
 }
 
-/** Approximate fixed chrome (px): title block on first Bijlage 3 page only, footer, bottom padding, safety. */
-const BIJLAGE3_TITLE_BLOCK_PX = 52;
-const BIJLAGE3_FOOTER_BLOCK_PX = 78;
+/** Fallback chrome if measurement nodes are missing (aligned with historical fixed estimates). */
+const BIJLAGE3_TITLE_BLOCK_FALLBACK_PX = 52;
+const BIJLAGE3_FOOTER_BLOCK_FALLBACK_PX = 78;
+/** Matches `pb-8` on {@link TP2026_A4_PAGE_CLASS}. */
 const BIJLAGE3_PAGE_BOTTOM_PAD_PX = 32;
 const BIJLAGE3_TABLE_GAP_PX = 8;
-const BIJLAGE3_LAYOUT_SAFETY_PX = 14;
+const BIJLAGE3_LAYOUT_SAFETY_PX = 22;
 
 type Bijlage3PackResult = { chunks: TP2026Bijlage3Decision[][]; mergeTrede6: boolean };
 
 function computeBijlage3PackingFromMeasurements(
   decisions: TP2026Bijlage3Decision[],
-  theadPx: number,
+  usableFirstPx: number,
+  usableContPx: number,
   stepHeights: Record<string, number>,
   trede6TablePx: number
 ): Bijlage3PackResult {
@@ -1048,16 +1050,8 @@ function computeBijlage3PackingFromMeasurements(
     return { chunks: [[]], mergeTrede6: trede6TablePx > 0 };
   }
 
-  const baseChrome =
-    TP2026_BODY_FLOW_START_SPACER_PX +
-    theadPx +
-    BIJLAGE3_FOOTER_BLOCK_PX +
-    BIJLAGE3_PAGE_BOTTOM_PAD_PX +
-    BIJLAGE3_LAYOUT_SAFETY_PX;
-
-  const chromeFirstPage = baseChrome + BIJLAGE3_TITLE_BLOCK_PX;
-  const usableFirst = Math.max(120, A4_H - chromeFirstPage);
-  const usableCont = Math.max(120, A4_H - baseChrome);
+  const usableFirst = Math.max(120, usableFirstPx);
+  const usableCont = Math.max(120, usableContPx);
 
   const fallbackStep = 96;
   const heightOf = (id: string) => {
@@ -1100,16 +1094,21 @@ function Bijlage3Page2Only({
   data,
   page2,
   pageNumber = 2,
+  printMode = false,
 }: {
   data: Record<string, any>;
   page2: { doelJa?: boolean; doelNee?: boolean };
   pageNumber?: number;
+  printMode?: boolean;
 }) {
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
+  const bodyClass = printMode
+    ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+    : 'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden';
 
   return (
     <A4Page className={pageShellClass}>
-      <div className="flex shrink-0 flex-col overflow-hidden">
+      <div className={bodyClass}>
         <A4LogoHeader />
         <Bijlage3Trede6Table page2={page2} />
       </div>
@@ -1269,9 +1268,50 @@ export function Bijlage3A4Pages({
 
     const mainTable = root.querySelector<HTMLTableElement>('[data-b3-measure-main-table]');
     const trede6Wrap = root.querySelector<HTMLElement>('[data-b3-measure-trede6]');
+    const firstStack = root.querySelector<HTMLElement>('[data-b3-measure-first-stack]');
+    const contStack = root.querySelector<HTMLElement>('[data-b3-measure-cont-stack]');
+    const footerEl = root.querySelector<HTMLElement>('[data-b3-measure-footer]');
 
     const theadEl = mainTable?.querySelector('thead');
     const theadPx = theadEl?.offsetHeight ?? 0;
+
+    const firstTbody = mainTable?.querySelector('tbody');
+    let firstAbovePx = 0;
+    if (firstStack && firstTbody) {
+      firstAbovePx = Math.ceil(
+        firstTbody.getBoundingClientRect().top - firstStack.getBoundingClientRect().top
+      );
+    } else if (firstStack && mainTable) {
+      const thead = mainTable.querySelector('thead');
+      if (thead) {
+        firstAbovePx = Math.ceil(
+          thead.getBoundingClientRect().bottom - firstStack.getBoundingClientRect().top
+        );
+      }
+    }
+    if (!firstAbovePx) {
+      firstAbovePx =
+        TP2026_BODY_FLOW_START_SPACER_PX +
+        BIJLAGE3_TITLE_BLOCK_FALLBACK_PX +
+        theadPx;
+    }
+
+    const contFirstTbody = contStack?.querySelector('tbody');
+    let contAbovePx = 0;
+    if (contStack && contFirstTbody) {
+      contAbovePx = Math.ceil(
+        contFirstTbody.getBoundingClientRect().top - contStack.getBoundingClientRect().top
+      );
+    }
+    if (!contAbovePx) {
+      contAbovePx = TP2026_BODY_FLOW_START_SPACER_PX + theadPx;
+    }
+
+    const footerPx = footerEl?.offsetHeight ?? BIJLAGE3_FOOTER_BLOCK_FALLBACK_PX;
+
+    const bottomReserve = BIJLAGE3_PAGE_BOTTOM_PAD_PX + BIJLAGE3_LAYOUT_SAFETY_PX;
+    const usableFirstPx = A4_H - firstAbovePx - footerPx - bottomReserve;
+    const usableContPx = A4_H - contAbovePx - footerPx - bottomReserve;
 
     const stepHeights: Record<string, number> = {};
     if (mainTable) {
@@ -1286,9 +1326,15 @@ export function Bijlage3A4Pages({
     const trede6TablePx = trede6Wrap?.offsetHeight ?? 0;
 
     setPack(
-      computeBijlage3PackingFromMeasurements(decisions, theadPx, stepHeights, trede6TablePx)
+      computeBijlage3PackingFromMeasurements(
+        decisions,
+        usableFirstPx,
+        usableContPx,
+        stepHeights,
+        trede6TablePx
+      )
     );
-  }, [decisions]);
+  }, [decisions, data.date_of_birth, data.first_name, data.last_name, p2.doelJa, p2.doelNee]);
 
   const { chunks: mainChunks, mergeTrede6 } = pack;
   const totalSheets = mergeTrede6 ? mainChunks.length : mainChunks.length + 1;
@@ -1297,9 +1343,13 @@ export function Bijlage3A4Pages({
     const isLast = idx === mainChunks.length - 1;
     const appendTrede6 = mergeTrede6 && isLast;
 
+    const mainBodyClass = printMode
+      ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+      : 'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden';
+
     return (
       <A4Page key={`b3-main-${idx}`} className={pageShellClass}>
-        <div className="flex shrink-0 flex-col overflow-hidden">
+        <div className={mainBodyClass}>
           <A4LogoHeader />
           {idx === 0 ? <Bijlage3TitleBlock /> : null}
           <Bijlage3StroomTable decisions={chunk} />
@@ -1320,7 +1370,13 @@ export function Bijlage3A4Pages({
   });
 
   const page2Node = mergeTrede6 ? null : (
-    <Bijlage3Page2Only key="b3-p2" data={data} page2={p2} pageNumber={totalSheets} />
+    <Bijlage3Page2Only
+      key="b3-p2"
+      data={data}
+      page2={p2}
+      pageNumber={totalSheets}
+      printMode={printMode}
+    />
   );
 
   const measureLayer = (
@@ -1334,14 +1390,45 @@ export function Bijlage3A4Pages({
         className="px-24 font-[family-name:var(--font-montserrat),Montserrat,system-ui,sans-serif]"
         style={{ width: A4_W }}
       >
-        <table data-b3-measure-main-table className={BIJLAGE3_TABLE_SHELL_CLASS}>
-          <Bijlage3TableColGroup />
-          <Bijlage3TableThead />
-          {decisions.map((step) => (
-            <Bijlage3StepTbody key={`m-${step.id}`} step={step} />
-          ))}
-        </table>
-        <div data-b3-measure-trede6 className="mt-2">
+        {/* Same stacking as page 1; chrome-to-first-row height uses first tbody top vs this stack. */}
+        <div data-b3-measure-first-stack className="flex shrink-0 flex-col">
+          <A4LogoHeader />
+          <Bijlage3TitleBlock />
+          <table data-b3-measure-main-table className={BIJLAGE3_TABLE_SHELL_CLASS}>
+            <Bijlage3TableColGroup />
+            <Bijlage3TableThead />
+            {decisions.map((step) => (
+              <Bijlage3StepTbody key={`m-${step.id}`} step={step} />
+            ))}
+          </table>
+        </div>
+        {/* Continuation pages: logo + table with thead + minimal tbody so thead/tbody borders match. */}
+        <div data-b3-measure-cont-stack className="flex shrink-0 flex-col">
+          <A4LogoHeader />
+          <table className={BIJLAGE3_TABLE_SHELL_CLASS}>
+            <Bijlage3TableColGroup />
+            <Bijlage3TableThead />
+            <tbody aria-hidden>
+              <tr>
+                <td
+                  colSpan={6}
+                  className="h-0 max-h-0 border border-[#b8985c] p-0 leading-none text-[0]"
+                >
+                  &#8203;
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div data-b3-measure-footer>
+          <FooterIdentity
+            lastName={data.last_name}
+            firstName={data.first_name}
+            dateOfBirth={formatNLDate(data.date_of_birth)}
+            pageNumber={1}
+          />
+        </div>
+        <div data-b3-measure-trede6 className="shrink-0" style={{ marginTop: BIJLAGE3_TABLE_GAP_PX }}>
           <Bijlage3Trede6Table page2={p2} />
         </div>
       </div>
