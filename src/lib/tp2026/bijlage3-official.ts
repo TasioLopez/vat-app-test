@@ -17,8 +17,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
     question: 'Zijn er benutbare mogelijkheden\n(zie advies/ conclusie BA)',
     neeTredeNum: 1,
     neeTredeLabel: 'Trede 1',
-    neeTredeBody:
-      'Geïsoleerd\n< 2 uur actief\nbinnenshuis\n> 2 uur per week actief\n(ook bij eigen\nwerkgever) en/of\ntraject on hold',
+    neeTredeBody: 'Geïsoleerd < 2 uur actief binnenshuis',
     doelUren: '',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Zelfkennis'],
     yesOutcome: 'Volgende vraag',
@@ -31,8 +30,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Denk aan: geen contact buitenshuis behalve\nfunctionele contacten zoals een bezoek aan de\nhuisarts of fysiotherapeut',
     neeTredeNum: 1,
     neeTredeLabel: 'Trede 1',
-    neeTredeBody:
-      'Deelname aan\neen activiteit\nbuitenshuis\n< 2 uur\n> 2 uur per week actief\n(ook bij eigen\nwerkgever) en/of\ntraject on hold',
+    neeTredeBody: 'Deelname aan een activiteit buitenshuis < 2 uur',
     doelUren: '',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Zelfkennis'],
     yesOutcome: 'Volgende vraag',
@@ -45,8 +43,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Denk aan: wekelijks contact met anderen\nbuitenshuis zoals het deelnemen aan een\nkoffieochtend of het volgen van cursus of\ntaallessen.',
     neeTredeNum: 2,
     neeTredeLabel: 'Trede 2',
-    neeTredeBody:
-      'Deelname aan\neen activiteit\nbuitenshuis\n< 4 uur\n> 4 uur per week actief\n(ook bij eigen\nwerkgever)',
+    neeTredeBody: 'Deelname aan een activiteit buitenshuis < 4 uur',
     doelUren: '',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
@@ -59,8 +56,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Staat men ervoor open, is het een kwestie van\nniet willen of niet kunnen, zijn er factoren waar\nwerknemer gedemotiveerd van raakt?',
     neeTredeNum: 3,
     neeTredeLabel: 'Trede 3:',
-    neeTredeBody:
-      'Activering of\nspoor 1 < 10 uur\n> 10 uur per week een\nactiveringsplek (ook\neigen werkgever)',
+    neeTredeBody: 'Activering of spoor 1 < 10 uur',
     doelUren: '',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
@@ -73,8 +69,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Denk aan: deelname aan activiteiten met\nuitvoering van taken met een lage werkdruk en\nmet weinig eigen verantwoordelijkheid en/ of\nzelfstandigheid.',
     neeTredeNum: 3,
     neeTredeLabel: 'Trede 3:',
-    neeTredeBody:
-      'Activering of\nspoor 1 < 10 uur\n> 10 uur per week een\nactiveringsplek (ook\neigen werkgever)',
+    neeTredeBody: 'Activering of spoor 1 < 10 uur',
     doelUren: '',
     werkboeken: ['Empowerment', 'Dagstructuur', 'Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
@@ -87,7 +82,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Denk aan: onbetaald werk, gericht op werk.\nVoert zelfstandig taken uit en/of draagt\nverantwoordelijkheid en/of opbrengst heeft\neconomische waarde; en/of volgt een\nberoepsopleiding richting passend arbeid?',
     neeTredeNum: 4,
     neeTredeLabel: 'Trede 4:',
-    neeTredeBody: 'Stage/WEP/\nRe-integratie\nspoor 1 < 20 uur\nof < 50%',
+    neeTredeBody: 'Stage/WEP/Re-integratie spoor 1 < 20 uur\nof < 50%',
     doelUren: '> 20 uur per week of\n50% van de\ncontracturen',
     werkboeken: ['Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Volgende vraag',
@@ -101,8 +96,7 @@ export const BIJLAGE3_OFFICIAL_STEPS: readonly Bijlage3OfficialStepDef[] = [
       'Is werknemer voor minimaal 65% hersteld\ngemeld in eigen of andere functie in spoor 1 of\nkan men minimaal 65% loonwaarde ergens\nanders in een passende functie genereren?',
     neeTredeNum: 5,
     neeTredeLabel: 'Trede 5:',
-    neeTredeBody:
-      'Parttime\nbetaald werk,\ndetacheren,\nvoorziening of\neigen werkgever',
+    neeTredeBody: 'Parttime betaald werk, detacheren, voorziening of eigen werkgever',
     doelUren: '> 50% van de\ncontracturen\n(minimaal 11 uur)',
     werkboeken: ['Solliciteren', 'Beroepskeuze'],
     yesOutcome: 'Trede 6 (pagina 2)',
@@ -115,7 +109,7 @@ export const BIJLAGE3_PAGE2 = {
   focusLine: 'Directe focus op duurzaam betaald\narbeid.',
   tredeNum: 6 as const,
   tredeLabel: 'Trede 6:',
-  tredeBody: 'Weer volledig\nwerkzaam\nbinnen of buiten\nde organisatie',
+  tredeBody: 'Weer volledig werkzaam binnen of buiten de organisatie',
 } as const;
 
 export function createOfficialBijlage3Decisions(): TP2026Bijlage3Decision[] {

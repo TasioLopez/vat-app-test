@@ -929,7 +929,7 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
           {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
             <th
               key={`${h}-${idx}`}
-              className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
+              className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]"
             >
               {h}
             </th>
@@ -942,29 +942,29 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
             <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
               {renderBijlage3QuestionCell(step)}
             </td>
-            <td rowSpan={2} className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center">
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center">
               <div className="font-bold text-[#d4694a]">NEE &gt;</div>
             </td>
-            <td rowSpan={2} className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
+            <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
               <div className="font-bold">{step.neeTredeLabel}</div>
               <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
             </td>
-            <td rowSpan={2} className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
               {String(step.doelUren || '').trim() ? step.doelUren : '—'}
             </td>
-            <td rowSpan={2} className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
               {step.werkboeken.map((w, wi) => (
                 <div key={wi} className="break-words pb-0.5 last:pb-0">
                   • {w}
                 </div>
               ))}
             </td>
-            <td rowSpan={2} className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
               {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
             </td>
           </tr>,
           <tr key={`${step.id}-ja`}>
-            <td className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
+            <td colSpan={6} className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
               <div className="font-bold text-[#2d8f82]">JA &gt;</div>
             </td>
           </tr>,
@@ -983,6 +983,7 @@ function estimateBijlage3StepHeightPx(d: TP2026Bijlage3Decision): number {
   const wbChars = books.reduce((n, w) => n + String(w).length, 0);
   return (
     72 +
+    22 +
     qLen * 0.34 +
     hintLen * 0.28 +
     neeLen * 0.2 +
@@ -1061,7 +1062,7 @@ function Bijlage3Page2Only({
               {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
                 <th
                   key={`${h}-${idx}`}
-                  className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
+                  className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]"
                 >
                   {h}
                 </th>
@@ -1248,7 +1249,7 @@ export function Bijlage3A4Pages({
     <A4Page key={`b3-main-${idx}`} className={pageShellClass}>
       <div className="flex shrink-0 flex-col overflow-hidden">
         <A4LogoHeader />
-        <Bijlage3TitleBlock continued={idx > 0} />
+        {idx === 0 ? <Bijlage3TitleBlock /> : null}
         <Bijlage3StroomTable decisions={chunk} />
       </div>
       <FooterIdentity
