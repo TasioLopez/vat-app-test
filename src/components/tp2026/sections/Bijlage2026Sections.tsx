@@ -887,19 +887,11 @@ const BIJLAGE3_PRINT_HEADERS = [
 ] as const;
 
 function renderBijlage3QuestionCell(step: TP2026Bijlage3Decision) {
-  const lines = String(step.question || '').split('\n').filter(Boolean);
-  const firstLine = lines[0] ?? '';
-  const tail = lines.slice(1).join('\n');
-
   return (
     <>
-      <div className="whitespace-pre-line font-bold">{firstLine}</div>
-      {tail ? <div className="whitespace-pre-line font-normal">{tail}</div> : null}
-      {step.questionSubtitle ? (
-        <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-800">{step.questionSubtitle}</div>
-      ) : null}
+      <div className="whitespace-pre-line font-bold">{step.question}</div>
+      {step.questionSubtitle ? <div className="mt-0.5 whitespace-pre-line text-neutral-800">{step.questionSubtitle}</div> : null}
       {step.hint ? <div className="mt-1 whitespace-pre-line font-normal text-neutral-800">{step.hint}</div> : null}
-      <div className="mt-2 font-bold text-[#2d8f82]">JA &gt;</div>
     </>
   );
 }
@@ -931,8 +923,8 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
         </tr>
       </thead>
       <tbody>
-        {decisions.map((step) => (
-          <tr key={step.id}>
+        {decisions.flatMap((step) => [
+          <tr key={`${step.id}-nee`}>
             <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
               {renderBijlage3QuestionCell(step)}
             </td>
@@ -956,8 +948,18 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
             <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
               {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
             </td>
-          </tr>
-        ))}
+          </tr>,
+          <tr key={`${step.id}-ja`}>
+            <td className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
+              <div className="font-bold text-[#2d8f82]">JA &gt;</div>
+            </td>
+            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
+            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
+            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
+            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
+            <td className="border border-[#b8985c] bg-white px-1 py-0.5" />
+          </tr>,
+        ])}
       </tbody>
     </table>
   );
@@ -1016,8 +1018,8 @@ function chunkBijlage3Decisions(
 }
 
 /** Tbody vertical budget after logo + title + 5-col thead (approx.). */
-const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 760;
-const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 900;
+const BIJLAGE3_FIRST_PAGE_TBODY_BUDGET_PX = 1900;
+const BIJLAGE3_CONTINUATION_TBODY_BUDGET_PX = 1900;
 
 /** Page 2 only: final JA branch + Trede 6 (always last bijlage-3 sheet; page number follows stroomschema chunks). */
 function Bijlage3Page2Only({
