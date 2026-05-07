@@ -990,13 +990,19 @@ function Bijlage3StepTbody({ step }: { step: TP2026Bijlage3Decision }) {
 /** Trede 6 data row(s) only — use inside same table as stroomschema or in a thead-less table. */
 function Bijlage3Trede6Tbody({ page2 }: { page2: { doelJa?: boolean; doelNee?: boolean } }) {
   const tredeCellClass = `${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
+  const focusOnly = String(BIJLAGE3_PAGE2.focusLine).replace(/^\s*JA\s*>\s*\n?/i, '');
 
   return (
     <tbody data-b3-trede6-body>
       <tr>
         <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
-          <div className="font-bold text-[#2d8f82]">{BIJLAGE3_PAGE2.jaLeadIn}</div>
-          <div className="mt-1 whitespace-pre-line">{BIJLAGE3_PAGE2.focusLine}</div>
+          <div className="whitespace-pre-line">
+            <span className="font-bold text-[#2d8f82]">
+              {BIJLAGE3_PAGE2.jaLeadIn}
+            </span>
+            {'\n'}
+            <span className="font-bold text-neutral-900">{focusOnly}</span>
+          </div>
         </td>
         <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
         <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass}`}>
