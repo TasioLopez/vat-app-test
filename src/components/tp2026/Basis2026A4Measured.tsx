@@ -34,7 +34,7 @@ const NB_AVG_INLEIDING =
 const BLOCK_SPACING_PX = 12;
 const FOOTER_RESERVE_PX = 76;
 const PAGE_BOTTOM_PAD_PX = 32;
-const SAFETY_PX = 64;
+const SAFETY_PX = 120;
 
 export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb';
 
@@ -133,7 +133,7 @@ function buildActivityAtoms(data: Record<string, any>): BasisAtom[] {
   const atoms: BasisAtom[] = [];
   if (!selections.length) return atoms;
 
-  const introSlices = chunkByParagraphs(TP_BASIS_TP_ACTIVITIES_INTRO, 1400);
+  const introSlices = chunkByParagraphs(TP_BASIS_TP_ACTIVITIES_INTRO, 760);
   introSlices.forEach((slice, i) => {
     atoms.push({
       id: `acts-intro-${i}`,
@@ -150,7 +150,7 @@ function buildActivityAtoms(data: Record<string, any>): BasisAtom[] {
     const activity = TP_ACTIVITIES.find((a) => a.id === sel.id);
     if (!activity) continue;
     const body = getBodyMain(activity);
-    const bodySlices = chunkByParagraphs(body, 1400);
+    const bodySlices = chunkByParagraphs(body, 760);
     bodySlices.forEach((slice, i) => {
       atoms.push({
         id: `act-${activity.id}-${i}`,
@@ -169,7 +169,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   const atoms: BasisAtom[] = [];
 
   const sub = String(data.inleiding_sub || '').trim();
-  const introSlices = chunkByParagraphs(String(data.inleiding ?? ''), 1200);
+  const introSlices = chunkByParagraphs(String(data.inleiding ?? ''), 760);
   introSlices.forEach((slice, i) => {
     const isLast = i === introSlices.length - 1;
     atoms.push({
@@ -199,7 +199,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
       return;
     }
 
-    const soft = key === 'wk' ? 900 : 1250;
+    const soft = key === 'wk' ? 520 : 760;
     const baseText = raw || fallbackTrim;
     const slices = chunkByParagraphs(baseText, soft);
     slices.forEach((slice, i) => {
@@ -357,6 +357,40 @@ function packIntoPages(heights: number[], maxUsable: number): number[][] {
   });
   if (cur.length) pages.push(cur);
   return pages;
+}
+
+function pageUsedHeight(indices: number[], heights: number[]): number {
+  if (!indices.length) return 0;
+  const blocks = indices.reduce((sum, i) => sum + (heights[i] ?? 0), 0);
+  const gaps = Math.max(0, indices.length - 1) * BLOCK_SPACING_PX;
+  return blocks + gaps;
+}
+
+function rebalancePackedPages(pages: number[][], heights: number[], maxUsable: number): number[][] {
+  const out = pages.map((p) => [...p]).filter((p) => p.length > 0);
+  if (!out.length) return out;
+
+  let guard = 0;
+  let changed = true;
+  while (changed && guard < 2000) {
+    guard += 1;
+    changed = false;
+
+    for (let i = 0; i < out.length; i++) {
+      const used = pageUsedHeight(out[i], heights);
+      if (used <= maxUsable) continue;
+
+      if (out[i].length <= 1) continue;
+
+      const moved = out[i].pop();
+      if (typeof moved !== 'number') continue;
+      if (!out[i + 1]) out[i + 1] = [];
+      out[i + 1].unshift(moved);
+      changed = true;
+    }
+  }
+
+  return out.filter((p) => p.length > 0);
 }
 
 function Basis2026FrontPage({
@@ -616,6 +650,11 @@ export function Basis2026A4Pages({
   }, [onPaginationReady]);
 
   const measureAndPaginate = useCallback(async () => {
+    // Ensure web fonts are loaded; measuring before this tends to under-estimate line wrapping.
+    if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+      await (document as any).fonts.ready;
+    }
+
     const root = measureRootRef.current;
     itemRefs.current = itemRefs.current.slice(0, bodyAtoms.length);
     await waitImagesIn(root);
@@ -653,7 +692,9 @@ export function Basis2026A4Pages({
       }
     }
 
-    setBodyPages(packIntoPages(heights, maxUsablePx));
+    const packed = packIntoPages(heights, maxUsablePx);
+    const balanced = rebalancePackedPages(packed, heights, maxUsablePx);
+    setBodyPages(balanced);
     emitReady();
   }, [bodyAtoms, emitReady]);
 
