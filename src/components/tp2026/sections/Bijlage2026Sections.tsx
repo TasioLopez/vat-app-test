@@ -1039,6 +1039,51 @@ const BIJLAGE3_LAYOUT_SAFETY_PX = 22;
 
 type Bijlage3PackResult = { chunks: TP2026Bijlage3Decision[][]; mergeTrede6: boolean };
 
+type Bijlage3MeasureMeta = {
+  usableFirstPx: number;
+  usableContPx: number;
+  stepHeights: Record<string, number>;
+  trede6TablePx: number;
+};
+
+function bijlage3StepHeightOf(id: string, stepHeights: Record<string, number>): number {
+  const fallbackStep = 96;
+  const h = stepHeights[id];
+  return typeof h === 'number' && h > 0 ? h : fallbackStep;
+}
+
+function bijlage3ComputeMergeTrede6(
+  chunks: TP2026Bijlage3Decision[][],
+  stepHeights: Record<string, number>,
+  trede6TablePx: number,
+  usableFirstPx: number,
+  usableContPx: number
+): boolean {
+  if (trede6TablePx <= 0 || chunks.length === 0) return false;
+  const lastChunk = chunks[chunks.length - 1]!;
+  let lastUsed = 0;
+  for (const s of lastChunk) lastUsed += bijlage3StepHeightOf(s.id, stepHeights);
+
+  const usableFirst = Math.max(120, usableFirstPx);
+  const usableCont = Math.max(120, usableContPx);
+  const lastPageBudget = chunks.length <= 1 ? usableFirst : usableCont;
+
+  return lastUsed + BIJLAGE3_TABLE_GAP_PX + trede6TablePx <= lastPageBudget;
+}
+
+function bijlage3ChunksEqual(a: TP2026Bijlage3Decision[][], b: TP2026Bijlage3Decision[][]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ai = a[i];
+    const bi = b[i];
+    if (!ai || !bi || ai.length !== bi.length) return false;
+    for (let j = 0; j < ai.length; j++) {
+      if (ai[j].id !== bi[j].id) return false;
+    }
+  }
+  return true;
+}
+
 function computeBijlage3PackingFromMeasurements(
   decisions: TP2026Bijlage3Decision[],
   usableFirstPx: number,
@@ -1053,19 +1098,13 @@ function computeBijlage3PackingFromMeasurements(
   const usableFirst = Math.max(120, usableFirstPx);
   const usableCont = Math.max(120, usableContPx);
 
-  const fallbackStep = 96;
-  const heightOf = (id: string) => {
-    const h = stepHeights[id];
-    return typeof h === 'number' && h > 0 ? h : fallbackStep;
-  };
-
   const chunks: TP2026Bijlage3Decision[][] = [];
   let cur: TP2026Bijlage3Decision[] = [];
   let used = 0;
   let budget = usableFirst;
 
   for (const step of decisions) {
-    const h = heightOf(step.id);
+    const h = bijlage3StepHeightOf(step.id, stepHeights);
     if (cur.length > 0 && used + h > budget) {
       chunks.push(cur);
       cur = [];
@@ -1077,14 +1116,13 @@ function computeBijlage3PackingFromMeasurements(
   }
   if (cur.length) chunks.push(cur);
 
-  const lastChunk = chunks[chunks.length - 1]!;
-  let lastUsed = 0;
-  for (const s of lastChunk) lastUsed += heightOf(s.id);
-
-  const lastPageBudget = chunks.length <= 1 ? usableFirst : usableCont;
-  const mergeTrede6 =
-    trede6TablePx > 0 &&
-    lastUsed + BIJLAGE3_TABLE_GAP_PX + trede6TablePx <= lastPageBudget;
+  const mergeTrede6 = bijlage3ComputeMergeTrede6(
+    chunks,
+    stepHeights,
+    trede6TablePx,
+    usableFirstPx,
+    usableContPx
+  );
 
   return { chunks, mergeTrede6 };
 }
@@ -1094,21 +1132,16 @@ function Bijlage3Page2Only({
   data,
   page2,
   pageNumber = 2,
-  printMode = false,
 }: {
   data: Record<string, any>;
   page2: { doelJa?: boolean; doelNee?: boolean };
   pageNumber?: number;
-  printMode?: boolean;
 }) {
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
-  const bodyClass = printMode
-    ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-    : 'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden';
 
   return (
     <A4Page className={pageShellClass}>
-      <div className={bodyClass}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <A4LogoHeader />
         <Bijlage3Trede6Table page2={page2} />
       </div>
@@ -1257,10 +1290,17 @@ export function Bijlage3A4Pages({
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
   const measureMountRef = useRef<HTMLDivElement>(null);
+  const measureMetaRef = useRef<Bijlage3MeasureMeta | null>(null);
+  const mainPageBodyRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const refineIterationsRef = useRef(0);
   const [pack, setPack] = useState<Bijlage3PackResult>(() => ({
     chunks: decisions.length ? [decisions] : [[]],
     mergeTrede6: false,
   }));
+
+  useLayoutEffect(() => {
+    refineIterationsRef.current = 0;
+  }, [decisions, data.date_of_birth, data.first_name, data.last_name, p2.doelJa, p2.doelNee]);
 
   useLayoutEffect(() => {
     const root = measureMountRef.current;
@@ -1325,31 +1365,99 @@ export function Bijlage3A4Pages({
 
     const trede6TablePx = trede6Wrap?.offsetHeight ?? 0;
 
-    setPack(
-      computeBijlage3PackingFromMeasurements(
+    measureMetaRef.current = {
+      usableFirstPx,
+      usableContPx,
+      stepHeights,
+      trede6TablePx,
+    };
+
+    setPack((prev) => {
+      const next = computeBijlage3PackingFromMeasurements(
         decisions,
         usableFirstPx,
         usableContPx,
         stepHeights,
         trede6TablePx
-      )
-    );
+      );
+      if (bijlage3ChunksEqual(prev.chunks, next.chunks) && prev.mergeTrede6 === next.mergeTrede6) {
+        return prev;
+      }
+      return next;
+    });
   }, [decisions, data.date_of_birth, data.first_name, data.last_name, p2.doelJa, p2.doelNee]);
 
+  useLayoutEffect(() => {
+    if (!measureMetaRef.current || !decisions.length) return;
+
+    const { chunks, mergeTrede6 } = pack;
+    if (!chunks.length) return;
+
+    const maxPasses = decisions.length + chunks.length + 10;
+    if (refineIterationsRef.current >= maxPasses) return;
+
+    const tol = 4;
+    for (let i = 0; i < chunks.length; i++) {
+      const el = mainPageBodyRefs.current[i];
+      if (!el) continue;
+      if (el.scrollHeight <= el.clientHeight + tol) continue;
+
+      const chunk = chunks[i];
+      if (!chunk?.length) continue;
+
+      if (chunk.length > 1) {
+        refineIterationsRef.current += 1;
+        setPack((prev) => {
+          const m = measureMetaRef.current;
+          if (!m) return prev;
+          const nextChunks = prev.chunks.map((c) => [...c]);
+          const ch = nextChunks[i];
+          if (!ch || ch.length <= 1) return prev;
+          const moved = ch.pop()!;
+          if (nextChunks[i + 1]) nextChunks[i + 1].unshift(moved);
+          else nextChunks.push([moved]);
+
+          const mergeTrede6Next = bijlage3ComputeMergeTrede6(
+            nextChunks,
+            m.stepHeights,
+            m.trede6TablePx,
+            m.usableFirstPx,
+            m.usableContPx
+          );
+          return { chunks: nextChunks, mergeTrede6: mergeTrede6Next };
+        });
+        return;
+      }
+
+      if (i === chunks.length - 1 && mergeTrede6) {
+        refineIterationsRef.current += 1;
+        setPack((prev) => ({
+          chunks: prev.chunks.map((c) => [...c]),
+          mergeTrede6: false,
+        }));
+        return;
+      }
+
+      return;
+    }
+  }, [pack, decisions.length]);
+
   const { chunks: mainChunks, mergeTrede6 } = pack;
+  mainPageBodyRefs.current.length = mainChunks.length;
   const totalSheets = mergeTrede6 ? mainChunks.length : mainChunks.length + 1;
 
   const mainPages = mainChunks.map((chunk, idx) => {
     const isLast = idx === mainChunks.length - 1;
     const appendTrede6 = mergeTrede6 && isLast;
 
-    const mainBodyClass = printMode
-      ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-      : 'flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden';
-
     return (
       <A4Page key={`b3-main-${idx}`} className={pageShellClass}>
-        <div className={mainBodyClass}>
+        <div
+          ref={(el) => {
+            mainPageBodyRefs.current[idx] = el;
+          }}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
           <A4LogoHeader />
           {idx === 0 ? <Bijlage3TitleBlock /> : null}
           <Bijlage3StroomTable decisions={chunk} />
@@ -1370,13 +1478,7 @@ export function Bijlage3A4Pages({
   });
 
   const page2Node = mergeTrede6 ? null : (
-    <Bijlage3Page2Only
-      key="b3-p2"
-      data={data}
-      page2={p2}
-      pageNumber={totalSheets}
-      printMode={printMode}
-    />
+    <Bijlage3Page2Only key="b3-p2" data={data} page2={p2} pageNumber={totalSheets} />
   );
 
   const measureLayer = (
