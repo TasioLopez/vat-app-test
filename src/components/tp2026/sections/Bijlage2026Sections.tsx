@@ -920,12 +920,12 @@ const BIJLAGE3_TABLE_SHELL_CLASS =
 function Bijlage3TableColGroup() {
   return (
     <colgroup>
-      <col style={{ width: '26%' }} />
+      <col style={{ width: '31%' }} />
       <col style={{ width: '8%' }} />
-      <col style={{ width: '17%' }} />
       <col style={{ width: '16%' }} />
-      <col style={{ width: '19%' }} />
-      <col style={{ width: '14%' }} />
+      <col style={{ width: '16%' }} />
+      <col style={{ width: '16%' }} />
+      <col style={{ width: '13%' }} />
     </colgroup>
   );
 }
@@ -987,46 +987,69 @@ function Bijlage3StepTbody({ step }: { step: TP2026Bijlage3Decision }) {
   );
 }
 
-function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[] }) {
+/** Trede 6 data row(s) only — use inside same table as stroomschema or in a thead-less table. */
+function Bijlage3Trede6Tbody({ page2 }: { page2: { doelJa?: boolean; doelNee?: boolean } }) {
+  const tredeCellClass = `${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
+
+  return (
+    <tbody data-b3-trede6-body>
+      <tr>
+        <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
+          <div className="font-bold text-[#2d8f82]">{BIJLAGE3_PAGE2.jaLeadIn}</div>
+          <div className="mt-1 whitespace-pre-line">{BIJLAGE3_PAGE2.focusLine}</div>
+        </td>
+        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
+        <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass}`}>
+          <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
+          <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
+        </td>
+        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+          {BIJLAGE3_PAGE2.doelUren}
+        </td>
+        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+          {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
+        </td>
+      </tr>
+    </tbody>
+  );
+}
+
+function Bijlage3StroomTable({
+  decisions,
+  showThead = true,
+  trede6Page2,
+}: {
+  decisions: TP2026Bijlage3Decision[];
+  showThead?: boolean;
+  /** When set, Trede 6 rows are appended in the same table (no duplicate header). */
+  trede6Page2?: { doelJa?: boolean; doelNee?: boolean } | null;
+}) {
   return (
     <table className={BIJLAGE3_TABLE_SHELL_CLASS}>
       <Bijlage3TableColGroup />
-      <Bijlage3TableThead />
+      {showThead ? <Bijlage3TableThead /> : null}
       {decisions.map((step) => (
         <Bijlage3StepTbody key={step.id} step={step} />
       ))}
+      {trede6Page2 ? <Bijlage3Trede6Tbody page2={trede6Page2} /> : null}
     </table>
   );
 }
 
-/** Trede 6 continuation block (same grid as main table). */
-function Bijlage3Trede6Table({ page2 }: { page2: { doelJa?: boolean; doelNee?: boolean } }) {
-  const tredeCellClass = `${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
-
+/** Trede 6 on its own sheet: one table, no column header row (thead only on document page 1). */
+function Bijlage3Trede6Table({
+  page2,
+  showThead = false,
+}: {
+  page2: { doelJa?: boolean; doelNee?: boolean };
+  showThead?: boolean;
+}) {
   return (
     <table className={BIJLAGE3_TABLE_SHELL_CLASS}>
       <Bijlage3TableColGroup />
-      <Bijlage3TableThead />
-      <tbody>
-        <tr>
-          <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
-            <div className="font-bold text-[#2d8f82]">{BIJLAGE3_PAGE2.jaLeadIn}</div>
-            <div className="mt-1 whitespace-pre-line">{BIJLAGE3_PAGE2.focusLine}</div>
-          </td>
-          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
-          <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass}`}>
-            <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
-            <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
-          </td>
-          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
-            {BIJLAGE3_PAGE2.doelUren}
-          </td>
-          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
-          <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
-            {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
-          </td>
-        </tr>
-      </tbody>
+      {showThead ? <Bijlage3TableThead /> : null}
+      <Bijlage3Trede6Tbody page2={page2} />
     </table>
   );
 }
@@ -1036,7 +1059,6 @@ const BIJLAGE3_TITLE_BLOCK_FALLBACK_PX = 52;
 const BIJLAGE3_FOOTER_BLOCK_FALLBACK_PX = 78;
 /** Matches `pb-8` on {@link TP2026_A4_PAGE_CLASS}. */
 const BIJLAGE3_PAGE_BOTTOM_PAD_PX = 32;
-const BIJLAGE3_TABLE_GAP_PX = 8;
 const BIJLAGE3_LAYOUT_SAFETY_PX = 22;
 
 type Bijlage3PackResult = { chunks: TP2026Bijlage3Decision[][]; mergeTrede6: boolean };
@@ -1070,7 +1092,7 @@ function bijlage3ComputeMergeTrede6(
   const usableCont = Math.max(120, usableContPx);
   const lastPageBudget = chunks.length <= 1 ? usableFirst : usableCont;
 
-  return lastUsed + BIJLAGE3_TABLE_GAP_PX + trede6TablePx <= lastPageBudget;
+  return lastUsed + trede6TablePx <= lastPageBudget;
 }
 
 function bijlage3ChunksEqual(a: TP2026Bijlage3Decision[][], b: TP2026Bijlage3Decision[][]): boolean {
@@ -1156,7 +1178,7 @@ function Bijlage3Page2Only({
     <A4Page className={pageShellClass}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <A4LogoHeader />
-        <Bijlage3Trede6Table page2={page2} />
+        <Bijlage3Trede6Table page2={page2} showThead={false} />
       </div>
       <FooterIdentity
         lastName={data.last_name}
@@ -1190,27 +1212,6 @@ export function Bijlage3Editor({
           {decision.hint ? (
             <p className="text-xs text-neutral-700 mb-2 whitespace-pre-line">{decision.hint}</p>
           ) : null}
-          <label className="mb-2 block text-sm">
-            <span className="font-medium">Stroomschema (ja/nee)</span>
-            <select
-              className="mt-1 w-full max-w-xs border border-border rounded px-2 py-1 text-sm"
-              value={decision.reached || ''}
-              onChange={(e) =>
-                setDecisions(
-                  decisions.map((d, i) =>
-                    i === idx ? { ...d, reached: (e.target.value || null) as 'yes' | 'no' | null } : d
-                  )
-                )
-              }
-            >
-              <option value="">Geen keuze</option>
-              <option value="yes">Ja</option>
-              <option value="no">Nee</option>
-            </select>
-          </label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Ja → {decision.yesOutcome} | Nee → {decision.noOutcome}
-          </p>
           <div className="flex flex-wrap gap-4 border-t border-border pt-2">
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -1357,7 +1358,7 @@ export function Bijlage3A4Pages({
       );
     }
     if (!contAbovePx) {
-      contAbovePx = TP2026_BODY_FLOW_START_SPACER_PX + theadPx;
+      contAbovePx = TP2026_BODY_FLOW_START_SPACER_PX;
     }
 
     const footerPx = footerEl?.offsetHeight ?? BIJLAGE3_FOOTER_BLOCK_FALLBACK_PX;
@@ -1480,12 +1481,11 @@ export function Bijlage3A4Pages({
         >
           <A4LogoHeader />
           {idx === 0 ? <Bijlage3TitleBlock /> : null}
-          <Bijlage3StroomTable decisions={chunk} />
-          {appendTrede6 ? (
-            <div className="shrink-0" style={{ marginTop: BIJLAGE3_TABLE_GAP_PX }}>
-              <Bijlage3Trede6Table page2={p2} />
-            </div>
-          ) : null}
+          <Bijlage3StroomTable
+            decisions={chunk}
+            showThead={idx === 0}
+            trede6Page2={appendTrede6 ? p2 : null}
+          />
         </div>
         <FooterIdentity
           lastName={data.last_name}
@@ -1524,12 +1524,11 @@ export function Bijlage3A4Pages({
             ))}
           </table>
         </div>
-        {/* Continuation pages: logo + table with thead + minimal tbody so thead/tbody borders match. */}
+        {/* Continuation pages: logo + table without thead (matches rendered chunk pages). */}
         <div data-b3-measure-cont-stack className="flex shrink-0 flex-col">
           <A4LogoHeader />
           <table className={BIJLAGE3_TABLE_SHELL_CLASS}>
             <Bijlage3TableColGroup />
-            <Bijlage3TableThead />
             <tbody aria-hidden>
               <tr>
                 <td
@@ -1550,8 +1549,11 @@ export function Bijlage3A4Pages({
             pageNumber={1}
           />
         </div>
-        <div data-b3-measure-trede6 className="shrink-0" style={{ marginTop: BIJLAGE3_TABLE_GAP_PX }}>
-          <Bijlage3Trede6Table page2={p2} />
+        <div data-b3-measure-trede6 className="shrink-0">
+          <table className={BIJLAGE3_TABLE_SHELL_CLASS}>
+            <Bijlage3TableColGroup />
+            <Bijlage3Trede6Tbody page2={p2} />
+          </table>
         </div>
       </div>
     </div>
