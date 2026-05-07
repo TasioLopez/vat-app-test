@@ -877,24 +877,52 @@ function bijlage3DoelChecksPrint(ja?: boolean, nee?: boolean) {
   );
 }
 
+const BIJLAGE3_PRINT_HEADERS = [
+  'Vragen stroomschema',
+  '',
+  'Trede-bepaling',
+  'Doel uren %',
+  'Werkboeken',
+  'Doel behaald',
+] as const;
+
+function renderBijlage3QuestionCell(step: TP2026Bijlage3Decision) {
+  const lines = String(step.question || '').split('\n').filter(Boolean);
+  const firstLine = lines[0] ?? '';
+  const tail = lines.slice(1).join('\n');
+
+  return (
+    <>
+      <div className="whitespace-pre-line font-bold">{firstLine}</div>
+      {tail ? <div className="whitespace-pre-line font-normal">{tail}</div> : null}
+      {step.questionSubtitle ? (
+        <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-800">{step.questionSubtitle}</div>
+      ) : null}
+      {step.hint ? <div className="mt-1 whitespace-pre-line font-normal text-neutral-800">{step.hint}</div> : null}
+      <div className="mt-2 font-bold text-[#2d8f82]">JA &gt;</div>
+    </>
+  );
+}
+
 function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[] }) {
-  const tredeBoxClass = (n: number) =>
-    `rounded-sm px-1.5 py-1 text-left text-[7pt] leading-[1.35] ${BIJLAGE2_TREDE_BADGE[n] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`;
+  const tredeCellClass = (n: number) =>
+    `${BIJLAGE2_TREDE_BADGE[n] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`;
 
   return (
     <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
       <colgroup>
-        <col style={{ width: '30%' }} />
-        <col style={{ width: '19%' }} />
+        <col style={{ width: '26%' }} />
+        <col style={{ width: '8%' }} />
         <col style={{ width: '17%' }} />
-        <col style={{ width: '20%' }} />
+        <col style={{ width: '16%' }} />
+        <col style={{ width: '19%' }} />
         <col style={{ width: '14%' }} />
       </colgroup>
       <thead>
         <tr>
-          {BIJLAGE3_TABLE_HEADERS.map((h) => (
+          {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
             <th
-              key={h}
+              key={`${h}-${idx}`}
               className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
             >
               {h}
@@ -906,21 +934,14 @@ function Bijlage3StroomTable({ decisions }: { decisions: TP2026Bijlage3Decision[
         {decisions.map((step) => (
           <tr key={step.id}>
             <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
-              <div className="whitespace-pre-line font-normal">{step.question}</div>
-              {step.questionSubtitle ? (
-                <div className="mt-0.5 whitespace-pre-line text-neutral-800">{step.questionSubtitle}</div>
-              ) : null}
-              {step.hint ? (
-                <div className="mt-1 whitespace-pre-line text-neutral-800">{step.hint}</div>
-              ) : null}
-              <div className="mt-1 font-bold text-[#d4694a]">NEE &gt;</div>
-              <div className="mt-3 font-bold text-[#2d8f82]">JA &gt;</div>
+              {renderBijlage3QuestionCell(step)}
             </td>
-            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
-              <div className={tredeBoxClass(step.neeTredeNum)}>
-                <div className="font-bold">{step.neeTredeLabel}</div>
-                <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
-              </div>
+            <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center">
+              <div className="font-bold text-[#d4694a]">NEE &gt;</div>
+            </td>
+            <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
+              <div className="font-bold">{step.neeTredeLabel}</div>
+              <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
             </td>
             <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
               {String(step.doelUren || '').trim() ? step.doelUren : '—'}
@@ -1009,7 +1030,7 @@ function Bijlage3Page2Only({
   pageNumber?: number;
 }) {
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
-  const tredeBoxClass = `rounded-sm px-1.5 py-1 text-left text-[7pt] leading-[1.35] ${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
+  const tredeCellClass = `${BIJLAGE2_TREDE_BADGE[BIJLAGE3_PAGE2.tredeNum]}`;
 
   return (
     <A4Page className={pageShellClass}>
@@ -1017,17 +1038,18 @@ function Bijlage3Page2Only({
         <A4LogoHeader />
         <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900">
           <colgroup>
-            <col style={{ width: '30%' }} />
-            <col style={{ width: '19%' }} />
+            <col style={{ width: '26%' }} />
+            <col style={{ width: '8%' }} />
             <col style={{ width: '17%' }} />
-            <col style={{ width: '20%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '19%' }} />
             <col style={{ width: '14%' }} />
           </colgroup>
           <thead>
             <tr>
-              {BIJLAGE3_TABLE_HEADERS.map((h) => (
+              {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
                 <th
-                  key={h}
+                  key={`${h}-${idx}`}
                   className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold tracking-tight text-[#6d2a96]"
                 >
                   {h}
@@ -1041,13 +1063,14 @@ function Bijlage3Page2Only({
                 <div className="font-bold text-[#2d8f82]">{BIJLAGE3_PAGE2.jaLeadIn}</div>
                 <div className="mt-1 whitespace-pre-line">{BIJLAGE3_PAGE2.focusLine}</div>
               </td>
-              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
-                <div className={tredeBoxClass}>
-                  <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
-                  <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
-                </div>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
+              <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass}`}>
+                <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
+                <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
               </td>
-              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+              <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+                —
+              </td>
               <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
               <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
                 {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
