@@ -2,11 +2,11 @@
 
 import Image from 'next/image';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
-import { TP2026CoverFields } from '@/lib/tp2026/schema';
+import { TP2026CoverFields, formatNLDate } from '@/lib/tp2026/schema';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
-import { formatTP2026CoverVoorName } from '@/lib/utils';
+import { formatEmployeeName } from '@/lib/utils';
 import FieldControl from '@/components/tp2026/FieldControl';
 
 /**
@@ -81,7 +81,7 @@ export function Cover2026Editor({
 export function Cover2026A4({ data }: { data: Record<string, any> }) {
   const employeeName =
     data.first_name && data.last_name
-      ? formatTP2026CoverVoorName(data.first_name, data.last_name)
+      ? formatEmployeeName(data.first_name, data.last_name, data.gender)
       : data.employee_name?.trim() ||
         [data.first_name, data.last_name].filter(Boolean).join(' ').trim() ||
         '—';
@@ -140,8 +140,11 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
               className="grid text-[#6d2a96] leading-tight"
             >
               <CoverInfoLine label="Voor" value={employeeName} />
-              <CoverInfoLine label="Datum rapportage" value={data.tp_creation_date || ''} />
-              <CoverInfoLine label="Opdrachtgever" value={data.client_name || ''} />
+              <CoverInfoLine label="Datum rapportage" value={formatNLDate(data.tp_creation_date)} />
+              <CoverInfoLine
+                label="Opdrachtgever"
+                value={data.employer_name || data.client_name || ''}
+              />
             </div>
           </div>
         </div>

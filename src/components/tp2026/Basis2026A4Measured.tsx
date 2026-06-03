@@ -470,7 +470,9 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
           advisorName={data.consultant_name || 'Loopbaanadviseur'}
           employerContact={data.client_referent_name || 'Naam opdrachtgever'}
           employerFunctionCompany={
-            [data.client_referent_function, data.client_name].filter(Boolean).join(', ') || undefined
+            [data.client_referent_function, data.employer_name || data.client_name]
+              .filter(Boolean)
+              .join(', ') || undefined
           }
         />
       );

@@ -197,9 +197,10 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           ...meta,
         });
 
-        if (clientCompanyName) next.employer_name = clientCompanyName;
-
-        if (appUserDisplayName) next.client_name = appUserDisplayName;
+        if (clientCompanyName) {
+          next.employer_name = clientCompanyName;
+          next.client_name = clientCompanyName;
+        }
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;
         }

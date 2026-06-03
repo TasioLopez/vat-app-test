@@ -1,4 +1,4 @@
-import { formatTP2026CoverVoorName } from '@/lib/utils';
+import { formatEmployeeName } from '@/lib/utils';
 import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
 import type {
   TP2026Bijlage1Activity,
@@ -210,7 +210,7 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   const next = { ...raw };
 
   if (next.first_name && next.last_name) {
-    next.employee_name = formatTP2026CoverVoorName(next.first_name, next.last_name);
+    next.employee_name = formatEmployeeName(next.first_name, next.last_name, next.gender);
   } else if (!next.employee_name?.trim()) {
     next.employee_name = [next.first_name, next.last_name].filter(Boolean).join(' ').trim();
   }
