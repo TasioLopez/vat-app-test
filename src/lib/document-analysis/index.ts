@@ -1,7 +1,11 @@
 export { extractStoragePath, getFileType, isIntakeDocumentType, INTAKE_TYPE_VARIANTS } from './storage';
 export { parseJsonFromAssistant, flattenExtractionPayload } from './parseJsonResponse';
 export { getOpenAIFileParams, buildOpenAIFile } from '@/lib/openai-file-upload';
-export { mapAndValidateEmployeeDetails, extractReferentFromRaw } from './nullSafeDetails';
+export {
+  mapAndValidateEmployeeDetails,
+  extractReferentFromRaw,
+  mergeReferentFields,
+} from './nullSafeDetails';
 export { getAutofillCompleteness, type AutofillWarning } from './incomplete';
 export { runAssistantExtraction, type RunAssistantExtractionOptions } from './runAssistantExtraction';
 export { getIntakeDocumentForEmployee, runIntakeAssistantText, type IntakeDocumentFile } from './getIntakeDocument';

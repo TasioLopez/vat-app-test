@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { flattenExtractionPayload } from '../parseJsonResponse';
+import { flattenExtractionPayload, repairJsonString, parseJsonFromAssistant } from '../parseJsonResponse';
 import { mapAndValidateEmployeeDetails } from '../nullSafeDetails';
-import { extractReferentFromRaw } from '../nullSafeDetails';
+import { extractReferentFromRaw, mergeReferentFields } from '../nullSafeDetails';
 
 describe('flattenExtractionPayload', () => {
   it('merges employee_details into root', () => {
@@ -38,5 +38,31 @@ describe('flattenExtractionPayload', () => {
     });
     assert.equal(ref.referent_first_name, 'Piet');
     assert.equal(ref.referent_phone, '0612345678');
+  });
+
+  it('repairJsonString fixes trailing comma and missing value', () => {
+    const repaired = repairJsonString(
+      '{"current_job":"A","education_level":null,"education_name":}'
+    );
+    const parsed = JSON.parse(repaired);
+    assert.equal(parsed.education_name, null);
+    assert.equal(parsed.current_job, 'A');
+  });
+
+  it('parseJsonFromAssistant repairs malformed JSON', () => {
+    const parsed = parseJsonFromAssistant(
+      '```json\n{"contract_hours":32,"education_name":}\n```'
+    );
+    assert.equal(parsed.contract_hours, 32);
+    assert.equal(parsed.education_name, null);
+  });
+
+  it('mergeReferentFields fills gaps without overwriting intake', () => {
+    const merged = mergeReferentFields(
+      { referent_first_name: 'Jan' },
+      { referent_first_name: 'Piet', referent_last_name: 'Jansen' }
+    );
+    assert.equal(merged.referent_first_name, 'Jan');
+    assert.equal(merged.referent_last_name, 'Jansen');
   });
 });

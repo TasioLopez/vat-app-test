@@ -38,6 +38,37 @@ export function flattenExtractionPayload(parsed: Record<string, unknown>): Recor
   return out;
 }
 
+/** Fix common invalid JSON from LLMs (trailing commas, missing values). */
+export function repairJsonString(json: string): string {
+  let s = json.trim();
+  s = s.replace(/,(\s*[}\]])/g, '$1');
+  // "key": with no value before } or ]
+  s = s.replace(/"([^"\\]+)"\s*:\s*(?=[}\]])/g, '"$1": null');
+  // "key": at end of string (truncated)
+  s = s.replace(/"([^"\\]+)"\s*:\s*$/g, '"$1": null');
+  return s;
+}
+
+function tryParseJsonObject(json: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return flattenExtractionPayload(parsed as Record<string, unknown>);
+    }
+  } catch {
+    // retry after repair
+  }
+  try {
+    const parsed = JSON.parse(repairJsonString(json));
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return flattenExtractionPayload(parsed as Record<string, unknown>);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function parseJsonFromAssistant(responseText: string): Record<string, unknown> {
   if (!responseText || typeof responseText !== 'string') {
     console.warn('⚠️ Empty or invalid response text');
@@ -73,16 +104,10 @@ export function parseJsonFromAssistant(responseText: string): Record<string, unk
 
   cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
 
-  try {
-    const parsed = JSON.parse(cleanedResponse);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return flattenExtractionPayload(parsed as Record<string, unknown>);
-    }
-    return {};
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn('⚠️ JSON parsing error:', message);
-    console.warn('📄 Attempted to parse:', cleanedResponse.substring(0, 200));
-    return {};
-  }
+  const parsed = tryParseJsonObject(cleanedResponse);
+  if (parsed) return parsed;
+
+  console.warn('⚠️ JSON parsing error: could not parse assistant response');
+  console.warn('📄 Attempted to parse:', cleanedResponse.substring(0, 200));
+  return {};
 }

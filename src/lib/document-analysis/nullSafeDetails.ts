@@ -55,7 +55,9 @@ export function mapAndValidateEmployeeDetails(
     const mappedKey = FIELD_MAPPING[key] || key;
 
     if (!VALID_EMPLOYEE_DETAILS_FIELDS.has(mappedKey)) {
-      console.log(`⚠️ Skipping field "${mappedKey}" - belongs in tp_meta table, not employee_details`);
+      if (!mappedKey.startsWith('referent_')) {
+        console.log(`⚠️ Skipping field "${mappedKey}" - not an employee_details field`);
+      }
       continue;
     }
 
@@ -173,5 +175,25 @@ export function extractReferentFromRaw(
     }
   }
 
+  return out;
+}
+
+/** Merge referent fields; existing non-empty values win. */
+export function mergeReferentFields(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+): Record<string, unknown> {
+  const out = { ...target };
+  for (const k of REFERENT_KEYS) {
+    const incoming = source[k];
+    const current = out[k];
+    if (
+      incoming != null &&
+      incoming !== '' &&
+      (current == null || current === '')
+    ) {
+      out[k] = incoming;
+    }
+  }
   return out;
 }

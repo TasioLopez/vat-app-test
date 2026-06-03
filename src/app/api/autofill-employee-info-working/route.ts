@@ -7,6 +7,7 @@ import {
   runAssistantExtraction,
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
+  mergeReferentFields,
   getAutofillCompleteness,
   INTAKE_EMPLOYEE_PROMPT,
   INTAKE_EMPLOYEE_USER_MESSAGE,
@@ -212,38 +213,34 @@ async function processIntakeForm(doc: DocRow) {
 }
 
 async function processADReport(doc: DocRow) {
-  const { mapped } = await processDocumentWithAssistant(doc, {
+  return processDocumentWithAssistant(doc, {
     logLabel: 'AD report',
     assistantName: 'AD Report Analyzer',
     instructions: AD_EMPLOYEE_PROMPT,
     userMessage: AD_EMPLOYEE_USER_MESSAGE,
   });
-  return mapped;
 }
 
 async function processFMLIZP(doc: DocRow) {
-  const { mapped } = await processDocumentWithAssistant(doc, {
+  return processDocumentWithAssistant(doc, {
     logLabel: 'FML/IZP',
     assistantName: 'FML/IZP Analyzer',
     instructions: FML_EMPLOYEE_PROMPT,
     userMessage: FML_EMPLOYEE_USER_MESSAGE,
   });
-  return mapped;
 }
 
 async function processExtraDoc(doc: DocRow) {
   if (isIntakeDocumentType(doc.type)) {
-    const { mapped } = await processIntakeForm(doc);
-    return mapped;
+    return processIntakeForm(doc);
   }
 
-  const { mapped } = await processDocumentWithAssistant(doc, {
+  return processDocumentWithAssistant(doc, {
     logLabel: 'extra document',
     assistantName: 'Extra Document Analyzer',
     instructions: EXTRA_EMPLOYEE_PROMPT,
     userMessage: EXTRA_EMPLOYEE_USER_MESSAGE,
   });
-  return mapped;
 }
 
 async function processDocumentsSeparately(docs: DocRow[]): Promise<{
@@ -264,7 +261,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log('📄 Processing intake form (priority 1)...');
     const intakeResult = await processIntakeForm(intakeDoc);
     Object.assign(results, intakeResult.mapped);
-    referent = { ...referent, ...intakeResult.referent };
+    referent = mergeReferentFields(referent, intakeResult.referent);
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
@@ -278,16 +275,20 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   if (adDoc) {
     console.log('📄 Processing AD report (priority 2)...');
     const adResult = await processADReport(adDoc);
-    Object.keys(adResult).forEach((key) => {
-      const adValue = adResult[key];
+    Object.keys(adResult.mapped).forEach((key) => {
+      const adValue = adResult.mapped[key];
       if (AD_FIRST_FIELDS.includes(key)) {
         if (isFilled(adValue)) results[key] = adValue;
       } else if (!isFilled(results[key])) {
         results[key] = adValue;
       }
     });
+    referent = mergeReferentFields(referent, adResult.referent);
+    if (Object.keys(adResult.referent).length > 0) {
+      console.log('✅ AD report: referent contact extracted');
+    }
     processedDocs.push('ad_rapport');
-    console.log(`✅ AD report: ${Object.keys(adResult).length} fields extracted`);
+    console.log(`✅ AD report: ${Object.keys(adResult.mapped).length} fields extracted`);
   }
 
   const fmlDoc = docs.find((d) => {
@@ -298,11 +299,12 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   if (fmlDoc) {
     console.log('📄 Processing FML/IZP (priority 3)...');
     const fmlResult = await processFMLIZP(fmlDoc);
-    Object.keys(fmlResult).forEach((key) => {
-      if (!isFilled(results[key])) results[key] = fmlResult[key];
+    Object.keys(fmlResult.mapped).forEach((key) => {
+      if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
     });
+    referent = mergeReferentFields(referent, fmlResult.referent);
     processedDocs.push('fml/izp');
-    console.log(`✅ FML/IZP: ${Object.keys(fmlResult).length} fields extracted`);
+    console.log(`✅ FML/IZP: ${Object.keys(fmlResult.mapped).length} fields extracted`);
   }
 
   const extraDocs = docs.filter((d) => {
@@ -324,9 +326,10 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log(`📄 Processing ${extraDocs.length} extra document(s) (priority 4)...`);
     for (const extraDoc of extraDocs) {
       const extraResult = await processExtraDoc(extraDoc);
-      Object.keys(extraResult).forEach((key) => {
-        if (!isFilled(results[key])) results[key] = extraResult[key];
+      Object.keys(extraResult.mapped).forEach((key) => {
+        if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
       });
+      referent = mergeReferentFields(referent, extraResult.referent);
     }
     processedDocs.push('extra');
     console.log('✅ Extra documents: processed');
@@ -407,7 +410,15 @@ export async function GET(req: NextRequest) {
 
     const refFirst = (referent.referent_first_name ?? '').toString().trim();
     const refLast = (referent.referent_last_name ?? '').toString().trim();
+
     if (refFirst || refLast) {
+      console.log('📇 Referent extracted:', {
+        first: refFirst,
+        last: refLast,
+        has_function: Boolean(referent.referent_function),
+        has_phone: Boolean(referent.referent_phone),
+        has_email: Boolean(referent.referent_email),
+      });
       suggested_referent = {
         first_name: refFirst,
         last_name: refLast,
