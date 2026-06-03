@@ -20,6 +20,8 @@ import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage
 import { BIJLAGE3_PAGE2, BIJLAGE3_STEP_7_ID } from '@/lib/tp2026/bijlage3-official';
 import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/tp2026/schema';
+import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
+import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { BIJLAGE1_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
@@ -75,8 +77,6 @@ const addMonths = (date: Date, months: number): Date => {
   return next;
 };
 
-const toISODate = (d: Date): string => d.toISOString().split('T')[0];
-
 function normalizePhase(phase: TP2026Bijlage1Phase, index: number): TP2026Bijlage1Phase {
   return {
     title: String(phase?.title || `Planning fase ${index + 1}`),
@@ -94,18 +94,23 @@ function normalizePhase(phase: TP2026Bijlage1Phase, index: number): TP2026Bijlag
 }
 
 function createTemplates(startDate: string, endDate: string): Record<'2-fases' | '3-fases', TP2026Bijlage1Phase[]> {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseDateFlexible(startDate);
+  const end = parseDateFlexible(endDate);
+  if (!start || !end) {
+    return { '3-fases': [], '2-fases': [] };
+  }
   const phase1End = addMonths(start, 3);
   const phase2Start = phase1End;
   const phase2End = addMonths(phase2Start, 3);
+  const threePhaseDates = computeBijlage1PhaseDateSlots(3, startDate, endDate);
+  const twoPhaseDates = computeBijlage1PhaseDateSlots(2, startDate, endDate);
 
   return {
     '3-fases': [
       {
         title: 'Oriëntatie',
-        period_from: toISODate(start),
-        period_to: toISODate(phase1End),
+        period_from: threePhaseDates[0]?.period_from ?? toISODate(start),
+        period_to: threePhaseDates[0]?.period_to ?? toISODate(phase1End),
         activities: [
           'Verwerking verlies en acceptatie',
           'Empowerment',
@@ -119,8 +124,8 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
       },
       {
         title: 'Activering',
-        period_from: toISODate(phase2Start),
-        period_to: toISODate(phase2End),
+        period_from: threePhaseDates[1]?.period_from ?? toISODate(phase2Start),
+        period_to: threePhaseDates[1]?.period_to ?? toISODate(phase2End),
         activities: [
           'Sollicitatievaardigheden vervolg (gesprek)',
           'Netwerken',
@@ -134,8 +139,8 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
       },
       {
         title: 'Betaald werk',
-        period_from: toISODate(phase2End),
-        period_to: toISODate(end),
+        period_from: threePhaseDates[2]?.period_from ?? toISODate(phase2End),
+        period_to: threePhaseDates[2]?.period_to ?? toISODate(end),
         activities: [
           'Wekelijks solliciteren vervolg',
           'Sollicitatiegesprek voorbereiden en presenteren',
@@ -150,8 +155,8 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
     '2-fases': [
       {
         title: 'Oriëntatie',
-        period_from: toISODate(start),
-        period_to: toISODate(phase1End),
+        period_from: twoPhaseDates[0]?.period_from ?? toISODate(start),
+        period_to: twoPhaseDates[0]?.period_to ?? toISODate(phase1End),
         activities: [
           'Verwerking verlies en acceptatie',
           'Empowerment',
@@ -165,8 +170,8 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
       },
       {
         title: 'Activering/betaald werk',
-        period_from: toISODate(phase1End),
-        period_to: toISODate(end),
+        period_from: twoPhaseDates[1]?.period_from ?? toISODate(phase1End),
+        period_to: twoPhaseDates[1]?.period_to ?? toISODate(end),
         activities: [
           'Sollicitatievaardigheden vervolg (gesprek)',
           'Netwerken',

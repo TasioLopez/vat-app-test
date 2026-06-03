@@ -266,6 +266,17 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     }
   }, [tpData.first_sick_day, tpData.registration_date, tpData.intake_date, tpData.tp_end_date, tpData.tp_start_date, updateField]);
 
+  // Bijlage 1: merge legacy dates and auto-fill periods when trajectory dates become available
+  useEffect(() => {
+    setTPData((prev) => {
+      const shaped = ensureTP2026Shape(prev);
+      if (JSON.stringify(shaped.bijlage1_phases) === JSON.stringify(prev.bijlage1_phases)) {
+        return prev;
+      }
+      return { ...prev, bijlage1_phases: shaped.bijlage1_phases };
+    });
+  }, [tpData.tp_start_date, tpData.tp_end_date, tpData.intake_date, tpData.bijlage_fases, setTPData]);
+
   const persist = async () => {
     setSaving(true);
     try {

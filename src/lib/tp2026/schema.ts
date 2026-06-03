@@ -5,6 +5,7 @@ import {
   EDUCATION_LEVEL_OPTIONS,
   TRANSPORT_TYPE_OPTIONS,
 } from '@/lib/tp2026/gegevens-field-options';
+import { parseDateFlexible } from '@/lib/tp2026/trajectory-dates';
 
 export type TP2026FieldType =
   | 'text'
@@ -155,7 +156,7 @@ export function boolToJaNee(value: unknown): string {
 
 export function formatNLDate(input?: string | null): string {
   if (!input) return '—';
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return '—';
+  const d = parseDateFlexible(String(input));
+  if (!d) return '—';
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
 }

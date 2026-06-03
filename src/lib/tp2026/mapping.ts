@@ -10,6 +10,7 @@ import type {
 } from './schema';
 import { createOfficialBijlage2Model } from '@/lib/tp2026/bijlage2-official';
 import { createOfficialBijlage3Decisions } from '@/lib/tp2026/bijlage3-official';
+import { resolveBijlage1PhaseDates } from '@/lib/tp2026/bijlage1-dates';
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -217,13 +218,14 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   const fromLegacy = normalizeBijlage1Phases(next.bijlage_fases);
   const currentBijlage1 = normalizeBijlage1Phases(next.bijlage1_phases);
+  let bijlage1Phases: TP2026Bijlage1Phase[];
   if (!Array.isArray(next.bijlage1_phases) || next.bijlage1_phases.length === 0) {
-    next.bijlage1_phases = (fromLegacy.length > 0
-      ? fromLegacy
-      : bijlage1PhaseDefaults) as TP2026Bijlage1Phase[];
+    bijlage1Phases = (fromLegacy.length > 0 ? fromLegacy : bijlage1PhaseDefaults) as TP2026Bijlage1Phase[];
   } else {
-    next.bijlage1_phases = currentBijlage1.length > 0 ? currentBijlage1 : bijlage1PhaseDefaults;
+    bijlage1Phases = currentBijlage1.length > 0 ? currentBijlage1 : bijlage1PhaseDefaults;
   }
+  const planStart = next.tp_start_date || next.intake_date;
+  next.bijlage1_phases = resolveBijlage1PhaseDates(bijlage1Phases, fromLegacy, planStart, next.tp_end_date);
 
   if (!next.bijlage2_model || typeof next.bijlage2_model !== 'object') {
     next.bijlage2_model = bijlage2Default;
