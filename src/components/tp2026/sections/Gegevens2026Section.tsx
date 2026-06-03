@@ -12,8 +12,15 @@ import {
   TP2026_A4_PAGE_CLASS,
   TP2026FieldTable,
 } from '@/components/tp2026/primitives';
+import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
-import { formatTP2026CoverVoorName } from '@/lib/utils';
+import {
+  formatComputerSkills,
+  formatDriversLicense,
+  formatTP2026CoverVoorName,
+  formatTransportation,
+} from '@/lib/utils';
+import { Mail, Phone, User } from 'lucide-react';
 
 /** Ja/nee checkboxes for print layout (matches Word template). */
 function JaNeeReportChecks({ value }: { value: boolean | null | undefined }) {
@@ -73,7 +80,6 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
       : [data.last_name, data.first_name].filter(Boolean).join(' ').trim() || '—';
   const werkgever = data.employer_name || data.client_name || '—';
   const adviseur = data.consultant_name || '—';
-  const adviseurContact = [data.consultant_phone, data.consultant_email].filter(Boolean).join(' · ');
 
   const items: { label: string; value: React.ReactNode }[] = [
     { label: 'Naam', value: naam },
@@ -82,10 +88,19 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
     {
       label: 'Loopbaanadviseur',
       value: (
-        <span>
-          {adviseur}
-          {adviseurContact ? (
-            <span className="mt-0.5 block text-xs text-muted-foreground">{adviseurContact}</span>
+        <span className="space-y-1">
+          <span className="block">{adviseur}</span>
+          {data.consultant_phone ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Phone className="h-3 w-3 shrink-0" aria-hidden />
+              {data.consultant_phone}
+            </span>
+          ) : null}
+          {data.consultant_email ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Mail className="h-3 w-3 shrink-0" aria-hidden />
+              {data.consultant_email}
+            </span>
           ) : null}
         </span>
       ),
@@ -93,16 +108,16 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
   ];
 
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3">
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+    <GegevensEditorSection title="Samenvatting" icon={User}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {items.map(({ label, value }) => (
           <div key={label}>
-            <div className="text-xs font-medium text-muted-foreground">{label}</div>
+            <div className="mb-1 text-xs font-medium text-muted-foreground">{label}</div>
             <div className="text-sm text-foreground">{value}</div>
           </div>
         ))}
       </div>
-    </div>
+    </GegevensEditorSection>
   );
 }
 
@@ -114,17 +129,16 @@ export function Gegevens2026Editor({
   updateField: (key: string, value: any) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <GegevensContextCard data={data} />
       {GEGEVENS_EDITOR_SECTIONS.map((section) => (
-        <section key={section.id} className="space-y-3">
-          <SectionBand title={section.title} className="mb-0" />
-          <div className="space-y-3">
+        <GegevensEditorSection key={section.id} title={section.title} icon={section.icon}>
+          <div className="space-y-4">
             {section.rows.map((row, i) => (
               <GegevensEditorRow key={`${section.id}-${i}`} row={row} data={data} updateField={updateField} />
             ))}
           </div>
-        </section>
+        </GegevensEditorSection>
       ))}
     </div>
   );
@@ -192,8 +206,9 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
 }
 
 function GegevensPage2({ data }: { data: Record<string, any> }) {
-  const vervoertekst = Array.isArray(data.transport_type) ? data.transport_type.join(', ') : data.transport_type || '—';
-  const rijbewijs = data.drivers_license ? 'Ja' : 'Nee';
+  const vervoertekst = formatTransportation(null, data.transport_type);
+  const rijbewijs = formatDriversLicense(data.drivers_license, data.drivers_license_type);
+  const pcVaardigheden = formatComputerSkills(data.computer_skills);
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
@@ -211,7 +226,7 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
             <DataRow label="Schrijfvaardigheid NL-taal" value={data.dutch_writing || '—'} />
             <DataRow label="Leesvaardigheid NL-taal" value={data.dutch_reading || '—'} />
             <DataRow label="Beschikking over een PC" value={boolToJaNee(data.has_computer)} />
-            <DataRow label="PC-vaardigheden" value={data.computer_skills || '—'} />
+            <DataRow label="PC-vaardigheden" value={pcVaardigheden} />
             <DataRow label="Aantal contracturen" value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'} />
             <DataRow label="Andere werkgever(s)" value={data.other_employers || '—'} />
           </TP2026FieldTable>

@@ -1,9 +1,18 @@
+import {
+  COMPUTER_SKILLS_OPTIONS,
+  DRIVERS_LICENSE_TYPE_VALUES,
+  DUTCH_LANGUAGE_OPTIONS,
+  EDUCATION_LEVEL_OPTIONS,
+  TRANSPORT_TYPE_OPTIONS,
+} from '@/lib/tp2026/gegevens-field-options';
+
 export type TP2026FieldType =
   | 'text'
   | 'date'
   | 'boolean'
   | 'select'
   | 'multiline'
+  | 'multiselect'
   | 'readonly';
 
 export type TP2026FieldDef = {
@@ -41,14 +50,20 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'client_referent_email', label: 'E-mail opdrachtgever', type: 'text' },
   { key: 'current_job', label: 'Huidige functie', type: 'text' },
   { key: 'work_experience', label: 'Werkervaring', type: 'multiline' },
-  { key: 'education_level', label: 'Opleidingsniveau', type: 'text' },
+  { key: 'education_level', label: 'Opleidingsniveau', type: 'select', options: [...EDUCATION_LEVEL_OPTIONS] },
   { key: 'drivers_license', label: 'Rijbewijs aanwezig', type: 'boolean' },
-  { key: 'transport_type', label: 'Eigen vervoer', type: 'multiline' },
-  { key: 'dutch_speaking', label: 'Spreekvaardigheid NL-taal', type: 'select', options: ['Goed', 'Matig', 'Onvoldoende'] },
-  { key: 'dutch_writing', label: 'Schrijfvaardigheid NL-taal', type: 'select', options: ['Goed', 'Matig', 'Onvoldoende'] },
-  { key: 'dutch_reading', label: 'Leesvaardigheid NL-taal', type: 'select', options: ['Goed', 'Matig', 'Onvoldoende'] },
+  { key: 'drivers_license_type', label: 'Rijbewijstype', type: 'multiselect', options: [...DRIVERS_LICENSE_TYPE_VALUES] },
+  { key: 'transport_type', label: 'Eigen vervoer', type: 'multiselect', options: [...TRANSPORT_TYPE_OPTIONS] },
+  { key: 'dutch_speaking', label: 'Spreekvaardigheid NL-taal', type: 'select', options: [...DUTCH_LANGUAGE_OPTIONS] },
+  { key: 'dutch_writing', label: 'Schrijfvaardigheid NL-taal', type: 'select', options: [...DUTCH_LANGUAGE_OPTIONS] },
+  { key: 'dutch_reading', label: 'Leesvaardigheid NL-taal', type: 'select', options: [...DUTCH_LANGUAGE_OPTIONS] },
   { key: 'has_computer', label: 'Beschikking over een PC', type: 'boolean' },
-  { key: 'computer_skills', label: 'PC-vaardigheden', type: 'text' },
+  {
+    key: 'computer_skills',
+    label: 'PC-vaardigheden',
+    type: 'select',
+    options: COMPUTER_SKILLS_OPTIONS.map((o) => o.value),
+  },
   { key: 'contract_hours', label: 'Aantal contracturen per week', type: 'text' },
   { key: 'other_employers', label: 'Andere werkgever(s)', type: 'multiline' },
   { key: 'tp_lead_time', label: 'Doorlooptijd (weken)', type: 'text' },

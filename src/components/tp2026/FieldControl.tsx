@@ -4,6 +4,10 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  COMPUTER_SKILLS_OPTIONS,
+  DRIVERS_LICENSE_TYPE_OPTIONS,
+} from '@/lib/tp2026/gegevens-field-options';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 
 export type FieldControlLayout = 'stack' | 'row';
@@ -18,6 +22,12 @@ type Props = {
   disabled?: boolean;
   className?: string;
 };
+
+function normalizeMultiselectValue(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v) => typeof v === 'string' && v.length > 0);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
 
 function CompactBooleanControl({
   fieldKey,
@@ -61,20 +71,73 @@ function CompactBooleanControl({
   );
 }
 
+function MultiselectControl({
+  field,
+  value,
+  onChange,
+  disabled,
+}: {
+  field: TP2026FieldDef;
+  value: unknown;
+  onChange: (value: string[]) => void;
+  disabled?: boolean;
+}) {
+  const selected = normalizeMultiselectValue(value);
+  const options =
+    field.key === 'drivers_license_type'
+      ? DRIVERS_LICENSE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
+      : (field.options || []).map((opt) => ({ value: opt, label: opt }));
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {options.map((option) => {
+        const isSelected = selected.includes(option.value);
+        return (
+          <label
+            key={option.value}
+            className={cn(
+              'flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors',
+              isSelected
+                ? 'border-[#6d2a96]/60 bg-[#6d2a96]/10 text-foreground'
+                : 'border-border bg-background hover:bg-muted/50',
+              disabled && 'cursor-not-allowed opacity-60'
+            )}
+          >
+            <input
+              type="checkbox"
+              className="h-4 w-4 shrink-0 rounded border-border"
+              checked={isSelected}
+              disabled={disabled}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  onChange([...selected, option.value]);
+                } else {
+                  onChange(selected.filter((v) => v !== option.value));
+                }
+              }}
+            />
+            <span className="leading-snug">{option.label}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 function FieldShell({
   field,
   layout,
   className,
-  label,
   control,
 }: {
   field: TP2026FieldDef;
   layout: FieldControlLayout;
   className?: string;
-  label: React.ReactNode;
   control: React.ReactNode;
 }) {
-  if (layout === 'row') {
+  const effectiveLayout = layout === 'row' ? 'row' : 'stack';
+
+  if (effectiveLayout === 'row') {
     return (
       <div className={cn('grid grid-cols-[minmax(0,38%)_1fr] items-center gap-x-3 gap-y-1', className)}>
         <label className="text-sm font-semibold leading-snug text-foreground">{field.label}</label>
@@ -85,7 +148,7 @@ function FieldShell({
 
   return (
     <div className={className}>
-      <label className="mb-1 block text-sm font-semibold text-foreground">{field.label}</label>
+      <label className="mb-1.5 block text-sm font-semibold text-foreground">{field.label}</label>
       {control}
     </div>
   );
@@ -109,7 +172,6 @@ export default function FieldControl({
         field={field}
         layout={layout}
         className={className}
-        label={field.label}
         control={
           <div className="w-full rounded-md border bg-muted px-3 py-2 text-muted-foreground">{value || '—'}</div>
         }
@@ -123,7 +185,6 @@ export default function FieldControl({
         field={field}
         layout={layout}
         className={className}
-        label={field.label}
         control={
           <Input
             type="date"
@@ -144,7 +205,6 @@ export default function FieldControl({
           field={field}
           layout={layout}
           className={className}
-          label={field.label}
           control={
             <CompactBooleanControl
               fieldKey={field.key}
@@ -163,7 +223,6 @@ export default function FieldControl({
         field={field}
         layout={layout}
         className={className}
-        label={field.label}
         control={
           <Select value={v || undefined} onValueChange={(x) => onChange(x === 'ja')} disabled={disabled}>
             <SelectTrigger className="w-full">
@@ -179,22 +238,39 @@ export default function FieldControl({
     );
   }
 
+  if (field.type === 'multiselect' && field.options?.length) {
+    return (
+      <FieldShell
+        field={field}
+        layout="stack"
+        className={className}
+        control={
+          <MultiselectControl field={field} value={value} onChange={onChange} disabled={disabled} />
+        }
+      />
+    );
+  }
+
   if (field.type === 'select' && field.options?.length) {
+    const isComputerSkills = field.key === 'computer_skills';
+    const selectOptions = isComputerSkills
+      ? COMPUTER_SKILLS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
+      : field.options.map((opt) => ({ value: opt, label: opt }));
+
     return (
       <FieldShell
         field={field}
         layout={layout}
         className={className}
-        label={field.label}
         control={
           <Select value={value || undefined} onValueChange={(x) => onChange(x)} disabled={disabled}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecteer" />
             </SelectTrigger>
             <SelectContent>
-              {field.options.map((opt) => (
-                <SelectItem key={opt} value={opt}>
-                  {opt}
+              {selectOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -210,13 +286,12 @@ export default function FieldControl({
         field={field}
         layout="stack"
         className={className}
-        label={field.label}
         control={
           <Textarea
             value={value || ''}
             disabled={disabled}
             rows={multilineMinRows}
-            className="min-h-0 resize-y"
+            className="min-h-[80px] resize-y"
             onChange={(e) => onChange(e.target.value)}
           />
         }
@@ -229,7 +304,6 @@ export default function FieldControl({
       field={field}
       layout={layout}
       className={className}
-      label={field.label}
       control={
         <Input
           className="w-full"
