@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
-import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 // Avoid importing beta types to keep build compatible
 
 const supabase = createClient(
