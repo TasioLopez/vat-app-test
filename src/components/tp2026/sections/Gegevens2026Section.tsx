@@ -255,7 +255,7 @@ function GegevensPage3({ data, pageNumber }: { data: Record<string, any>; pageNu
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={3}
+        pageNumber={pageNumber}
       />
     </A4Page>
   );
