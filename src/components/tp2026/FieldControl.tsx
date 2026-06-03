@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn, normalizeStringArrayField } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,9 +24,7 @@ type Props = {
 };
 
 function normalizeMultiselectValue(value: unknown): string[] {
-  if (Array.isArray(value)) return value.filter((v) => typeof v === 'string' && v.length > 0);
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return [];
+  return normalizeStringArrayField(value);
 }
 
 function CompactBooleanControl({

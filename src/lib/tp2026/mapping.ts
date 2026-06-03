@@ -1,4 +1,4 @@
-import { formatEmployeeName } from '@/lib/utils';
+import { formatEmployeeName, normalizeStringArrayField } from '@/lib/utils';
 import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
 import type {
   TP2026Bijlage1Activity,
@@ -247,6 +247,16 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   if (!String(next.praktische_belemmeringen || '').trim()) {
     next.praktische_belemmeringen =
       'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
+  }
+
+  const licenseTypes = normalizeStringArrayField(next.drivers_license_type);
+  if (licenseTypes.length > 0) {
+    next.drivers_license_type = licenseTypes;
+  }
+
+  const transport = normalizeStringArrayField(next.transport_type);
+  if (transport.length > 0) {
+    next.transport_type = transport;
   }
 
   return next;

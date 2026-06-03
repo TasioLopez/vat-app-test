@@ -190,6 +190,32 @@ export function formatEducationLevel(
 }
 
 /**
+ * Normalize Postgres/legacy values to string[] (JSON strings, comma-separated, arrays).
+ */
+export function normalizeStringArrayField(value: unknown): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    const s = value.trim();
+    if (!s) return [];
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((x) => String(x).trim()).filter(Boolean);
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    return s.split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+/**
  * Formats driver's license information
  * 
  * @param hasLicense - Boolean indicating if person has license
