@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
+import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
+import { COVER_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026CoverFields, formatNLDate } from '@/lib/tp2026/schema';
 import Logo2 from '@/assets/images/logo-2.png';
@@ -79,6 +82,12 @@ export function Cover2026Editor({
 }
 
 export function Cover2026A4({ data }: { data: Record<string, any> }) {
+  const { setSectionPageCount } = useTP2026PageNumber();
+
+  useEffect(() => {
+    setSectionPageCount('cover', COVER_PAGE_COUNT);
+  }, [setSectionPageCount]);
+
   const employeeName =
     data.first_name && data.last_name
       ? formatEmployeeName(data.first_name, data.last_name, data.gender)

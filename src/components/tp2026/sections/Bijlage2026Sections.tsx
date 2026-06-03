@@ -8,6 +8,7 @@ import {
   FooterIdentity,
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
+import { PrintCheckbox, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
@@ -19,7 +20,9 @@ import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage
 import { BIJLAGE3_PAGE2, BIJLAGE3_STEP_7_ID } from '@/lib/tp2026/bijlage3-official';
 import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/tp2026/schema';
-import { useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
+import { BIJLAGE1_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { Button } from '@/components/ui/button';
 
 function TextInput({
@@ -404,6 +407,12 @@ export function Bijlage1A4Pages({
   phases: TP2026Bijlage1Phase[];
   printMode?: boolean;
 }) {
+  const { getPageNumber, setSectionPageCount } = useTP2026PageNumber();
+
+  useEffect(() => {
+    setSectionPageCount('bijlage1', BIJLAGE1_PAGE_COUNT);
+  }, [setSectionPageCount]);
+
   const normalized = phases.map((phase, index) => normalizePhase(phase, index));
   const renderPeriodeText = (phase: TP2026Bijlage1Phase) =>
     `Van ${formatNLDate(phase.period_from)} tot ${formatNLDate(phase.period_to)}`;
@@ -498,7 +507,7 @@ export function Bijlage1A4Pages({
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={1}
+        pageNumber={getPageNumber('bijlage1', 0)}
       />
     </A4Page>
   );
@@ -652,8 +661,9 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
               className="border border-[#b8985c] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
             >
               {col.map((row, ri) => (
-                <div key={ri} className="break-words pb-1 last:pb-0">
-                  {row.checked ? '☑' : '☐'} {row.label}
+                <div key={ri} className="flex break-words items-start gap-1 pb-1 last:pb-0">
+                  <PrintCheckbox checked={row.checked} className="mt-0.5" size={9} />
+                  <span>{row.label}</span>
                 </div>
               ))}
             </td>
@@ -685,8 +695,9 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
               </div>
               <div>
                 {t.criteria.map((c, idx) => (
-                  <div key={idx} className="break-words pb-1 last:pb-0">
-                    {c.checked ? '☑' : '☐'} {c.label}
+                  <div key={idx} className="flex break-words items-start gap-1 pb-1 last:pb-0">
+                    <PrintCheckbox checked={c.checked} className="mt-0.5" size={9} />
+                    <span>{c.label}</span>
                   </div>
                 ))}
               </div>
@@ -773,6 +784,7 @@ export function Bijlage2A4Pages({
   model: TP2026Bijlage2Model;
   printMode?: boolean;
 }) {
+  const { getSectionStartPage, setSectionPageCount } = useTP2026PageNumber();
   const powSorted = useMemo(
     () => [...model.powTredes].sort((a, b) => a.trede - b.trede),
     [model.powTredes]
@@ -783,14 +795,27 @@ export function Bijlage2A4Pages({
     [powSorted]
   );
 
+  const pageCount = powChunks.length === 0 ? 1 : powChunks.length;
+
+  useEffect(() => {
+    setSectionPageCount('bijlage2', pageCount);
+  }, [pageCount, setSectionPageCount]);
+
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
+  const startPage = getSectionStartPage('bijlage2');
 
   const pages = useMemo(() => {
     const out: ReactElement[] = [];
-    let pageNumber = 0;
+    const footer = (pageIndex: number) => (
+      <FooterIdentity
+        lastName={data.last_name}
+        firstName={data.first_name}
+        dateOfBirth={formatNLDate(data.date_of_birth)}
+        pageNumber={startPage + pageIndex}
+      />
+    );
 
     if (powChunks.length === 0) {
-      pageNumber += 1;
       out.push(
         <A4Page key="b2-only-basis" className={pageShellClass}>
           <div className={bijlage2BodyClass}>
@@ -799,12 +824,7 @@ export function Bijlage2A4Pages({
             <Bijlage2BasisTable model={model} />
             <Bijlage2FootnotesBlock />
           </div>
-          <FooterIdentity
-            lastName={data.last_name}
-            firstName={data.first_name}
-            dateOfBirth={formatNLDate(data.date_of_birth)}
-            pageNumber={pageNumber}
-          />
+          {footer(0)}
         </A4Page>
       );
       return out;
@@ -812,7 +832,6 @@ export function Bijlage2A4Pages({
 
     const lastChunkIdx = powChunks.length - 1;
 
-    pageNumber += 1;
     out.push(
       <A4Page key="b2-p1" className={pageShellClass}>
         <div className={bijlage2BodyClass}>
@@ -823,17 +842,11 @@ export function Bijlage2A4Pages({
           <Bijlage2PowRows tredes={powChunks[0]} />
           {lastChunkIdx === 0 ? <Bijlage2FootnotesBlock /> : null}
         </div>
-        <FooterIdentity
-          lastName={data.last_name}
-          firstName={data.first_name}
-          dateOfBirth={formatNLDate(data.date_of_birth)}
-          pageNumber={pageNumber}
-        />
+        {footer(0)}
       </A4Page>
     );
 
     for (let ci = 1; ci < powChunks.length; ci++) {
-      pageNumber += 1;
       const isLast = ci === lastChunkIdx;
       out.push(
         <A4Page key={`b2-pow-${ci}`} className={pageShellClass}>
@@ -842,18 +855,13 @@ export function Bijlage2A4Pages({
             <Bijlage2PowRows tredes={powChunks[ci]} />
             {isLast ? <Bijlage2FootnotesBlock /> : null}
           </div>
-          <FooterIdentity
-            lastName={data.last_name}
-            firstName={data.first_name}
-            dateOfBirth={formatNLDate(data.date_of_birth)}
-            pageNumber={pageNumber}
-          />
+          {footer(ci)}
         </A4Page>
       );
     }
 
     return out;
-  }, [data, model, pageShellClass, powChunks]);
+  }, [data, model, pageShellClass, powChunks, startPage]);
 
   if (printMode) {
     return (
@@ -884,9 +892,10 @@ function Bijlage3TitleBlock({ continued = false }: { continued?: boolean }) {
 
 function bijlage3DoelChecksPrint(ja?: boolean, nee?: boolean) {
   return (
-    <div className="text-[7pt] leading-tight text-neutral-900">
-      <span>{ja ? '☑' : '☐'} ja</span> <span>{nee ? '☑' : '☐'} nee</span>
-    </div>
+    <PrintJaNeeChecks
+      value={ja ? true : nee ? false : undefined}
+      className="text-[7pt] leading-tight"
+    />
   );
 }
 
@@ -1218,6 +1227,7 @@ export function Bijlage3A4Pages({
   page2?: { doelJa?: boolean; doelNee?: boolean };
   printMode?: boolean;
 }) {
+  const { getPageNumber, setSectionPageCount } = useTP2026PageNumber();
   const p2 = page2 || { doelJa: false, doelNee: false };
   const pageShellClass = `${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`;
 
@@ -1353,6 +1363,10 @@ export function Bijlage3A4Pages({
   const { chunks: mainChunks } = pack;
   mainPageBodyRefs.current.length = mainChunks.length;
 
+  useEffect(() => {
+    setSectionPageCount('bijlage3', mainChunks.length);
+  }, [mainChunks.length, setSectionPageCount]);
+
   const mainPages = mainChunks.map((chunk, idx) => {
     const isLast = idx === mainChunks.length - 1;
 
@@ -1376,7 +1390,7 @@ export function Bijlage3A4Pages({
           lastName={data.last_name}
           firstName={data.first_name}
           dateOfBirth={formatNLDate(data.date_of_birth)}
-          pageNumber={idx + 1}
+          pageNumber={getPageNumber('bijlage3', idx)}
         />
       </A4Page>
     );

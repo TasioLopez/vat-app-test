@@ -33,6 +33,7 @@ import {
 } from '@/components/tp2026/sections/Bijlage2026Sections';
 import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
 import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
+import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 type Props = {
   employeeId: string;
@@ -413,6 +414,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
               </div>
             </div>
           ))}
+          {currentStep >= 4 ? <HiddenBasisPageMeasure data={tpData} /> : null}
         </div>
       </div>
 
@@ -428,10 +430,25 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   );
 }
 
+function HiddenBasisPageMeasure({ data }: { data: Record<string, any> }) {
+  const { sectionPageCounts } = useTP2026PageNumber();
+  if (sectionPageCounts.basis > 0) return null;
+  return (
+    <div
+      className="sr-only pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden"
+      aria-hidden
+    >
+      <Basis2026A4Pages data={data} />
+    </div>
+  );
+}
+
 export default function TP2026Builder({ employeeId, tpInstanceId, initialData }: Props) {
   return (
     <TPInstanceProvider initialData={ensureTP2026Shape(initialData)}>
-      <TP2026BuilderInner employeeId={employeeId} tpInstanceId={tpInstanceId} />
+      <TP2026PageNumberProvider>
+        <TP2026BuilderInner employeeId={employeeId} tpInstanceId={tpInstanceId} />
+      </TP2026PageNumberProvider>
     </TPInstanceProvider>
   );
 }

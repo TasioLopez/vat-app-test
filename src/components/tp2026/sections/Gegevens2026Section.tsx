@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
+import { GEGEVENS_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
 import { GEGEVENS_EDITOR_SECTIONS } from '@/lib/tp2026/gegevens-editor-layout';
 import {
@@ -21,54 +23,17 @@ import {
   formatTransportation,
 } from '@/lib/utils';
 import { Mail, Phone, User } from 'lucide-react';
-
-/** Ja/nee checkboxes for print layout (matches Word template). */
-function JaNeeReportChecks({ value }: { value: boolean | null | undefined }) {
-  const ja = value === true;
-  const nee = value === false;
-  return (
-    <span className="inline-flex flex-wrap items-center gap-5 text-[12px] text-neutral-900">
-      <span className="inline-flex items-center gap-1">
-        <span className="select-none font-sans leading-none" aria-hidden>
-          {ja ? '☑' : '☐'}
-        </span>
-        ja
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <span className="select-none font-sans leading-none" aria-hidden>
-          {nee ? '☑' : '☐'}
-        </span>
-        nee
-      </span>
-    </span>
-  );
-}
+import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 
 function GegevensNaamBlock({ data }: { data: Record<string, any> }) {
   const naam =
     data.first_name && data.last_name
       ? formatTP2026CoverVoorName(data.first_name, data.last_name)
       : [data.last_name, data.first_name].filter(Boolean).join(' ').trim() || '—';
-  const g = (data.gender || '').toString().toLowerCase();
-  const man = g === 'man' || g === 'male';
-  const vrouw = g === 'vrouw' || g === 'female';
   return (
     <div className="space-y-1">
       <div>{naam}</div>
-      <div className="flex flex-wrap items-center gap-5 text-[11px] text-neutral-900">
-        <span className="inline-flex items-center gap-1">
-          <span className="select-none font-sans leading-none" aria-hidden>
-            {man ? '☑' : '☐'}
-          </span>
-          man
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="select-none font-sans leading-none" aria-hidden>
-            {vrouw ? '☑' : '☐'}
-          </span>
-          vrouw
-        </span>
-      </div>
+      <PrintGenderChecks gender={data.gender} className="text-[11px]" />
     </div>
   );
 }
@@ -144,7 +109,7 @@ export function Gegevens2026Editor({
   );
 }
 
-function GegevensPage1({ data }: { data: Record<string, any> }) {
+function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
@@ -166,7 +131,7 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
             <DataRow label="Datum aanmelding" value={formatNLDate(data.registration_date)} />
             <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
             <DataRow label="Datum opmaak trajectplan" value={formatNLDate(data.tp_creation_date)} />
-            <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={<JaNeeReportChecks value={data.has_ad_report} />} />
+            <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={<PrintJaNeeChecks value={data.has_ad_report} className="text-[12px]" />} />
             <DataRow label="Datum AD rapportage" value={formatNLDate(data.ad_report_date)} />
             <DataRow label="Arbeidsdeskundige" value={data.occupational_doctor_name || '—'} />
             <DataRow label="Bedrijfsarts" value={data.occupational_doctor_org || '—'} />
@@ -199,13 +164,13 @@ function GegevensPage1({ data }: { data: Record<string, any> }) {
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={1}
+        pageNumber={pageNumber}
       />
     </A4Page>
   );
 }
 
-function GegevensPage2({ data }: { data: Record<string, any> }) {
+function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
   const vervoertekst = formatTransportation(null, data.transport_type);
   const rijbewijs = formatDriversLicense(data.drivers_license, data.drivers_license_type);
   const pcVaardigheden = formatComputerSkills(data.computer_skills);
@@ -255,13 +220,13 @@ function GegevensPage2({ data }: { data: Record<string, any> }) {
         lastName={data.last_name}
         firstName={data.first_name}
         dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={2}
+        pageNumber={pageNumber}
       />
     </A4Page>
   );
 }
 
-function GegevensPage3({ data }: { data: Record<string, any> }) {
+function GegevensPage3({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
@@ -303,13 +268,19 @@ export function Gegevens2026A4Pages({
   data: Record<string, any>;
   printMode?: boolean;
 }) {
+  const { getPageNumber, setSectionPageCount } = useTP2026PageNumber();
+
+  useEffect(() => {
+    setSectionPageCount('gegevens', GEGEVENS_PAGE_COUNT);
+  }, [setSectionPageCount]);
+
   const wrap = (node: React.ReactNode, key: string) =>
     printMode ? <section className="print-page" key={key}>{node}</section> : <div key={key}>{node}</div>;
   return (
     <>
-      {wrap(<GegevensPage1 data={data} />, 'g1')}
-      {wrap(<GegevensPage2 data={data} />, 'g2')}
-      {wrap(<GegevensPage3 data={data} />, 'g3')}
+      {wrap(<GegevensPage1 data={data} pageNumber={getPageNumber('gegevens', 0)} />, 'g1')}
+      {wrap(<GegevensPage2 data={data} pageNumber={getPageNumber('gegevens', 1)} />, 'g2')}
+      {wrap(<GegevensPage3 data={data} pageNumber={getPageNumber('gegevens', 2)} />, 'g3')}
     </>
   );
 }

@@ -19,6 +19,7 @@ import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import { TP_BASIS_TP_ACTIVITIES_INTRO } from '@/lib/tp2026/basis-document-agreement';
 import TP_ACTIVITIES, { getBodyMain, normalizeTp3Activities } from '@/lib/tp/tp_activities';
+import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 const INLEIDING_SUB_DELIM = 'staat het volgende:';
 
@@ -613,6 +614,7 @@ export function Basis2026A4Pages({
   printMode?: boolean;
   onPaginationReady?: () => void;
 }) {
+  const { getSectionStartPage, setSectionPageCount } = useTP2026PageNumber();
   const baseline = useMemo(() => buildBasisBodyAtoms(data), [data]);
   const [bodyAtoms, setBodyAtoms] = useState<BasisAtom[]>(baseline);
   const [bodyPages, setBodyPages] = useState<number[][]>([]);
@@ -686,7 +688,13 @@ export function Basis2026A4Pages({
     );
 
   const pages = bodyPages;
-  let pageNumber = 1;
+  const basisStartPage = getSectionStartPage('basis');
+
+  useEffect(() => {
+    if (!isPaginating) {
+      setSectionPageCount('basis', 1 + bodyPages.length);
+    }
+  }, [isPaginating, bodyPages.length, setSectionPageCount]);
 
   if (isPaginating) {
     return (
@@ -698,13 +706,16 @@ export function Basis2026A4Pages({
 
   return (
     <>
-      {wrap(<Basis2026InhoudsopgavePage data={data} pageNumber={pageNumber++} />, 'basis-inhoud')}
+      {wrap(
+        <Basis2026InhoudsopgavePage data={data} pageNumber={basisStartPage} />,
+        'basis-inhoud'
+      )}
       {pages.map((idxs, pi) =>
         wrap(
           <BasisBodyPage
             data={data}
             atoms={idxs.map((i) => bodyAtoms[i]).filter(Boolean)}
-            pageNumber={pageNumber++}
+            pageNumber={basisStartPage + 1 + pi}
           />,
           `basis-body-${pi}`
         )
