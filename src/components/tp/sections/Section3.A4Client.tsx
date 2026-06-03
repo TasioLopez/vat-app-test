@@ -292,7 +292,7 @@ type PreviewItem = {
 
 const LogoBar = React.forwardRef<HTMLDivElement>((_props, ref) => (
     <div ref={ref as any} className="w-full flex justify-end mb-6">
-        <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
+        <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} loading="eager" />
     </div>
 ));
 LogoBar.displayName = "LogoBar";

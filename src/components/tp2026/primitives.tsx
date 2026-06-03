@@ -42,7 +42,7 @@ export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <div className="mb-2 flex w-full justify-start">
-        <Image src={Logo2} alt="ValentineZ" width={120} height={40} />
+        <Image src={Logo2} alt="ValentineZ" width={120} height={40} loading="eager" />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
         className="pointer-events-none absolute z-10 flex flex-col items-start"
         style={{ left: leftPx, top: topPx }}
       >
-        <Image src={Logo2} alt="ValentineZ" width={widthPx} height={heightPx} />
+        <Image src={Logo2} alt="ValentineZ" width={widthPx} height={heightPx} loading="eager" />
       </div>
       <div className="shrink-0" style={{ height: TP2026_BODY_FLOW_START_SPACER_PX }} aria-hidden />
     </>

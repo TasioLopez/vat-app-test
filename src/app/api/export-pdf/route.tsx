@@ -9,6 +9,7 @@ import { createServerClient } from "@supabase/ssr";
 import { loadTPData } from "@/lib/tp/load";
 import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
+import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -176,10 +177,7 @@ export async function GET(req: NextRequest) {
     await page.waitForSelector(".tp-print-root, #tp-print-root", { timeout: 30_000 });
     await page.waitForSelector('#tp-print-root[data-ready="1"]', { timeout: 30_000 });
 
-    await page.evaluate(async () => {
-      // @ts-ignore
-      if ((document as any).fonts?.ready) await (document as any).fonts.ready;
-    });
+    await waitForPrintAssets(page);
 
     await page.addStyleTag({
       content: `

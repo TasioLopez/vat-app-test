@@ -279,7 +279,7 @@ const AGREEMENT_FOOTER_2 = {
 function LogoBar() {
   return (
     <div className="w-full flex justify-end mb-6">
-      <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} />
+      <Image src={Logo2} alt="Valentinez Logo" width={120} height={60} loading="eager" />
     </div>
   );
 }
