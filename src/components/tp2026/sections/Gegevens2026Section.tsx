@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import type { TP2026FieldDef } from '@/lib/tp2026/schema';
-import { TP2026GegevensFields, boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
+import { boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
+import { GEGEVENS_EDITOR_SECTIONS } from '@/lib/tp2026/gegevens-editor-layout';
 import {
   A4LogoHeader,
   A4Page,
@@ -12,7 +12,7 @@ import {
   TP2026_A4_PAGE_CLASS,
   TP2026FieldTable,
 } from '@/components/tp2026/primitives';
-import FieldControl from '@/components/tp2026/FieldControl';
+import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
 import { formatTP2026CoverVoorName } from '@/lib/utils';
 
 /** Ja/nee checkboxes for print layout (matches Word template). */
@@ -66,6 +66,46 @@ function GegevensNaamBlock({ data }: { data: Record<string, any> }) {
   );
 }
 
+function GegevensContextCard({ data }: { data: Record<string, any> }) {
+  const naam =
+    data.first_name && data.last_name
+      ? formatTP2026CoverVoorName(data.first_name, data.last_name)
+      : [data.last_name, data.first_name].filter(Boolean).join(' ').trim() || '—';
+  const werkgever = data.employer_name || data.client_name || '—';
+  const adviseur = data.consultant_name || '—';
+  const adviseurContact = [data.consultant_phone, data.consultant_email].filter(Boolean).join(' · ');
+
+  const items: { label: string; value: React.ReactNode }[] = [
+    { label: 'Naam', value: naam },
+    { label: 'Werkgever', value: werkgever },
+    { label: 'Opdrachtnemer', value: 'ValentineZ' },
+    {
+      label: 'Loopbaanadviseur',
+      value: (
+        <span>
+          {adviseur}
+          {adviseurContact ? (
+            <span className="mt-0.5 block text-xs text-muted-foreground">{adviseurContact}</span>
+          ) : null}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        {items.map(({ label, value }) => (
+          <div key={label}>
+            <div className="text-xs font-medium text-muted-foreground">{label}</div>
+            <div className="text-sm text-foreground">{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Gegevens2026Editor({
   data,
   updateField,
@@ -74,9 +114,17 @@ export function Gegevens2026Editor({
   updateField: (key: string, value: any) => void;
 }) {
   return (
-    <div className="space-y-3">
-      {TP2026GegevensFields.map((field: TP2026FieldDef) => (
-        <FieldControl key={field.key} field={field} value={data[field.key]} onChange={(v) => updateField(field.key, v)} />
+    <div className="space-y-5">
+      <GegevensContextCard data={data} />
+      {GEGEVENS_EDITOR_SECTIONS.map((section) => (
+        <section key={section.id} className="space-y-3">
+          <SectionBand title={section.title} className="mb-0" />
+          <div className="space-y-3">
+            {section.rows.map((row, i) => (
+              <GegevensEditorRow key={`${section.id}-${i}`} row={row} data={data} updateField={updateField} />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );
