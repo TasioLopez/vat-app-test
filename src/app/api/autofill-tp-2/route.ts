@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +26,9 @@ async function processDocumentsWithAssistant(docs: any[]): Promise<any> {
     // Step 1: Create assistant with instructions
     const assistant = await openai.beta.assistants.create({
       name: "Trajectplan Document Analyzer",
-      instructions: `Je bent een expert in het analyseren van Nederlandse re-integratie documenten.
+      instructions: `${INTAKE_LAYOUT_V75_HINT}
+
+Je bent een expert in het analyseren van Nederlandse re-integratie documenten.
 
 BELANGRIJK: Extract ALLEEN TP metadata velden (trajectplan-specifieke velden). 
 NIET extracten: employee profile velden zoals current_job, work_experience, education_level, transport_type, dutch_speaking/writing/reading, computer_skills, etc. 

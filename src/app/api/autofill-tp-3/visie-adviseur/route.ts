@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -180,7 +181,9 @@ BEDRIJFSARTS EN SUPERVISOR: Als deze niet hierboven gegeven zijn, zoek in de doc
     ? `- Gebruik voor de FML-datum: ${fmlDateFormatted} (staat al correct geformatteerd).\n`
     : '';
 
-  return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
+  return `${INTAKE_LAYOUT_V75_HINT}
+
+Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Lees ALLE aangeleverde documenten via file_search en schrijf UITSLUITEND de sectie "visie_loopbaanadviseur".
 
 ${medischeSituatieText ? `

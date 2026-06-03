@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NB_DEFAULT_GEEN_AD } from "@/lib/tp/static";
 import { resolveReferentForEmployee } from "@/lib/referents";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 
 // ---- INIT ----
 const supabase = createClient(
@@ -91,7 +92,9 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
     const assistant = await openai.beta.assistants.create({
       name: "Intake Section Extractor",
       instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
-      
+
+${INTAKE_LAYOUT_V75_HINT}
+
 Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
 - Geef de VOLLEDIGE tekst van deze sectie terug
 - Behoud de originele structuur en formatting
@@ -178,6 +181,8 @@ function buildInleidingInstructions(
   const genderWord = isMale ? 'man' : 'vrouw';
   
   return `
+${INTAKE_LAYOUT_V75_HINT}
+
 Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
 Maak de Inleiding sectie in de schrijfstijl van professionele re-integratierapporten. Schrijf zakelijk en maak waar nodig formeel.

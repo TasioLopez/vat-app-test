@@ -3,6 +3,7 @@ import { handleAPIError, createSuccessResponse, validateRequiredFields, validate
 import { SupabaseService } from "@/lib/supabase-service";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 import OpenAI from "openai";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -65,7 +66,9 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
     const assistant = await openai.beta.assistants.create({
       name: "Intake Section Extractor",
       instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
-      
+
+${INTAKE_LAYOUT_V75_HINT}
+
 Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
 - Geef de VOLLEDIGE tekst van deze sectie terug
 - Behoud de originele structuur en formatting
@@ -242,7 +245,9 @@ function buildInstructions(section6Text?: string | null, section14Text?: string 
     intakeSectionsInfo += "\nDeze secties bevatten de MEEST BETROUWBARE informatie over de huidige spoor en werkuren van de werknemer.\n";
   }
   
-  return `Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
+  return `${INTAKE_LAYOUT_V75_HINT}
+
+Je bent een expert in het analyseren van Nederlandse re-integratiedocumenten voor de PoW-meter (Perspectief op Werk meter).
 
 Je moet de PoW-meter trede bepalen op basis van de volgende prioriteitsvolgorde:
 

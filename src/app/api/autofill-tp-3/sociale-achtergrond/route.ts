@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 // Avoid importing beta types to keep build compatible
 
 const supabase = createClient(
@@ -26,20 +27,6 @@ function extractStoragePath(url: string): string | null {
   if (url?.startsWith("documents/")) return url.slice("documents/".length);
   if (url && !url.includes("://") && !url.includes("object/")) return url;
   return null;
-}
-
-async function readPdfFromStorage(path: string): Promise<string> {
-  const { data: file } = await supabase.storage.from("documents").download(path);
-  if (!file) return "";
-  const buf = Buffer.from(await file.arrayBuffer());
-  try {
-    const bufferString = buf.toString('utf8');
-    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.,:;()]{10,}/g);
-    if (readableText && readableText.length > 0) return readableText.join(' ');
-    return "";
-  } catch {
-    return "";
-  }
 }
 
 async function listEmployeeDocumentPaths(employeeId: string): Promise<string[]> {
@@ -108,6 +95,8 @@ async function extractIntakeSection(employeeId: string, sectionName: string): Pr
     const assistant = await openai.beta.assistants.create({
       name: "Intake Section Extractor",
       instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
+
+${INTAKE_LAYOUT_V75_HINT}
 
 Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
 - Geef de VOLLEDIGE tekst van deze sectie terug

@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
-import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID, ValidationError } from "@/lib/api-utils";
+import OpenAI from "openai";
+import { handleAPIError, createSuccessResponse, validateRequiredFields, validateUUID } from "@/lib/api-utils";
 import { OpenAIService } from "@/lib/openai-service";
 import { SupabaseService } from "@/lib/supabase-service";
+import { getEmployeeDocumentContext } from "@/lib/document-analysis";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 // ---- Citation Stripping ----
 function stripCitations(text: string): string {
@@ -23,88 +27,6 @@ function stripCitations(text: string): string {
   return cleaned;
 }
 
-function extractStoragePath(url: string): string | null {
-  const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
-  if (m?.[1]) return m[1];
-  if (url?.startsWith("documents/")) return url.slice("documents/".length);
-  if (url && !url.includes("://") && !url.includes("object/")) return url;
-  return null;
-}
-// Simple PDF text extraction that works 100% in Vercel
-async function readPdfFromStorage(path: string) {
-  const supabaseService = SupabaseService.getInstance();
-  const supabase = supabaseService.getClient();
-  const { data: file } = await supabase.storage.from("documents").download(path);
-  if (!file) return "";
-  const buf = Buffer.from(await file.arrayBuffer());
-  
-  try {
-    // Convert buffer to string and extract readable text
-    const bufferString = buf.toString('utf8');
-    
-    // Look for specific patterns from TP documents
-    const patterns = [
-      /prognose[^:]*:\s*([^\n\r]+)/i,
-      /herstel[^:]*:\s*([^\n\r]+)/i,
-      /belastbaarheid[^:]*:\s*([^\n\r]+)/i,
-      /re-integratie[^:]*:\s*([^\n\r]+)/i,
-      /spoor[^:]*:\s*([^\n\r]+)/i,
-      /bedrijfsarts[^:]*:\s*([^\n\r]+)/i,
-      /arbeidsdeskundig[^:]*:\s*([^\n\r]+)/i,
-      /fml[^:]*:\s*([^\n\r]+)/i,
-      /izp[^:]*:\s*([^\n\r]+)/i,
-      /inzetbaarheidsprofiel[^:]*:\s*([^\n\r]+)/i
-    ];
-    
-    const extractedInfo: string[] = [];
-    
-    for (const pattern of patterns) {
-      const match = bufferString.match(pattern);
-      if (match) {
-        extractedInfo.push(`${pattern.source}: ${match[1]}`);
-      }
-    }
-    
-    if (extractedInfo.length > 0) {
-      const text = extractedInfo.join('\n');
-      console.log('📄 TP Prognose PDF extraction successful, found patterns:', extractedInfo.length);
-      return text;
-    }
-    
-    // Fallback: extract any readable text
-    const readableText = bufferString.match(/[A-Za-z0-9\s\-\.\,\:\;\(\)]{10,}/g);
-    if (readableText && readableText.length > 0) {
-      const text = readableText.join(' ');
-      console.log('📄 TP Prognose PDF extraction successful, extracted readable text');
-      return text;
-    }
-    
-    return "";
-  } catch (error: any) {
-    console.error('TP Prognose PDF extraction failed:', error.message);
-    return "";
-  }
-}
-async function getDocTextByTypes(employeeId: string, candidates: string[]) {
-  const supabaseService = SupabaseService.getInstance();
-  const supabase = supabaseService.getClient();
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("type,url,uploaded_at")
-    .eq("employee_id", employeeId)
-    .order("uploaded_at", { ascending: false });
-  if (!docs?.length) return "";
-  for (const c of candidates) {
-    const hit = docs.find(d => (d.type || "").toLowerCase().includes(c));
-    if (!hit?.url) continue;
-    const path = extractStoragePath(hit.url);
-    if (!path) continue;
-    const txt = await readPdfFromStorage(path);
-    if (txt && txt.length > 50) return txt;
-  }
-  return "";
-}
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -116,19 +38,40 @@ export async function GET(req: NextRequest) {
 
     const supabaseService = SupabaseService.getInstance();
     const openaiService = OpenAIService.getInstance();
+    const supabase = supabaseService.getClient();
 
-    // Prefer FML/IZP/LAB over AD
-    const FML = await getDocTextByTypes(employeeId!, [
+    const fmlMatchers = [
       "fml", "functiemogelijkhedenlijst",
       "izp", "inzetbaarheidsprofiel",
       "lab", "lijst arbeidsmogelijkheden", "arbeidsmogelijkheden en beperkingen"
-    ]);
-    const AD = await getDocTextByTypes(employeeId!, [
-      "ad_rapport","ad-rapport","adrapport","ad_rapportage","ad-rapportage","arbeidsdeskund"
-    ]);
-    const source = FML ? "fml" : (AD ? "ad" : "");
+    ];
+    const adMatchers = [
+      "ad_rapport", "ad-rapport", "adrapport", "ad_rapportage", "ad-rapportage", "arbeidsdeskund"
+    ];
 
-    if (!FML && !AD) {
+    const prognoseFocus = `Extraheer uit dit document alle tekst relevant voor een prognose van de bedrijfsarts: herstelperspectief, belastbaarheid, re-integratie (spoor 1/2), beperkingen in algemene termen. Geen diagnoses.`;
+
+    let sourceText = await getEmployeeDocumentContext(
+      openai,
+      supabase,
+      employeeId!,
+      fmlMatchers,
+      prognoseFocus
+    );
+    let source = "fml";
+
+    if (!sourceText) {
+      sourceText = await getEmployeeDocumentContext(
+        openai,
+        supabase,
+        employeeId!,
+        adMatchers,
+        prognoseFocus
+      );
+      source = "ad";
+    }
+
+    if (!sourceText) {
       return createSuccessResponse(
         { prognose_bedrijfsarts: "" },
         "Geen FML/IZP/LAB of AD-rapport gevonden"
@@ -146,7 +89,7 @@ Lever uitsluiten via function-call: { prognose_bedrijfsarts: string }.
 
     const userPrompt = `
 BRON (${source.toUpperCase()}):
-${(FML || AD).slice(0, 22000)}
+${sourceText}
 `.trim();
 
     const toolSchema = {

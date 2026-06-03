@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,7 +83,9 @@ function buildInstructions(employeeData: any): string {
     ? driversLicenseType.join(', ') 
     : (typeof driversLicenseType === 'string' ? driversLicenseType : 'onbekend');
   
-  return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
+  return `${INTAKE_LAYOUT_V75_HINT}
+
+Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
 Schrijf UITSLUITEND de sectie "persoonlijk_profiel" op basis van de VERPLICHTE BASISGEGEVENS hieronder en aanvullende info uit documenten.
 
 VERPLICHTE BASISGEGEVENS (ALTIJD GEBRUIKEN - dit zijn de officiële gegevens):

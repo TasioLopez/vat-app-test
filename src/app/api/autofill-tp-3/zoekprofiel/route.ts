@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { parseWorkExperience } from "@/lib/utils";
+import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
 import { getOpenAIFileParams } from "@/lib/openai-file-upload";
 
 const supabase = createClient(
@@ -110,7 +111,9 @@ function buildInstructions(employeeData: any, fmlDate: string): string {
     `- Datum FML/IZP: ${fmlDate ? fmlDate : "niet aangeleverd (laat de datumverwijzing in de sluitzin weg)."}`,
   ].join("\n");
 
-  const masterPrompt = `MASTER PROMPT – ZOEKPROFIEL (UWV / ARBEIDSDESKUNDIG)
+  const masterPrompt = `${INTAKE_LAYOUT_V75_HINT}
+
+MASTER PROMPT – ZOEKPROFIEL (UWV / ARBEIDSDESKUNDIG)
 
 Je schrijft een professioneel Zoekprofiel in zakelijk Nederlands, geschikt voor opname in een UWV-arbeidsdeskundige rapportage.
 De tekst is volledig AVG/GDPR-proof en uitsluitend gebaseerd op het aangeleverde belastbaarheidsdocument.

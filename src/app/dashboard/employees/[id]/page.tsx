@@ -514,9 +514,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             const details = json.details || json.data?.details;
             const data = json.data || json;
             if (details && Object.keys(details).length > 0) {
-                const fields = EMPLOYEE_DETAILS_FIELD_KEYS.filter((key) =>
-                    Object.prototype.hasOwnProperty.call(details, key)
-                );
+                const fields = EMPLOYEE_DETAILS_FIELD_KEYS.filter((key) => {
+                    if (!Object.prototype.hasOwnProperty.call(details, key)) return false;
+                    const v = details[key as keyof typeof details];
+                    if (key === 'transport_type' && Array.isArray(v) && v.length === 0) return false;
+                    return v != null && v !== '';
+                });
 
                 // Suggested referent from autofill (for "Quick create and set" / "Set as contactperson")
                 const suggested = data.suggested_referent;
@@ -580,7 +583,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 }
 
                 setSavedDetailsSnapshot(toNormalizedDetailsPayload(updatedDetails, employeeId));
-                showSuccess('AI autofill succesvol uitgevoerd!');
+
+                if (data.autofill_incomplete && Array.isArray(data.autofill_warnings) && data.autofill_warnings.length > 0) {
+                    const warningText = data.autofill_warnings
+                        .map((w: { message?: string }) => w.message)
+                        .filter(Boolean)
+                        .join(' ');
+                    showError(
+                        'Autofill onvolledig',
+                        warningText || 'Controleer vervoer, talen en computervaardigheden handmatig.'
+                    );
+                } else {
+                    showSuccess('AI autofill succesvol uitgevoerd!');
+                }
             } else {
                 showError('Geen documenten gevonden', 'Er zijn geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
             }
