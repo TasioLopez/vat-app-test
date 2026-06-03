@@ -33,6 +33,17 @@ import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    AutofillProgressOverlay,
+    type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
+import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
+import {
+    applyEmployeeAutofillDetails,
+    listAutofilledEmployeeDetailKeys,
+    normalizeEmployeeDetailsPayload,
+    processEmployeeAutofillRawDetails,
+} from '@/lib/employee/autofill-persist';
 
 type Employee = {
     id: string;
@@ -206,6 +217,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [userRole, setUserRole] = useState<string>('');
     const [updating, setUpdating] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
+    const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
     const [autofilledFields, setAutofilledFields] = useState<Set<string>>(new Set());
     const [documents, setDocuments] = useState<Document[]>([]);
     const [activeDocType, setActiveDocType] = useState<string | null>(null);
@@ -227,6 +239,32 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             ).length,
         [documents]
     );
+
+    useEffect(() => {
+        if (!aiLoading) {
+            setAutofillProgress(null);
+            return;
+        }
+
+        const steps = buildEmployeeAutofillSteps(documents);
+        let idx = 0;
+        setAutofillProgress({
+            currentIndex: 1,
+            total: steps.length,
+            currentLabel: steps[0] ?? 'Documenten analyseren…',
+        });
+
+        const interval = setInterval(() => {
+            idx = Math.min(idx + 1, Math.max(steps.length - 2, 0));
+            setAutofillProgress({
+                currentIndex: idx + 1,
+                total: steps.length,
+                currentLabel: steps[idx] ?? 'Documenten analyseren…',
+            });
+        }, 3500);
+
+        return () => clearInterval(interval);
+    }, [aiLoading, documents]);
 
     useEffect(() => {
         fetchEmployee();
@@ -510,18 +548,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 throw new Error(json.error || `HTTP ${res.status}: ${res.statusText}`);
             }
 
-            // Handle both response formats
             const details = json.details || json.data?.details;
             const data = json.data || json;
             if (details && Object.keys(details).length > 0) {
-                const fields = EMPLOYEE_DETAILS_FIELD_KEYS.filter((key) => {
-                    if (!Object.prototype.hasOwnProperty.call(details, key)) return false;
-                    const v = details[key as keyof typeof details];
-                    if (key === 'transport_type' && Array.isArray(v) && v.length === 0) return false;
-                    return v != null && v !== '';
-                });
+                const processedDetails = processEmployeeAutofillRawDetails(details as Record<string, unknown>);
+                const fields = listAutofilledEmployeeDetailKeys(processedDetails);
 
-                // Suggested referent from autofill (for "Quick create and set" / "Set as contactperson")
                 const suggested = data.suggested_referent;
                 if (suggested && (suggested.first_name || suggested.last_name)) {
                     setSuggestedReferent({
@@ -540,53 +572,36 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     setExistingReferentId(null);
                 }
 
-                // Ensure transport_type and drivers_license_type are handled as arrays
-                const processedDetails: any = { ...details };
-                if (processedDetails.transport_type) {
-                    if (!Array.isArray(processedDetails.transport_type)) {
-                        // Convert string to array if needed
-                        processedDetails.transport_type = typeof processedDetails.transport_type === 'string' 
-                            ? [processedDetails.transport_type] 
-                            : [];
+                const persistResult = await applyEmployeeAutofillDetails(
+                    supabase,
+                    employeeId,
+                    employeeDetails,
+                    processedDetails,
+                    {
+                        autofill_incomplete: data.autofill_incomplete,
+                        autofill_warnings: data.autofill_warnings,
                     }
-                }
-                // Add similar handling for drivers_license_type
-                if (processedDetails.drivers_license_type) {
-                    if (!Array.isArray(processedDetails.drivers_license_type)) {
-                        processedDetails.drivers_license_type = typeof processedDetails.drivers_license_type === 'string' 
-                            ? [processedDetails.drivers_license_type] 
-                            : null;
-                    }
-                }
+                );
 
-                // Create a new updated version of the employeeDetails object
-                const updatedDetails: EmployeeDetails = {
-                    ...(employeeDetails || {}),
-                    ...toEmployeeDetailsPayload(processedDetails, employeeId),
-                    employee_id: employeeId,
-                    autofilled_fields: fields,
-                };
-
-                // Update local state to reflect changes in UI
-                setEmployeeDetails(updatedDetails);
-                setAutofilledFields(new Set(fields));
-
-                // Persist to Supabase
-                const { error: persistError } = await supabase
-                    .from('employee_details')
-                    .upsert([toEmployeeDetailsPayload(updatedDetails, employeeId)], { onConflict: 'employee_id' });
-
-                if (persistError) {
-                    console.error('Error persisting autofilled details:', persistError);
+                if (persistResult.error) {
+                    console.error('Error persisting autofilled details:', persistResult.error);
                     showError('Autofill deels mislukt', 'AI velden zijn gevonden, maar opslaan in het profiel is mislukt.');
                     return;
                 }
 
-                setSavedDetailsSnapshot(toNormalizedDetailsPayload(updatedDetails, employeeId));
+                setEmployeeDetails(persistResult.updatedDetails);
+                setAutofilledFields(new Set(persistResult.autofilledFields));
+                setSavedDetailsSnapshot(
+                    normalizeEmployeeDetailsPayload(persistResult.updatedDetails, employeeId)
+                );
 
-                if (data.autofill_incomplete && Array.isArray(data.autofill_warnings) && data.autofill_warnings.length > 0) {
-                    const warningText = data.autofill_warnings
-                        .map((w: { message?: string }) => w.message)
+                if (
+                    persistResult.autofillIncomplete &&
+                    Array.isArray(persistResult.autofillWarnings) &&
+                    persistResult.autofillWarnings.length > 0
+                ) {
+                    const warningText = persistResult.autofillWarnings
+                        .map((w) => w.message)
                         .filter(Boolean)
                         .join(' ');
                     showError(
@@ -1024,7 +1039,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             )}
 
             {/* Worker Profile Section */}
-            <div className="bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
+            <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
+                {aiLoading && autofillProgress ? (
+                    <AutofillProgressOverlay progress={autofillProgress} title="Invullen met AI" />
+                ) : null}
                 <div className="flex justify-between items-center pb-4 border-b border-purple-200">
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                         <FileText className="w-5 h-5 text-purple-600" />

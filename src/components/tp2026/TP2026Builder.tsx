@@ -8,6 +8,18 @@ import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { TP2026_BASIS_AUTOFILL_ENDPOINTS } from '@/lib/tp2026/basis-autofill-endpoints';
+import {
+  buildAutofillSteps,
+  canAutofillCurrentStep,
+  runAutofillSteps,
+  type AutofillScope,
+} from '@/lib/tp2026/autofill-runner';
+import { AutofillScopeDropdown } from '@/components/ui/dropdown-menu';
+import {
+  AutofillProgressOverlay,
+  type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
+import { useToastHelpers } from '@/components/ui/Toast';
 import { Cover2026A4, Cover2026Editor } from '@/components/tp2026/sections/Cover2026Section';
 import { Gegevens2026A4Pages, Gegevens2026Editor } from '@/components/tp2026/sections/Gegevens2026Section';
 import { Basis2026A4Pages, Basis2026Editor } from '@/components/tp2026/sections/Basis2026Section';
@@ -29,7 +41,9 @@ type Props = {
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
   const { tpData, setTPData, updateField, saveAll, isDirty, markSaved } = useTPInstance();
+  const { showSuccess, showError } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
+  const autofillCancelRef = useRef(false);
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -41,9 +55,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
+  const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
 
   const autofillBasisField = useCallback(
     async (fieldKey: string) => {
+      if (autofilling) return;
       const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
       if (!endpoint) return;
       try {
@@ -62,7 +78,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         console.error('Basis field autofill failed', fieldKey, e);
       }
     },
-    [employeeId, setTPData]
+    [employeeId, setTPData, autofilling]
   );
 
   const sections = [
@@ -264,54 +280,81 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     }
   };
 
-  const runAutofill = async () => {
-    setAutofilling(true);
-    try {
-      let next: Record<string, any> = { ...tpData };
-
-      const tp2Res = await fetch(`/api/autofill-tp-2?employeeId=${employeeId}`);
-      const tp2Json = await tp2Res.json();
-      if (tp2Res.ok && tp2Json?.details) {
-        next = mergeAutofillIntoTP2026(next, tp2Json.details);
+  const runAutofill = useCallback(
+    async (scope: AutofillScope) => {
+      if (scope === 'current_step' && !canAutofillCurrentStep(currentStep)) {
+        showError('Geen autofill', 'Geen autofill beschikbaar voor deze stap.');
+        return;
       }
 
-      const tp3FieldOrder = [
-        'inleiding',
-        'sociale_achtergrond',
-        'visie_werknemer',
-        'visie_loopbaanadviseur',
-        'prognose_bedrijfsarts',
-        'persoonlijk_profiel',
-        'zoekprofiel',
-        'advies_ad_passende_arbeid',
-        'visie_plaatsbaarheid',
-        'pow_meter',
-      ] as const;
+      const steps = buildAutofillSteps(scope, currentStep, tpData);
+      if (steps.length === 0) {
+        showError('Geen lege velden', 'Alle velden voor autofill zijn al ingevuld.');
+        return;
+      }
 
-      for (const fieldKey of tp3FieldOrder) {
-        const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
-        if (!endpoint) continue;
-        try {
-          const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
-          const json = await res.json();
-          if (!res.ok) continue;
-          if (json?.details && typeof json.details === 'object') {
-            next = mergeAutofillIntoTP2026(next, json.details);
+      autofillCancelRef.current = false;
+      setAutofilling(true);
+      setAutofillProgress({ currentIndex: 1, total: steps.length, currentLabel: 'Voorbereiden…' });
+
+      try {
+        const result = await runAutofillSteps(
+          steps,
+          { employeeId, supabase },
+          { ...tpData, employee_id: tpData.employee_id ?? employeeId },
+          {
+            onProgress: setAutofillProgress,
+            shouldCancel: () => autofillCancelRef.current,
           }
-          if (json?.data?.pow_meter) next.pow_meter = json.data.pow_meter;
-        } catch {
-          // continue to next endpoint
-        }
-      }
+        );
 
-      setTPData(ensureTP2026Shape(next));
-    } catch (error) {
-      console.error('TP 2026 autofill failed', error);
-      alert('Autofill mislukt');
-    } finally {
-      setAutofilling(false);
-    }
-  };
+        setTPData(result.data);
+
+        if (result.cancelled) {
+          showError(
+            'Autofill gestopt',
+            `${result.completed}/${steps.length} stappen voltooid voordat u stopte.`
+          );
+          return;
+        }
+
+        if (result.failed.length === 0) {
+          showSuccess(`Autofill voltooid (${result.completed}/${steps.length} stappen).`);
+          return;
+        }
+
+        if (result.completed > 0) {
+          showError(
+            'Autofill gedeeltelijk voltooid',
+            `${result.completed}/${steps.length} stappen gelukt. Mislukt: ${result.failed
+              .map((f) => f.label)
+              .join('; ')}`
+          );
+          return;
+        }
+
+        showError(
+          'Autofill mislukt',
+          result.failed.map((f) => `${f.label}: ${f.error}`).join('; ')
+        );
+      } catch (error) {
+        console.error('TP 2026 autofill failed', error);
+        showError('Autofill mislukt', error instanceof Error ? error.message : 'Onbekende fout');
+      } finally {
+        setAutofilling(false);
+        setAutofillProgress(null);
+      }
+    },
+    [currentStep, employeeId, showError, showSuccess, supabase, tpData, setTPData]
+  );
+
+  const cancelAutofill = useCallback(() => {
+    autofillCancelRef.current = true;
+  }, []);
+
+  const currentStepHasAutofill = canAutofillCurrentStep(currentStep);
+  const currentStepAutofillAvailable =
+    currentStepHasAutofill && buildAutofillSteps('current_step', currentStep, tpData).length > 0;
 
   const totalSteps = sections.length;
 
@@ -328,9 +371,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           </div>
           <div className="flex items-center gap-2">
             <ExportButton employeeId={employeeId} tpInstanceId={tpInstanceId} layoutKey="tp_2026" />
-            <Button variant="outline" onClick={runAutofill} disabled={autofilling}>
-              {autofilling ? 'Autofill…' : 'Autofill met bestaande TP AI'}
-            </Button>
+            <AutofillScopeDropdown
+              loading={autofilling}
+              currentStepDisabled={!currentStepAutofillAvailable}
+              onRunAll={() => void runAutofill('all')}
+              onRunCurrentStep={() => void runAutofill('current_step')}
+            />
             <Button onClick={persist} disabled={saving || !isDirty}>
               {saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
             </Button>
@@ -339,7 +385,13 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
-        <div className="h-full min-h-0 p-6 relative">
+        <div className="relative h-full min-h-0 p-6">
+          {autofilling && autofillProgress ? (
+            <AutofillProgressOverlay
+              progress={autofillProgress}
+              onCancel={cancelAutofill}
+            />
+          ) : null}
           {sections.map((section, index) => (
             <div key={section.id} style={{ display: currentStep === index + 1 ? 'block' : 'none' }} className="h-full min-h-0">
               <div className="flex min-h-0 h-full gap-10 items-stretch">
