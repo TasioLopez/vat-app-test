@@ -1,7 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { runAssistantExtraction } from './runAssistantExtraction';
-import { extractStoragePath, getFileType } from './storage';
+import { extractStoragePath } from './storage';
 
 const MAX_CONTEXT_CHARS = 22_000;
 
@@ -43,13 +43,12 @@ export async function getEmployeeDocumentContext(
     if (!file) continue;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileType = getFileType(path, hit.name ?? undefined);
-    const ext = fileType.ext === 'docm' ? 'docm' : fileType.ext;
+    const fallbackName = hit.name || `${hit.type || 'document'}`;
 
     const { rawText } = await runAssistantExtraction(openai, {
       buffer,
-      fileName: `${hit.type || 'document'}.${ext}`,
-      mime: fileType.mime,
+      storagePath: path,
+      fallbackName,
       assistantName: 'Document Context Extractor',
       instructions: focusInstructions,
       userMessage,

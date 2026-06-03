@@ -1,10 +1,13 @@
 import type OpenAI from 'openai';
+import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { parseJsonFromAssistant } from './parseJsonResponse';
 
 export type RunAssistantExtractionOptions = {
   buffer: Buffer;
-  fileName: string;
-  mime: string;
+  /** Storage path or filename used for OpenAI extension/MIME rules (docm → docx). */
+  storagePath: string;
+  /** Used when storagePath has no extension (e.g. type-only label). */
+  fallbackName?: string;
   assistantName: string;
   instructions: string;
   userMessage: string;
@@ -17,8 +20,8 @@ export async function runAssistantExtraction(
 ): Promise<{ rawText: string; parsed: Record<string, unknown> }> {
   const {
     buffer,
-    fileName,
-    mime,
+    storagePath,
+    fallbackName,
     assistantName,
     instructions,
     userMessage,
@@ -32,8 +35,10 @@ export async function runAssistantExtraction(
     tools: [{ type: 'file_search' }],
   });
 
+  const uploadFile = buildOpenAIFile(buffer, storagePath, fallbackName);
+
   const uploadedFile = await openai.files.create({
-    file: new File([buffer], fileName, { type: mime }),
+    file: uploadFile,
     purpose: 'assistants',
   });
 

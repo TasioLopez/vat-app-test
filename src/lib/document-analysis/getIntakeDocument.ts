@@ -1,13 +1,13 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { runAssistantExtraction } from './runAssistantExtraction';
-import { extractStoragePath, getFileType, INTAKE_TYPE_VARIANTS } from './storage';
+import { extractStoragePath, INTAKE_TYPE_VARIANTS } from './storage';
 
 export type IntakeDocumentFile = {
   buffer: Buffer;
-  fileName: string;
-  mime: string;
   path: string;
+  /** Original filename for OpenAI naming when path lacks extension. */
+  displayName?: string;
 };
 
 export async function getIntakeDocumentForEmployee(
@@ -32,14 +32,11 @@ export async function getIntakeDocumentForEmployee(
     const { data: file } = await supabase.storage.from('documents').download(path);
     if (!file) continue;
 
-    const fileType = getFileType(path, hit.name ?? undefined);
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = fileType.ext === 'docm' ? 'docm' : fileType.ext;
     return {
       buffer,
-      fileName: `intake.${ext}`,
-      mime: fileType.mime,
       path,
+      displayName: hit.name ?? undefined,
     };
   }
 
@@ -59,8 +56,8 @@ export async function runIntakeAssistantText(
 
   const { rawText } = await runAssistantExtraction(openai, {
     buffer: doc.buffer,
-    fileName: doc.fileName,
-    mime: doc.mime,
+    storagePath: doc.path,
+    fallbackName: doc.displayName || doc.path,
     assistantName: 'Intake Section Analyzer',
     instructions,
     userMessage,

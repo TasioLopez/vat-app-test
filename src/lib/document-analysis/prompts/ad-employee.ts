@@ -22,6 +22,7 @@ NIET EXTRACTEN (niet in AD rapport):
 
 REGELS:
 - Geen gokken: ontbrekende velden weglaten of null.
+- Return een PLAT JSON object met keys direct op root-niveau; NIET wrappen in "employee_details" of "referent" objecten.
 - ALLEEN JSON object teruggeven, geen markdown.`;
 
 export const AD_EMPLOYEE_USER_MESSAGE =

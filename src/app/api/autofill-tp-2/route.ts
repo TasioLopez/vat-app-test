@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis';
+import { buildOpenAIFile } from '@/lib/openai-file-upload';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,33 +72,14 @@ Return ONLY a JSON object with the fields you find.`,
       if (!file) continue;
       
       const buffer = Buffer.from(await file.arrayBuffer());
-      
-      // Detect file type from path extension or document name
-      const getFileType = (path: string, docName?: string): { ext: string; mime: string } => {
-        const pathLower = path.toLowerCase();
-        const nameLower = (docName || '').toLowerCase();
-        
-        // Check for DOCX
-        if (pathLower.endsWith('.docx') || nameLower.endsWith('.docx')) {
-          return { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
-        }
-        // Check for DOC
-        if (pathLower.endsWith('.doc') || nameLower.endsWith('.doc')) {
-          return { ext: 'doc', mime: 'application/msword' };
-        }
-        // Default to PDF
-        return { ext: 'pdf', mime: 'application/pdf' };
-      };
-      
-      const fileType = getFileType(path, doc.name);
-      const fileName = `${doc.type}.${fileType.ext}`;
-      
+      const uploadFile = buildOpenAIFile(buffer, path, doc.name);
+
       const uploadedFile = await openai.files.create({
-        file: new File([buffer], fileName, { type: fileType.mime }),
+        file: uploadFile,
         purpose: "assistants"
       });
       fileIds.push(uploadedFile.id);
-      console.log(`✅ Uploaded file (${fileType.mime}):`, uploadedFile.id);
+      console.log(`✅ Uploaded file (${uploadFile.type}):`, uploadedFile.id);
     }
 
     if (fileIds.length === 0) {

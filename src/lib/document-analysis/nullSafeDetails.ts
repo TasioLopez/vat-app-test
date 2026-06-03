@@ -138,21 +138,40 @@ export function mapAndValidateEmployeeDetails(
   return mappedData;
 }
 
+const REFERENT_KEYS = [
+  'referent_first_name',
+  'referent_last_name',
+  'referent_function',
+  'referent_phone',
+  'referent_email',
+  'referent_gender',
+] as const;
+
 /** Referent fields stripped from details but kept for suggested_referent. */
 export function extractReferentFromRaw(
   extractedData: Record<string, unknown>
 ): Record<string, unknown> {
-  const keys = [
-    'referent_first_name',
-    'referent_last_name',
-    'referent_function',
-    'referent_phone',
-    'referent_email',
-    'referent_gender',
-  ];
   const out: Record<string, unknown> = {};
-  for (const k of keys) {
+  for (const k of REFERENT_KEYS) {
     if (extractedData[k] != null && extractedData[k] !== '') out[k] = extractedData[k];
   }
+
+  const nested = extractedData.referent;
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    const map: Record<string, string> = {
+      first_name: 'referent_first_name',
+      last_name: 'referent_last_name',
+      function: 'referent_function',
+      phone: 'referent_phone',
+      email: 'referent_email',
+      gender: 'referent_gender',
+    };
+    for (const [key, value] of Object.entries(nested as Record<string, unknown>)) {
+      if (value == null || value === '') continue;
+      const target = map[key] || (key.startsWith('referent_') ? key : null);
+      if (target && out[target] == null) out[target] = value;
+    }
+  }
+
   return out;
 }

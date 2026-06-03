@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import {
   extractStoragePath,
-  getFileType,
   isIntakeDocumentType,
   runAssistantExtraction,
   mapAndValidateEmployeeDetails,
@@ -18,6 +17,7 @@ import {
   EXTRA_EMPLOYEE_PROMPT,
   EXTRA_EMPLOYEE_USER_MESSAGE,
 } from '@/lib/document-analysis';
+import { getOpenAIFileParams } from '@/lib/openai-file-upload';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,22 +34,30 @@ function isFilled(v: unknown): boolean {
 
 type DocRow = { type?: string | null; url?: string | null; name?: string | null };
 
-async function downloadDocumentBuffer(doc: DocRow): Promise<{ buffer: Buffer; fileType: ReturnType<typeof getFileType> } | null> {
+async function downloadDocumentBuffer(
+  doc: DocRow
+): Promise<{ buffer: Buffer; path: string } | null> {
   const path = extractStoragePath(doc.url || '');
   if (!path) {
-    console.log('⚠️ Could not extract storage path for document');
+    console.log('⚠️ Could not extract storage path for document', {
+      type: doc.type,
+      url: doc.url?.substring(0, 120),
+    });
     return null;
   }
 
-  const { data: file } = await supabase.storage.from('documents').download(path);
+  const { data: file, error } = await supabase.storage.from('documents').download(path);
   if (!file) {
-    console.log('⚠️ Could not download document');
+    console.log('⚠️ Could not download document', {
+      type: doc.type,
+      path,
+      error: error?.message,
+    });
     return null;
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const fileType = getFileType(path, doc.name ?? undefined);
-  return { buffer, fileType };
+  return { buffer, path };
 }
 
 function extractAllEducationLevels(text: string): string[] {
@@ -153,19 +161,20 @@ async function processDocumentWithAssistant(
     const downloaded = await downloadDocumentBuffer(doc);
     if (!downloaded) return { mapped: {}, referent: {}, rawText: '' };
 
-    const { buffer, fileType } = downloaded;
-    const fileName = `${doc.type}.${fileType.ext === 'docm' ? 'docm' : fileType.ext}`;
+    const { buffer, path } = downloaded;
+    const fallbackName = doc.name || `${doc.type || 'document'}`;
 
     const { rawText, parsed } = await runAssistantExtraction(openai, {
       buffer,
-      fileName,
-      mime: fileType.mime,
+      storagePath: path,
+      fallbackName,
       assistantName: options.assistantName,
       instructions: options.instructions,
       userMessage: options.userMessage,
     });
 
-    console.log(`✅ Uploaded ${options.logLabel} (${fileType.mime})`);
+    const { mimeType } = getOpenAIFileParams(doc.name || path);
+    console.log(`✅ Uploaded ${options.logLabel} (${mimeType})`);
 
     const referent = extractReferentFromRaw(parsed);
     const mapped = mapAndValidateEmployeeDetails(parsed);
@@ -298,6 +307,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
 
   const extraDocs = docs.filter((d) => {
     const type = (d.type || '').toLowerCase();
+    if (type === 'tp' || type.includes('trajectplan')) {
+      return false;
+    }
     return (
       !type.includes('intake') &&
       !type.includes('ad') &&

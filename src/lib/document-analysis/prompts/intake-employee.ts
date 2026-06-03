@@ -36,7 +36,7 @@ Computer:
 Referent (mag in JSON; wordt apart verwerkt):
 - referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
 
-RETURN FORMAT: ALLEEN een JSON object, geen markdown of tekst ervoor/erna.`;
+RETURN FORMAT: PLAT JSON object (keys direct op root); NIET wrappen in "employee_details" of "referent". Geen markdown.`;
 
 export const INTAKE_EMPLOYEE_USER_MESSAGE =
   'Analyseer dit intakeformulier en vul alle employee_details-velden volgens de instructies. Let extra op aangevinkte vervoer, rijbewijs, talen (G/R/O), en computervaardigheden.';

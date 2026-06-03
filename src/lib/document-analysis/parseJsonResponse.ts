@@ -1,3 +1,43 @@
+const REFERENT_KEY_MAP: Record<string, string> = {
+  first_name: 'referent_first_name',
+  last_name: 'referent_last_name',
+  function: 'referent_function',
+  phone: 'referent_phone',
+  email: 'referent_email',
+  gender: 'referent_gender',
+};
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Unwrap nested employee_details / referent wrappers from model output. */
+export function flattenExtractionPayload(parsed: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...parsed };
+
+  const details = parsed.employee_details;
+  if (isPlainObject(details)) {
+    for (const [key, value] of Object.entries(details)) {
+      if (value !== undefined && value !== null) {
+        out[key] = value;
+      }
+    }
+    delete out.employee_details;
+  }
+
+  const referent = parsed.referent;
+  if (isPlainObject(referent)) {
+    for (const [key, value] of Object.entries(referent)) {
+      if (value === undefined || value === null) continue;
+      const mappedKey = REFERENT_KEY_MAP[key] || (key.startsWith('referent_') ? key : null);
+      if (mappedKey) out[mappedKey] = value;
+    }
+    delete out.referent;
+  }
+
+  return out;
+}
+
 export function parseJsonFromAssistant(responseText: string): Record<string, unknown> {
   if (!responseText || typeof responseText !== 'string') {
     console.warn('⚠️ Empty or invalid response text');
@@ -35,9 +75,10 @@ export function parseJsonFromAssistant(responseText: string): Record<string, unk
 
   try {
     const parsed = JSON.parse(cleanedResponse);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return flattenExtractionPayload(parsed as Record<string, unknown>);
+    }
+    return {};
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn('⚠️ JSON parsing error:', message);
