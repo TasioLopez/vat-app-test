@@ -19,6 +19,7 @@ import {
   type SuggestedReferent,
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
+import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -164,7 +165,7 @@ async function runTp2AutofillStep(
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }
     const next = mergeGegevensAutofill(currentData, json.details, GEGEVENS_TP2_KEYS);
-    return { data: ensureTP2026Shape(next) };
+    return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };
   } catch (e) {
     return {
       data: currentData,
@@ -229,7 +230,12 @@ export async function runAutofillSteps(
 
   for (let i = 0; i < steps.length; i++) {
     if (options.shouldCancel?.()) {
-      return { data: ensureTP2026Shape(data), completed, failed, cancelled: true };
+      return {
+        data: ensureTP2026Shape(applyTrajectoryDateDerivations(data)),
+        completed,
+        failed,
+        cancelled: true,
+      };
     }
 
     const step = steps[i];
@@ -248,5 +254,10 @@ export async function runAutofillSteps(
     }
   }
 
-  return { data: ensureTP2026Shape(data), completed, failed, cancelled: false };
+  return {
+    data: ensureTP2026Shape(applyTrajectoryDateDerivations(data)),
+    completed,
+    failed,
+    cancelled: false,
+  };
 }

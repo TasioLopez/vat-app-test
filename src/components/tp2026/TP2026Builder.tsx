@@ -32,6 +32,7 @@ import {
   Bijlage3Editor,
 } from '@/components/tp2026/sections/Bijlage2026Sections';
 import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
+import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
 
 type Props = {
   employeeId: string;
@@ -255,6 +256,14 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       cancelled = true;
     };
   }, [employeeId, tpInstanceId, markSaved, setTPData, supabase]);
+
+  // Opdrachtinformatie: derive end/start/lead time from traject dates (legacy EmployeeInfo behavior)
+  useEffect(() => {
+    const updates = getTrajectoryDateUpdates(tpData);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) updateField(key, value);
+    }
+  }, [tpData.first_sick_day, tpData.registration_date, tpData.intake_date, tpData.tp_end_date, tpData.tp_start_date, updateField]);
 
   const persist = async () => {
     setSaving(true);
