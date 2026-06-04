@@ -23,6 +23,7 @@ import {
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
+import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 
@@ -179,7 +180,7 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />
 
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col min-h-0">
         <div>
           <SectionBand title="Gegevens re-integratietraject 2e spoor" />
           <TP2026FieldTable>
@@ -216,12 +217,9 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Startdatum" value={formatNLDate(data.tp_start_date)} />
             <DataRow label="Einddatum (planning)" value={formatNLDate(data.tp_end_date)} />
           </TP2026FieldTable>
+          <p className="mt-3 text-[11px] italic leading-snug text-[#6d2a96]/90">{NB_DEFAULT_GEEN_AD}</p>
         </div>
       </div>
-
-      <p className="text-[11px] italic text-[#6d2a96]/90 mt-3 leading-snug">
-        NB: in het kader van de algemene verordening gegevensbescherming (AVG) worden in deze rapportage geen medische termen en diagnoses vermeld.
-      </p>
 
       <FooterIdentity
         lastName={data.last_name}
