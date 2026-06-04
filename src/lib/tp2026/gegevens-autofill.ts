@@ -54,6 +54,25 @@ export function isEmptyGegevensField(key: string, value: unknown): boolean {
   return false;
 }
 
+/** Merge source into target only where target field is empty (hydrate must not clobber data_json). */
+export function mergeRecordFillBlanks(
+  target: Record<string, unknown>,
+  source: Record<string, unknown> | null | undefined,
+  keys?: readonly string[]
+): Record<string, unknown> {
+  if (!source) return target;
+  const next = { ...target };
+  const keyList = keys ?? Object.keys(source);
+  for (const key of keyList) {
+    if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+    const incoming = source[key];
+    if (isEmptyGegevensField(key, next[key]) && !isEmptyGegevensField(key, incoming)) {
+      next[key] = incoming;
+    }
+  }
+  return next;
+}
+
 export function getGegevensAutofillPlan(data: Record<string, unknown>): {
   runEmployee: boolean;
   runTp2: boolean;

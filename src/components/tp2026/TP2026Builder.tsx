@@ -33,6 +33,8 @@ import {
 } from '@/components/tp2026/sections/Bijlage2026Sections';
 import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
 import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
+import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
+import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
 import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 type Props = {
@@ -42,7 +44,7 @@ type Props = {
 };
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
-  const { tpData, setTPData, updateField, saveAll, isDirty, markSaved } = useTPInstance();
+  const { tpData, setTPData, updateField, saveAll, isDirty, markDirty, markSaved } = useTPInstance();
   const { showSuccess, showError } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
   const autofillCancelRef = useRef(false);
@@ -59,6 +61,25 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [autofilling, setAutofilling] = useState(false);
   const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
 
+  const persistDraftFromData = useCallback(
+    async (data: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const result = await persistTp2026Draft(supabase, {
+        tpInstanceId,
+        employeeId,
+        tpData: data,
+        userId: user?.id ?? null,
+      });
+      if (result.error) return { ok: false, error: result.error };
+      await saveAll();
+      markSaved();
+      return { ok: true };
+    },
+    [employeeId, markSaved, saveAll, supabase, tpInstanceId]
+  );
+
   const autofillBasisField = useCallback(
     async (fieldKey: string) => {
       if (autofilling) return;
@@ -68,19 +89,31 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
         const json = await res.json();
         if (!res.ok) return;
+
+        let computedNext: Record<string, any> | null = null;
         setTPData((prev) => {
           let next: Record<string, any> = { ...prev };
           if (json?.details && typeof json.details === 'object') {
             next = mergeAutofillIntoTP2026(next, json.details);
           }
           if (json?.data?.pow_meter) next.pow_meter = json.data.pow_meter;
-          return ensureTP2026Shape(next);
+          computedNext = ensureTP2026Shape(next);
+          return computedNext;
         });
+
+        if (!computedNext) return;
+        const { ok, error } = await persistDraftFromData(computedNext);
+        if (!ok) {
+          markDirty();
+          showError('Opslaan mislukt', error || 'Kon basis-autofill niet opslaan.');
+        } else {
+          showSuccess('Basisveld ingevuld en opgeslagen.');
+        }
       } catch (e) {
         console.error('Basis field autofill failed', fieldKey, e);
       }
     },
-    [employeeId, setTPData, autofilling]
+    [employeeId, autofilling, markDirty, persistDraftFromData, setTPData, showError, showSuccess]
   );
 
   const sections = [
@@ -208,14 +241,17 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         const meta = { ...(metaRes.data || {}) };
         delete (meta as { tp_creation_date?: unknown }).tp_creation_date;
 
-        const next = ensureTP2026Shape({
-          ...prev,
-          ...employee,
-          ...(detailsRes.data || {}),
-          ...meta,
-        });
+        // data_json (prev) wins; only fill empty fields from employee profile / tp_meta
+        let merged = mergeRecordFillBlanks(
+          { ...prev } as Record<string, unknown>,
+          employee as Record<string, unknown>
+        );
+        merged = mergeRecordFillBlanks(merged, (detailsRes.data || {}) as Record<string, unknown>);
+        merged = mergeRecordFillBlanks(merged, meta as Record<string, unknown>);
 
-        if (clientCompanyName) {
+        const next = ensureTP2026Shape(merged as Record<string, any>);
+
+        if (clientCompanyName && !String(next.employer_name || '').trim()) {
           next.employer_name = clientCompanyName;
           next.client_name = clientCompanyName;
         }
@@ -247,7 +283,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
       if (!cancelled) {
         employeeHydrateKeyRef.current = hydrateKey;
-        markSaved();
       }
     }
 
@@ -256,7 +291,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     return () => {
       cancelled = true;
     };
-  }, [employeeId, tpInstanceId, markSaved, setTPData, supabase]);
+  }, [employeeId, tpInstanceId, setTPData, supabase]);
 
   // Opdrachtinformatie: derive end/start/lead time from traject dates (legacy EmployeeInfo behavior)
   useEffect(() => {
@@ -280,22 +315,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const persist = async () => {
     setSaving(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await (supabase as any)
-        .from('tp_instances')
-        .update({
-          data_json: ensureTP2026Shape(tpData),
-          updated_by: user?.id ?? null,
-        })
-        .eq('id', tpInstanceId);
-      if (error) throw error;
-      await saveAll();
-      markSaved();
+      const { ok, error } = await persistDraftFromData(tpData);
+      if (!ok) throw new Error(error || 'Opslaan mislukt');
     } catch (error) {
       console.error('Failed to save TP 2026 instance', error);
-      alert('Opslaan mislukt');
+      alert(error instanceof Error ? error.message : 'Opslaan mislukt');
     } finally {
       setSaving(false);
     }
@@ -329,18 +353,31 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           }
         );
 
-        setTPData(result.data);
+        setTPData(result.data as Record<string, any>);
+
+        let savedSuffix = '';
+        if (result.completed > 0) {
+          const { ok, error } = await persistDraftFromData(result.data);
+          if (ok) {
+            savedSuffix = ' Opgeslagen.';
+          } else {
+            markDirty();
+            savedSuffix = error ? ` Niet opgeslagen: ${error}` : ' Niet opgeslagen.';
+          }
+        }
 
         if (result.cancelled) {
           showError(
             'Autofill gestopt',
-            `${result.completed}/${steps.length} stappen voltooid voordat u stopte.`
+            `${result.completed}/${steps.length} stappen voltooid voordat u stopte.${savedSuffix}`
           );
           return;
         }
 
         if (result.failed.length === 0) {
-          showSuccess(`Autofill voltooid (${result.completed}/${steps.length} stappen).`);
+          showSuccess(
+            `Autofill voltooid (${result.completed}/${steps.length} stappen).${savedSuffix}`
+          );
           return;
         }
 
@@ -349,7 +386,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
             'Autofill gedeeltelijk voltooid',
             `${result.completed}/${steps.length} stappen gelukt. Mislukt: ${result.failed
               .map((f) => f.label)
-              .join('; ')}`
+              .join('; ')}${savedSuffix}`
           );
           return;
         }
@@ -366,7 +403,17 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         setAutofillProgress(null);
       }
     },
-    [currentStep, employeeId, showError, showSuccess, supabase, tpData, setTPData]
+    [
+      currentStep,
+      employeeId,
+      markDirty,
+      persistDraftFromData,
+      showError,
+      showSuccess,
+      supabase,
+      tpData,
+      setTPData,
+    ]
   );
 
   const cancelAutofill = useCallback(() => {

@@ -25,8 +25,10 @@ type SaveHandler = () => Promise<void>;
 type TPInstanceContextValue = {
   tpData: TPInstanceData;
   setTPData: React.Dispatch<React.SetStateAction<TPInstanceData>>;
+  replaceTPData: (next: TPInstanceData, options?: { markDirty?: boolean }) => void;
   updateField: (field: string, value: any) => void;
   isDirty: boolean;
+  markDirty: () => void;
   markSaved: () => void;
   registerSaveHandler: (sectionKey: TPInstanceSectionKey, handler: SaveHandler) => void;
   unregisterSaveHandler: (sectionKey: TPInstanceSectionKey) => void;
@@ -54,6 +56,20 @@ export function TPInstanceProvider({
   const [tpData, setTPData] = useState<TPInstanceData>(initialData ?? {});
   const [isDirty, setIsDirty] = useState(false);
   const handlersRef = useRef<Partial<Record<TPInstanceSectionKey, SaveHandler>>>({});
+
+  const markDirty = useCallback(() => {
+    setIsDirty(true);
+  }, []);
+
+  const replaceTPData = useCallback(
+    (next: TPInstanceData, options?: { markDirty?: boolean }) => {
+      setTPData(next);
+      if (options?.markDirty !== false) {
+        setIsDirty(true);
+      }
+    },
+    []
+  );
 
   const updateField = useCallback((field: string, value: any) => {
     setTPData((prev) => ({ ...prev, [field]: value }));
@@ -84,14 +100,26 @@ export function TPInstanceProvider({
     () => ({
       tpData,
       setTPData,
+      replaceTPData,
       updateField,
       isDirty,
+      markDirty,
       markSaved,
       registerSaveHandler,
       unregisterSaveHandler,
       saveAll,
     }),
-    [tpData, isDirty, updateField, markSaved, registerSaveHandler, unregisterSaveHandler, saveAll]
+    [
+      tpData,
+      isDirty,
+      replaceTPData,
+      updateField,
+      markDirty,
+      markSaved,
+      registerSaveHandler,
+      unregisterSaveHandler,
+      saveAll,
+    ]
   );
 
   return <TPInstanceCtx.Provider value={value}>{children}</TPInstanceCtx.Provider>;
