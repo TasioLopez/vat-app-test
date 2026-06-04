@@ -54,15 +54,15 @@ export function Spoor2SubsectionUnit({
         <SalmonSectionBar
           title={TP_SPOOR2_SECTION_TITLE}
           barColorClass="bg-[#df9180]"
-          className="mb-3"
+          className="mb-3 pl-6 pr-4"
         />
       ) : null}
-      {showSubsectionTitle ? (
-        <div className={SPOOR2_HEADING_CLASS}>{subsectionTitle}</div>
-      ) : null}
-      {trimmed ? (
+      {trimmed || showSubsectionTitle ? (
         <div className={SPOOR2_BOX_CLASS}>
-          <Basis2026MarkdownBody markdown={trimmed} />
+          {showSubsectionTitle ? (
+            <div className={SPOOR2_HEADING_CLASS}>{subsectionTitle}</div>
+          ) : null}
+          {trimmed ? <Basis2026MarkdownBody markdown={trimmed} /> : null}
         </div>
       ) : null}
     </>

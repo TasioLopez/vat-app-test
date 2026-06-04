@@ -139,31 +139,25 @@ function textVariant(key: string, text: string): BasisTextVariant {
 }
 
 function buildSpoor2Atoms(): BasisAtom[] {
-  const atoms: BasisAtom[] = [];
-
-  const toelichtingSlices = chunkByParagraphs(TP_SPOOR2_TOELICHTING_BODY, 760);
-  toelichtingSlices.forEach((slice, i) => {
-    atoms.push({
-      id: `spoor2-toel-${i}`,
+  const atoms: BasisAtom[] = [
+    {
+      id: 'spoor2-toel',
       kind: 'spoor2',
       title: TP_SPOOR2_TOELICHTING_TITLE,
-      body: slice,
-      showMainBand: i === 0,
-      showSubsectionTitle: i === 0,
-    });
-  });
+      body: TP_SPOOR2_TOELICHTING_BODY,
+      showMainBand: true,
+      showSubsectionTitle: true,
+    },
+  ];
 
   for (const sub of TP_SPOOR2_SUBSECTIONS) {
-    const bodySlices = chunkByParagraphs(sub.body, 760);
-    bodySlices.forEach((slice, i) => {
-      atoms.push({
-        id: `spoor2-${sub.id}-${i}`,
-        kind: 'spoor2',
-        title: sub.title,
-        body: slice,
-        showMainBand: false,
-        showSubsectionTitle: i === 0,
-      });
+    atoms.push({
+      id: `spoor2-${sub.id}`,
+      kind: 'spoor2',
+      title: sub.title,
+      body: sub.body,
+      showMainBand: false,
+      showSubsectionTitle: true,
     });
   }
 
@@ -204,19 +198,15 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
       return;
     }
 
-    const soft = key === 'wk' ? 520 : 760;
     const baseText = raw || fallbackTrim;
-    const slices = chunkByParagraphs(baseText, soft);
-    slices.forEach((slice, i) => {
-      atoms.push({
-        id: `${key}-${i}`,
-        kind: 'text',
-        key,
-        title,
-        md: slice,
-        showSectionTitle: i === 0,
-        variant: textVariant(key, slice),
-      });
+    atoms.push({
+      id: key,
+      kind: 'text',
+      key,
+      title,
+      md: baseText,
+      showSectionTitle: true,
+      variant: textVariant(key, baseText),
     });
   };
 
@@ -445,6 +435,47 @@ function Spoor2AtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'spoor2'
   );
 }
 
+/** Collapse same-section pagination fragments on one page into a single visual block. */
+function mergeSectionAtomsOnPage(atoms: BasisAtom[]): BasisAtom[] {
+  const out: BasisAtom[] = [];
+
+  for (const atom of atoms) {
+    const prev = out[out.length - 1];
+
+    if (
+      prev &&
+      atom.kind === 'spoor2' &&
+      prev.kind === 'spoor2' &&
+      prev.title === atom.title &&
+      !atom.showSubsectionTitle
+    ) {
+      out[out.length - 1] = {
+        ...prev,
+        body: `${prev.body.trim()}\n\n${atom.body.trim()}`.trim(),
+      };
+      continue;
+    }
+
+    if (
+      prev &&
+      atom.kind === 'text' &&
+      prev.kind === 'text' &&
+      prev.key === atom.key &&
+      !atom.showSectionTitle
+    ) {
+      out[out.length - 1] = {
+        ...prev,
+        md: `${prev.md.trim()}\n\n${atom.md.trim()}`.trim(),
+      };
+      continue;
+    }
+
+    out.push(atom);
+  }
+
+  return out;
+}
+
 function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.ReactNode {
   switch (atom.kind) {
     case 'inleiding':
@@ -482,6 +513,8 @@ function BasisBodyPage({
   atoms: BasisAtom[];
   pageNumber: number;
 }) {
+  const displayAtoms = mergeSectionAtomsOnPage(atoms);
+
   return (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
@@ -489,10 +522,10 @@ function BasisBodyPage({
         data-basis-body
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
-        {atoms.map((atom, idx) => (
+        {displayAtoms.map((atom, idx) => (
           <div
             key={`${atom.id}-${idx}`}
-            className={getAtomMarginClass(atom, idx > 0 ? atoms[idx - 1] : undefined)}
+            className={getAtomMarginClass(atom, idx > 0 ? displayAtoms[idx - 1] : undefined)}
           >
             {renderBodyAtom(data, atom)}
           </div>
