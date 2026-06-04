@@ -98,7 +98,7 @@ export function FooterIdentity({
 export function SalmonSectionBar({ title, className = '' }: { title: string; className?: string }) {
   return (
     <div
-      className={`-mx-4 mb-2 px-4 py-2 text-[12px] font-bold leading-tight text-white bg-[#c76f5c] ${className}`}
+      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white bg-[#c76f5c] ${className}`}
     >
       {title}
     </div>

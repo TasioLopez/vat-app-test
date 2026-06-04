@@ -9,18 +9,16 @@ import {
   A4LogoHeader,
   A4Page,
   FooterIdentity,
-  SalmonSectionBar,
   SectionBand,
-  TealSubsectionTitle,
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
+import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import {
-  TP_SPOOR2_SECTION_TITLE,
   TP_SPOOR2_SUBSECTIONS,
   TP_SPOOR2_TOELICHTING_BODY,
   TP_SPOOR2_TOELICHTING_TITLE,
@@ -143,15 +141,6 @@ function textVariant(key: string, text: string): BasisTextVariant {
 function buildSpoor2Atoms(): BasisAtom[] {
   const atoms: BasisAtom[] = [];
 
-  atoms.push({
-    id: 'spoor2-main',
-    kind: 'spoor2',
-    title: TP_SPOOR2_SECTION_TITLE,
-    body: '',
-    showMainBand: true,
-    showSubsectionTitle: false,
-  });
-
   const toelichtingSlices = chunkByParagraphs(TP_SPOOR2_TOELICHTING_BODY, 760);
   toelichtingSlices.forEach((slice, i) => {
     atoms.push({
@@ -159,7 +148,7 @@ function buildSpoor2Atoms(): BasisAtom[] {
       kind: 'spoor2',
       title: TP_SPOOR2_TOELICHTING_TITLE,
       body: slice,
-      showMainBand: false,
+      showMainBand: i === 0,
       showSubsectionTitle: i === 0,
     });
   });
@@ -330,12 +319,14 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
         id: `${atom.id}-a`,
         body: a,
         showSubsectionTitle: atom.showSubsectionTitle,
+        showMainBand: atom.showMainBand,
       },
       {
         ...atom,
         id: `${atom.id}-b`,
         body: b,
         showSubsectionTitle: false,
+        showMainBand: false,
       },
       ...atoms.slice(idx + 1),
     ];
@@ -444,17 +435,13 @@ function TextAtomPreview({
 }
 
 function Spoor2AtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'spoor2' }> }) {
-  const body = String(atom.body || '').trim();
   return (
-    <div>
-      {atom.showMainBand ? <SalmonSectionBar title={atom.title} /> : null}
-      {atom.showSubsectionTitle ? <TealSubsectionTitle title={atom.title} /> : null}
-      {body ? (
-        <div className={boxClass}>
-          <Basis2026MarkdownBody markdown={body} />
-        </div>
-      ) : null}
-    </div>
+    <Spoor2SubsectionUnit
+      showMainBand={atom.showMainBand}
+      showSubsectionTitle={atom.showSubsectionTitle}
+      subsectionTitle={atom.title}
+      body={atom.body}
+    />
   );
 }
 
@@ -503,7 +490,10 @@ function BasisBodyPage({
         className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
         {atoms.map((atom, idx) => (
-          <div key={`${atom.id}-${idx}`} className={idx > 0 ? 'mt-3' : ''}>
+          <div
+            key={`${atom.id}-${idx}`}
+            className={getAtomMarginClass(atom, idx > 0 ? atoms[idx - 1] : undefined)}
+          >
             {renderBodyAtom(data, atom)}
           </div>
         ))}
