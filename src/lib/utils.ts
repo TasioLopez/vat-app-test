@@ -83,10 +83,10 @@ export function formatEmployeeNameWithoutPrefix(
 }
 
 /**
- * TP 2026 Gegevens body "Naam" line: initial + achternaam (voornaam), no Meneer/Mevrouw
+ * TP 2026 Gegevens body "Naam" line: achternaam (voornaam), no Meneer/Mevrouw
  * (gender is shown via man/vrouw checkboxes on that page). Not used on the cover;
  * the cover uses {@link formatEmployeeName}.
- * e.g. "K. Baaijens (Kim)"
+ * e.g. "Baaijens (Kim)"
  */
 export function formatTP2026CoverVoorName(
   firstName: string | null | undefined,
@@ -96,8 +96,7 @@ export function formatTP2026CoverVoorName(
   if (!firstName || !lastName) {
     return [firstName, lastName].filter(Boolean).join(' ').trim() || '—';
   }
-  const initial = firstName.charAt(0).toUpperCase();
-  return `${initial}. ${lastName} (${firstName})`;
+  return `${lastName} (${firstName})`;
 }
 
 /**
