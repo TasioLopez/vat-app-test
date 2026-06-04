@@ -1,13 +1,12 @@
 // Sections that never change (paste your exact boilerplates here)
 export const ALWAYS_SAME: Record<string, string> = {
-  wettelijke_kaders: `Ik heb werknemer uitleg gegeven over:
-• Het doel van de intake;
-• Het doel en opzet van het 2e spoortraject;
-• Rechten en plichten van werkgever en werknemer in het kader van de Wet Verbetering Poortwachter;
-• Het verschil tussen spoor 1 en spoor 2 en dat de beiden trajecten parallel aan elkaar kunnen lopen;
-• Wat de procedure is als een werknemer 2 jaar ziek is en geen ander werk heeft gevonden.
-• Hoe een arbeidsongeschiktheidspercentage (AO-percentage) tot stand komt.
-• De WIA-aanvraag. Als een werknemer na 2 jaar ziekte een WIA-uitkering aanvraagt, beoordeelt het UWV wat de werknemer nog kan verdienen, daarbij rekening houdend met ziekte of handicap van de werknemer.`,
+  wettelijke_kaders: `• Het doel van het intakegesprek;
+• Het doel, de inhoud en fasering van het tweede spoortraject;
+• Rechten en plichten van zowel de werkgever als de werknemer in het kader van de Wet Verbetering Poortwachter;
+• De verschillen tussen spoor 1 en spoor 2 en dat de beiden trajecten parallel aan elkaar (kunnen) worden ingezet;
+• Wat de procedure is als een werknemer 2 jaar ziek is en geen ander passend werk heeft gevonden.
+• Toelichting op de WIA-aanvraag. Wanneer een werknemer na twee jaar ziekte een WIA-uitkering aanvraagt, beoordeelt het UWV wat de werknemer nog kan verdienen, rekening houdend met de beperkingen in belastbaarheid.
+• Waar het ValentineZ privacy- en klachtenreglement vindbaar zijn.`,
   visie_loopbaanadviseur: `Werknemer heeft conform de FML/ IZP/ LAB van (datum) beperkingen in de volgende rubrieken:
 • Persoonlijk functioneren
 • Sociaal functioneren

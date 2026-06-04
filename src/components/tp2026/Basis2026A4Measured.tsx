@@ -16,8 +16,10 @@ import {
 } from '@/components/tp2026/primitives';
 import {
   getBasisToelichtingLabel,
+  normalizeWkMarkdown,
   TP_BASIS_BODY_BOX_CLASS,
   TP_BASIS_TOELICHTING_DEFAULT,
+  TP_WK_INTRO_LINE,
 } from '@/lib/tp2026/basis-document-layout';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
 import { formatNLDate } from '@/lib/tp2026/schema';
@@ -354,7 +356,7 @@ function InleidingAtomPreview({
 
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title="Inleiding" underline /> : null}
+      {atom.showSectionTitle ? <SectionBand title="Inleiding" /> : null}
       <div className={TP_BASIS_BODY_BOX_CLASS}>
         {atom.showSectionTitle ? (
           <BasisToelichtingHeading label={TP_BASIS_TOELICHTING_DEFAULT} />
@@ -528,6 +530,8 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
       return <TextAtomPreview atom={atom} />;
     case 'spoor2':
       return <Spoor2AtomPreview atom={atom} />;
+    case 'groupBanner':
+      return <PurpleSectionBar title={atom.title} className="mb-3" />;
     case 'agreement':
       return <BasisAgreementBlock />;
     case 'signature':
