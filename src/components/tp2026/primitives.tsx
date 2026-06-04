@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
+import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
 
 export const A4_W = 794;
@@ -120,6 +121,22 @@ export function TealSubsectionTitle({ title, className = '' }: { title: string; 
   );
 }
 
+/** Teal in-box sub-heading (Toelichting) for Profiel sections. */
+export function BasisToelichtingHeading({ label }: { label: string }) {
+  return <div className={TP_BASIS_TOELICHTING_CLASS}>{label}</div>;
+}
+
+/** Purple full-width band (Profiel werknemer, matches inhoudsopgave). */
+export function PurpleSectionBar({ title, className = '' }: { title: string; className?: string }) {
+  return (
+    <div
+      className={`-mx-4 pl-6 pr-4 py-2.5 text-[15px] font-bold leading-tight text-white bg-[#5a257d] ${className}`}
+    >
+      {title}
+    </div>
+  );
+}
+
 /** Section title: plain bold purple on white (Word template style, no tan band). */
 export function SectionBand({
   title,
@@ -133,7 +150,7 @@ export function SectionBand({
 }) {
   return (
     <div
-      className={`text-[#6d2a96] font-bold text-[12px] leading-tight mb-1 ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
+      className={`mb-1 text-[12px] font-extrabold leading-tight text-[#6d2a96] ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
     >
       {title}
     </div>

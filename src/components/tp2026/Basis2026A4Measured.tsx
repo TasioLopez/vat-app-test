@@ -8,10 +8,17 @@ import { BasisAgreementBlock, BasisSignatureBlock } from '@/components/tp2026/Ba
 import {
   A4LogoHeader,
   A4Page,
+  BasisToelichtingHeading,
   FooterIdentity,
+  PurpleSectionBar,
   SectionBand,
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
+import {
+  getBasisToelichtingLabel,
+  TP_BASIS_BODY_BOX_CLASS,
+  TP_BASIS_TOELICHTING_DEFAULT,
+} from '@/lib/tp2026/basis-document-layout';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
@@ -26,8 +33,6 @@ import {
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 const INLEIDING_SUB_DELIM = 'staat het volgende:';
-
-const boxClass = 'border border-[#b8985c] bg-[#f5efe6] p-2.5 text-neutral-900';
 
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
@@ -61,6 +66,12 @@ export type BasisAtom =
       body: string;
       showMainBand: boolean;
       showSubsectionTitle: boolean;
+    }
+  | {
+      id: string;
+      kind: 'groupBanner';
+      title: string;
+      pageBreakBefore: boolean;
     }
   | { id: string; kind: 'agreement' }
   | { id: string; kind: 'signature' };
@@ -216,6 +227,12 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
     data.wettelijke_kaders,
     WETTELIJKE_KADERS
   );
+  atoms.push({
+    id: 'profiel-banner',
+    kind: 'groupBanner',
+    title: 'Profiel werknemer',
+    pageBreakBefore: true,
+  });
   pushTextField('soc', 'Sociale achtergrond & maatschappelijke context', data.sociale_achtergrond, '');
   pushTextField('visw', 'Visie van werknemer', data.visie_werknemer, '');
   pushTextField('vlb', 'Visie van loopbaanadviseur', data.visie_loopbaanadviseur, '');
@@ -337,8 +354,11 @@ function InleidingAtomPreview({
 
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title="Inleiding" /> : null}
-      <div className={boxClass}>
+      {atom.showSectionTitle ? <SectionBand title="Inleiding" underline /> : null}
+      <div className={TP_BASIS_BODY_BOX_CLASS}>
+        {atom.showSectionTitle ? (
+          <BasisToelichtingHeading label={TP_BASIS_TOELICHTING_DEFAULT} />
+        ) : null}
         {String(atom.md || '').trim() ? (
           <Basis2026MarkdownBody markdown={String(atom.md)} />
         ) : atom.showSectionTitle ? (
@@ -348,8 +368,7 @@ function InleidingAtomPreview({
           <p className="mt-3 text-[12px] font-semibold text-neutral-900">{NB_AVG_INLEIDING}</p>
         ) : null}
         {atom.showToelichting && sub ? (
-          <div className="mt-4 border-t border-[#b8985c]/50 pt-3">
-            <h3 className="mb-1.5 text-[12px] font-bold text-green-800">Toelichting</h3>
+          <div className="mt-4">
             {useDelimiterBlock ? (
               <InleidingSubBlock text={sub} className="text-[12px] leading-relaxed text-neutral-900" />
             ) : (
@@ -414,10 +433,13 @@ function TextAtomPreview({
 }: {
   atom: Extract<BasisAtom, { kind: 'text' }>;
 }) {
+  const toelichtingLabel = getBasisToelichtingLabel(atom.key);
+
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
-      <div className={boxClass}>
+      {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
+      <div className={TP_BASIS_BODY_BOX_CLASS}>
+        {toelichtingLabel ? <BasisToelichtingHeading label={toelichtingLabel} /> : null}
         <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
       </div>
     </div>
@@ -470,10 +492,32 @@ function mergeSectionAtomsOnPage(atoms: BasisAtom[]): BasisAtom[] {
       continue;
     }
 
+    if (
+      prev &&
+      atom.kind === 'inleiding' &&
+      prev.kind === 'inleiding' &&
+      !atom.showSectionTitle
+    ) {
+      out[out.length - 1] = {
+        ...prev,
+        md: `${prev.md.trim()}\n\n${atom.md.trim()}`.trim(),
+        showToelichting: atom.showToelichting || prev.showToelichting,
+        showAvgDisclaimer: atom.showAvgDisclaimer || prev.showAvgDisclaimer,
+      };
+      continue;
+    }
+
     out.push(atom);
   }
 
   return out;
+}
+
+function getBasisAtomMarginClass(atom: BasisAtom, prev: BasisAtom | undefined): string {
+  if (atom.kind === 'groupBanner') {
+    return prev ? 'mt-3' : '';
+  }
+  return getAtomMarginClass(atom, prev);
 }
 
 function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.ReactNode {
@@ -525,7 +569,7 @@ function BasisBodyPage({
         {displayAtoms.map((atom, idx) => (
           <div
             key={`${atom.id}-${idx}`}
-            className={getAtomMarginClass(atom, idx > 0 ? displayAtoms[idx - 1] : undefined)}
+            className={getBasisAtomMarginClass(atom, idx > 0 ? displayAtoms[idx - 1] : undefined)}
           >
             {renderBodyAtom(data, atom)}
           </div>
@@ -616,6 +660,16 @@ function packPagesWithDomMeasure(
   let current: number[] = [];
 
   for (let i = 0; i < n; i++) {
+    const atom = bodyAtoms[i];
+    if (
+      atom?.kind === 'groupBanner' &&
+      atom.pageBreakBefore &&
+      current.length > 0
+    ) {
+      pages.push(current);
+      current = [];
+    }
+
     const trial = [...current, i];
     if (doesBasisPageFitDom(data, bodyAtoms, trial)) {
       current = trial;

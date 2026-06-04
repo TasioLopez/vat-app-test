@@ -3,6 +3,7 @@
 import React from 'react';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { SalmonSectionBar } from '@/components/tp2026/primitives';
+import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
 export const TP_SPOOR2_COLOR_SALMON = '#df9180';
@@ -11,8 +12,7 @@ export const TP_SPOOR2_COLOR_BODY_BG = '#f3efe4';
 
 export const SPOOR2_BOX_CLASS = `bg-[#f3efe4] p-2.5 text-neutral-900`;
 
-export const SPOOR2_HEADING_CLASS =
-  'mb-1.5 text-[12px] font-bold leading-tight text-[#64b6a6]';
+export const SPOOR2_HEADING_CLASS = TP_BASIS_TOELICHTING_CLASS;
 
 type MarginAtom = {
   kind: string;
