@@ -19,6 +19,7 @@ import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
 import {
   formatComputerSkills,
   formatDriversLicense,
+  formatGegevensOtherEmployers,
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
@@ -193,7 +194,13 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Beschikking over een PC" value={boolToJaNee(data.has_computer)} />
             <DataRow label="PC-vaardigheden" value={pcVaardigheden} />
             <DataRow label="Aantal contracturen" value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'} />
-            <DataRow label="Andere werkgever(s)" value={data.other_employers || '—'} />
+            <DataRow
+              label="Andere werkgever(s)"
+              value={formatGegevensOtherEmployers(
+                data.other_employers,
+                data.client_name || data.employer_name
+              )}
+            />
           </TP2026FieldTable>
         </div>
 

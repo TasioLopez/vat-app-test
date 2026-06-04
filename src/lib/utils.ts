@@ -334,3 +334,13 @@ export function filterOtherEmployers(
   // Return filtered list or em dash if empty
   return filtered.length > 0 ? filtered.join(', ') : "—";
 }
+
+/** TP2026 Gegevens preview: empty andere werkgevers → "geen" (not em dash). */
+export function formatGegevensOtherEmployers(
+  otherEmployersText: string | null | undefined,
+  currentEmployerName: string | null | undefined
+): string {
+  if (!otherEmployersText?.trim()) return 'geen';
+  const filtered = filterOtherEmployers(otherEmployersText, currentEmployerName);
+  return filtered === '—' ? 'geen' : filtered;
+}
