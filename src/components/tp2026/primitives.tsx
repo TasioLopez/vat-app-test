@@ -95,20 +95,28 @@ export function FooterIdentity({
 }
 
 /** Salmon full-width band (Onderdelen Spoor 2 begeleiding, inhoudsopgave). */
-export function SalmonSectionBar({ title, className = '' }: { title: string; className?: string }) {
+export function SalmonSectionBar({
+  title,
+  className = '',
+  barColorClass = 'bg-[#c76f5c]',
+}: {
+  title: string;
+  className?: string;
+  barColorClass?: string;
+}) {
   return (
     <div
-      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white bg-[#c76f5c] ${className}`}
+      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white ${barColorClass} ${className}`}
     >
       {title}
     </div>
   );
 }
 
-/** Teal subsection title inside Spoor 2 begeleiding blocks. */
+/** Teal subsection title (legacy helper; Spoor 2 uses Spoor2SectionUnits). */
 export function TealSubsectionTitle({ title, className = '' }: { title: string; className?: string }) {
   return (
-    <div className={`mb-1 text-[12px] font-bold leading-tight text-[#2d7a8c] ${className}`}>{title}</div>
+    <div className={`mb-1 text-[12px] font-bold leading-tight text-[#64b6a6] ${className}`}>{title}</div>
   );
 }
 
