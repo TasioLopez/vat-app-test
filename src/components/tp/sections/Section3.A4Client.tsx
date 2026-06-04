@@ -10,8 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
-import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity } from "@/lib/tp/tp_activities";
-import { ActivityBody } from "./ActivityBody";
+import { BasisSpoor2Block } from '@/components/tp2026/BasisSpoor2Block';
 import {
   TP_BASIS_AGREEMENT_INTRO,
   TP_BASIS_AGREEMENT_POINTS,
@@ -260,14 +259,10 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
     return renderTextWithLogoBullets(text, false);
 }
 
-const TP_ACTIVITIES_INTRO =
-    "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.";
-
 type PreviewItem = {
     key: string;
     title?: string;
     text?: string;
-    subText?: string | null;
     variant: "block" | "subtle" | "custom";
     node?: React.ReactNode;
 };
@@ -405,52 +400,13 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         return hasEssentialData || hasContent;
     }, [tpData]);
 
-    // pull selected activities for this employee (saved by the builder)
-    const [activitySelections, setActivitySelections] = useState<Array<{ id: string; subText?: string | null }>>([]);
-    const [selectedIdsLoaded, setSelectedIdsLoaded] = useState(false);
-
-    useEffect(() => {
-        (async () => {
-            setSelectedIdsLoaded(false);
-            const { data, error } = await supabase
-                .from("tp_meta")
-                .select("tp3_activities")
-                .eq("employee_id", employeeId)
-                .maybeSingle();
-
-            const normalized = !error ? normalizeTp3Activities((data as any)?.tp3_activities) : [];
-            console.log("🔍 Review page loaded activities:", normalized);
-            setActivitySelections(normalized);
-            setSelectedIdsLoaded(true);
-        })();
-    }, [employeeId]);
-
-    const selectedActivitiesWithSub = useMemo(
-        () =>
-            activitySelections
-                .map((s) => {
-                    const activity = ACTIVITIES.find((a) => a.id === s.id);
-                    return activity ? { activity, subText: s.subText ?? null } : null;
-                })
-                .filter((x): x is { activity: TPActivity; subText: string | null } => x != null),
-        [activitySelections]
-    );
-
-    // Wait for BOTH tpData AND selectedIds to be ready before creating sections
-    const isEverythingReady = isDataReady && selectedIdsLoaded;
+    const isEverythingReady = isDataReady;
 
     const sections = useMemo<PreviewItem[]>(() => {
-        // Don't create sections if data isn't ready OR selectedIds aren't loaded yet
         if (!isEverythingReady) {
-            console.log('⏳ Section3A4Client: Data not ready', { 
-                isDataReady, 
-                selectedIdsLoaded,
-                selectedIdsCount: activitySelections.length 
-            });
             return [];
         }
         
-        console.log('📦 Section3A4Client: Creating sections', { selectedIdsCount: activitySelections.length });
         const list: PreviewItem[] = [
             { key: "inl", title: "Inleiding", text: tpData.inleiding || "—", variant: "block" },
         ];
@@ -536,24 +492,7 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             }
         );
 
-        // Trajectdoel + activities (each activity as its own block for clean pagination)
-        if (selectedActivitiesWithSub.length) {
-            list.push({
-                key: "acts-intro",
-                title: "Trajectdoel en in te zetten activiteiten",
-                text: TP_ACTIVITIES_INTRO,
-                variant: "block",
-            });
-            selectedActivitiesWithSub.forEach(({ activity, subText }) => {
-                list.push({
-                    key: `act-${activity.id}`,
-                    title: activity.title,
-                    text: getBodyMain(activity),
-                    subText,
-                    variant: "block",
-                });
-            });
-        }
+        list.push({ key: "spoor2", variant: "custom", node: <BasisSpoor2Block /> });
 
         // Agreement and signatures as custom nodes
         list.push({ key: "agree", variant: "custom", node: <AgreementBlock /> });
@@ -590,16 +529,10 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
         tpData.advies_ad_passende_arbeid,
         tpData.pow_meter,
         tpData.visie_plaatsbaarheid,
-        selectedActivitiesWithSub,
     ]);
 
     // Don't render if data isn't ready or sections are empty
     if (!isEverythingReady || !sections || sections.length === 0) {
-        console.log('⏳ Section3A4Client: Waiting for data...', { 
-            isDataReady, 
-            selectedIdsLoaded,
-            sectionsCount: sections?.length 
-        });
         return (
             <div className="flex items-center justify-center p-8">
                 <p className="text-muted-foreground">Laden...</p>
@@ -656,12 +589,6 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     <div className={blockTitle}>{s.title}</div>
                                     {s.key === 'inl_sub' ? (
                                         <div className={paperText}><InleidingSubBlock text={s.text} /></div>
-                                    ) : s.key.startsWith('act-') ? (
-                                        <ActivityBody 
-                                            bodyMain={s.text ?? ""} 
-                                            subText={s.subText ?? null} 
-                                            className={paperText}
-                                        />
                                     ) : s.key === 'vlb' || s.key === 'wk' ? (
                                         <div className={paperText}>{renderTextWithLogoBullets(s.text, false, true)}</div>
                                     ) : s.key === 'plaats' ? (
@@ -977,13 +904,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                         ) : s.variant === "block" && s.text ? (
                                             <>
                                                 <div className={blockTitle}>{s.title}</div>
-                                                {s.key.startsWith('act-') ? (
-                                                    <ActivityBody 
-                                                        bodyMain={s.text ?? ""} 
-                                                        subText={s.subText ?? null} 
-                                                        className={paperText}
-                                                    />
-                                                ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                                {s.key === 'vlb' || s.key === 'wk' ? (
                                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
                                                 ) : s.key === 'plaats' ? (
                                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>

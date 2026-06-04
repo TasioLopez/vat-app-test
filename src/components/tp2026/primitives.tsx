@@ -94,6 +94,24 @@ export function FooterIdentity({
   );
 }
 
+/** Salmon full-width band (Onderdelen Spoor 2 begeleiding, inhoudsopgave). */
+export function SalmonSectionBar({ title, className = '' }: { title: string; className?: string }) {
+  return (
+    <div
+      className={`-mx-4 mb-2 px-4 py-2 text-[12px] font-bold leading-tight text-white bg-[#c76f5c] ${className}`}
+    >
+      {title}
+    </div>
+  );
+}
+
+/** Teal subsection title inside Spoor 2 begeleiding blocks. */
+export function TealSubsectionTitle({ title, className = '' }: { title: string; className?: string }) {
+  return (
+    <div className={`mb-1 text-[12px] font-bold leading-tight text-[#2d7a8c] ${className}`}>{title}</div>
+  );
+}
+
 /** Section title: plain bold purple on white (Word template style, no tan band). */
 export function SectionBand({
   title,

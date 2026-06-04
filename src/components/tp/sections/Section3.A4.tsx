@@ -7,8 +7,7 @@ import Logo2 from "@/assets/images/logo-2.png";
 import { loadTP, TPData } from "@/lib/tp/load";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
-import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity } from "@/lib/tp/tp_activities";
-import { ActivityBody } from "./ActivityBody";
+import { BasisSpoor2Block } from '@/components/tp2026/BasisSpoor2Block';
 import {
   TP_BASIS_AGREEMENT_INTRO,
   TP_BASIS_AGREEMENT_POINTS,
@@ -252,10 +251,6 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
   return renderTextWithLogoBullets(text, false);
 }
 
-/* ------------ static text ------------ */
-const TP_ACTIVITIES_INTRO =
-  "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.";
-
 /* ------------ presentational blocks ------------ */
 function LogoBar() {
   return (
@@ -386,15 +381,6 @@ export default function Section3A4({ data }: { data: TPData }) {
       ? "NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld."
       : "");
 
-  // selected activities (from tp_meta.tp3_activities)
-  const activitySelections = normalizeTp3Activities((data as any).tp3_activities);
-  const selectedActivitiesWithSub = activitySelections
-    .map((s) => {
-      const activity = ACTIVITIES.find((a) => a.id === s.id);
-      return activity ? { activity, subText: s.subText ?? null } : null;
-    })
-    .filter((x): x is { activity: TPActivity; subText: string | null } => x != null);
-
   // names for signature - use simple firstName lastName format
   const employeeName = 
     `${((data as any).first_name ?? "").trim()} ${((data as any).last_name ?? "").trim()}`.trim()
@@ -410,7 +396,7 @@ export default function Section3A4({ data }: { data: TPData }) {
 
   type Block =
     | { key: string; title?: string; text: string; subText?: string | null; variant: "block" | "subtle" }
-    | { key: string; custom: "agreement" | "signature" };
+    | { key: string; custom: "agreement" | "signature" | "spoor2" };
 
   const blocks: Block[] = [
     { key: "inl", title: "Inleiding", text: inleiding, variant: "block" },
@@ -486,24 +472,7 @@ export default function Section3A4({ data }: { data: TPData }) {
       variant: "block",
     },
 
-    // Activities (only when any are selected)
-    ...(selectedActivitiesWithSub.length
-      ? ([
-          {
-            key: "tp-acts-intro",
-            title: "Trajectdoel en in te zetten activiteiten",
-            text: TP_ACTIVITIES_INTRO,
-            variant: "block" as const,
-          },
-          ...selectedActivitiesWithSub.map(({ activity, subText }) => ({
-            key: `act-${activity.id}`,
-            title: activity.title,
-            text: getBodyMain(activity),
-            subText,
-            variant: "block" as const,
-          })),
-        ] as Block[])
-      : []),
+    { key: "spoor2", custom: "spoor2" },
 
     // Agreement + signatures
     { key: "agree", custom: "agreement" },
@@ -524,6 +493,10 @@ export default function Section3A4({ data }: { data: TPData }) {
             {("custom" in firstBlock) ? (
               firstBlock.custom === "agreement" ? (
                 <AgreementBlock key={firstBlock.key} />
+              ) : firstBlock.custom === "spoor2" ? (
+                <div key={firstBlock.key} className={avoidBreak}>
+                  <BasisSpoor2Block />
+                </div>
               ) : (
                 <SignatureBlock
                   key={firstBlock.key}
@@ -542,12 +515,6 @@ export default function Section3A4({ data }: { data: TPData }) {
                     {firstBlock.title && <div className={blockTitle}>{firstBlock.title}</div>}
                     {firstBlock.key === 'inl_sub' ? (
                       <div className={paperText}><InleidingSubBlock text={firstBlock.text} /></div>
-                    ) : firstBlock.key.startsWith('act-') ? (
-                      <ActivityBody 
-                        bodyMain={firstBlock.text} 
-                        subText={"subText" in firstBlock ? firstBlock.subText : null} 
-                        className={paperText}
-                      />
                     ) : firstBlock.key === 'vlb' || firstBlock.key === 'wk' ? (
                       <div className={paperText}>{renderTextWithLogoBullets(firstBlock.text, false)}</div>
                     ) : firstBlock.key === 'plaats' ? (
@@ -586,9 +553,15 @@ export default function Section3A4({ data }: { data: TPData }) {
         )}
         {restBlocks.map((b) => {
           if ("custom" in b) {
-            return b.custom === "agreement" ? (
-              <AgreementBlock key={b.key} />
-            ) : (
+            if (b.custom === "agreement") return <AgreementBlock key={b.key} />;
+            if (b.custom === "spoor2") {
+              return (
+                <div key={b.key} className={avoidBreak}>
+                  <BasisSpoor2Block />
+                </div>
+              );
+            }
+            return (
               <SignatureBlock
                 key={b.key}
                 employeeName={employeeName}
@@ -607,12 +580,6 @@ export default function Section3A4({ data }: { data: TPData }) {
                   {b.title && <div className={blockTitle}>{b.title}</div>}
                   {b.key === 'inl_sub' ? (
                     <div className={paperText}><InleidingSubBlock text={b.text} /></div>
-                  ) : b.key.startsWith('act-') ? (
-                    <ActivityBody 
-                      bodyMain={b.text} 
-                      subText={"subText" in b ? b.subText : null} 
-                      className={paperText}
-                    />
                   ) : b.key === 'vlb' || b.key === 'wk' ? (
                     <div className={paperText}>{renderTextWithLogoBullets(b.text, false)}</div>
                   ) : b.key === 'plaats' ? (

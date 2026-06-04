@@ -9,7 +9,9 @@ import {
   A4LogoHeader,
   A4Page,
   FooterIdentity,
+  SalmonSectionBar,
   SectionBand,
+  TealSubsectionTitle,
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
 import { formatNLDate } from '@/lib/tp2026/schema';
@@ -17,8 +19,12 @@ import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026Inhouds
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
-import { TP_BASIS_TP_ACTIVITIES_INTRO } from '@/lib/tp2026/basis-document-agreement';
-import TP_ACTIVITIES, { getBodyMain, normalizeTp3Activities } from '@/lib/tp/tp_activities';
+import {
+  TP_SPOOR2_SECTION_TITLE,
+  TP_SPOOR2_SUBSECTIONS,
+  TP_SPOOR2_TOELICHTING_BODY,
+  TP_SPOOR2_TOELICHTING_TITLE,
+} from '@/lib/tp2026/basis-spoor2-begeleiding';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 const INLEIDING_SUB_DELIM = 'staat het volgende:';
@@ -50,7 +56,14 @@ export type BasisAtom =
       showSectionTitle: boolean;
       variant: BasisTextVariant;
     }
-  | { id: string; kind: 'activity'; title: string; body: string; subText?: string | null; showSectionTitle: boolean }
+  | {
+      id: string;
+      kind: 'spoor2';
+      title: string;
+      body: string;
+      showMainBand: boolean;
+      showSubsectionTitle: boolean;
+    }
   | { id: string; kind: 'agreement' }
   | { id: string; kind: 'signature' };
 
@@ -127,41 +140,44 @@ function textVariant(key: string, text: string): BasisTextVariant {
   return 'markdown';
 }
 
-function buildActivityAtoms(data: Record<string, any>): BasisAtom[] {
-  const raw = (data as { tp3_activities?: unknown }).tp3_activities;
-  const selections = normalizeTp3Activities(raw);
+function buildSpoor2Atoms(): BasisAtom[] {
   const atoms: BasisAtom[] = [];
-  if (!selections.length) return atoms;
 
-  const introSlices = chunkByParagraphs(TP_BASIS_TP_ACTIVITIES_INTRO, 760);
-  introSlices.forEach((slice, i) => {
+  atoms.push({
+    id: 'spoor2-main',
+    kind: 'spoor2',
+    title: TP_SPOOR2_SECTION_TITLE,
+    body: '',
+    showMainBand: true,
+    showSubsectionTitle: false,
+  });
+
+  const toelichtingSlices = chunkByParagraphs(TP_SPOOR2_TOELICHTING_BODY, 760);
+  toelichtingSlices.forEach((slice, i) => {
     atoms.push({
-      id: `acts-intro-${i}`,
-      kind: 'text',
-      key: 'acts-intro',
-      title: 'Trajectdoel en in te zetten activiteiten',
-      md: slice,
-      showSectionTitle: i === 0,
-      variant: 'markdown',
+      id: `spoor2-toel-${i}`,
+      kind: 'spoor2',
+      title: TP_SPOOR2_TOELICHTING_TITLE,
+      body: slice,
+      showMainBand: false,
+      showSubsectionTitle: i === 0,
     });
   });
 
-  for (const sel of selections) {
-    const activity = TP_ACTIVITIES.find((a) => a.id === sel.id);
-    if (!activity) continue;
-    const body = getBodyMain(activity);
-    const bodySlices = chunkByParagraphs(body, 760);
+  for (const sub of TP_SPOOR2_SUBSECTIONS) {
+    const bodySlices = chunkByParagraphs(sub.body, 760);
     bodySlices.forEach((slice, i) => {
       atoms.push({
-        id: `act-${activity.id}-${i}`,
-        kind: 'activity',
-        title: activity.title,
+        id: `spoor2-${sub.id}-${i}`,
+        kind: 'spoor2',
+        title: sub.title,
         body: slice,
-        subText: i === bodySlices.length - 1 ? sel.subText ?? null : null,
-        showSectionTitle: i === 0,
+        showMainBand: false,
+        showSubsectionTitle: i === 0,
       });
     });
   }
+
   return atoms;
 }
 
@@ -239,7 +255,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   pushTextField('pow', 'Perspectief op Werk (PoW-meter)', data.pow_meter, '');
   pushTextField('plaats', 'Visie op plaatsbaarheid', data.visie_plaatsbaarheid, '');
 
-  atoms.push(...buildActivityAtoms(data));
+  atoms.push(...buildSpoor2Atoms());
   atoms.push({ id: 'agree', kind: 'agreement' }, { id: 'sign', kind: 'signature' });
 
   return atoms;
@@ -303,7 +319,7 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
     ];
   }
 
-  if (atom.kind === 'activity') {
+  if (atom.kind === 'spoor2' && atom.body.trim()) {
     const parts = splitTextAggressive(atom.body);
     if (!parts) return null;
     const [a, b] = parts;
@@ -313,15 +329,13 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
         ...atom,
         id: `${atom.id}-a`,
         body: a,
-        showSectionTitle: atom.showSectionTitle,
-        subText: null,
+        showSubsectionTitle: atom.showSubsectionTitle,
       },
       {
         ...atom,
         id: `${atom.id}-b`,
         body: b,
-        showSectionTitle: false,
-        subText: atom.subText,
+        showSubsectionTitle: false,
       },
       ...atoms.slice(idx + 1),
     ];
@@ -429,27 +443,17 @@ function TextAtomPreview({
   );
 }
 
-function ActivityAtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'activity' }> }) {
-  const hasSub = typeof atom.subText === 'string' && atom.subText.trim().length > 0;
+function Spoor2AtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'spoor2' }> }) {
+  const body = String(atom.body || '').trim();
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
-      <div className={boxClass}>
-        <div className="text-[12px] leading-relaxed">
-          {String(atom.body || '').trim() ? (
-            <Basis2026MarkdownBody markdown={String(atom.body)} />
-          ) : (
-            <span className="text-neutral-600">—</span>
-          )}
-          {hasSub ? (
-            <div className="mt-2 flex items-start gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-1 shrink-0" />
-              <span>{atom.subText!.trim()}</span>
-            </div>
-          ) : null}
+      {atom.showMainBand ? <SalmonSectionBar title={atom.title} /> : null}
+      {atom.showSubsectionTitle ? <TealSubsectionTitle title={atom.title} /> : null}
+      {body ? (
+        <div className={boxClass}>
+          <Basis2026MarkdownBody markdown={body} />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -460,8 +464,8 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
       return <InleidingAtomPreview data={data} atom={atom} />;
     case 'text':
       return <TextAtomPreview atom={atom} />;
-    case 'activity':
-      return <ActivityAtomPreview atom={atom} />;
+    case 'spoor2':
+      return <Spoor2AtomPreview atom={atom} />;
     case 'agreement':
       return <BasisAgreementBlock />;
     case 'signature':

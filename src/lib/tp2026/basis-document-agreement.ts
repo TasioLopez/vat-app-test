@@ -1,8 +1,5 @@
 /** Shared with legacy Section3 basis preview / TP 2026 basis document. */
 
-export const TP_BASIS_TP_ACTIVITIES_INTRO =
-  'Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.';
-
 export const TP_BASIS_AGREEMENT_INTRO =
   'Met ondertekening van trajectplan gaat u akkoord met onderstaande:';
 
