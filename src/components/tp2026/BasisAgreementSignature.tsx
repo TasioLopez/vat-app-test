@@ -2,8 +2,6 @@
 
 import React from 'react';
 import {
-  TP_BASIS_AGREEMENT_FOOTER_1,
-  TP_BASIS_AGREEMENT_FOOTER_2,
   TP_BASIS_AGREEMENT_INTRO,
   TP_BASIS_AGREEMENT_POINTS,
 } from '@/lib/tp2026/basis-document-agreement';
@@ -15,9 +13,8 @@ const paperText =
 export function BasisAgreementBlock() {
   return (
     <div className="mb-2 mt-3">
-      <SectionBand title="Akkoordverklaring" />
+      <SectionBand title={TP_BASIS_AGREEMENT_INTRO} />
       <div className={paperText}>
-        <p className="mb-2">{TP_BASIS_AGREEMENT_INTRO}</p>
         <div className="ml-1 space-y-1.5">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -27,14 +24,6 @@ export function BasisAgreementBlock() {
             </div>
           ))}
         </div>
-        <p className="mt-3">{TP_BASIS_AGREEMENT_FOOTER_1}</p>
-        <p className="mt-2">
-          {TP_BASIS_AGREEMENT_FOOTER_2.text}
-          <span className="underline">{TP_BASIS_AGREEMENT_FOOTER_2.link1}</span>
-          {TP_BASIS_AGREEMENT_FOOTER_2.middle}
-          <span className="underline">{TP_BASIS_AGREEMENT_FOOTER_2.link2}</span>
-          {TP_BASIS_AGREEMENT_FOOTER_2.end}
-        </p>
       </div>
     </div>
   );

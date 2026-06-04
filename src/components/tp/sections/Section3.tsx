@@ -8,6 +8,10 @@ import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static
 import { InleidingSubBlock } from "../InleidingSubBlock";
 import Logo2 from "@/assets/images/logo-2.png";
 import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity, type TPActivitySelection } from "@/lib/tp/tp_activities";
+import {
+  TP_BASIS_AGREEMENT_INTRO,
+  TP_BASIS_AGREEMENT_POINTS,
+} from '@/lib/tp2026/basis-document-agreement';
 import SectionEditorModal from '../SectionEditorModal';
 import { FileText, Sparkles } from 'lucide-react';
 import { ActivityBody } from './ActivityBody';
@@ -26,30 +30,6 @@ const heading = "text-lg font-semibold text-center mb-6";
 const blockTitle = "font-bold text-[#660066] px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
 const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
-
-// --- Static "agreement" text (from TP template) ---
-const AGREEMENT_INTRO =
-    "Door het trajectplan te ondertekenen, gaat u met onderstaande akkoord;";
-
-const AGREEMENT_POINTS: string[] = [
-    "ValentineZ vraagt eventuele benodigde informatie op bij uw werkgever, zoals een Arbeidsdeskundig Rapport en/of een Inzetbaarheidsprofiel/Functie Mogelijkheden Lijst. ValentineZ heeft deze informatie nodig om u zo goed mogelijk te kunnen begeleiden. De informatie zal zorgvuldig verwerkt en opgeslagen worden en is uitsluitend bedoeld voor intern gebruik.",
-    "Uw loopbaan adviseur kan de verstrekte informatie gebruiken om een rapportage te schrijven over de voortgang van uw begeleiding, deze is uitsluitend bestemd voor uw werkgever en het UWV. De rapportage beperkt zich tot het in kaart brengen van vorderingen in uw re-integratietraject. Er zullen geen medische termen en diagnoses worden vermeld.",
-    "Uw CV kan worden gebruikt worden om u voor te stellen bij andere werkgevers.",
-    "ValentineZ werkt met een multidisciplinair team. Het kan voorkomen dat er, ten behoeve van uw begeleiding, input en/of kennis van derden nodig is. Daarom zijn uw gegevens ook inzichtelijk voor andere medewerkers van ValentineZ.",
-    "U kunt benaderd worden door een extern bureau met het verzoek of u wilt meewerken aan een klanttevredenheidsonderzoek.",
-    "U bent zelf eindverantwoordelijk voor het slagen van uw 2e spoortraject. Het volgen van dit traject vraagt om een investering van tijd en energie van beide partijen. Wij verwachten van u dat u de onderling gemaakte afspraken nakomt en dat u zelf actief meewerkt aan uw eigen re-integratie, met als doel deze zo succesvol mogelijk te laten verlopen.",
-];
-
-const AGREEMENT_FOOTER_1 =
-    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat.";
-
-const AGREEMENT_FOOTER_2 = {
-    text: "Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website ",
-    link1: "www.valentinez.nl",
-    middle: ". Een papieren versie kunt u opvragen via 085 - 800 2010 of ",
-    link2: "info@ValentineZ.nl",
-    end: "."
-};
 
 type PreviewVariant = "block" | "subtle" | "custom";
 
@@ -80,11 +60,10 @@ const TP_ACTIVITIES_INTRO = "Het doel van dit traject is een bevredigend resulta
 function AgreementBlock() {
     return (
         <div>
-            <div className={blockTitle}>Akkoordverklaring</div>
+            <div className={blockTitle}>{TP_BASIS_AGREEMENT_INTRO}</div>
             <div className={paperText}>
-                <p className="mb-3">{AGREEMENT_INTRO}</p>
                 <div className="ml-4 space-y-2 mb-4">
-                    {AGREEMENT_POINTS.map((point, i) => (
+                    {TP_BASIS_AGREEMENT_POINTS.map((point, i) => (
                         <div key={i} className="flex items-start gap-2">
                             <img 
                                 src="/val-logo.jpg" 
@@ -95,14 +74,6 @@ function AgreementBlock() {
                         </div>
                     ))}
                 </div>
-                <p className="text-xs leading-relaxed">{AGREEMENT_FOOTER_1}</p>
-                <p className="text-xs leading-relaxed mt-2">
-                    {AGREEMENT_FOOTER_2.text}
-                    <span className="underline">{AGREEMENT_FOOTER_2.link1}</span>
-                    {AGREEMENT_FOOTER_2.middle}
-                    <span className="underline">{AGREEMENT_FOOTER_2.link2}</span>
-                    {AGREEMENT_FOOTER_2.end}
-                </p>
             </div>
         </div>
     );

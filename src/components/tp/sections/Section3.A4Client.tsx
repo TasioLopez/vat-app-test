@@ -1,5 +1,5 @@
 // CLIENT WRAPPER — Section3.A4Client.tsx
-// Final review/print: includes trajectdoelen, akkoordverklaring (“Door het…”) and signature.
+// Final review/print: includes trajectdoelen, akkoordverklaring and signature.
 
 "use client";
 
@@ -12,6 +12,10 @@ import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static
 import { InleidingSubBlock } from "../InleidingSubBlock";
 import ACTIVITIES, { getBodyMain, normalizeTp3Activities, type TPActivity } from "@/lib/tp/tp_activities";
 import { ActivityBody } from "./ActivityBody";
+import {
+  TP_BASIS_AGREEMENT_INTRO,
+  TP_BASIS_AGREEMENT_POINTS,
+} from '@/lib/tp2026/basis-document-agreement';
 
 const page =
     "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none";
@@ -259,28 +263,6 @@ function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
 const TP_ACTIVITIES_INTRO =
     "Het doel van dit traject is een bevredigend resultaat. Dit houdt in een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden. Onderstaande aanbodversterkende activiteiten zullen ingezet worden om het doel van betaald werk te realiseren.";
 
-// Agreement (Door het …)
-const AGREEMENT_INTRO =
-    "Door het trajectplan te ondertekenen, gaat u met onderstaande akkoord;";
-const AGREEMENT_POINTS: string[] = [
-    "ValentineZ vraagt eventuele benodigde informatie op bij uw werkgever, zoals een Arbeidsdeskundig Rapport en/of een Inzetbaarheidsprofiel/Functie Mogelijkheden Lijst. ValentineZ heeft deze informatie nodig om u zo goed mogelijk te kunnen begeleiden. De informatie zal zorgvuldig verwerkt en opgeslagen worden en is uitsluitend bedoeld voor intern gebruik.",
-    "Uw loopbaan adviseur kan de verstrekte informatie gebruiken om een rapportage te schrijven over de voortgang van uw begeleiding, deze is uitsluitend bestemd voor uw werkgever en het UWV. De rapportage beperkt zich tot het in kaart brengen van vorderingen in uw re-integratietraject. Er zullen geen medische termen en diagnoses worden vermeld.",
-    "Uw CV kan worden gebruikt worden om u voor te stellen bij andere werkgevers.",
-    "ValentineZ werkt met een multidisciplinair team. Het kan voorkomen dat er, ten behoeve van uw begeleiding, input en/of kennis van derden nodig is. Daarom zijn uw gegevens ook inzichtelijk voor andere medewerkers van ValentineZ.",
-    "U kunt benaderd worden door een extern bureau met het verzoek of u wilt meewerken aan een klanttevredenheidsonderzoek.",
-    "U bent zelf eindverantwoordelijk voor het slagen van uw 2e spoortraject. Het volgen van dit traject vraagt om een investering van tijd en energie van beide partijen. Wij verwachten van u dat u de onderling gemaakte afspraken nakomt en dat u zelf actief meewerkt aan uw eigen re-integratie, met als doel deze zo succesvol mogelijk te laten verlopen.",
-];
-const AGREEMENT_FOOTER_1 =
-    "Met ondertekening van dit trajectplan gaat u akkoord met de inhoud van dit trajectplan en de wijze waarop ValentineZ uw gegevens opvraagt, verwerkt, deelt en opslaat.";
-
-const AGREEMENT_FOOTER_2 = {
-    text: "Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons klachtenreglement op onze website ",
-    link1: "www.valentinez.nl",
-    middle: ". Een papieren versie kunt u opvragen via 085 - 800 2010 of ",
-    link2: "info@ValentineZ.nl",
-    end: "."
-};
-
 type PreviewItem = {
     key: string;
     title?: string;
@@ -301,11 +283,10 @@ LogoBar.displayName = "LogoBar";
 function AgreementBlock() {
     return (
         <div>
-            <div className={blockTitle}>Akkoordverklaring</div>
+            <div className={blockTitle}>{TP_BASIS_AGREEMENT_INTRO}</div>
             <div className={paperText}>
-                <p className="mb-2">{AGREEMENT_INTRO}</p>
                 <div className="ml-4 space-y-2">
-                    {AGREEMENT_POINTS.map((t, i) => (
+                    {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
                         <div key={i} className="flex items-start gap-2">
                             <img 
                                 src="/val-logo.jpg" 
@@ -318,14 +299,6 @@ function AgreementBlock() {
                         </div>
                     ))}
                 </div>
-                <p className="mt-3">{AGREEMENT_FOOTER_1}</p>
-                <p className="mt-2">
-                    {AGREEMENT_FOOTER_2.text}
-                    <span className="underline">{AGREEMENT_FOOTER_2.link1}</span>
-                    {AGREEMENT_FOOTER_2.middle}
-                    <span className="underline">{AGREEMENT_FOOTER_2.link2}</span>
-                    {AGREEMENT_FOOTER_2.end}
-                </p>
             </div>
         </div>
     );
