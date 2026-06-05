@@ -439,7 +439,7 @@ function TextAtomPreview({
 
   return (
     <div>
-      {atom.showSectionTitle ? <SectionBand title={atom.title} underline /> : null}
+      {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
       <div className={TP_BASIS_BODY_BOX_CLASS}>
         {toelichtingLabel ? <BasisToelichtingHeading label={toelichtingLabel} /> : null}
         <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
