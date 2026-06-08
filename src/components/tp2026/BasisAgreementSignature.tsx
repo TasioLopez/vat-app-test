@@ -89,7 +89,7 @@ export function BasisSignatureBlock({
           </SignatureCell>
           <div />
         </div>
-        <p className="mt-4 text-[12px] leading-relaxed text-neutral-900">
+        <p className="mt-4 text-[10px] leading-relaxed text-neutral-900">
           Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons
           klachtenreglement op onze website{' '}
           <a
