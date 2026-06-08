@@ -29,81 +29,86 @@ export function BasisAgreementBlock() {
   );
 }
 
+function formatEmployerLine(name: string, jobTitle?: string): string {
+  const contact = String(name || '').trim();
+  const role = String(jobTitle || '').trim();
+  if (contact && role) return `${contact}, ${role}`;
+  return contact || role;
+}
+
+function SignatureCell({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded border border-neutral-400/25 p-3">
+      <div className="mb-2 text-[13px] font-bold text-[#6d2a96]">{title}</div>
+      <div className="space-y-3 text-[12px] leading-relaxed text-neutral-900">{children}</div>
+    </div>
+  );
+}
+
 export function BasisSignatureBlock({
   employeeName,
   advisorName,
   employerContact,
-  employerFunctionCompany,
+  employerFunction,
 }: {
   employeeName: string;
   advisorName: string;
   employerContact: string;
-  employerFunctionCompany?: string;
+  employerFunction?: string;
 }) {
   const row = 'mt-3 grid grid-cols-2 gap-4';
-  const cell = 'rounded border border-[#b8985c] bg-[#f5efe6] p-3';
-  const line = 'inline-block min-w-[140px] border-b border-neutral-900';
-  const label = 'text-[10px] font-bold text-neutral-600';
+  const employerLine = formatEmployerLine(employerContact, employerFunction);
+
   return (
     <div className="mb-2 mt-3">
       <SectionBand title="Ondertekening" />
       <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
         <div className={row}>
-          <div className={cell}>
-            <div className="mb-1 font-semibold">Werknemer</div>
-            <div className="mb-1">
-              <span className={label}>Naam: </span>
-              <span className={line}>{employeeName}</span>
-            </div>
-            <div className="mb-1">
-              <span className={label}>Datum: </span>
-              <span className={line} />
-            </div>
-            <div className="min-h-14 pt-1">
-              <span className={label}>Handtekening: </span>
-              <span className={line} />
-            </div>
-          </div>
-          <div className={cell}>
-            <div className="mb-1 font-semibold">Loopbaanadviseur</div>
-            <div className="mb-1">
-              <span className={label}>Naam: </span>
-              <span className={line}>{advisorName}</span>
-            </div>
-            <div className="mb-1">
-              <span className={label}>Datum: </span>
-              <span className={line} />
-            </div>
-            <div className="min-h-14 pt-1">
-              <span className={label}>Handtekening: </span>
-              <span className={line} />
-            </div>
-          </div>
+          <SignatureCell title="Werknemer">
+            <div>{employeeName}</div>
+            <div className="min-h-[1rem]" aria-hidden />
+            <div className="min-h-14" aria-hidden />
+          </SignatureCell>
+          <SignatureCell title="Valentine Z">
+            <div>{advisorName}</div>
+            <div className="min-h-[1rem]" aria-hidden />
+            <div className="min-h-14" aria-hidden />
+          </SignatureCell>
         </div>
         <div className={row}>
-          <div className={cell}>
-            <div className="mb-1 font-semibold">Opdrachtgever</div>
-            <div className="mb-1">
-              <span className={label}>Naam: </span>
-              <span className={line}>{employerContact}</span>
-            </div>
-            {employerFunctionCompany ? (
-              <div className="mb-1">
-                <span className={label}>Functie, bedrijf: </span>
-                <span className={line}>{employerFunctionCompany}</span>
-              </div>
-            ) : null}
-            <div className="mb-1">
-              <span className={label}>Datum: </span>
-              <span className={line} />
-            </div>
-            <div className="min-h-14 pt-1">
-              <span className={label}>Handtekening: </span>
-              <span className={line} />
-            </div>
-          </div>
+          <SignatureCell title="Opdrachtgever">
+            <div>{employerLine}</div>
+            <div className="min-h-[1rem]" aria-hidden />
+            <div className="min-h-14" aria-hidden />
+          </SignatureCell>
           <div />
         </div>
+        <p className="mt-4 text-[12px] leading-relaxed text-neutral-900">
+          Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons
+          klachtenreglement op onze website{' '}
+          <a
+            href="https://www.valentinez.nl"
+            className="text-neutral-900 underline underline-offset-2"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            www.valentinez.nl
+          </a>
+          . Een papieren versie kunt u opvragen via 085 - 800 2010 of{' '}
+          <a
+            href="mailto:info@valentinez.nl"
+            className="text-neutral-900 underline underline-offset-2"
+          >
+            info@valentinez.nl
+          </a>
+          .
+        </p>
       </div>
     </div>
   );
