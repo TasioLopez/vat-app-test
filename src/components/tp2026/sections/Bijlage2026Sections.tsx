@@ -44,8 +44,8 @@ import { formatNLDate } from '@/lib/tp2026/schema';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import {
-  TP2026_BORDER_GOLD_CLASS,
-  TP2026_CELL_BG_GOLD_CLASS,
+  TP2026_BORDER_THIN_CLASS,
+  TP2026_CELL_BG_WARM_CLASS,
 } from '@/lib/tp2026/tp2026-colors';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
@@ -628,8 +628,8 @@ export function Bijlage1Editor({
 }
 
 /** Left-column label cells (Doel / Periode / Activiteiten). */
-const BIJLAGE1_LABEL_BG = TP2026_CELL_BG_GOLD_CLASS;
-const BIJLAGE_TABLE_BORDER = TP2026_BORDER_GOLD_CLASS;
+const BIJLAGE1_LABEL_BG = TP2026_CELL_BG_WARM_CLASS;
+const BIJLAGE_TABLE_BORDER = TP2026_BORDER_THIN_CLASS;
 
 export function Bijlage1A4Pages({
   data,
@@ -672,30 +672,30 @@ export function Bijlage1A4Pages({
               </colgroup>
               <tbody>
                 <tr>
-                  <td colSpan={2} className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
+                  <td colSpan={2} className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
                     Planning fase {idx + 1}
                   </td>
-                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
+                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
                     Status
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Doel
                   </td>
-                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
+                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
                     {phase.title || '—'}
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Periode
                   </td>
-                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
+                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
                     {renderPeriodeText(phase)}
                   </td>
                 </tr>
@@ -705,15 +705,15 @@ export function Bijlage1A4Pages({
                       {rowIdx === 0 ? (
                         <td
                           rowSpan={rows.length}
-                          className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                          className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                         >
                           Activiteiten
                         </td>
                       ) : null}
-                      <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 align-top text-neutral-900">
+                      <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 align-top text-neutral-900">
                         {activity.name}
                       </td>
-                      <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-center align-top font-bold text-neutral-900">
+                      <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-center align-top font-bold text-neutral-900">
                         {activity.status}
                       </td>
                     </tr>
@@ -867,7 +867,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
   const cols = [model.willen, model.weten, model.kunnen, model.doen] as const;
   const headers = ['WILLEN', 'WETEN', 'KUNNEN', 'DOEN'] as const;
   return (
-    <table className="w-full shrink-0 border-collapse border border-[#c4b37b] table-fixed">
+    <table className="w-full shrink-0 border-collapse border-[0.5pt] border-[#c4b37b] table-fixed">
       <colgroup>
         <col style={{ width: '25%' }} />
         <col style={{ width: '25%' }} />
@@ -879,7 +879,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
           {headers.map((h) => (
             <th
               key={h}
-              className={`border border-[#c4b37b] ${TP2026_CELL_BG_GOLD_CLASS} px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]`}
+              className={`border-[0.5pt] border-[#c4b37b] ${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]`}
             >
               {h}
             </th>
@@ -891,7 +891,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
           {cols.map((col, ci) => (
             <td
               key={ci}
-              className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
+              className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
             >
               {col.map((row, ri) => (
                 <div key={ri} className="flex break-words items-start gap-1 pb-1 last:pb-0">
@@ -918,11 +918,11 @@ function Bijlage2PowHeaderRow() {
 
 function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
   return (
-    <table className="w-full border-collapse border border-[#c4b37b] text-[7pt] leading-[1.45]">
+    <table className="w-full border-collapse border-[0.5pt] border-[#c4b37b] text-[7pt] leading-[1.45]">
       <tbody>
         {tredes.map((t) => (
           <tr key={t.trede}>
-            <td className="w-[78%] border border-[#c4b37b] bg-white px-1.5 py-1 align-top text-neutral-900">
+            <td className="w-[78%] border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top text-neutral-900">
               <div className="mb-1 font-bold text-[#6d2a96]">
                 Trede {t.trede} is succesvol afgerond wanneer:
               </div>
@@ -936,7 +936,7 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
               </div>
             </td>
             <td
-              className={`w-[22%] border border-[#c4b37b] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
+              className={`w-[22%] border-[0.5pt] border-[#c4b37b] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
             >
               Trede {t.trede}
             </td>
@@ -1157,7 +1157,7 @@ function renderBijlage3QuestionCell(step: TP2026Bijlage3Decision) {
 }
 
 const BIJLAGE3_TABLE_SHELL_CLASS =
-  'w-full shrink-0 border-collapse border border-[#c4b37b] table-fixed text-[7pt] leading-[1.45] text-neutral-900';
+  'w-full shrink-0 border-collapse border-[0.5pt] border-[#c4b37b] table-fixed text-[7pt] leading-[1.45] text-neutral-900';
 
 function Bijlage3TableColGroup() {
   return (
@@ -1179,7 +1179,7 @@ function Bijlage3TableThead() {
         {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
           <th
             key={`${h}-${idx}`}
-            className={`border border-[#c4b37b] ${TP2026_CELL_BG_GOLD_CLASS} px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]`}
+            className={`border-[0.5pt] border-[#c4b37b] ${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]`}
           >
             {h}
           </th>
@@ -1196,32 +1196,32 @@ function Bijlage3StepTbody({ step }: { step: TP2026Bijlage3Decision }) {
   return (
     <tbody data-b3-step-id={step.id}>
       <tr>
-        <td className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top">
           {renderBijlage3QuestionCell(step)}
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-center">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-center">
           <div className="font-bold text-[#d4694a]">NEE &gt;</div>
         </td>
-        <td className={`border border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
+        <td className={`border-[0.5pt] border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
           <div className="font-bold">{step.neeTredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
           {String(step.doelUren || '').trim() ? step.doelUren : '—'}
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
           {step.werkboeken.map((w, wi) => (
             <div key={wi} className="break-words pb-0.5 last:pb-0">
               • {w}
             </div>
           ))}
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
         </td>
       </tr>
       <tr>
-        <td colSpan={6} className="border border-[#c4b37b] bg-white px-1.5 py-0.5 align-top">
+        <td colSpan={6} className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-0.5 align-top">
           <div className="font-bold text-[#2d8f82]">JA &gt;</div>
         </td>
       </tr>
@@ -1236,19 +1236,19 @@ function Bijlage3Trede6Tbody({ page2 }: { page2: { doelJa?: boolean; doelNee?: b
   return (
     <tbody data-b3-trede6-body>
       <tr>
-        <td className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top">
           <div className="whitespace-pre-line font-bold text-neutral-900">{BIJLAGE3_PAGE2.focusLine}</div>
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
-        <td className={`border border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass}`}>
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
+        <td className={`border-[0.5pt] border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass}`}>
           <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
           {BIJLAGE3_PAGE2.doelUren}
         </td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-neutral-500">—</td>
-        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
         </td>
       </tr>
@@ -1661,7 +1661,7 @@ export function Bijlage3A4Pages({
               <tr>
                 <td
                   colSpan={6}
-                  className="h-0 max-h-0 border border-[#c4b37b] p-0 leading-none text-[0]"
+                  className="h-0 max-h-0 border-[0.5pt] border-[#c4b37b] p-0 leading-none text-[0]"
                 >
                   &#8203;
                 </td>

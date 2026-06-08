@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
-import { TP2026_CELL_BG_GOLD_CLASS } from '@/lib/tp2026/tp2026-colors';
+import { TP2026_DATA_ROW_LABEL_CLASS, TP2026_FIELD_TABLE_CLASS } from '@/lib/tp2026/tp2026-colors';
 
 export const A4_W = 794;
 export const A4_H = 1123;
@@ -167,7 +167,7 @@ export function SectionBand({
 
 /** Bordered field table: full outer frame + horizontal rules between rows (template-style grid). */
 export function TP2026FieldTable({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`flex flex-col ${className}`}>{children}</div>;
+  return <div className={`${TP2026_FIELD_TABLE_CLASS} ${className}`}>{children}</div>;
 }
 
 /** Two-column form row for TP 2026 A4 (~35% / 65%, Word-style). */
@@ -183,7 +183,7 @@ export function DataRow({
   const size = compact ? 'text-[11px]' : 'text-[12px]';
   return (
     <div className={`grid grid-cols-[35%_65%] ${size} leading-snug`}>
-      <div className={`px-2.5 py-1.5 font-bold text-[#6d2a96] ${TP2026_CELL_BG_GOLD_CLASS} align-top`}>
+      <div className={TP2026_DATA_ROW_LABEL_CLASS}>
         {label}
       </div>
       <div className="px-2.5 py-1.5 font-normal text-neutral-900 bg-white">{value}</div>

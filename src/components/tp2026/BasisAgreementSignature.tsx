@@ -44,7 +44,7 @@ function SignatureCell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded border border-[#c4b37b] p-3">
+    <div className="rounded border-[0.5pt] border-[#c4b37b] p-3">
       <div className="mb-2 text-[13px] font-bold text-[#6d2a96]">{title}</div>
       <div className="space-y-3 text-[12px] leading-relaxed text-neutral-900">{children}</div>
     </div>
