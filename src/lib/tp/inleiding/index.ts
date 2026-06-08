@@ -6,6 +6,7 @@ export {
 export {
   buildInleidingFields,
   buildAdSubBlock,
+  coerceText,
   nlDate,
   stripCitations,
   type InleidingBuildContext,

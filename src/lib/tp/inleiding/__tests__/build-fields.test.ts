@@ -126,6 +126,15 @@ describe('buildInleidingFields', () => {
     assert.match(inleiding, /P\. de Vries, Casemanager bij UWV In opdracht van/);
   });
 
+  it('handles numeric contract_hours from database', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      details: { ...baseCtx.details, contract_hours: 32 },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    assert.match(inleiding, /urenomvang van 32 uur per week/);
+  });
+
   it('falls back to advies_ad_passende_arbeid for AD quote when model quote empty', () => {
     const ctx = {
       ...baseCtx,

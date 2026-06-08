@@ -14,7 +14,7 @@ export type InleidingBuildContext = {
   details: {
     gender?: string | null;
     current_job?: string | null;
-    contract_hours?: string | null;
+    contract_hours?: string | number | null;
     date_of_birth?: string | null;
   };
   meta: {
@@ -33,6 +33,12 @@ export type InleidingFields = {
   inleiding: string;
   inleiding_sub: string;
 };
+
+/** Coerce DB/model values (string | number | null) to trimmed text. */
+export function coerceText(value: unknown, fallback = ''): string {
+  if (value == null || value === '') return fallback;
+  return String(value).trim();
+}
 
 export function nlDate(iso?: string | null): string {
   if (!iso) return '';
@@ -92,7 +98,7 @@ function applyGenderToMedischeText(text: string, gender?: string | null): string
 }
 
 function buildGesprek(ctx: InleidingBuildContext): string {
-  const lastName = ctx.employee.last_name?.trim() || '[achternaam]';
+  const lastName = coerceText(ctx.employee.last_name, '[achternaam]');
   const intakeDate = nlDate(ctx.meta.intake_date) || '[datum intake]';
   return `Ik heb ${heerMevrouw(ctx.details.gender)} ${lastName}, hierna werknemer te noemen, gesproken op ${intakeDate}.`;
 }
@@ -101,10 +107,10 @@ function buildUitval(ctx: InleidingBuildContext): string {
   const age = calculateAge(ctx.details.date_of_birth);
   const agePart = age != null ? `${age}-jarige ` : '';
   const poss = pronPoss(ctx.details.gender);
-  const job = (ctx.details.current_job || '[functie]').toLowerCase();
-  const employer = ctx.client.name?.trim() || '[werkgever]';
+  const job = coerceText(ctx.details.current_job, '[functie]').toLowerCase();
+  const employer = coerceText(ctx.client.name, '[werkgever]');
   const sickDay = nlDate(ctx.meta.first_sick_day) || '[eerste ziektedag]';
-  const hours = ctx.details.contract_hours?.trim() || '[uren]';
+  const hours = coerceText(ctx.details.contract_hours, '[uren]');
   return `Werknemer is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
 }
 
@@ -114,11 +120,11 @@ function buildFunctieomschrijving(body: string): string {
 }
 
 function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentResult): string {
-  const companyName = ctx.client.name?.trim() || '[organisatie]';
+  const companyName = coerceText(ctx.client.name, '[organisatie]');
   const ref = ctx.referent;
   const refInitials = getInitials(ref?.first_name);
-  const refLastName = ref?.last_name?.trim() || '[naam aanmelder]';
-  const refFunction = ref?.referent_function?.trim() || 'contactpersoon';
+  const refLastName = coerceText(ref?.last_name, '[naam aanmelder]');
+  const refFunction = coerceText(ref?.referent_function, 'contactpersoon');
   const refGenderTitle = refTitle(ref?.gender);
 
   const suffix =
@@ -148,7 +154,7 @@ function buildMedischeSituatie(ctx: InleidingBuildContext, content: InleidingCon
 function buildReintegratieEnDoel(ctx: InleidingBuildContext, content: InleidingContentResult): string {
   let reinteg: string;
   if (content.reintegreert_spoor1) {
-    const uren = content.reintegratie_uren?.trim() || '[uren]';
+    const uren = coerceText(content.reintegratie_uren, '[uren]');
     const werkType = content.reintegratie_werk_type || 'eigen werk';
     reinteg = `Ten tijde van het intakegesprek re-integreert werknemer in spoor 1 gedurende ${uren} uur per week in ${werkType}.`;
   } else {
@@ -156,8 +162,9 @@ function buildReintegratieEnDoel(ctx: InleidingBuildContext, content: InleidingC
   }
 
   let doel = `${VALENTINEZ_DOEL_BASE} ${VALENTINEZ_DOEL_AFSLUITING}`;
-  if (content.werknemer_doel_toelichting?.trim()) {
-    doel = `${VALENTINEZ_DOEL_BASE} ${content.werknemer_doel_toelichting.trim()} ${VALENTINEZ_DOEL_AFSLUITING}`;
+  const doelToelichting = coerceText(content.werknemer_doel_toelichting);
+  if (doelToelichting) {
+    doel = `${VALENTINEZ_DOEL_BASE} ${doelToelichting} ${VALENTINEZ_DOEL_AFSLUITING}`;
   }
 
   return `${reinteg} ${doel}`;
@@ -195,11 +202,9 @@ export function buildInleidingFields(
   let inleiding_sub = '';
   if (hasAd) {
     const quote =
-      content.ad_quote?.trim() ||
-      ctx.meta.advies_ad_passende_arbeid?.trim() ||
-      '';
+      coerceText(content.ad_quote) || coerceText(ctx.meta.advies_ad_passende_arbeid);
     if (quote) {
-      const adName = ctx.meta.occupational_doctor_name?.trim() || '[naam arbeidsdeskundige]';
+      const adName = coerceText(ctx.meta.occupational_doctor_name, '[naam arbeidsdeskundige]');
       const adDate = nlDate(ctx.meta.ad_report_date) || '[datum]';
       inleiding_sub = buildAdSubBlock(adName, adDate, quote);
     }
