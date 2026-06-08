@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
-import { getOpenAIFileParams } from "@/lib/openai-file-upload";
-import { INTAKE_LAYOUT_V75_HINT } from "@/lib/document-analysis";
-// Avoid importing beta types to keep build compatible
+import { generateVisieWerknemer } from "@/lib/tp/visie-werknemer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,234 +9,65 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-function stripCitations(text: string): string {
-  if (!text) return text;
-  return text
-    .replace(/\[\d+:\d+\/[^\]]+\.pdf\]/gi, '')
-    .replace(/【[^】]+】/g, '')
-    .replace(/\[\d+:\d+[^\]]*\]/g, '')
-    .replace(/ {2,}/g, ' ')
-    .trim();
-}
-
-function extractStoragePath(url: string): string | null {
-  const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
-  if (m?.[1]) return m[1];
-  if (url?.startsWith("documents/")) return url.slice("documents/".length);
-  if (url && !url.includes("://") && !url.includes("object/")) return url;
-  return null;
-}
-
-async function listEmployeeDocumentPaths(employeeId: string): Promise<string[]> {
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("url")
-    .eq("employee_id", employeeId)
-    .order("uploaded_at", { ascending: false });
-  if (!docs?.length) return [];
-  const paths: string[] = [];
-  for (const d of docs) {
-    const path = extractStoragePath(d.url as string);
-    if (path) paths.push(path);
-  }
-  return paths;
-}
-
-async function uploadDocsToOpenAI(paths: string[]) {
-  const fileIds: string[] = [];
-  for (const p of paths) {
-    const { data: file } = await supabase.storage.from("documents").download(p);
-    if (!file) continue;
-    const buf = Buffer.from(await file.arrayBuffer());
-    const { filename, mimeType } = getOpenAIFileParams(p);
-    const uploaded = await openai.files.create({
-      file: new File([buf], filename, { type: mimeType }),
-      purpose: "assistants",
-    });
-    fileIds.push(uploaded.id);
-  }
-  return fileIds;
-}
-
-// Extract specific section from intake form using AI
-async function extractIntakeSection(
-  employeeId: string,
-  sectionName: string,
-  extraInstructions?: string
-): Promise<string | null> {
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("type, url, uploaded_at")
-    .eq("employee_id", employeeId)
-    .order("uploaded_at", { ascending: false });
-
-  if (!docs?.length) return null;
-
-  const variants = ["intakeformulier", "intake-formulier", "intake"];
-  const intakeDoc = docs.find(d => {
-    const type = (d.type || "").toLowerCase();
-    return variants.some(v => type.includes(v));
-  });
-
-  if (!intakeDoc?.url) return null;
-
-  const path = extractStoragePath(intakeDoc.url);
-  if (!path) return null;
-
-  try {
-    const { data: file } = await supabase.storage.from('documents').download(path);
-    if (!file) return null;
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const { filename, mimeType } = getOpenAIFileParams(path);
-    const uploadedFile = await openai.files.create({
-      file: new File([buffer], filename, { type: mimeType }),
-      purpose: "assistants"
-    });
-
-    const assistant = await openai.beta.assistants.create({
-      name: "Intake Section Extractor",
-      instructions: `Je bent een expert in het extracten van specifieke secties uit Nederlandse intake formulieren.
-
-${INTAKE_LAYOUT_V75_HINT}
-
-Extract ALLEEN de sectie "${sectionName}" uit het intake formulier.
-- Geef de VOLLEDIGE tekst van deze sectie terug
-- Behoud de originele structuur en formatting
-${extraInstructions ? `\n${extraInstructions}\n` : ""}- Als de sectie niet gevonden wordt, retourneer "NIET_GEVONDEN"`,
-      model: "gpt-4o",
-      tools: [{ type: "file_search" }]
-    });
-
-    const thread = await openai.beta.threads.create({
-      messages: [{
-        role: "user",
-        content: `Extract de sectie "${sectionName}" uit dit intake formulier.`,
-        attachments: [{ file_id: uploadedFile.id, tools: [{ type: "file_search" }] }]
-      }]
-    });
-
-    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
-      assistant_id: assistant.id
-    });
-
-    if (run.status !== 'completed') {
-      await openai.beta.assistants.delete(assistant.id);
-      await openai.files.delete(uploadedFile.id);
-      return null;
-    }
-
-    const messages = await openai.beta.threads.messages.list(thread.id);
-    const response = messages.data[0].content[0];
-
-    let extractedText = '';
-    if (response.type === 'text') {
-      extractedText = response.text.value.trim();
-    }
-
-    await openai.beta.assistants.delete(assistant.id);
-    await openai.files.delete(uploadedFile.id);
-
-    return extractedText && extractedText !== 'NIET_GEVONDEN' ? extractedText : null;
-  } catch (error: any) {
-    console.error(`❌ Error extracting ${sectionName}:`, error.message);
-    return null;
-  }
-}
-
-function buildInstructions(extractedIntakeSection?: string | null): string {
-  const intakeBlock = extractedIntakeSection
-    ? `
-BELANGRIJK: Onderstaande tekst komt uit het intake formulier (sectie "Visie van werknemer"). Gebruik ALLEEN deze informatie. Voeg GEEN informatie toe die niet in deze tekst staat (bijv. geen 'open voor scholing' als dat niet genoemd wordt).
-
-INTAKE SECTIE TEKST:
-${extractedIntakeSection}
-`
-    : '';
-
-  return `Je bent een NL re-integratie-rapportage assistent voor ValentineZ.
-${intakeBlock}
-Schrijf UITSLUITEND de sectie "visie_werknemer" op basis van de bovenstaande intake-informatie${extractedIntakeSection ? ' (gebruik ALLEEN wat in de intake staat)' : ''}.
-Vereisten:
-- 1–2 alinea's, scheid alinea's met dubbele newlines (\n\n)
-- Benoem houding/motivatie/wensen, wat lukt/niet lukt gezien huidige belastbaarheid (in eigen woorden), bereidheid t.o.v. 2e spoor alleen indien in de intake genoemd
-- Geen medische details of diagnoses. Zakelijk en AVG-proof
-- SCHRIJFSTIJL: Gebruik "Werknemer" (zonder "De"). NOOIT "De werknemer" schrijven, altijd "Werknemer" aan het begin van zinnen.
-- GEEN citations of bronvermeldingen
-Output uitsluitend JSON: { "visie_werknemer": string }`;
-}
-
-async function runAssistant(files: string[], extractedIntakeSection?: string | null) {
-  const assistant = await openai.beta.assistants.create({
-    name: "TP Visie Werknemer",
-    instructions: buildInstructions(extractedIntakeSection),
-    model: "gpt-4o-mini",
-    tools: [{ type: "file_search" }],
-  });
-
-  const thread = await openai.beta.threads.create({
-    messages: [
-      {
-        role: "user",
-        content: "Genereer de JSON voor visie_werknemer.",
-        attachments: files.map((id) => ({ file_id: id, tools: [{ type: "file_search" }] })),
-      },
-    ],
-  });
-
-  // Use createAndPoll like the working inleiding route
-  const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
-    assistant_id: assistant.id
-  });
-
-  console.log('✅ Assistant run completed with status:', run.status);
-
-  if (run.status !== 'completed') {
-    throw new Error(`Assistant run failed: ${run.status}`);
-  }
-
-  const msgs = await openai.beta.threads.messages.list(thread.id);
-  const text = msgs.data[0]?.content?.[0]?.type === 'text' ? msgs.data[0].content[0].text.value : '';
-  const match = text.match(/\{[\s\S]*\}/);
-  const jsonStr = match ? match[0] : text;
-  let parsed: any = {};
-  try { parsed = JSON.parse(jsonStr); } catch { parsed = { visie_werknemer: text }; }
-
-  return parsed;
+function isIntakeDoc(type: string | null | undefined): boolean {
+  const t = (type || "").toLowerCase();
+  return t.includes("intakeformulier") || t.includes("intake-formulier") || t.includes("intake");
 }
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const employeeId = searchParams.get("employeeId");
-    if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    if (!employeeId) {
+      return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    }
 
-    const VISIE_EXTRA = `Deze sectie kan in het formulier als "Visie van werknemer" of "Visie van de werknemer" staan. De sectie omvat ALLES onder die kop tot de volgende hoofdsectie (bijv. "Algemene informatie"), inclusief alle genummerde onderdelen (13. Werkverleden en verbondenheid, 14. Huidige situatie, 15. Houding t.o.v. spoor 2, 16. Toekomstbeeld en voorkeuren) en hun antwoorden. Geef die volledige inhoud terug, niet alleen de kop.`;
+    const { data: employee } = await supabase
+      .from("employees")
+      .select("first_name, last_name")
+      .eq("id", employeeId)
+      .single();
 
-    let extractedSection =
-      (await extractIntakeSection(employeeId, "Visie van de werknemer", VISIE_EXTRA)) ??
-      (await extractIntakeSection(employeeId, "Visie van werknemer", VISIE_EXTRA));
+    const { data: details } = await supabase
+      .from("employee_details")
+      .select("gender")
+      .eq("employee_id", employeeId)
+      .single();
 
-    if (!extractedSection) {
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("type, url, uploaded_at")
+      .eq("employee_id", employeeId)
+      .order("uploaded_at", { ascending: false });
+
+    const intakeDocs = (docs || []).filter((d) => isIntakeDoc(d.type));
+    if (intakeDocs.length === 0) {
       return NextResponse.json(
-        { error: "Intake sectie 'Visie van werknemer' / 'Visie van de werknemer' niet gevonden of leeg.", details: {} },
+        { error: "Geen intakeformulier gevonden", details: {} },
         { status: 200 }
       );
     }
 
-    // Strip meta-sentence if extractor returned "De sectie ... is niet ingevuld."
-    const nietIngevuldMatch = extractedSection.match(/^De sectie ['"].*?['"] is niet ingevuld\.\s*/i);
-    if (nietIngevuldMatch) {
-      extractedSection = extractedSection.slice(nietIngevuldMatch[0].length).trim();
-    }
+    const ctx = {
+      employee: employee ?? {},
+      details: details ?? {},
+    };
 
-    const docPaths = await listEmployeeDocumentPaths(employeeId);
-    if (docPaths.length === 0) {
-      return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
+    let visie_werknemer: string;
+
+    try {
+      const result = await generateVisieWerknemer(openai, supabase, ctx, intakeDocs);
+      visie_werknemer = result.visie_werknemer;
+      if (!visie_werknemer.trim()) {
+        return NextResponse.json(
+          { error: "Geen visie-informatie gevonden in intakeformulier", details: {} },
+          { status: 200 }
+        );
+      }
+    } catch (error) {
+      console.error("❌ Visie werknemer generation failed:", error);
+      visie_werknemer = `[Visie van werknemer voor ${employee?.first_name || "werknemer"} ${employee?.last_name || ""} - AI generatie mislukt, handmatig invullen vereist]`;
     }
-    const fileIds = await uploadDocsToOpenAI(docPaths);
-    const parsed = await runAssistant(fileIds, extractedSection);
-    const visie_werknemer = stripCitations((parsed?.visie_werknemer || '').trim());
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, visie_werknemer } as any,
@@ -251,8 +80,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("❌ visie-werknemer route error:", err);
-    return NextResponse.json({ error: "Server error", details: err?.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Server error", details: err?.message },
+      { status: 500 }
+    );
   }
 }
-
-
