@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
+import { TP2026_CELL_BG_GOLD_CLASS } from '@/lib/tp2026/tp2026-colors';
 
 export const A4_W = 794;
 export const A4_H = 1123;
@@ -39,7 +40,13 @@ export function A4Page({
   );
 }
 
-export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
+export function A4LogoHeader({
+  compact = false,
+  flowStartSpacerPx,
+}: {
+  compact?: boolean;
+  flowStartSpacerPx?: number;
+}) {
   if (compact) {
     return (
       <div className="mb-2 flex w-full justify-start">
@@ -48,6 +55,7 @@ export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
     );
   }
 
+  const spacerPx = flowStartSpacerPx ?? TP2026_BODY_FLOW_START_SPACER_PX;
   const { leftPx, topPx, widthPx, heightPx } = TP2026_LOGO;
   return (
     <>
@@ -57,7 +65,7 @@ export function A4LogoHeader({ compact = false }: { compact?: boolean }) {
       >
         <Image src={Logo2} alt="ValentineZ" width={widthPx} height={heightPx} loading="eager" />
       </div>
-      <div className="shrink-0" style={{ height: TP2026_BODY_FLOW_START_SPACER_PX }} aria-hidden />
+      <div className="shrink-0" style={{ height: spacerPx }} aria-hidden />
     </>
   );
 }
@@ -75,7 +83,7 @@ export function FooterIdentity({
 }) {
   const name = [lastName, firstName].filter(Boolean).join(' ') || '—';
   return (
-    <div className="mt-auto shrink-0 border-t border-[#b8985c] py-2.5">
+    <div className="mt-auto shrink-0 py-2.5">
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 text-[10px] leading-tight text-neutral-900">
         <div className="flex flex-col gap-1 text-left">
           <div>
@@ -159,13 +167,7 @@ export function SectionBand({
 
 /** Bordered field table: full outer frame + horizontal rules between rows (template-style grid). */
 export function TP2026FieldTable({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`flex flex-col border border-[#b8985c] divide-y divide-[#b8985c] ${className}`}
-    >
-      {children}
-    </div>
-  );
+  return <div className={`flex flex-col ${className}`}>{children}</div>;
 }
 
 /** Two-column form row for TP 2026 A4 (~35% / 65%, Word-style). */
@@ -181,7 +183,7 @@ export function DataRow({
   const size = compact ? 'text-[11px]' : 'text-[12px]';
   return (
     <div className={`grid grid-cols-[35%_65%] ${size} leading-snug`}>
-      <div className="px-2.5 py-1.5 font-bold text-[#6d2a96] bg-[#ebe1cf] border-r border-[#b8985c] align-top">
+      <div className={`px-2.5 py-1.5 font-bold text-[#6d2a96] ${TP2026_CELL_BG_GOLD_CLASS} align-top`}>
         {label}
       </div>
       <div className="px-2.5 py-1.5 font-normal text-neutral-900 bg-white">{value}</div>

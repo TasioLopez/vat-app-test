@@ -1,6 +1,24 @@
 'use client';
 
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   A4LogoHeader,
   A4Page,
   A4_H,
@@ -18,14 +36,22 @@ import type {
 } from '@/lib/tp2026/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/tp2026/bijlage2-official';
 import { BIJLAGE3_PAGE2, BIJLAGE3_STEP_7_ID } from '@/lib/tp2026/bijlage3-official';
-import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
+import {
+  TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX,
+  TP2026_BODY_FLOW_START_SPACER_PX,
+} from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import {
+  TP2026_BORDER_GOLD_CLASS,
+  TP2026_CELL_BG_GOLD_CLASS,
+} from '@/lib/tp2026/tp2026-colors';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { BIJLAGE1_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 
 function TextInput({
   value,
@@ -193,6 +219,69 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
   };
 }
 
+function Bijlage1Draggable({ id, children }: { id: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style = {
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
+      {children}
+    </div>
+  );
+}
+
+function Bijlage1Droppable({
+  id,
+  children,
+  className = '',
+}: {
+  id: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} ${isOver ? 'ring-1 ring-[#6d2a96]/40' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Bijlage1SortableActivityRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (props: { dragHandleProps: Record<string, unknown> }) => ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ dragHandleProps: { ...attributes, ...listeners } })}
+    </div>
+  );
+}
+
+function findPhaseIndexForActivity(phases: TP2026Bijlage1Phase[], activityName: string): number {
+  return phases.findIndex((phase) => phase.activities.some((a) => a.name === activityName));
+}
+
+function resolveDropPhaseIndex(overId: string, phases: TP2026Bijlage1Phase[]): number {
+  if (overId === 'unassigned') return -1;
+  if (overId.startsWith('fase-')) return Number(overId.split('-')[1]);
+  return findPhaseIndexForActivity(phases, overId);
+}
+
 export function Bijlage1Editor({
   phases,
   setPhases,
@@ -205,6 +294,8 @@ export function Bijlage1Editor({
   planEndDate?: string;
 }) {
   const [activePhaseIdx, setActivePhaseIdx] = useState(0);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const normalized = useMemo(() => phases.map((phase, index) => normalizePhase(phase, index)), [phases]);
   const usedActivityNames = useMemo(
     () => new Set(normalized.flatMap((phase) => phase.activities.map((activity) => activity.name))),
@@ -213,6 +304,10 @@ export function Bijlage1Editor({
   const unassigned = useMemo(
     () => ACTIVITY_LIBRARY.filter((activity) => !usedActivityNames.has(activity)),
     [usedActivityNames]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const updatePhase = (idx: number, updater: (prev: TP2026Bijlage1Phase) => TP2026Bijlage1Phase) => {
@@ -251,157 +346,290 @@ export function Bijlage1Editor({
     }));
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="rounded-md border border-border bg-muted/20 p-3">
-        <div className="mb-2 text-sm font-semibold">Templates</div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => applyTemplate('3-fases')}
-            disabled={!planStartDate || !planEndDate}
-          >
-            3 fases (legacy)
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => applyTemplate('2-fases')}
-            disabled={!planStartDate || !planEndDate}
-          >
-            2 fases (legacy)
-          </Button>
-          <Button type="button" size="sm" onClick={addPhase}>
-            Fase toevoegen
-          </Button>
-        </div>
-        {!planStartDate || !planEndDate ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Vul start- en einddatum in bij Gegevens om templates automatisch te vullen.
-          </p>
-        ) : null}
-      </div>
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    if (!over) return;
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-md border border-border p-3">
-          <div className="mb-2 text-sm font-semibold">Beschikbare activiteiten</div>
-          <div className="max-h-[520px] space-y-1 overflow-y-auto pr-1">
-            {unassigned.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Alle activiteiten zijn toegewezen.</p>
-            ) : null}
-            {unassigned.map((activity) => (
-              <button
+    const activityName = String(active.id);
+    const overId = String(over.id);
+    const fromPhaseIdx = findPhaseIndexForActivity(normalized, activityName);
+    const toPhaseIdx = resolveDropPhaseIndex(overId, normalized);
+
+    if (overId === 'unassigned') {
+      if (fromPhaseIdx === -1) return;
+      const next = normalized.map((phase, idx) =>
+        idx === fromPhaseIdx
+          ? { ...phase, activities: phase.activities.filter((a) => a.name !== activityName) }
+          : phase
+      );
+      setPhases(next);
+      return;
+    }
+
+    if (fromPhaseIdx === toPhaseIdx && fromPhaseIdx !== -1) {
+      const items = [...normalized[fromPhaseIdx].activities];
+      const fromIndex = items.findIndex((a) => a.name === activityName);
+      const toIndex = items.findIndex((a) => a.name === overId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+      const next = normalized.map((phase, idx) =>
+        idx === fromPhaseIdx ? { ...phase, activities: arrayMove(items, fromIndex, toIndex) } : phase
+      );
+      setPhases(next);
+      return;
+    }
+
+    if (fromPhaseIdx === -1 && toPhaseIdx !== -1) {
+      const next = normalized.map((phase, idx) =>
+        idx === toPhaseIdx
+          ? { ...phase, activities: [...phase.activities, { name: activityName, status: 'P' as const }] }
+          : phase
+      );
+      setPhases(next);
+      return;
+    }
+
+    if (fromPhaseIdx !== -1 && toPhaseIdx !== -1) {
+      const moved = normalized[fromPhaseIdx].activities.find((a) => a.name === activityName);
+      if (!moved) return;
+      const next = normalized.map((phase, idx) => {
+        if (idx === fromPhaseIdx) {
+          return { ...phase, activities: phase.activities.filter((a) => a.name !== activityName) };
+        }
+        if (idx === toPhaseIdx) {
+          const overActivityIdx = phase.activities.findIndex((a) => a.name === overId);
+          const activities = [...phase.activities];
+          if (overActivityIdx >= 0) {
+            activities.splice(overActivityIdx, 0, moved);
+          } else {
+            activities.push(moved);
+          }
+          return { ...phase, activities };
+        }
+        return phase;
+      });
+      setPhases(next);
+    }
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(event) => setActiveDragId(String(event.active.id))}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveDragId(null)}
+    >
+      <div className="space-y-4">
+        <div className="rounded-md border border-border bg-muted/20 p-3">
+          <div className="mb-2 text-sm font-semibold">Templates</div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => applyTemplate('3-fases')}
+              disabled={!planStartDate || !planEndDate}
+            >
+              3 fases (legacy)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => applyTemplate('2-fases')}
+              disabled={!planStartDate || !planEndDate}
+            >
+              2 fases (legacy)
+            </Button>
+            <Button type="button" size="sm" onClick={addPhase}>
+              Fase toevoegen
+            </Button>
+          </div>
+          {!planStartDate || !planEndDate ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Vul start- en einddatum in bij Gegevens om templates automatisch te vullen.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex gap-4">
+          {sidebarCollapsed ? (
+            <div className="flex w-9 shrink-0 flex-col items-center pt-1">
+              <Button
                 type="button"
-                key={activity}
-                className="w-full rounded border bg-white px-2 py-1 text-left text-xs hover:bg-muted"
-                onClick={() => addActivityToActivePhase(activity)}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Beschikbare activiteiten uitklappen"
+                aria-expanded={false}
+                onClick={() => setSidebarCollapsed(false)}
               >
-                {activity}
-              </button>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="min-w-[200px] max-w-[280px] shrink-0 rounded-md border border-border p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold">Beschikbare activiteiten</div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  aria-label="Beschikbare activiteiten inklappen"
+                  aria-expanded={true}
+                  onClick={() => setSidebarCollapsed(true)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              <Bijlage1Droppable id="unassigned" className="max-h-[520px] space-y-1 overflow-y-auto pr-1">
+                {unassigned.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Alle activiteiten zijn toegewezen.</p>
+                ) : null}
+                {unassigned.map((activity) => (
+                  <Bijlage1Draggable key={activity} id={activity}>
+                    <button
+                      type="button"
+                      className="w-full rounded border bg-white px-2 py-1 text-left text-xs hover:bg-muted"
+                      onClick={() => addActivityToActivePhase(activity)}
+                    >
+                      {activity}
+                    </button>
+                  </Bijlage1Draggable>
+                ))}
+              </Bijlage1Droppable>
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1 space-y-4">
+            {normalized.map((phase, phaseIdx) => (
+              <div
+                key={phaseIdx}
+                className={`rounded-md border p-3 ${activePhaseIdx === phaseIdx ? 'border-[#6d2a96]' : 'border-border'}`}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-left"
+                    onClick={() => setActivePhaseIdx(phaseIdx)}
+                  >
+                    Planning fase {phaseIdx + 1}
+                  </button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removePhase(phaseIdx)}>
+                    Verwijder
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <TextInput
+                    value={phase.title}
+                    onChange={(v) => updatePhase(phaseIdx, (p) => ({ ...p, title: v }))}
+                    placeholder="Doel"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      className="w-full border border-border rounded px-2 py-1 text-sm"
+                      value={phase.period_from || ''}
+                      onChange={(e) => updatePhase(phaseIdx, (p) => ({ ...p, period_from: e.target.value }))}
+                    />
+                    <input
+                      type="date"
+                      className="w-full border border-border rounded px-2 py-1 text-sm"
+                      value={phase.period_to || ''}
+                      onChange={(e) => updatePhase(phaseIdx, (p) => ({ ...p, period_to: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <Bijlage1Droppable
+                  id={`fase-${phaseIdx}`}
+                  className="mt-3 min-h-[40px] space-y-1 rounded-md border border-dashed border-border/60 p-1"
+                >
+                  <SortableContext
+                    items={phase.activities.map((a) => a.name)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {phase.activities.map((activity, actIdx) => (
+                      <Bijlage1SortableActivityRow key={`${phaseIdx}-${activity.name}`} id={activity.name}>
+                        {({ dragHandleProps }) => (
+                          <div className="grid grid-cols-[auto_1fr_70px_56px] items-center gap-2">
+                            <button
+                              type="button"
+                              className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                              aria-label="Sleep activiteit"
+                              {...dragHandleProps}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
+                            <TextInput
+                              value={activity.name}
+                              onChange={(v) =>
+                                updatePhase(phaseIdx, (p) => ({
+                                  ...p,
+                                  activities: p.activities.map((row, rowIdx) =>
+                                    rowIdx === actIdx ? { ...row, name: v } : row
+                                  ),
+                                }))
+                              }
+                            />
+                            <select
+                              className="border border-border rounded px-2 py-1 text-sm"
+                              value={activity.status}
+                              onChange={(e) =>
+                                updatePhase(phaseIdx, (p) => ({
+                                  ...p,
+                                  activities: p.activities.map((row, rowIdx) =>
+                                    rowIdx === actIdx
+                                      ? { ...row, status: e.target.value as TP2026Bijlage1Activity['status'] }
+                                      : row
+                                  ),
+                                }))
+                              }
+                            >
+                              {STATUS_OPTIONS.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                updatePhase(phaseIdx, (p) => ({
+                                  ...p,
+                                  activities: p.activities.filter((_, rowIdx) => rowIdx !== actIdx),
+                                }))
+                              }
+                            >
+                              X
+                            </Button>
+                          </div>
+                        )}
+                      </Bijlage1SortableActivityRow>
+                    ))}
+                  </SortableContext>
+                </Bijlage1Droppable>
+              </div>
             ))}
           </div>
         </div>
-
-        <div className="space-y-4">
-          {normalized.map((phase, phaseIdx) => (
-            <div
-              key={phaseIdx}
-              className={`rounded-md border p-3 ${activePhaseIdx === phaseIdx ? 'border-[#6d2a96]' : 'border-border'}`}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-left"
-                  onClick={() => setActivePhaseIdx(phaseIdx)}
-                >
-                  Planning fase {phaseIdx + 1}
-                </button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => removePhase(phaseIdx)}>
-                  Verwijder
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <TextInput
-                  value={phase.title}
-                  onChange={(v) => updatePhase(phaseIdx, (p) => ({ ...p, title: v }))}
-                  placeholder="Doel"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    className="w-full border border-border rounded px-2 py-1 text-sm"
-                    value={phase.period_from || ''}
-                    onChange={(e) => updatePhase(phaseIdx, (p) => ({ ...p, period_from: e.target.value }))}
-                  />
-                  <input
-                    type="date"
-                    className="w-full border border-border rounded px-2 py-1 text-sm"
-                    value={phase.period_to || ''}
-                    onChange={(e) => updatePhase(phaseIdx, (p) => ({ ...p, period_to: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="mt-3 space-y-1">
-                {phase.activities.map((activity, actIdx) => (
-                  <div key={`${phaseIdx}-${actIdx}`} className="grid grid-cols-[1fr_70px_56px] gap-2">
-                    <TextInput
-                      value={activity.name}
-                      onChange={(v) =>
-                        updatePhase(phaseIdx, (p) => ({
-                          ...p,
-                          activities: p.activities.map((row, rowIdx) =>
-                            rowIdx === actIdx ? { ...row, name: v } : row
-                          ),
-                        }))
-                      }
-                    />
-                    <select
-                      className="border border-border rounded px-2 py-1 text-sm"
-                      value={activity.status}
-                      onChange={(e) =>
-                        updatePhase(phaseIdx, (p) => ({
-                          ...p,
-                          activities: p.activities.map((row, rowIdx) =>
-                            rowIdx === actIdx ? { ...row, status: e.target.value as TP2026Bijlage1Activity['status'] } : row
-                          ),
-                        }))
-                      }
-                    >
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        updatePhase(phaseIdx, (p) => ({
-                          ...p,
-                          activities: p.activities.filter((_, rowIdx) => rowIdx !== actIdx),
-                        }))
-                      }
-                    >
-                      X
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
-    </div>
+
+      <DragOverlay>
+        {activeDragId ? (
+          <div className="rounded border bg-white px-2 py-1 text-xs shadow-md">{activeDragId}</div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
-/** Left-column label cells (Doel / Periode / Activiteiten) — Word template orange tint */
-const BIJLAGE1_LABEL_ORANGE = 'bg-[#fcd8b8]';
+/** Left-column label cells (Doel / Periode / Activiteiten). */
+const BIJLAGE1_LABEL_BG = TP2026_CELL_BG_GOLD_CLASS;
+const BIJLAGE_TABLE_BORDER = TP2026_BORDER_GOLD_CLASS;
 
 export function Bijlage1A4Pages({
   data,
@@ -426,8 +654,8 @@ export function Bijlage1A4Pages({
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       {/* Scroll main body; footer stays pinned to bottom of A4 (avoids clipped fase 3 + stray gap). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-        <A4LogoHeader />
-        <div className="mb-2 shrink-0">
+        <A4LogoHeader flowStartSpacerPx={TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX} />
+        <div className="mb-1 shrink-0">
           {/* Google Doc: "Bijlage 1" 11 pt; subtitle "Voortgang en planning" 10 pt (smaller). */}
           <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>
           <div className="mt-0.5 text-[10pt] leading-tight font-bold tracking-tight text-[#2d8f82]">
@@ -436,7 +664,7 @@ export function Bijlage1A4Pages({
         </div>
         <div className="shrink-0 space-y-1.5 text-[10pt] leading-snug text-neutral-900">
           {normalized.map((phase, idx) => (
-            <table key={idx} className="w-full border border-[#b8985c] border-collapse table-fixed bg-white">
+            <table key={idx} className={`w-full ${BIJLAGE_TABLE_BORDER} border-collapse table-fixed bg-white`}>
               <colgroup>
                 <col style={{ width: '22%' }} />
                 <col style={{ width: '68%' }} />
@@ -444,30 +672,30 @@ export function Bijlage1A4Pages({
               </colgroup>
               <tbody>
                 <tr>
-                  <td colSpan={2} className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
+                  <td colSpan={2} className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
                     Planning fase {idx + 1}
                   </td>
-                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
+                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
                     Status
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                    className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Doel
                   </td>
-                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-[#6d2a96] align-top" colSpan={2}>
+                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
                     {phase.title || '—'}
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                    className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Periode
                   </td>
-                  <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
+                  <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
                     {renderPeriodeText(phase)}
                   </td>
                 </tr>
@@ -477,15 +705,15 @@ export function Bijlage1A4Pages({
                       {rowIdx === 0 ? (
                         <td
                           rowSpan={rows.length}
-                          className={`border border-[#b8985c] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_ORANGE}`}
+                          className={`border border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                         >
                           Activiteiten
                         </td>
                       ) : null}
-                      <td className="border border-[#b8985c] !bg-white px-2 py-0.5 align-top text-neutral-900">
+                      <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 align-top text-neutral-900">
                         {activity.name}
                       </td>
-                      <td className="border border-[#b8985c] !bg-white px-2 py-0.5 text-center align-top text-neutral-900">
+                      <td className="border border-[#c4b37b] !bg-white px-2 py-0.5 text-center align-top font-bold text-neutral-900">
                         {activity.status}
                       </td>
                     </tr>
@@ -639,7 +867,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
   const cols = [model.willen, model.weten, model.kunnen, model.doen] as const;
   const headers = ['WILLEN', 'WETEN', 'KUNNEN', 'DOEN'] as const;
   return (
-    <table className="w-full shrink-0 border-collapse border border-[#b8985c] table-fixed">
+    <table className="w-full shrink-0 border-collapse border border-[#c4b37b] table-fixed">
       <colgroup>
         <col style={{ width: '25%' }} />
         <col style={{ width: '25%' }} />
@@ -651,7 +879,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
           {headers.map((h) => (
             <th
               key={h}
-              className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]"
+              className={`border border-[#c4b37b] ${TP2026_CELL_BG_GOLD_CLASS} px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]`}
             >
               {h}
             </th>
@@ -663,7 +891,7 @@ function Bijlage2BasisTable({ model }: { model: TP2026Bijlage2Model }) {
           {cols.map((col, ci) => (
             <td
               key={ci}
-              className="border border-[#b8985c] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
+              className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
             >
               {col.map((row, ri) => (
                 <div key={ri} className="flex break-words items-start gap-1 pb-1 last:pb-0">
@@ -690,11 +918,11 @@ function Bijlage2PowHeaderRow() {
 
 function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
   return (
-    <table className="w-full border-collapse border border-[#b8985c] text-[7pt] leading-[1.45]">
+    <table className="w-full border-collapse border border-[#c4b37b] text-[7pt] leading-[1.45]">
       <tbody>
         {tredes.map((t) => (
           <tr key={t.trede}>
-            <td className="w-[78%] border border-[#b8985c] bg-white px-1.5 py-1 align-top text-neutral-900">
+            <td className="w-[78%] border border-[#c4b37b] bg-white px-1.5 py-1 align-top text-neutral-900">
               <div className="mb-1 font-bold text-[#6d2a96]">
                 Trede {t.trede} is succesvol afgerond wanneer:
               </div>
@@ -708,7 +936,7 @@ function Bijlage2PowRows({ tredes }: { tredes: TP2026Bijlage2PowTrede[] }) {
               </div>
             </td>
             <td
-              className={`w-[22%] border border-[#b8985c] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
+              className={`w-[22%] border border-[#c4b37b] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
             >
               Trede {t.trede}
             </td>
@@ -929,7 +1157,7 @@ function renderBijlage3QuestionCell(step: TP2026Bijlage3Decision) {
 }
 
 const BIJLAGE3_TABLE_SHELL_CLASS =
-  'w-full shrink-0 border-collapse border border-[#b8985c] table-fixed text-[7pt] leading-[1.45] text-neutral-900';
+  'w-full shrink-0 border-collapse border border-[#c4b37b] table-fixed text-[7pt] leading-[1.45] text-neutral-900';
 
 function Bijlage3TableColGroup() {
   return (
@@ -951,7 +1179,7 @@ function Bijlage3TableThead() {
         {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
           <th
             key={`${h}-${idx}`}
-            className="border border-[#b8985c] bg-[#ebe1cf] px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]"
+            className={`border border-[#c4b37b] ${TP2026_CELL_BG_GOLD_CLASS} px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]`}
           >
             {h}
           </th>
@@ -968,32 +1196,32 @@ function Bijlage3StepTbody({ step }: { step: TP2026Bijlage3Decision }) {
   return (
     <tbody data-b3-step-id={step.id}>
       <tr>
-        <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
+        <td className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top">
           {renderBijlage3QuestionCell(step)}
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-center">
           <div className="font-bold text-[#d4694a]">NEE &gt;</div>
         </td>
-        <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
+        <td className={`border border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
           <div className="font-bold">{step.neeTredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
           {String(step.doelUren || '').trim() ? step.doelUren : '—'}
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
           {step.werkboeken.map((w, wi) => (
             <div key={wi} className="break-words pb-0.5 last:pb-0">
               • {w}
             </div>
           ))}
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
         </td>
       </tr>
       <tr>
-        <td colSpan={6} className="border border-[#b8985c] bg-white px-1.5 py-0.5 align-top">
+        <td colSpan={6} className="border border-[#c4b37b] bg-white px-1.5 py-0.5 align-top">
           <div className="font-bold text-[#2d8f82]">JA &gt;</div>
         </td>
       </tr>
@@ -1008,19 +1236,19 @@ function Bijlage3Trede6Tbody({ page2 }: { page2: { doelJa?: boolean; doelNee?: b
   return (
     <tbody data-b3-trede6-body>
       <tr>
-        <td className="border border-[#b8985c] bg-white px-1.5 py-1 align-top">
+        <td className="border border-[#c4b37b] bg-white px-1.5 py-1 align-top">
           <div className="whitespace-pre-line font-bold text-neutral-900">{BIJLAGE3_PAGE2.focusLine}</div>
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
-        <td className={`border border-[#b8985c] px-1 py-1 align-top ${tredeCellClass}`}>
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
+        <td className={`border border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass}`}>
           <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
           {BIJLAGE3_PAGE2.doelUren}
         </td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top text-neutral-500">—</td>
-        <td className="border border-[#b8985c] bg-white px-1 py-1 align-top">
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top text-neutral-500">—</td>
+        <td className="border border-[#c4b37b] bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
         </td>
       </tr>
@@ -1433,7 +1661,7 @@ export function Bijlage3A4Pages({
               <tr>
                 <td
                   colSpan={6}
-                  className="h-0 max-h-0 border border-[#b8985c] p-0 leading-none text-[0]"
+                  className="h-0 max-h-0 border border-[#c4b37b] p-0 leading-none text-[0]"
                 >
                   &#8203;
                 </td>
