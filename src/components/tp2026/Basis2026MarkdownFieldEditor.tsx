@@ -2,7 +2,7 @@
 
 import '@mdxeditor/editor/style.css';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
@@ -13,6 +13,7 @@ import {
   ListsToggle,
   markdownShortcutPlugin,
   MDXEditor,
+  type MDXEditorMethods,
   quotePlugin,
   Separator,
   toolbarPlugin,
@@ -35,6 +36,21 @@ export function Basis2026MarkdownFieldEditor({
   placeholder,
   minHeightClassName = 'min-h-[220px]',
 }: Props) {
+  const editorRef = useRef<MDXEditorMethods>(null);
+  const lastEmitted = useRef(markdown);
+
+  useEffect(() => {
+    if (markdown !== lastEmitted.current) {
+      editorRef.current?.setMarkdown(markdown);
+      lastEmitted.current = markdown;
+    }
+  }, [markdown]);
+
+  const handleChange = (md: string) => {
+    lastEmitted.current = md;
+    onChange(md);
+  };
+
   const plugins = useMemo(
     () => [
       headingsPlugin(),
@@ -64,8 +80,9 @@ export function Basis2026MarkdownFieldEditor({
   return (
     <div className="overflow-hidden rounded-md border border-[#b8985c] bg-white">
       <MDXEditor
+        ref={editorRef}
         markdown={markdown}
-        onChange={(md) => onChange(md)}
+        onChange={handleChange}
         plugins={plugins}
         suppressHtmlProcessing
         className="bg-white"

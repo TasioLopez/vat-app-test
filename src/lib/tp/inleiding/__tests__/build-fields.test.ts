@@ -5,7 +5,7 @@ import {
   buildInleidingFields,
   type InleidingBuildContext,
 } from '../build-fields';
-import { AD_INTRO_SUFFIX, INLEIDING_GEEN_AD } from '../constants';
+import { AD_INTRO_SUFFIX, INLEIDING_GEEN_AD, isAdSubBlock } from '../constants';
 import type { InleidingContentResult } from '../schema';
 
 const baseCtx: InleidingBuildContext = {
@@ -154,5 +154,19 @@ describe('buildAdSubBlock', () => {
     const block = buildAdSubBlock('dhr. X', '15 januari 2026', 'Citaat tekst.');
     assert.match(block, /op 15 januari 2026 staat het volgende advies/);
     assert.ok(block.endsWith('Citaat tekst.'));
+  });
+});
+
+describe('isAdSubBlock', () => {
+  it('detects V2 AD intro suffix', () => {
+    assert.equal(isAdSubBlock(`Intro ${AD_INTRO_SUFFIX} quote`), true);
+  });
+
+  it('detects legacy AD intro suffix', () => {
+    assert.equal(isAdSubBlock('Intro staat het volgende: quote'), true);
+  });
+
+  it('returns false for unrelated text', () => {
+    assert.equal(isAdSubBlock(INLEIDING_GEEN_AD), false);
   });
 });

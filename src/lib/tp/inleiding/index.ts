@@ -1,7 +1,9 @@
 export {
   INLEIDING_GEEN_AD,
   AD_INTRO_SUFFIX,
+  AD_INTRO_SUFFIX_LEGACY,
   DEFAULT_INLEIDING_MODEL,
+  isAdSubBlock,
 } from './constants';
 export {
   buildInleidingFields,

@@ -7,6 +7,7 @@ import { TP2026BasisFields } from '@/lib/tp2026/schema';
 import { TP2026_BASIS_AUTOFILL_ENDPOINTS } from '@/lib/tp2026/basis-autofill-endpoints';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
+import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
 export { Basis2026A4Pages } from '@/components/tp2026/Basis2026A4Measured';
@@ -68,11 +69,17 @@ function BasisFieldEditorRow({
   updateField: (key: string, value: any) => void;
   onAutofillField?: (fieldKey: string) => Promise<void>;
 }) {
+  if (field.key === 'inleiding_sub') {
+    return null;
+  }
+
   const canAutofill = Boolean(onAutofillField && TP2026_BASIS_AUTOFILL_ENDPOINTS[field.key]);
 
   if (field.type !== 'multiline') {
     return <FieldControl field={field} value={data[field.key]} onChange={(v) => updateField(field.key, v)} />;
   }
+
+  const inleidingSub = field.key === 'inleiding' ? String(data.inleiding_sub ?? '').trim() : '';
 
   return (
     <div>
@@ -93,6 +100,14 @@ function BasisFieldEditorRow({
         onChange={(md) => updateField(field.key, md)}
         placeholder={field.placeholder}
       />
+      {inleidingSub ? (
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
+          <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
+            <InleidingSubBlock text={inleidingSub} className="text-sm leading-relaxed text-neutral-900" />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

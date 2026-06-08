@@ -25,6 +25,14 @@ export const VALENTINEZ_DOEL_AFSLUITING =
 export const AD_INTRO_SUFFIX =
   'staat het volgende advies ten aanzien van het inzetten van een tweede spoor traject:';
 
+/** Legacy AD intro delimiter (still present in older inleiding_sub values). */
+export const AD_INTRO_SUFFIX_LEGACY = 'staat het volgende:';
+
+/** Whether inleiding_sub should render via InleidingSubBlock (bold intro + italic quote). */
+export function isAdSubBlock(text: string): boolean {
+  return text.includes(AD_INTRO_SUFFIX) || text.includes(AD_INTRO_SUFFIX_LEGACY);
+}
+
 /** Default model — override with OPENAI_INLEIDING_MODEL (e.g. gpt-5.1-2025-11-13). */
 export const DEFAULT_INLEIDING_MODEL = 'gpt-5.1-2025-11-13';
 

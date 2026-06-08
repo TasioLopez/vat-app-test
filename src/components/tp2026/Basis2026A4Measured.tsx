@@ -35,8 +35,6 @@ import {
 import { resolveSpoor2Selections } from '@/lib/tp/tp_activities';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
-const INLEIDING_SUB_DELIM = 'staat het volgende:';
-
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
 
@@ -362,15 +360,11 @@ function InleidingAtomPreview({
   atom: Extract<BasisAtom, { kind: 'inleiding' }>;
 }) {
   const sub = String(data.inleiding_sub || '').trim();
-  const useDelimiterBlock = sub.includes(INLEIDING_SUB_DELIM);
 
   return (
     <div>
       {atom.showSectionTitle ? <SectionBand title="Inleiding" /> : null}
       <div className={TP_BASIS_BODY_BOX_CLASS}>
-        {atom.showSectionTitle ? (
-          <BasisToelichtingHeading label={TP_BASIS_TOELICHTING_DEFAULT} />
-        ) : null}
         {String(atom.md || '').trim() ? (
           <Basis2026MarkdownBody markdown={String(atom.md)} />
         ) : atom.showSectionTitle ? (
@@ -381,11 +375,7 @@ function InleidingAtomPreview({
         ) : null}
         {atom.showToelichting && sub ? (
           <div className="mt-4">
-            {useDelimiterBlock ? (
-              <InleidingSubBlock text={sub} className="text-[12px] leading-relaxed text-neutral-900" />
-            ) : (
-              <Basis2026MarkdownBody markdown={sub} />
-            )}
+            <InleidingSubBlock text={sub} className="text-[12px] leading-relaxed text-neutral-900" />
           </div>
         ) : null}
       </div>
