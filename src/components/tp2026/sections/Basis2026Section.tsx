@@ -6,6 +6,8 @@ import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026BasisFields } from '@/lib/tp2026/schema';
 import { TP2026_BASIS_AUTOFILL_ENDPOINTS } from '@/lib/tp2026/basis-autofill-endpoints';
 import FieldControl from '@/components/tp2026/FieldControl';
+import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
+import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
 export { Basis2026A4Pages } from '@/components/tp2026/Basis2026A4Measured';
 
@@ -40,6 +42,17 @@ export function Basis2026Editor({
           onAutofillField={onAutofillField}
         />
       ))}
+      <div>
+        <label className="mb-2 block text-sm font-semibold text-foreground">{TP_SPOOR2_SECTION_TITLE}</label>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Selecteer welke onderdelen in het trajectplan verschijnen. Optioneel kunt u per onderdeel een subtekst met
+          Z-logo toevoegen.
+        </p>
+        <Spoor2ActivitiesEditor
+          tp3Activities={data.tp3_activities}
+          onChange={(next) => updateField('tp3_activities', next)}
+        />
+      </div>
     </div>
   );
 }

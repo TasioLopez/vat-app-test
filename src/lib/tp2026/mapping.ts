@@ -11,6 +11,7 @@ import type {
 import { createOfficialBijlage2Model } from '@/lib/tp2026/bijlage2-official';
 import { createOfficialBijlage3Decisions } from '@/lib/tp2026/bijlage3-official';
 import { resolveBijlage1PhaseDates } from '@/lib/tp2026/bijlage1-dates';
+import { normalizeTp3Activities } from '@/lib/tp/tp_activities';
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -259,6 +260,10 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   const transport = normalizeStringArrayField(next.transport_type);
   if (transport.length > 0) {
     next.transport_type = transport;
+  }
+
+  if (next.tp3_activities !== null && next.tp3_activities !== undefined) {
+    next.tp3_activities = normalizeTp3Activities(next.tp3_activities);
   }
 
   return next;

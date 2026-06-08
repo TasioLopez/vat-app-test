@@ -10,9 +10,79 @@ export type Spoor2Subsection = {
   id: string;
   title: string;
   body: string;
+  subTextTemplates?: [string, string, string];
 };
 
-export const TP_SPOOR2_SUBSECTIONS: Spoor2Subsection[] = [
+/** Preset subtext variants (Z-logo bullet) per subsection — editable via partner copy updates. */
+export const SPOOR2_SUBTEXT_TEMPLATES: Record<string, [string, string, string]> = {
+  'verwerking-verlies-acceptatie': [
+    'Werknemer is bereid om in gesprekken het verlies van de baan te verwerken en stappen te zetten richting een nieuwe toekomst.',
+    'De loopbaanadviseur ondersteunt werknemer bij het verwerken van het baanverlies en het vinden van een nieuwe richting.',
+    'Verwerking en acceptatie van het verlies maken onderdeel uit van de begeleiding; werknemer staat hiervoor open.',
+  ],
+  empowerment: [
+    'Werknemer is gemotiveerd om met de methodiek weten, willen, kunnen, doen aan de slag te gaan en de regie te hernemen.',
+    'Empowerment wordt ingezet waar nodig; werknemer staat open voor gesprekken en huiswerkopdrachten die het zelfvertrouwen versterken.',
+    'De loopbaanadviseur zet empowerment in zodat werknemer weer vertrouwen krijgt in eigen kunnen.',
+  ],
+  orientatie: [
+    'Werknemer staat open voor een oriëntatie op persoonlijkheid, competenties en beroepen; een interesse- of competentietest kan worden ingezet indien nodig.',
+    'Tijdens de oriëntatie wordt gewerkt aan een persoonlijk zoekprofiel dat aansluit bij de mogelijkheden van werknemer.',
+    'De loopbaanadviseur begeleidt werknemer bij het in kaart brengen van wensen en mogelijkheden op de arbeidsmarkt.',
+  ],
+  scholing: [
+    'Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.',
+    'Werknemer is bereid om scholingsmogelijkheden te verkennen indien dit het traject ondersteunt.',
+    'Scholing wordt alleen ingezet wanneer dit noodzakelijk is; werknemer staat open voor een korte, passende cursus.',
+  ],
+  'social-media': [
+    'Werknemer heeft genoeg pc-vaardigheden, voor specifieke Social mediapresentatie zal de loopbaanadviseur de nodige begeleiding bieden.',
+    'Werknemer kan met ondersteuning van de loopbaanadviseur een professioneel LinkedIn-profiel opzetten.',
+    'Voor het optimaal gebruik van social media bij solliciteren biedt de loopbaanadviseur de benodigde begeleiding.',
+  ],
+  webinars: [
+    'Werknemer heeft genoeg pc-vaardigheden om via de pc webinars te volgen, loopbaan adviseur zal hierin adviseren welke nuttig kunnen zijn voor werknemer.',
+    'Werknemer kan webinars volgen; de loopbaanadviseur adviseert welke webinars het meest passend zijn.',
+    'Online webinars sluiten aan bij de mogelijkheden van werknemer; advies over keuze volgt van de loopbaanadviseur.',
+  ],
+  'sollicitatievaardigheden-en-sollicitatietools': [
+    'Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.',
+    'CV en sollicitatievaardigheden worden samen met de loopbaanadviseur op maat bijgewerkt.',
+    'De loopbaanadviseur ondersteunt werknemer bij cv, sollicitatiebrieven en het gebruik van sollicitatietools.',
+  ],
+  netwerken: [
+    'Werknemer brengt het persoonlijke en zakelijke netwerk in kaart; de loopbaanadviseur ondersteunt bij het verder uitbreiden.',
+    'Netwerkbijeenkomsten en arbeidsmarktgerelateerde evenementen maken onderdeel uit van het traject; werknemer staat hiervoor open.',
+    'De loopbaanadviseur begeleidt werknemer bij het inzetten van het netwerk voor passende functies.',
+  ],
+  solliciteren: [
+    'Werknemer zal wekelijks actief solliciteren op passende vacatures, in overleg met de loopbaanadviseur.',
+    'Solliciteren gebeurt op basis van het zoekprofiel en de FML/IZP/LAB; werknemer neemt hierin actief deel.',
+    'De loopbaanadviseur ondersteunt bij het vinden en beantwoorden van vacatures; werknemer zet wekelijks stappen.',
+  ],
+  'stage-en-werkervaringsplek': [
+    'Werknemer staat open voor een werkervaringsplek zodra de belastbaarheid het toelaat, bij voorkeur met kans op betaald werk.',
+    'Indien passend wordt werknemer bemiddeld naar een stage of werkervaringsplek om vaardigheden op te bouwen.',
+    'De loopbaanadviseur zoekt mee naar een geschikte werkervaringsplek die aansluit bij de mogelijkheden van werknemer.',
+  ],
+  'bemiddeling-en-jobhunting': [
+    'De jobhunter van ValentineZ zoekt actief mee naar passende vacatures; werknemer reageert op voorgelegde kansen.',
+    'Werknemer wordt ondersteund bij het vinden van vacatures en open sollicitaties; bemiddeling en jobhunting maken onderdeel uit van het traject.',
+    'Met het zoekprofiel als basis zoekt de loopbaanadviseur mee naar kansrijke vacatures; werknemer neemt sollicitaties zelf ter hand.',
+  ],
+  detachering: [
+    'Werknemer staat open voor detachering als tussenstap richting een andere werkgever wanneer dit passend is.',
+    'Detachering kan worden verkend als werknemer de huidige functie moeilijk kan loslaten; de loopbaanadviseur licht de mogelijkheden toe.',
+    'Indien detachering een passende route is, wordt werknemer hierin begeleid en bemiddeld.',
+  ],
+};
+
+function withSubTextTemplates(sub: Omit<Spoor2Subsection, 'subTextTemplates'>): Spoor2Subsection {
+  const templates = SPOOR2_SUBTEXT_TEMPLATES[sub.id];
+  return templates ? { ...sub, subTextTemplates: templates } : sub;
+}
+
+const TP_SPOOR2_SUBSECTIONS_RAW: Omit<Spoor2Subsection, 'subTextTemplates'>[] = [
   {
     id: 'verwerking-verlies-acceptatie',
     title: 'Verwerking verlies en acceptatie',
@@ -93,3 +163,6 @@ De belangrijkste doelstellingen van een werkervaringsplek zijn het doorbreken va
 Voor werkgevers kan detachering aantrekkelijk zijn omdat een werknemer kan worden ingezet zonder direct het volledige werkgeversrisico te dragen. In voorkomende gevallen kan een nieuwe werkgever een arbeidsovereenkomst aanbieden na doorstroom via de WIA-procedure, waardoor mogelijk gebruik kan worden gemaakt van een no-risk polis.`,
   },
 ];
+
+export const TP_SPOOR2_SUBSECTIONS: Spoor2Subsection[] =
+  TP_SPOOR2_SUBSECTIONS_RAW.map(withSubTextTemplates);

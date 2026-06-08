@@ -32,6 +32,7 @@ import {
   TP_SPOOR2_TOELICHTING_BODY,
   TP_SPOOR2_TOELICHTING_TITLE,
 } from '@/lib/tp2026/basis-spoor2-begeleiding';
+import { resolveSpoor2Selections } from '@/lib/tp/tp_activities';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 const INLEIDING_SUB_DELIM = 'staat het volgende:';
@@ -68,6 +69,7 @@ export type BasisAtom =
       body: string;
       showMainBand: boolean;
       showSubsectionTitle: boolean;
+      subText?: string | null;
     }
   | {
       id: string;
@@ -151,7 +153,10 @@ function textVariant(key: string, text: string): BasisTextVariant {
   return 'markdown';
 }
 
-function buildSpoor2Atoms(): BasisAtom[] {
+function buildSpoor2Atoms(data: Record<string, unknown>): BasisAtom[] {
+  const selections = resolveSpoor2Selections(data.tp3_activities);
+  const selectionById = new Map(selections.map((s) => [s.id, s]));
+
   const atoms: BasisAtom[] = [
     {
       id: 'spoor2-toel',
@@ -164,6 +169,8 @@ function buildSpoor2Atoms(): BasisAtom[] {
   ];
 
   for (const sub of TP_SPOOR2_SUBSECTIONS) {
+    const sel = selectionById.get(sub.id);
+    if (!sel) continue;
     atoms.push({
       id: `spoor2-${sub.id}`,
       kind: 'spoor2',
@@ -171,6 +178,7 @@ function buildSpoor2Atoms(): BasisAtom[] {
       body: sub.body,
       showMainBand: false,
       showSubsectionTitle: true,
+      subText: sel.subText ?? null,
     });
   }
 
@@ -253,7 +261,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   pushTextField('pow', 'Perspectief op Werk (PoW-meter)', data.pow_meter, '');
   pushTextField('plaats', 'Visie op plaatsbaarheid', data.visie_plaatsbaarheid, '');
 
-  atoms.push(...buildSpoor2Atoms());
+  atoms.push(...buildSpoor2Atoms(data));
   atoms.push({ id: 'agree', kind: 'agreement' }, { id: 'sign', kind: 'signature' });
 
   return atoms;
@@ -329,6 +337,7 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
         body: a,
         showSubsectionTitle: atom.showSubsectionTitle,
         showMainBand: atom.showMainBand,
+        subText: undefined,
       },
       {
         ...atom,
@@ -336,6 +345,7 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
         body: b,
         showSubsectionTitle: false,
         showMainBand: false,
+        subText: atom.subText,
       },
       ...atoms.slice(idx + 1),
     ];
@@ -455,6 +465,7 @@ function Spoor2AtomPreview({ atom }: { atom: Extract<BasisAtom, { kind: 'spoor2'
       showSubsectionTitle={atom.showSubsectionTitle}
       subsectionTitle={atom.title}
       body={atom.body}
+      subText={atom.subText}
     />
   );
 }
@@ -476,6 +487,7 @@ function mergeSectionAtomsOnPage(atoms: BasisAtom[]): BasisAtom[] {
       out[out.length - 1] = {
         ...prev,
         body: `${prev.body.trim()}\n\n${atom.body.trim()}`.trim(),
+        subText: atom.subText ?? prev.subText,
       };
       continue;
     }

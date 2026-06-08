@@ -35,18 +35,30 @@ export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefine
   return 'mt-3';
 }
 
+export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
+  return (
+    <div className="mt-2 flex items-start gap-2">
+      <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-1 flex-shrink-0" />
+      <span>{subText.trim()}</span>
+    </div>
+  );
+}
+
 export function Spoor2SubsectionUnit({
   showMainBand = false,
   showSubsectionTitle,
   subsectionTitle,
   body,
+  subText,
 }: {
   showMainBand?: boolean;
   showSubsectionTitle: boolean;
   subsectionTitle: string;
   body: string;
+  subText?: string | null;
 }) {
   const trimmed = String(body || '').trim();
+  const hasSubText = typeof subText === 'string' && subText.trim().length > 0;
 
   return (
     <>
@@ -57,12 +69,13 @@ export function Spoor2SubsectionUnit({
           className="mb-3 pl-6 pr-4"
         />
       ) : null}
-      {trimmed || showSubsectionTitle ? (
+      {trimmed || showSubsectionTitle || hasSubText ? (
         <div className={SPOOR2_BOX_CLASS}>
           {showSubsectionTitle ? (
             <div className={SPOOR2_HEADING_CLASS}>{subsectionTitle}</div>
           ) : null}
           {trimmed ? <Basis2026MarkdownBody markdown={trimmed} /> : null}
+          {hasSubText ? <Spoor2SubtextLogoBullet subText={subText!} /> : null}
         </div>
       ) : null}
     </>

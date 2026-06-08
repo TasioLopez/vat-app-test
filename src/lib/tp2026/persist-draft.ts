@@ -37,7 +37,7 @@ function pickKeys(
 /** Keys stored on employee_details (excludes email — stored on employees). */
 const DETAILS_KEYS_FOR_PERSIST = GEGEVENS_EMPLOYEE_KEYS.filter((k) => k !== 'email');
 
-const TP_META_PERSIST_KEYS = [...GEGEVENS_TP2_KEYS, ...GEGEVENS_REFERENT_KEYS] as const;
+const TP_META_PERSIST_KEYS = [...GEGEVENS_TP2_KEYS, ...GEGEVENS_REFERENT_KEYS, 'tp3_activities'] as const;
 
 export function pickGegevensEmployeeDetailsPayload(
   tpData: Record<string, unknown>,

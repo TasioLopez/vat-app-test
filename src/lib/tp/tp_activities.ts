@@ -6,6 +6,7 @@ export type TPActivity = {
   id: string;
   title: string;
   body: string;
+  subTextTemplates?: [string, string, string];
 };
 
 /** Normalize tp3_activities from DB: support legacy string[] or new { id, subText }[]. */
@@ -23,14 +24,32 @@ export function normalizeTp3Activities(raw: unknown): TPActivitySelection[] {
     .map((x) => ({ id: x.id, subText: x.subText ?? null }));
 }
 
+/**
+ * Effective Spoor 2 selections for preview/editor.
+ * null/undefined → all subsections (legacy full-document default).
+ * [] → explicitly none selected (Toelichting only).
+ */
+export function resolveSpoor2Selections(raw: unknown): TPActivitySelection[] {
+  if (raw === null || raw === undefined) {
+    return TP_SPOOR2_SUBSECTIONS.map((s) => ({ id: s.id, subText: null }));
+  }
+  if (Array.isArray(raw) && raw.length === 0) {
+    return [];
+  }
+  const normalized = normalizeTp3Activities(raw);
+  if (normalized.length > 0) return normalized;
+  return TP_SPOOR2_SUBSECTIONS.map((s) => ({ id: s.id, subText: null }));
+}
+
 export function getBodyMain(activity: TPActivity): string {
   return activity.body;
 }
 
-export const TP_ACTIVITIES: TPActivity[] = TP_SPOOR2_SUBSECTIONS.map(({ id, title, body }) => ({
+export const TP_ACTIVITIES: TPActivity[] = TP_SPOOR2_SUBSECTIONS.map(({ id, title, body, subTextTemplates }) => ({
   id,
   title,
   body,
+  subTextTemplates,
 }));
 
 export default TP_ACTIVITIES;
