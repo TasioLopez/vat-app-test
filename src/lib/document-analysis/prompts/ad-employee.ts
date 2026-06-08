@@ -14,11 +14,9 @@ VELDEN TE EXTRACTEN (employee_details):
 - drivers_license: true/false alleen als expliciet; weglaten indien niet vermeld
 - drivers_license_type: array zoals ["B", "CE"]; weglaten indien niet vermeld
 
-CONTACTPERSOON (referent):
-- referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
-
-NIET EXTRACTEN (niet in AD rapport):
+NIET EXTRACTEN:
 - transport_type, computer_skills, has_computer, dutch_speaking, dutch_writing, dutch_reading
+- referent_* velden — contactpersoon werkgever komt uit het intakeformulier sectie 4 Aanmelding
 
 REGELS:
 - Geen gokken: ontbrekende velden weglaten of null.

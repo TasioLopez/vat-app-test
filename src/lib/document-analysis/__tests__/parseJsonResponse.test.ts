@@ -37,7 +37,7 @@ describe('flattenExtractionPayload', () => {
       referent: { first_name: 'Piet', phone: '0612345678' },
     });
     assert.equal(ref.referent_first_name, 'Piet');
-    assert.equal(ref.referent_phone, '0612345678');
+    assert.equal(ref.referent_phone, '06-12 34 56 78');
   });
 
   it('repairJsonString fixes trailing comma and missing value', () => {

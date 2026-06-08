@@ -1,4 +1,6 @@
 /** Employee profile fields on step 2 filled by `/api/autofill-employee-info-working`. */
+import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+
 export const GEGEVENS_EMPLOYEE_KEYS = [
   'gender',
   'phone',
@@ -121,7 +123,8 @@ export function applySuggestedReferentToTpData(
     next.client_referent_name = fullName;
   }
   if (suggested.phone && isEmptyGegevensField('client_referent_phone', next.client_referent_phone)) {
-    next.client_referent_phone = suggested.phone;
+    next.client_referent_phone =
+      formatDutchPhoneDisplay(suggested.phone) ?? suggested.phone;
   }
   if (suggested.email && isEmptyGegevensField('client_referent_email', next.client_referent_email)) {
     next.client_referent_email = suggested.email;

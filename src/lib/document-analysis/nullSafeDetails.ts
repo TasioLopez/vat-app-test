@@ -1,8 +1,13 @@
+import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+
 const FIELD_MAPPING: Record<string, string> = {
   geslacht_werknemer: 'gender',
   geslacht: 'gender',
   leeftijd_werknemer: 'date_of_birth',
   naam_werknemer: 'name',
+  telefoon: 'phone',
+  telefoonnummer: 'phone',
+  telefoonnummer_werknemer: 'phone',
 };
 
 const VALID_EMPLOYEE_DETAILS_FIELDS = new Set([
@@ -43,6 +48,29 @@ function normalizeDutchLevel(value: unknown): string | undefined {
   }
   if (s === 'Goed' || s === 'Gemiddeld' || s === 'Niet goed') return s;
   return undefined;
+}
+
+/** Split "Naam contactpersoon" into first/last (last token = achternaam). */
+export function splitContactPersonName(fullName: string): { first_name: string; last_name: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first_name: '', last_name: '' };
+  if (parts.length === 1) return { first_name: '', last_name: parts[0] };
+  return {
+    first_name: parts.slice(0, -1).join(' '),
+    last_name: parts[parts.length - 1],
+  };
+}
+
+function normalizeReferentPhone(value: unknown): string | undefined {
+  if (!isPresent(value)) return undefined;
+  return formatDutchPhoneDisplay(String(value));
+}
+
+function isLikelyWrongReferent(out: Record<string, unknown>): boolean {
+  const fn = String(out.referent_function ?? '').toLowerCase();
+  const hasContact = isPresent(out.referent_phone) || isPresent(out.referent_email);
+  if (hasContact) return false;
+  return fn.includes('arbeidsdeskundig') || fn.includes('bedrijfsarts');
 }
 
 /** Map raw AI JSON to employee_details fields; omit keys instead of inventing defaults. */
@@ -132,6 +160,12 @@ export function mapAndValidateEmployeeDetails(
       continue;
     }
 
+    if (mappedKey === 'phone') {
+      const formatted = normalizeReferentPhone(rawValue);
+      if (formatted) mappedData[mappedKey] = formatted;
+      continue;
+    }
+
     if (isPresent(rawValue)) {
       mappedData[mappedKey] = rawValue;
     }
@@ -148,6 +182,8 @@ const REFERENT_KEYS = [
   'referent_email',
   'referent_gender',
 ] as const;
+
+const FULL_NAME_KEYS = ['naam_contactpersoon', 'referent_name', 'contactpersoon_naam'] as const;
 
 /** Referent fields stripped from details but kept for suggested_referent. */
 export function extractReferentFromRaw(
@@ -173,6 +209,27 @@ export function extractReferentFromRaw(
       const target = map[key] || (key.startsWith('referent_') ? key : null);
       if (target && out[target] == null) out[target] = value;
     }
+  }
+
+  if (!out.referent_first_name && !out.referent_last_name) {
+    for (const key of FULL_NAME_KEYS) {
+      const raw = extractedData[key];
+      if (typeof raw === 'string' && raw.trim()) {
+        const split = splitContactPersonName(raw);
+        if (split.first_name) out.referent_first_name = split.first_name;
+        if (split.last_name) out.referent_last_name = split.last_name;
+        break;
+      }
+    }
+  }
+
+  if (out.referent_phone != null && out.referent_phone !== '') {
+    const formatted = normalizeReferentPhone(out.referent_phone);
+    if (formatted) out.referent_phone = formatted;
+  }
+
+  if (isLikelyWrongReferent(out)) {
+    return {};
   }
 
   return out;

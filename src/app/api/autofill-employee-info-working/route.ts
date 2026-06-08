@@ -19,6 +19,7 @@ import {
   EXTRA_EMPLOYEE_USER_MESSAGE,
 } from '@/lib/document-analysis';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
+import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -261,7 +262,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log('📄 Processing intake form (priority 1)...');
     const intakeResult = await processIntakeForm(intakeDoc);
     Object.assign(results, intakeResult.mapped);
-    referent = mergeReferentFields(referent, intakeResult.referent);
+    referent = intakeResult.referent;
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
@@ -283,9 +284,11 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
         results[key] = adValue;
       }
     });
-    referent = mergeReferentFields(referent, adResult.referent);
-    if (Object.keys(adResult.referent).length > 0) {
-      console.log('✅ AD report: referent contact extracted');
+    if (!intakeProcessed) {
+      referent = mergeReferentFields(referent, adResult.referent);
+      if (Object.keys(adResult.referent).length > 0) {
+        console.log('✅ AD report: referent contact extracted');
+      }
     }
     processedDocs.push('ad_rapport');
     console.log(`✅ AD report: ${Object.keys(adResult.mapped).length} fields extracted`);
@@ -302,7 +305,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     Object.keys(fmlResult.mapped).forEach((key) => {
       if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
     });
-    referent = mergeReferentFields(referent, fmlResult.referent);
+    if (!intakeProcessed) {
+      referent = mergeReferentFields(referent, fmlResult.referent);
+    }
     processedDocs.push('fml/izp');
     console.log(`✅ FML/IZP: ${Object.keys(fmlResult.mapped).length} fields extracted`);
   }
@@ -329,7 +334,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
       Object.keys(extraResult.mapped).forEach((key) => {
         if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
       });
-      referent = mergeReferentFields(referent, extraResult.referent);
+      if (!intakeProcessed) {
+        referent = mergeReferentFields(referent, extraResult.referent);
+      }
     }
     processedDocs.push('extra');
     console.log('✅ Extra documents: processed');
@@ -426,7 +433,8 @@ export async function GET(req: NextRequest) {
           referent.referent_function != null ? String(referent.referent_function).trim() : undefined,
         phone:
           referent.referent_phone != null && referent.referent_phone !== ''
-            ? String(referent.referent_phone).trim()
+            ? formatDutchPhoneDisplay(String(referent.referent_phone).trim()) ??
+              String(referent.referent_phone).trim()
             : undefined,
         email:
           referent.referent_email != null && referent.referent_email !== ''

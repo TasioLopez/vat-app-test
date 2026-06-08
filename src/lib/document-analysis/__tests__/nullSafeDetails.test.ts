@@ -1,6 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapAndValidateEmployeeDetails } from '../nullSafeDetails';
+import {
+  mapAndValidateEmployeeDetails,
+  extractReferentFromRaw,
+  splitContactPersonName,
+} from '../nullSafeDetails';
 
 describe('mapAndValidateEmployeeDetails', () => {
   it('returns empty object for empty input', () => {
@@ -49,5 +53,45 @@ describe('mapAndValidateEmployeeDetails', () => {
       referent_last_name: 'Brama',
     });
     assert.equal('referent_first_name' in result, false);
+  });
+
+  it('formats phone from telefoonnummer alias', () => {
+    const result = mapAndValidateEmployeeDetails({ telefoonnummer: '0612345678' });
+    assert.equal(result.phone, '06-12 34 56 78');
+  });
+});
+
+describe('extractReferentFromRaw', () => {
+  it('formats referent_phone', () => {
+    const ref = extractReferentFromRaw({ referent_phone: '0612345678' });
+    assert.equal(ref.referent_phone, '06-12 34 56 78');
+  });
+
+  it('splits naam_contactpersoon when first/last missing', () => {
+    const ref = extractReferentFromRaw({
+      naam_contactpersoon: 'Herleen Brama',
+      referent_function: 'HR adviseur',
+      referent_phone: '0612345678',
+    });
+    assert.equal(ref.referent_first_name, 'Herleen');
+    assert.equal(ref.referent_last_name, 'Brama');
+  });
+
+  it('rejects likely wrong referent without contact info', () => {
+    const ref = extractReferentFromRaw({
+      referent_first_name: 'Jan',
+      referent_last_name: 'AD',
+      referent_function: 'Arbeidsdeskundige',
+    });
+    assert.deepEqual(ref, {});
+  });
+});
+
+describe('splitContactPersonName', () => {
+  it('splits full name into first and last', () => {
+    assert.deepEqual(splitContactPersonName('Herleen Brama'), {
+      first_name: 'Herleen',
+      last_name: 'Brama',
+    });
   });
 });
