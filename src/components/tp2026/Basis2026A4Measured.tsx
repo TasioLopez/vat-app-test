@@ -198,7 +198,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
       md: slice,
       showSectionTitle: i === 0,
       showToelichting: isLast && Boolean(sub),
-      showAvgDisclaimer: isLast && !sub && data.has_ad_report === false,
+      showAvgDisclaimer: false,
     });
   });
 

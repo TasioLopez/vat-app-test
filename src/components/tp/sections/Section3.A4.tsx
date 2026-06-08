@@ -375,11 +375,7 @@ function SignatureBlock({
 export default function Section3A4({ data }: { data: TPData }) {
   // inleiding + NB rule
   const inleiding = safe(data.inleiding);
-  const inleidingSub =
-    data.inleiding_sub ??
-    (!data.has_ad_report
-      ? "NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld."
-      : "");
+  const inleidingSub = data.inleiding_sub ?? "";
 
   // names for signature - use simple firstName lastName format
   const employeeName = 
