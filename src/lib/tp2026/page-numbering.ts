@@ -13,7 +13,7 @@ export type TP2026SectionId = (typeof TP2026_SECTION_ORDER)[number];
 export type TP2026SectionPageCounts = Record<TP2026SectionId, number>;
 
 export const COVER_PAGE_COUNT = 1;
-export const GEGEVENS_PAGE_COUNT = 3;
+export const GEGEVENS_PAGE_COUNT = 2;
 export const BIJLAGE1_PAGE_COUNT = 1;
 
 export function getDefaultTP2026PageCounts(): TP2026SectionPageCounts {

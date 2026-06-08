@@ -27,6 +27,20 @@ import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 
+const GEGEVENS_LEGENDA_ITEMS: [string, string][] = [
+  ['AO', 'Arbeidsdeskundig onderzoek'],
+  ['AD', 'Arbeidsdeskundig'],
+  ['BA', 'Bedrijfsarts'],
+  ['EZD', 'Eerste ziekte dag'],
+  ['FML', 'Functiemogelijkhedenlijst'],
+  ['GBM', 'Geen benutbare mogelijkheden'],
+  ['IZP', 'Inzetbaarheidsprofiel'],
+  ['LAB', 'Lijst arbeidsmogelijkheden en beperkingen'],
+  ['TP', 'Trajectplan'],
+  ['VGR', 'Voortgangsrapportage'],
+  ['WAZO', 'Wet arbeid en zorg'],
+];
+
 function GegevensNaamBlock({ data }: { data: Record<string, any> }) {
   const naam =
     data.first_name && data.last_name
@@ -219,41 +233,15 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
           </TP2026FieldTable>
           <p className="mt-3 text-[11px] italic leading-snug text-[#6d2a96]/90">{NB_DEFAULT_GEEN_AD}</p>
         </div>
-      </div>
 
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={pageNumber}
-      />
-    </A4Page>
-  );
-}
-
-function GegevensPage3({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
-  return (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
-      <A4LogoHeader />
-      <div className="flex-1 min-h-0">
-        <SectionBand title="Legenda" />
-        <TP2026FieldTable>
-          {[
-            ['AO', 'Arbeidsdeskundig onderzoek'],
-            ['AD', 'Arbeidsdeskundig'],
-            ['BA', 'Bedrijfsarts'],
-            ['EZD', 'Eerste ziekte dag'],
-            ['FML', 'Functiemogelijkhedenlijst'],
-            ['GBM', 'Geen benutbare mogelijkheden'],
-            ['IZP', 'Inzetbaarheidsprofiel'],
-            ['LAB', 'Lijst arbeidsmogelijkheden en beperkingen'],
-            ['TP', 'Trajectplan'],
-            ['VGR', 'Voortgangsrapportage'],
-            ['WAZO', 'Wet arbeid en zorg'],
-          ].map(([abbr, desc]) => (
-            <DataRow key={abbr} label={abbr} value={desc} compact />
-          ))}
-        </TP2026FieldTable>
+        <div className="mt-7">
+          <SectionBand title="Legenda" />
+          <TP2026FieldTable>
+            {GEGEVENS_LEGENDA_ITEMS.map(([abbr, desc]) => (
+              <DataRow key={abbr} label={abbr} value={desc} compact />
+            ))}
+          </TP2026FieldTable>
+        </div>
       </div>
 
       <FooterIdentity
@@ -285,7 +273,6 @@ export function Gegevens2026A4Pages({
     <>
       {wrap(<GegevensPage1 data={data} pageNumber={getPageNumber('gegevens', 0)} />, 'g1')}
       {wrap(<GegevensPage2 data={data} pageNumber={getPageNumber('gegevens', 1)} />, 'g2')}
-      {wrap(<GegevensPage3 data={data} pageNumber={getPageNumber('gegevens', 2)} />, 'g3')}
     </>
   );
 }

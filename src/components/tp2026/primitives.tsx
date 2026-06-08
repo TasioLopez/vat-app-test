@@ -3,7 +3,11 @@ import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
-import { TP2026_DATA_ROW_LABEL_CLASS, TP2026_FIELD_TABLE_CLASS } from '@/lib/tp2026/tp2026-colors';
+import {
+  TP2026_DATA_ROW_LABEL_CLASS,
+  TP2026_DATA_ROW_VALUE_CLASS,
+  TP2026_FIELD_TABLE_CLASS,
+} from '@/lib/tp2026/tp2026-colors';
 
 export const A4_W = 794;
 export const A4_H = 1123;
@@ -186,7 +190,7 @@ export function DataRow({
       <div className={TP2026_DATA_ROW_LABEL_CLASS}>
         {label}
       </div>
-      <div className="px-2.5 py-1.5 font-normal text-neutral-900 bg-white">{value}</div>
+      <div className={TP2026_DATA_ROW_VALUE_CLASS}>{value}</div>
     </div>
   );
 }
