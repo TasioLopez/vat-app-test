@@ -35,22 +35,48 @@ BELANGRIJK: Extract ALLEEN TP metadata velden (trajectplan-specifieke velden).
 NIET extracten: employee profile velden zoals current_job, work_experience, education_level, transport_type, dutch_speaking/writing/reading, computer_skills, etc. 
 Deze velden horen in het werknemersprofiel, niet in TP metadata.
 
-Extract ALLEEN deze TP metadata velden als je ze vindt:
-1. first_sick_day: "Datum ziekmelding:" (YYYY-MM-DD format)
-2. registration_date: "Aanmeld:" (YYYY-MM-DD format)
-3. intake_date: "Gespreksdatum:" (YYYY-MM-DD format)
-4. ad_report_date: "Datum rapport:" (YYYY-MM-DD format)
-5. fml_izp_lab_date: "Datum FML:" or "Datum FML/IZP/LAB:" (YYYY-MM-DD format)
-6. occupational_doctor_name: "Arbeidsdeskundige:" - Extract name AND company in format "Name, Company"
-7. occupational_doctor_org: "Bedrijfsarts:" - Extract name and supervision info. VERWIJDER: BIG nummers en "- Bedrijfsarts" suffix (overbodig).
+Extract ALLEEN deze TP metadata velden als je ze vindt (Juni V3 intake labels eerst; oudere formulieren als fallback):
+
+1. first_sick_day (YYYY-MM-DD)
+   - Juni V3 sectie 5: "Datum eerste ziekte dag:"
+   - Fallback: "Datum ziekmelding:"
+
+2. registration_date (YYYY-MM-DD)
+   - Juni V3 sectie 6: "Aanmelddatum:"
+   - Fallback: "Aanmeld:"
+
+3. intake_date (YYYY-MM-DD)
+   - Juni V3 sectie 1: "Datum gesprek:"
+   - Fallback: "Gespreksdatum:"
+
+4. ad_report_date (YYYY-MM-DD)
+   - AD rapport document: "Datum rapport:"
+   - Juni V3 sectie 6 bij "AD-rapport" (datum naast AD-rapport regel)
+   - Fallback: datum bij arbeidsdeskundig rapport in sectie 7
+
+5. fml_izp_lab_date (YYYY-MM-DD)
+   - Juni V3 sectie 6: datum bij "Datum ☐ FML ☐ IZP:" (gebruik ingevulde FML/IZP-datum)
+   - Fallback: "Datum FML:", "Datum IZP:", "Datum FML/IZP/LAB:"
+
+6. occupational_doctor_name — arbeidsdeskundige (NIET bedrijfsarts)
+   - Juni V3 sectie 7: "Naam arbeidsdeskundige"
+   - Juni V3 sectie 6: "Naam AD:" (OSV-regel)
+   - Fallback: "Arbeidsdeskundige:"
+   - Formaat: "Naam, Organisatie" indien beide bekend
+
+7. occupational_doctor_org — bedrijfsarts / BA
+   - Juni V3 sectie 6: "Naam ☐ Arts ☐ Anios ☐ BA:" (ingevulde naam + eventueel supervisie)
+   - Fallback: "Bedrijfsarts:"
+   - VERWIJDER: BIG nummers en trailing "- Bedrijfsarts"
 
 Voorbeelden:
-- "Datum ziekmelding: 26-04-2024" → first_sick_day: "2024-04-26"
-- "Aanmeld: 12-06-2025" → registration_date: "2025-06-12"
+- "Datum eerste ziekte dag: 26-04-2024" → first_sick_day: "2024-04-26"
+- "Datum gesprek: 10-01-2024" → intake_date: "2024-01-10"
+- "Aanmelddatum: 12-06-2025" → registration_date: "2025-06-12"
+- "Naam arbeidsdeskundige: Marc Arendsen" → occupational_doctor_name: "Marc Arendsen"
 - "Arbeidsdeskundige: Marc Arendsen van Buro werk wijzer" → occupational_doctor_name: "Marc Arendsen, Buro werk wijzer"
-- "Bedrijfsarts: Arts L. Bollen werkend onder supervisie van arts T. de Haas - BIG nr. 12345678901 - Bedrijfsarts" → occupational_doctor_org: "Arts L. Bollen, werkend onder supervisie van: arts T. de Haas"
-- "Arts L Heydanus, Werkend onder supervisie van: M.E. Lindeboom - BIG nr. 39045796801 - Bedrijfsarts" → occupational_doctor_org: "Arts L Heydanus, Werkend onder supervisie van: M.E. Lindeboom"
-- "Dr. Smith" → occupational_doctor_org: "Dr. Smith"
+- "Naam Arts BA: Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen, werkend onder supervisie van: arts T. de Haas"
+- "Bedrijfsarts: Arts L. Bollen - BIG nr. 12345678901 - Bedrijfsarts" → occupational_doctor_org: "Arts L. Bollen"
 
 Return ONLY a JSON object with the fields you find.`,
       model: "gpt-4o",
