@@ -69,7 +69,7 @@ function BasisFieldEditorRow({
   updateField: (key: string, value: any) => void;
   onAutofillField?: (fieldKey: string) => Promise<void>;
 }) {
-  if (field.key === 'inleiding_sub') {
+  if (field.key === 'inleiding_sub' || field.key === 'wettelijke_kaders') {
     return null;
   }
 
