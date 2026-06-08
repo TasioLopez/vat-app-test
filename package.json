@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test:cv": "tsx --test src/lib/cv/__tests__/*.test.ts",
     "test:doc-analysis": "tsx --test src/lib/document-analysis/__tests__/*.test.ts src/lib/__tests__/openai-file-upload.test.ts",
+    "test:tp2026-autofill": "tsx --test src/lib/tp2026/__tests__/*.test.ts",
     "help:generate-nl-md": "node scripts/generate-help-nl-md.mjs",
     "help:seed": "tsx scripts/seed-help-kb.ts",
     "help:reindex-all": "tsx scripts/reindex-help-kb-all.ts",

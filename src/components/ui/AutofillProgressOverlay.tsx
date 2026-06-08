@@ -14,6 +14,7 @@ type Props = {
   title?: string;
   onCancel?: () => void;
   cancelLabel?: string;
+  cancelling?: boolean;
 };
 
 export function AutofillProgressOverlay({
@@ -21,6 +22,7 @@ export function AutofillProgressOverlay({
   title = 'Automatisch invullen met AI',
   onCancel,
   cancelLabel = 'Stoppen',
+  cancelling = false,
 }: Props) {
   const pct =
     progress.total > 0 ? Math.min(100, Math.round((progress.currentIndex / progress.total) * 100)) : 0;
@@ -42,7 +44,7 @@ export function AutofillProgressOverlay({
               {title}
             </h3>
             <p id="autofill-progress-label" className="text-gray-600">
-              {progress.currentLabel}
+              {cancelling ? 'Huidige stap wordt afgebroken…' : progress.currentLabel}
             </p>
           </div>
         </div>
@@ -61,8 +63,13 @@ export function AutofillProgressOverlay({
           </div>
         </div>
         {onCancel ? (
-          <Button variant="destructive" onClick={onCancel} className="w-full">
-            {cancelLabel}
+          <Button
+            variant="destructive"
+            onClick={onCancel}
+            disabled={cancelling}
+            className="w-full"
+          >
+            {cancelling ? 'Stoppen…' : cancelLabel}
           </Button>
         ) : null}
       </div>

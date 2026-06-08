@@ -6,14 +6,17 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
-import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
-import { TP2026_BASIS_AUTOFILL_ENDPOINTS } from '@/lib/tp2026/basis-autofill-endpoints';
+import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import {
   buildAutofillSteps,
+  buildSingleTp3AutofillStep,
   canAutofillCurrentStep,
   runAutofillSteps,
   type AutofillScope,
+  type AutofillRunStep,
+  type RunAutofillStepsResult,
 } from '@/lib/tp2026/autofill-runner';
+import { applyEmployeeAutofillDetails } from '@/lib/employee/autofill-persist';
 import { AutofillScopeDropdown } from '@/components/ui/dropdown-menu';
 import {
   AutofillProgressOverlay,
@@ -45,9 +48,10 @@ type Props = {
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
   const { tpData, setTPData, updateField, saveAll, isDirty, markDirty, markSaved } = useTPInstance();
-  const { showSuccess, showError } = useToastHelpers();
+  const { showSuccess, showError, showInfo } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
   const autofillCancelRef = useRef(false);
+  const autofillAbortRef = useRef<AbortController | null>(null);
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -59,6 +63,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
+  const [autofillCancelling, setAutofillCancelling] = useState(false);
   const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
 
   const persistDraftFromData = useCallback(
@@ -80,40 +85,148 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     [employeeId, markSaved, saveAll, supabase, tpInstanceId]
   );
 
+  const cancelAutofill = useCallback(() => {
+    autofillCancelRef.current = true;
+    autofillAbortRef.current?.abort();
+    setAutofillCancelling(true);
+  }, []);
+
+  const finalizeAutofillResult = useCallback(
+    async (
+      result: RunAutofillStepsResult,
+      tpSnapshot: Record<string, any>,
+      employeeSnapshot: Record<string, unknown> | null,
+      stepCount: number,
+      singleFieldSuccessMessage?: string
+    ) => {
+      if (result.cancelled) {
+        setTPData(tpSnapshot);
+        showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
+        return;
+      }
+
+      setTPData(result.data as Record<string, any>);
+
+      if (result.employeePersist) {
+        const persistResult = await applyEmployeeAutofillDetails(
+          supabase,
+          employeeId,
+          employeeSnapshot,
+          result.employeePersist.rawDetails,
+          result.employeePersist.meta
+        );
+        if (persistResult.error) {
+          markDirty();
+          showError(
+            'Autofill deels mislukt',
+            `Werknemersprofiel niet opgeslagen: ${persistResult.error}`
+          );
+        }
+      }
+
+      let savedSuffix = '';
+      if (result.completed > 0) {
+        const { ok, error } = await persistDraftFromData(result.data);
+        if (ok) {
+          savedSuffix = ' Opgeslagen.';
+        } else {
+          markDirty();
+          savedSuffix = error ? ` Niet opgeslagen: ${error}` : ' Niet opgeslagen.';
+        }
+      }
+
+      if (singleFieldSuccessMessage && result.failed.length === 0 && result.completed > 0) {
+        showSuccess(savedSuffix ? `${singleFieldSuccessMessage}${savedSuffix}` : singleFieldSuccessMessage);
+        return;
+      }
+
+      if (result.failed.length === 0) {
+        showSuccess(`Autofill voltooid (${result.completed}/${stepCount} stappen).${savedSuffix}`);
+        return;
+      }
+
+      if (result.completed > 0) {
+        showError(
+          'Autofill gedeeltelijk voltooid',
+          `${result.completed}/${stepCount} stappen gelukt. Mislukt: ${result.failed
+            .map((f) => f.label)
+            .join('; ')}${savedSuffix}`
+        );
+        return;
+      }
+
+      showError(
+        'Autofill mislukt',
+        result.failed.map((f) => `${f.label}: ${f.error}`).join('; ')
+      );
+    },
+    [employeeId, markDirty, persistDraftFromData, setTPData, showError, showInfo, showSuccess, supabase]
+  );
+
+  const runAutofillSession = useCallback(
+    async (steps: { id: string; label: string; run: AutofillRunStep['run'] }[]) => {
+      const tpSnapshot = JSON.parse(JSON.stringify(tpData)) as Record<string, any>;
+      const initialData = { ...tpSnapshot, employee_id: tpSnapshot.employee_id ?? employeeId };
+
+      const { data: employeeDetailsRow } = await supabase
+        .from('employee_details')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .maybeSingle();
+      const employeeSnapshot = (employeeDetailsRow as Record<string, unknown> | null) ?? null;
+
+      autofillCancelRef.current = false;
+      setAutofillCancelling(false);
+      const abortController = new AbortController();
+      autofillAbortRef.current = abortController;
+
+      setAutofilling(true);
+      setAutofillProgress({ currentIndex: 1, total: steps.length, currentLabel: 'Voorbereiden…' });
+
+      try {
+        const result = await runAutofillSteps(
+          steps,
+          { employeeId, supabase, signal: abortController.signal },
+          initialData,
+          {
+            onProgress: setAutofillProgress,
+            shouldCancel: () => autofillCancelRef.current,
+          }
+        );
+
+        return { result, tpSnapshot, employeeSnapshot, stepCount: steps.length };
+      } finally {
+        autofillAbortRef.current = null;
+        setAutofillCancelling(false);
+        setAutofilling(false);
+        setAutofillProgress(null);
+      }
+    },
+    [employeeId, supabase, tpData]
+  );
+
   const autofillBasisField = useCallback(
     async (fieldKey: string) => {
       if (autofilling) return;
-      const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
-      if (!endpoint) return;
+      const step = buildSingleTp3AutofillStep(fieldKey);
+      if (!step) return;
+
       try {
-        const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
-        const json = await res.json();
-        if (!res.ok) return;
-
-        let computedNext: Record<string, any> | null = null;
-        setTPData((prev) => {
-          let next: Record<string, any> = { ...prev };
-          if (json?.details && typeof json.details === 'object') {
-            next = mergeAutofillIntoTP2026(next, json.details);
-          }
-          if (json?.data?.pow_meter) next.pow_meter = json.data.pow_meter;
-          computedNext = ensureTP2026Shape(next);
-          return computedNext;
-        });
-
-        if (!computedNext) return;
-        const { ok, error } = await persistDraftFromData(computedNext);
-        if (!ok) {
-          markDirty();
-          showError('Opslaan mislukt', error || 'Kon basis-autofill niet opslaan.');
-        } else {
-          showSuccess('Basisveld ingevuld en opgeslagen.');
-        }
-      } catch (e) {
-        console.error('Basis field autofill failed', fieldKey, e);
+        const session = await runAutofillSession([step]);
+        if (!session) return;
+        await finalizeAutofillResult(
+          session.result,
+          session.tpSnapshot,
+          session.employeeSnapshot,
+          session.stepCount,
+          'Basisveld ingevuld en opgeslagen.'
+        );
+      } catch (error) {
+        console.error('Basis field autofill failed', fieldKey, error);
+        showError('Autofill mislukt', error instanceof Error ? error.message : 'Onbekende fout');
       }
     },
-    [employeeId, autofilling, markDirty, persistDraftFromData, setTPData, showError, showSuccess]
+    [autofilling, finalizeAutofillResult, runAutofillSession, showError]
   );
 
   const sections = [
@@ -338,87 +451,28 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         return;
       }
 
-      autofillCancelRef.current = false;
-      setAutofilling(true);
-      setAutofillProgress({ currentIndex: 1, total: steps.length, currentLabel: 'Voorbereiden…' });
-
       try {
-        const result = await runAutofillSteps(
-          steps,
-          { employeeId, supabase },
-          { ...tpData, employee_id: tpData.employee_id ?? employeeId },
-          {
-            onProgress: setAutofillProgress,
-            shouldCancel: () => autofillCancelRef.current,
-          }
-        );
-
-        setTPData(result.data as Record<string, any>);
-
-        let savedSuffix = '';
-        if (result.completed > 0) {
-          const { ok, error } = await persistDraftFromData(result.data);
-          if (ok) {
-            savedSuffix = ' Opgeslagen.';
-          } else {
-            markDirty();
-            savedSuffix = error ? ` Niet opgeslagen: ${error}` : ' Niet opgeslagen.';
-          }
-        }
-
-        if (result.cancelled) {
-          showError(
-            'Autofill gestopt',
-            `${result.completed}/${steps.length} stappen voltooid voordat u stopte.${savedSuffix}`
-          );
-          return;
-        }
-
-        if (result.failed.length === 0) {
-          showSuccess(
-            `Autofill voltooid (${result.completed}/${steps.length} stappen).${savedSuffix}`
-          );
-          return;
-        }
-
-        if (result.completed > 0) {
-          showError(
-            'Autofill gedeeltelijk voltooid',
-            `${result.completed}/${steps.length} stappen gelukt. Mislukt: ${result.failed
-              .map((f) => f.label)
-              .join('; ')}${savedSuffix}`
-          );
-          return;
-        }
-
-        showError(
-          'Autofill mislukt',
-          result.failed.map((f) => `${f.label}: ${f.error}`).join('; ')
+        const session = await runAutofillSession(steps);
+        if (!session) return;
+        await finalizeAutofillResult(
+          session.result,
+          session.tpSnapshot,
+          session.employeeSnapshot,
+          session.stepCount
         );
       } catch (error) {
         console.error('TP 2026 autofill failed', error);
         showError('Autofill mislukt', error instanceof Error ? error.message : 'Onbekende fout');
-      } finally {
-        setAutofilling(false);
-        setAutofillProgress(null);
       }
     },
     [
       currentStep,
-      employeeId,
-      markDirty,
-      persistDraftFromData,
+      finalizeAutofillResult,
+      runAutofillSession,
       showError,
-      showSuccess,
-      supabase,
       tpData,
-      setTPData,
     ]
   );
-
-  const cancelAutofill = useCallback(() => {
-    autofillCancelRef.current = true;
-  }, []);
 
   const currentStepHasAutofill = canAutofillCurrentStep(currentStep);
   const currentStepAutofillAvailable =
@@ -458,6 +512,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
             <AutofillProgressOverlay
               progress={autofillProgress}
               onCancel={cancelAutofill}
+              cancelling={autofillCancelling}
             />
           ) : null}
           {sections.map((section, index) => (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, useMemo } from 'react';
+import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase/client';
 import {
@@ -38,6 +38,7 @@ import {
     type AutofillProgressState,
 } from '@/components/ui/AutofillProgressOverlay';
 import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
+import { isAutofillAbortError } from '@/lib/tp2026/autofill-runner';
 import {
     applyEmployeeAutofillDetails,
     listAutofilledEmployeeDetailKeys,
@@ -204,7 +205,7 @@ function arePayloadsEqual<T>(left: T | null, right: T | null): boolean {
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: employeeId } = use(params);
     const router = useRouter();
-    const { showSuccess, showError } = useToastHelpers();
+    const { showSuccess, showError, showInfo } = useToastHelpers();
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -217,6 +218,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [userRole, setUserRole] = useState<string>('');
     const [updating, setUpdating] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
+    const [aiCancelling, setAiCancelling] = useState(false);
+    const aiCancelRef = useRef(false);
+    const aiAbortRef = useRef<AbortController | null>(null);
     const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
     const [autofilledFields, setAutofilledFields] = useState<Set<string>>(new Set());
     const [documents, setDocuments] = useState<Document[]>([]);
@@ -538,14 +542,56 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const cancelAiAutofill = useCallback(() => {
+        aiCancelRef.current = true;
+        aiAbortRef.current?.abort();
+        setAiCancelling(true);
+    }, []);
+
     const autofillWithAI = async () => {
+        const snapshot = {
+            employeeDetails: employeeDetails ? { ...employeeDetails } : null,
+            autofilledFields: new Set(autofilledFields),
+            suggestedReferent: suggestedReferent ? { ...suggestedReferent } : null,
+            referentExists,
+            existingReferentId,
+        };
+
+        aiCancelRef.current = false;
+        setAiCancelling(false);
+        const abortController = new AbortController();
+        aiAbortRef.current = abortController;
+
         setAiLoading(true);
         try {
-            const res = await fetch(`/api/autofill-employee-info-working?employeeId=${employeeId}`);
+            const res = await fetch(`/api/autofill-employee-info-working?employeeId=${employeeId}`, {
+                signal: abortController.signal,
+            });
+
+            if (abortController.signal.aborted || aiCancelRef.current) {
+                setEmployeeDetails(snapshot.employeeDetails);
+                setAutofilledFields(snapshot.autofilledFields);
+                setSuggestedReferent(snapshot.suggestedReferent);
+                setReferentExists(snapshot.referentExists);
+                setExistingReferentId(snapshot.existingReferentId);
+                showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
+                return;
+            }
+
             const json = await res.json();
 
             if (!res.ok) {
                 throw new Error(json.error || `HTTP ${res.status}: ${res.statusText}`);
+            }
+
+            if (abortController.signal.aborted || aiCancelRef.current) {
+                setEmployeeDetails(snapshot.employeeDetails);
+                setAutofilledFields(snapshot.autofilledFields);
+                setSuggestedReferent(snapshot.suggestedReferent);
+                setReferentExists(snapshot.referentExists);
+                setExistingReferentId(snapshot.existingReferentId);
+                showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
+                return;
             }
 
             const details = json.details || json.data?.details;
@@ -583,6 +629,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     }
                 );
 
+                if (abortController.signal.aborted || aiCancelRef.current) {
+                    setEmployeeDetails(snapshot.employeeDetails);
+                    setAutofilledFields(snapshot.autofilledFields);
+                    setSuggestedReferent(snapshot.suggestedReferent);
+                    setReferentExists(snapshot.referentExists);
+                    setExistingReferentId(snapshot.existingReferentId);
+                    showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
+                    return;
+                }
+
                 if (persistResult.error) {
                     console.error('Error persisting autofilled details:', persistResult.error);
                     showError('Autofill deels mislukt', 'AI velden zijn gevonden, maar opslaan in het profiel is mislukt.');
@@ -615,10 +671,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 showError('Geen documenten gevonden', 'Er zijn geen documenten gevonden of geen bruikbare informatie gevonden in de documenten.');
             }
         } catch (err) {
+            if (isAutofillAbortError(err) || aiCancelRef.current) {
+                setEmployeeDetails(snapshot.employeeDetails);
+                setAutofilledFields(snapshot.autofilledFields);
+                setSuggestedReferent(snapshot.suggestedReferent);
+                setReferentExists(snapshot.referentExists);
+                setExistingReferentId(snapshot.existingReferentId);
+                showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
+                return;
+            }
             console.error('Autofill mislukt:', err);
             const errorMessage = err instanceof Error ? err.message : 'Onbekende fout opgetreden';
             showError('Autofill mislukt', errorMessage);
         } finally {
+            aiAbortRef.current = null;
+            setAiCancelling(false);
             setAiLoading(false);
         }
     };
@@ -1041,7 +1108,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             {/* Worker Profile Section */}
             <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
                 {aiLoading && autofillProgress ? (
-                    <AutofillProgressOverlay progress={autofillProgress} title="Invullen met AI" />
+                    <AutofillProgressOverlay
+                        progress={autofillProgress}
+                        title="Invullen met AI"
+                        onCancel={cancelAiAutofill}
+                        cancelling={aiCancelling}
+                    />
                 ) : null}
                 <div className="flex justify-between items-center pb-4 border-b border-purple-200">
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">

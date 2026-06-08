@@ -7,10 +7,6 @@ import {
   labelForTp3Field,
 } from '@/lib/autofill-progress';
 import {
-  EMPLOYEE_DETAILS_PERSIST_KEYS,
-  applyEmployeeAutofillDetails,
-} from '@/lib/employee/autofill-persist';
-import {
   GEGEVENS_EMPLOYEE_KEYS,
   GEGEVENS_TP2_KEYS,
   applySuggestedReferentToTpData,
@@ -26,15 +22,27 @@ export type AutofillScope = 'all' | 'current_step';
 export type AutofillRunContext = {
   employeeId: string;
   supabase: SupabaseClient;
+  signal?: AbortSignal;
+};
+
+export type EmployeeAutofillPersistPayload = {
+  rawDetails: Record<string, unknown>;
+  meta?: {
+    autofill_incomplete?: boolean;
+    autofill_warnings?: { message?: string }[];
+  };
+};
+
+export type AutofillStepRunResult = {
+  data: Record<string, unknown>;
+  error?: string;
+  employeePersist?: EmployeeAutofillPersistPayload;
 };
 
 export type AutofillRunStep = {
   id: string;
   label: string;
-  run: (
-    ctx: AutofillRunContext,
-    currentData: Record<string, unknown>
-  ) => Promise<{ data: Record<string, unknown>; error?: string }>;
+  run: (ctx: AutofillRunContext, currentData: Record<string, unknown>) => Promise<AutofillStepRunResult>;
 };
 
 export type AutofillProgressCallback = (progress: {
@@ -42,6 +50,16 @@ export type AutofillProgressCallback = (progress: {
   total: number;
   currentLabel: string;
 }) => void;
+
+export function isAutofillAbortError(e: unknown): boolean {
+  if (e instanceof DOMException && e.name === 'AbortError') return true;
+  if (e instanceof Error && e.name === 'AbortError') return true;
+  return false;
+}
+
+function isCancelled(ctx: AutofillRunContext, shouldCancel?: () => boolean): boolean {
+  return Boolean(shouldCancel?.() || ctx.signal?.aborted);
+}
 
 export function canAutofillCurrentStep(currentStep: number): boolean {
   return currentStep === 2 || currentStep === 3;
@@ -73,7 +91,7 @@ function buildTp3Steps(): AutofillRunStep[] {
   return TP2026_TP3_FIELD_ORDER.map((fieldKey) => ({
     id: fieldKey,
     label: labelForTp3Field(fieldKey),
-    run: (ctx, currentData) => runTp3FieldStep(ctx.employeeId, fieldKey, currentData),
+    run: (ctx, currentData) => runTp3FieldStep(ctx, fieldKey, currentData),
   }));
 }
 
@@ -90,12 +108,23 @@ export function buildAutofillSteps(
   return [...buildGegevensSteps(tpData), ...buildTp3Steps()];
 }
 
+export function buildSingleTp3AutofillStep(fieldKey: string): AutofillRunStep | null {
+  if (!(TP2026_TP3_FIELD_ORDER as readonly string[]).includes(fieldKey)) return null;
+  return {
+    id: fieldKey,
+    label: labelForTp3Field(fieldKey),
+    run: (ctx, currentData) => runTp3FieldStep(ctx, fieldKey, currentData),
+  };
+}
+
 async function runEmployeeAutofillStep(
   ctx: AutofillRunContext,
   currentData: Record<string, unknown>
-): Promise<{ data: Record<string, unknown>; error?: string }> {
+): Promise<AutofillStepRunResult> {
   try {
-    const res = await fetch(`/api/autofill-employee-info-working?employeeId=${ctx.employeeId}`);
+    const res = await fetch(`/api/autofill-employee-info-working?employeeId=${ctx.employeeId}`, {
+      signal: ctx.signal,
+    });
     const json = await res.json();
     if (!res.ok) {
       return {
@@ -111,36 +140,21 @@ async function runEmployeeAutofillStep(
     }
 
     let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS);
-
-    const existingDetails = Object.fromEntries(
-      EMPLOYEE_DETAILS_PERSIST_KEYS.filter((key) => key !== 'autofilled_fields').map((key) => [
-        key,
-        currentData[key],
-      ])
-    );
-
-    const persistResult = await applyEmployeeAutofillDetails(
-      ctx.supabase,
-      ctx.employeeId,
-      existingDetails,
-      details,
-      {
-        autofill_incomplete: data.autofill_incomplete,
-        autofill_warnings: data.autofill_warnings,
-      }
-    );
-
-    if (persistResult.error) {
-      return { data: next, error: `Opslaan werknemersprofiel mislukt: ${persistResult.error}` };
-    }
-
-    next = mergeGegevensAutofill(next, persistResult.updatedDetails, GEGEVENS_EMPLOYEE_KEYS);
-
     const suggested = data.suggested_referent as SuggestedReferent | undefined;
     next = applySuggestedReferentToTpData(next, suggested);
 
-    return { data: ensureTP2026Shape(next) };
+    return {
+      data: ensureTP2026Shape(next),
+      employeePersist: {
+        rawDetails: details,
+        meta: {
+          autofill_incomplete: data.autofill_incomplete,
+          autofill_warnings: data.autofill_warnings,
+        },
+      },
+    };
   } catch (e) {
+    if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {
       data: currentData,
       error: e instanceof Error ? e.message : 'Werknemersprofiel autofill mislukt',
@@ -151,9 +165,11 @@ async function runEmployeeAutofillStep(
 async function runTp2AutofillStep(
   ctx: AutofillRunContext,
   currentData: Record<string, unknown>
-): Promise<{ data: Record<string, unknown>; error?: string }> {
+): Promise<AutofillStepRunResult> {
   try {
-    const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`);
+    const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
+      signal: ctx.signal,
+    });
     const json = await res.json();
     if (!res.ok || !json.success) {
       return {
@@ -167,6 +183,7 @@ async function runTp2AutofillStep(
     const next = mergeGegevensAutofill(currentData, json.details, GEGEVENS_TP2_KEYS);
     return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };
   } catch (e) {
+    if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {
       data: currentData,
       error: e instanceof Error ? e.message : 'Gegevens traject autofill mislukt',
@@ -175,17 +192,19 @@ async function runTp2AutofillStep(
 }
 
 async function runTp3FieldStep(
-  employeeId: string,
+  ctx: AutofillRunContext,
   fieldKey: string,
   currentData: Record<string, unknown>
-): Promise<{ data: Record<string, unknown>; error?: string }> {
+): Promise<AutofillStepRunResult> {
   const endpoint = TP2026_BASIS_AUTOFILL_ENDPOINTS[fieldKey];
   if (!endpoint) {
     return { data: currentData, error: `Geen autofill endpoint voor ${fieldKey}` };
   }
 
   try {
-    const res = await fetch(`${endpoint}?employeeId=${employeeId}`);
+    const res = await fetch(`${endpoint}?employeeId=${ctx.employeeId}`, {
+      signal: ctx.signal,
+    });
     const json = await res.json();
     if (!res.ok) {
       return { data: currentData, error: json.error || `HTTP ${res.status}` };
@@ -200,6 +219,7 @@ async function runTp3FieldStep(
     }
     return { data: ensureTP2026Shape(next) };
   } catch (e) {
+    if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {
       data: currentData,
       error: e instanceof Error ? e.message : `Autofill mislukt voor ${fieldKey}`,
@@ -212,7 +232,18 @@ export type RunAutofillStepsResult = {
   completed: number;
   failed: { id: string; label: string; error: string }[];
   cancelled: boolean;
+  employeePersist?: EmployeeAutofillPersistPayload;
 };
+
+function cancelledResult(initialData: Record<string, unknown>): RunAutofillStepsResult {
+  return {
+    data: initialData,
+    completed: 0,
+    failed: [],
+    cancelled: true,
+    employeePersist: undefined,
+  };
+}
 
 export async function runAutofillSteps(
   steps: AutofillRunStep[],
@@ -226,16 +257,12 @@ export async function runAutofillSteps(
   let data = { ...initialData };
   const failed: { id: string; label: string; error: string }[] = [];
   let completed = 0;
+  let employeePersist: EmployeeAutofillPersistPayload | undefined;
   const total = steps.length;
 
   for (let i = 0; i < steps.length; i++) {
-    if (options.shouldCancel?.()) {
-      return {
-        data: ensureTP2026Shape(applyTrajectoryDateDerivations(data)),
-        completed,
-        failed,
-        cancelled: true,
-      };
+    if (isCancelled(ctx, options.shouldCancel)) {
+      return cancelledResult(initialData);
     }
 
     const step = steps[i];
@@ -245,12 +272,27 @@ export async function runAutofillSteps(
       currentLabel: step.label,
     });
 
-    const result = await step.run(ctx, data);
-    data = result.data;
-    if (result.error) {
-      failed.push({ id: step.id, label: step.label, error: result.error });
-    } else {
-      completed += 1;
+    try {
+      const result = await step.run(ctx, data);
+
+      if (isCancelled(ctx, options.shouldCancel)) {
+        return cancelledResult(initialData);
+      }
+
+      data = result.data;
+      if (result.employeePersist) {
+        employeePersist = result.employeePersist;
+      }
+      if (result.error) {
+        failed.push({ id: step.id, label: step.label, error: result.error });
+      } else {
+        completed += 1;
+      }
+    } catch (e) {
+      if (isAutofillAbortError(e) || isCancelled(ctx, options.shouldCancel)) {
+        return cancelledResult(initialData);
+      }
+      throw e;
     }
   }
 
@@ -259,5 +301,6 @@ export async function runAutofillSteps(
     completed,
     failed,
     cancelled: false,
+    employeePersist,
   };
 }
