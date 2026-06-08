@@ -1,5 +1,15 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
-import { BANNED_PHRASES, PERSONALITY_BLOCKLIST } from './constants';
+import {
+  ALINEA_1_TOPICS,
+  ALINEA_2_TOPICS,
+  ALINEA_3_TOPICS,
+  BANNED_PHRASES,
+  MAX_SENTENCES_PER_ALINEA,
+  MAX_WORDS_PER_ALINEA,
+  MAX_WORDS_TOTAL,
+  PERSONALITY_BLOCKLIST,
+  STYLE_REFERENCE_EXAMPLE,
+} from './constants';
 
 const INTAKE_SOCIALE_SECTIONS_HINT = `
 INTAKE SECTIES VOOR SOCIAAL-MAATSCHAPPELIJKE CONTEXT (Juni V3):
@@ -14,12 +24,12 @@ INTAKE SECTIES VOOR SOCIAAL-MAATSCHAPPELIJKE CONTEXT (Juni V3):
 
 /**
  * Content instructions for sociale achtergrond generation (masterprompt substance).
- * Paragraph layout is handled server-side in build-fields.ts.
+ * Output is three short synthesized paragraphs (~120 words total).
  */
 export const SOCIALE_ACHTERGROND_CONTENT_PROMPT = `
 Je bent een Nederlandse re-integratie rapportage specialist voor ValentineZ.
 
-Analyseer uitsluitend het bijgevoegde intakeformulier. Lever gestructureerde feitelijke content voor de sectie "Sociale achtergrond & maatschappelijke context" van een 2e spoor trajectplan.
+Analyseer uitsluitend het bijgevoegde intakeformulier. Lever drie korte, samenhangende alinea's voor "Sociale achtergrond & maatschappelijke context" van een 2e spoor trajectplan.
 
 ${INTAKE_LAYOUT_V75_HINT}
 
@@ -30,13 +40,23 @@ Beschrijf uitsluitend de sociale achtergrond en maatschappelijke context op basi
 Behandel uitsluitend onderwerpen waarvoor daadwerkelijk informatie aanwezig is én die relevant zijn voor de sociaal-maatschappelijke situatie.
 Neem geen feitelijke details op zonder maatschappelijke relevantie (bijv. duur van een huwelijk of relatie).
 
+LENGTE EN STIJL (verplicht)
+- Maximaal drie alinea's; totaal circa ${MAX_WORDS_TOTAL} woorden
+- Per alinea: max ${MAX_SENTENCES_PER_ALINEA} zinnen, circa ${MAX_WORDS_PER_ALINEA} woorden
+- SYNTHETISEER: vloeiende alinea's, geen aparte zin per intake-onderwerp
+- HERHAAL GEEN FEITEN: overlap tussen woon/gezin/netwerk in één alinea samenvoegen
+- Geen opsommingen, geen bullets
+
+STIJLREFERENTIE (alleen lengte en toon — niet kopiëren):
+${STYLE_REFERENCE_EXAMPLE}
+
 BRON (strikt)
 Gebruik uitsluitend informatie die letterlijk of rechtstreeks uit het intakeformulier afkomstig is.
 Wel: feiten, concrete situaties, feitelijke relaties, contacten, activiteiten, woon- en gezinssituaties.
-Niet: aannames, interpretaties, verklaringen, conclusies, vermoedens, adviezen, eigen toevoegingen, samenvattingen die verder gaan dan de bron.
+Niet: aannames, interpretaties, verklaringen, conclusies, vermoedens, adviezen, eigen toevoegingen.
 
 ONTBREKENDE INFORMATIE
-Benoem nooit dat informatie ontbreekt. Laat onderwerpen zonder informatie volledig weg (null in JSON).
+Benoem nooit dat informatie ontbreekt. Null voor een alinea wanneer geen relevante intake-informatie voor die alinea.
 
 PERSOONLIJKHEID / ZELOMSCHRIJVING
 Neem nooit persoonlijkheidskenmerken of zelfomschrijvingen op, ook niet wanneer letterlijk in het intakeformulier.
@@ -46,31 +66,24 @@ MEDISCH
 Neem nooit medische informatie op (diagnoses, klachten, beperkingen, behandelingen, psychologische info).
 
 PRIVACY (AVG)
-Geen geboortedata, leeftijd, adressen, telefoonnummers, e-mail, BSN, namen van familieleden/vrienden/kinderen.
-Kinderen: gebruik "kind", "kinderen", "uitwonend kind", "uitwonende kinderen"; niet "zoon", "dochter", "stiefzoon", "stiefdochter".
-Wanneer werknemer bij een kind woont: "woont bij een kind" / "woont in bij een kind".
-Familie: voorkeur "haar moeder", "zijn vader", "haar broer" (gebruik bezittelijk voornaamwoord passend bij geslacht werknemer uit context).
+Geen geboortedata, leeftijd, leeftijden van kinderen, adressen, telefoonnummers, e-mail, BSN, namen van familieleden/vrienden/kinderen.
+Kinderen: gebruik "kind", "kinderen", "uitwonend kind"; niet "zoon", "dochter", geen leeftijd (bijv. niet "6-jarig kind").
+Familie: voorkeur "haar moeder", "zijn vader" (bezittelijk voornaamwoord passend bij geslacht werknemer uit context).
 
 DAGSTRUCTUUR EN ACTIVITEITEN
 Alleen feitelijke activiteiten die daadwerkelijk plaatsvinden. Geen wensen, hoop of wat werknemer mist.
-Activiteiten uit het verleden alleen wanneer intake aangeeft dat deze nog worden uitgevoerd.
 
-SCHRIJFSTIJL (voor elke JSON-string)
+SCHRIJFSTIJL
 - Correct Nederlands, zakelijk, neutraal, feitelijk, compact
-- Geen opsommingen, geen bullets
-- Geen interpretaties of conclusies
 - Gebruik "Werknemer" (niet "De werknemer")
 - Vermijd: ${BANNED_PHRASES.slice(0, 8).join('; ')}
 
 JSON OUTPUT
-Lever één kort feitelijk fragment per onderwerp (maximaal 1–2 zinnen). Null wanneer het onderwerp niet in het intakeformulier staat.
-
-Onderwerpen per veld:
-- woonsituatie, gezinssituatie, familiecontacten, sociaal_netwerk, sociale_contacten, sociale_steun, praktische_omstandigheden
-- huishoudelijke_taken, zorgtaken, dagelijkse_bezigheden, dagstructuur, activiteiten_buitenshuis
-- vrije_tijd, hobby, sport, vrijwilligerswerk, maatschappelijke_activiteiten
-
-Kwaliteitscontrole vóór oplevering: elke zin moet expliciet uit het intakeformulier volgen; geen toegevoegde, medische of privacygevoelige informatie; geen persoonlijkheidskenmerken; kinderen neutraal benoemd.
+Lever exact drie velden: alinea_1, alinea_2, alinea_3.
+- alinea_1: ${ALINEA_1_TOPICS}
+- alinea_2: ${ALINEA_2_TOPICS}
+- alinea_3: ${ALINEA_3_TOPICS}
+Null wanneer die alinea geen inhoud heeft op basis van het intakeformulier.
 `.trim();
 
 export function buildSocialeAchtergrondContextMessage(context: Record<string, unknown>): string {

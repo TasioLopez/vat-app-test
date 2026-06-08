@@ -1,34 +1,33 @@
 /** Default model — override with OPENAI_SOCIALE_ACHTERGROND_MODEL. */
 export const DEFAULT_SOCIALE_ACHTERGROND_MODEL = 'gpt-5.1-2025-11-13';
 
-/** Alinea 1 topic keys (fixed assembly order). */
-export const ALINEA_1_KEYS = [
-  'woonsituatie',
-  'gezinssituatie',
-  'familiecontacten',
-  'sociaal_netwerk',
-  'sociale_contacten',
-  'sociale_steun',
-  'praktische_omstandigheden',
-] as const;
+/** Target length per synthesized paragraph (reference TP style). */
+export const MAX_WORDS_PER_ALINEA = 50;
 
-/** Alinea 2 topic keys (fixed assembly order). */
-export const ALINEA_2_KEYS = [
-  'huishoudelijke_taken',
-  'zorgtaken',
-  'dagelijkse_bezigheden',
-  'dagstructuur',
-  'activiteiten_buitenshuis',
-] as const;
+/** Target total length for the full section. */
+export const MAX_WORDS_TOTAL = 150;
 
-/** Alinea 3 topic keys (fixed assembly order). */
-export const ALINEA_3_KEYS = [
-  'vrije_tijd',
-  'hobby',
-  'sport',
-  'vrijwilligerswerk',
-  'maatschappelijke_activiteiten',
-] as const;
+/** Max sentences per paragraph. */
+export const MAX_SENTENCES_PER_ALINEA = 4;
+
+/** Topics to synthesize into each paragraph (prompt guidance only). */
+export const ALINEA_1_TOPICS =
+  'woonsituatie, gezinssituatie, familiecontacten, sociaal netwerk, sociale contacten, sociale steun, praktische omstandigheden (alleen indien essentieel)';
+
+export const ALINEA_2_TOPICS =
+  'huishoudelijke taken, zorgtaken, dagelijkse bezigheden, dagstructuur, activiteiten buitenshuis';
+
+export const ALINEA_3_TOPICS =
+  'vrije tijd, hobby\'s, sport, vrijwilligerswerk, maatschappelijke activiteiten';
+
+/** Style reference — length and tone only; do not copy content. */
+export const STYLE_REFERENCE_EXAMPLE = `
+Alinea 1 (ca. 40 woorden): Werknemer woont samen met haar partner en kind in Zaandam. Zij heeft een sociaal netwerk van familie en vrienden. Het contact met haar moeder is ondersteunend.
+
+Alinea 2 (ca. 45 woorden): Werknemer regelt het huishouden grotendeels zelfstandig. Zij combineert zorg voor haar kind met huishoudelijke taken en planning. Daarnaast onderhoudt zij sociale contacten buitenshuis.
+
+Alinea 3 (ca. 35 woorden): In haar vrije tijd verkoopt werknemer tweedehands babykleding via Vinted. Zij besteedt tijd aan activiteiten met haar kind.
+`.trim();
 
 /** Phrases the model must not use; stripped in post-processing when present. */
 export const BANNED_PHRASES = [

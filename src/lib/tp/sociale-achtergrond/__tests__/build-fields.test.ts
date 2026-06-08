@@ -1,7 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildParagraph,
   buildSocialeAchtergrondFields,
   sanitizeFragment,
   stripCitations,
@@ -15,47 +14,32 @@ const baseCtx: SocialeAchtergrondBuildContext = {
 };
 
 const emptyContent = (): SocialeAchtergrondContentResult => ({
-  woonsituatie: null,
-  gezinssituatie: null,
-  familiecontacten: null,
-  sociaal_netwerk: null,
-  sociale_contacten: null,
-  sociale_steun: null,
-  praktische_omstandigheden: null,
-  huishoudelijke_taken: null,
-  zorgtaken: null,
-  dagelijkse_bezigheden: null,
-  dagstructuur: null,
-  activiteiten_buitenshuis: null,
-  vrije_tijd: null,
-  hobby: null,
-  sport: null,
-  vrijwilligerswerk: null,
-  maatschappelijke_activiteiten: null,
+  alinea_1: null,
+  alinea_2: null,
+  alinea_3: null,
 });
 
 describe('buildSocialeAchtergrondFields', () => {
-  it('builds three paragraphs in fixed order when all alineas have content', () => {
+  it('joins three synthesized paragraphs with double newlines', () => {
     const content: SocialeAchtergrondContentResult = {
-      ...emptyContent(),
-      woonsituatie: 'Werknemer woont samen met haar partner',
-      huishoudelijke_taken: 'Werknemer verzorgt het huishouden',
-      hobby: 'Werknemer wandelt regelmatig',
+      alinea_1: 'Werknemer woont samen met haar partner en kind in Zaandam.',
+      alinea_2: 'Werknemer regelt het huishouden grotendeels zelfstandig.',
+      alinea_3: 'In haar vrije tijd verkoopt werknemer tweedehands babykleding via Vinted.',
     };
 
     const { sociale_achtergrond } = buildSocialeAchtergrondFields(baseCtx, content);
     const parts = sociale_achtergrond.split('\n\n');
     assert.equal(parts.length, 3);
-    assert.match(parts[0], /woont samen met haar partner/);
+    assert.match(parts[0], /Zaandam/);
     assert.match(parts[1], /huishouden/);
-    assert.match(parts[2], /wandelt/);
+    assert.match(parts[2], /Vinted/);
   });
 
-  it('omits empty alineas', () => {
+  it('omits null alineas', () => {
     const content: SocialeAchtergrondContentResult = {
-      ...emptyContent(),
-      woonsituatie: 'Werknemer woont alleen',
-      hobby: 'Werknemer leest graag',
+      alinea_1: 'Werknemer woont alleen.',
+      alinea_2: null,
+      alinea_3: 'Werknemer leest graag.',
     };
 
     const { sociale_achtergrond } = buildSocialeAchtergrondFields(baseCtx, content);
@@ -65,30 +49,34 @@ describe('buildSocialeAchtergrondFields', () => {
     assert.match(parts[1], /leest graag/);
   });
 
-  it('returns empty string when all topics are null', () => {
+  it('returns empty string when all alineas are null', () => {
     const { sociale_achtergrond } = buildSocialeAchtergrondFields(baseCtx, emptyContent());
     assert.equal(sociale_achtergrond, '');
   });
 
-  it('joins multiple topics within one alinea in schema order', () => {
+  it('preserves synthesized paragraph as-is without concatenating extra sentences', () => {
     const content: SocialeAchtergrondContentResult = {
-      ...emptyContent(),
-      woonsituatie: 'Werknemer woont in een appartement',
-      gezinssituatie: 'Werknemer heeft twee kinderen',
-      familiecontacten: 'Het contact met haar moeder is regelmatig',
+      alinea_1:
+        'Werknemer woont samen met haar partner en kind. Zij heeft een sociaal netwerk van familie en vrienden.',
+      alinea_2: null,
+      alinea_3: null,
     };
 
     const { sociale_achtergrond } = buildSocialeAchtergrondFields(baseCtx, content);
     assert.equal(sociale_achtergrond.split('\n\n').length, 1);
-    assert.match(sociale_achtergrond, /appartement.*twee kinderen.*haar moeder/s);
+    assert.equal(sociale_achtergrond.split('.').filter(Boolean).length, 2);
   });
-});
 
-describe('buildParagraph', () => {
-  it('adds sentence-ending punctuation when missing', () => {
-    const result = buildParagraph(['Werknemer woont alleen', 'Werknemer heeft een partner']);
-    assert.ok(result?.endsWith('.'));
-    assert.match(result!, /Werknemer woont alleen\. Werknemer heeft een partner\./);
+  it('collapses internal newlines within a paragraph', () => {
+    const content: SocialeAchtergrondContentResult = {
+      alinea_1: 'Werknemer woont alleen.\n\nZij heeft contact met familie.',
+      alinea_2: null,
+      alinea_3: null,
+    };
+
+    const { sociale_achtergrond } = buildSocialeAchtergrondFields(baseCtx, content);
+    assert.ok(!sociale_achtergrond.includes('\n\n\n'));
+    assert.match(sociale_achtergrond, /woont alleen.*contact met familie/);
   });
 });
 
@@ -101,5 +89,19 @@ describe('sanitizeFragment', () => {
     const cleaned = sanitizeFragment('Werknemer geeft aan dat zij graag wandelt');
     assert.ok(!cleaned.toLowerCase().includes('werknemer geeft aan'));
     assert.match(cleaned, /wandelt/i);
+  });
+});
+
+describe('parseSocialeAchtergrondContentResult', () => {
+  it('coerces empty strings to null', async () => {
+    const { parseSocialeAchtergrondContentResult } = await import('../schema');
+    const result = parseSocialeAchtergrondContentResult({
+      alinea_1: '  ',
+      alinea_2: 'Tekst',
+      alinea_3: '',
+    });
+    assert.equal(result.alinea_1, null);
+    assert.equal(result.alinea_2, 'Tekst');
+    assert.equal(result.alinea_3, null);
   });
 });

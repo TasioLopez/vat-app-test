@@ -1,7 +1,11 @@
-export { DEFAULT_SOCIALE_ACHTERGROND_MODEL, ALINEA_1_KEYS, ALINEA_2_KEYS, ALINEA_3_KEYS } from './constants';
+export {
+  DEFAULT_SOCIALE_ACHTERGROND_MODEL,
+  MAX_WORDS_PER_ALINEA,
+  MAX_WORDS_TOTAL,
+  STYLE_REFERENCE_EXAMPLE,
+} from './constants';
 export {
   buildSocialeAchtergrondFields,
-  buildParagraph,
   sanitizeFragment,
   stripCitations,
   type SocialeAchtergrondBuildContext,
@@ -15,7 +19,6 @@ export {
   SOCIALE_ACHTERGROND_CONTENT_JSON_SCHEMA,
   parseSocialeAchtergrondContentResult,
   type SocialeAchtergrondContentResult,
-  type SocialeAchtergrondTopicKey,
 } from './schema';
 export {
   SOCIALE_ACHTERGROND_CONTENT_PROMPT,
