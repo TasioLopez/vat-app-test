@@ -13,6 +13,7 @@
     "test:inleiding": "tsx --test src/lib/tp/inleiding/__tests__/*.test.ts",
     "test:sociale-achtergrond": "tsx --test src/lib/tp/sociale-achtergrond/__tests__/*.test.ts",
     "test:visie-werknemer": "tsx --test src/lib/tp/visie-werknemer/__tests__/*.test.ts",
+    "test:persoonlijk-profiel": "tsx --test src/lib/tp/persoonlijk-profiel/__tests__/*.test.ts",
     "test:phone": "tsx --test src/lib/phone/__tests__/*.test.ts",
     "help:generate-nl-md": "node scripts/generate-help-nl-md.mjs",
     "help:seed": "tsx scripts/seed-help-kb.ts",
