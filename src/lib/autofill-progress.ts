@@ -1,3 +1,5 @@
+import { TP2026_PROFIEL_WERKNEMER_FIELD_ORDER } from '@/lib/tp2026/basis-profiel-field-order';
+
 type DocLike = { type?: string | null };
 
 function normType(doc: DocLike): string {
@@ -52,8 +54,9 @@ export const TP2026_BASIS_FIELD_LABELS: Record<string, string> = {
   sociale_achtergrond: 'Sociale achtergrond',
   visie_werknemer: 'Visie van werknemer',
   visie_loopbaanadviseur: 'Visie van loopbaanadviseur',
-  prognose_bedrijfsarts: 'Prognose van de bedrijfsarts',
+  prognose_bedrijfsarts: 'Belastbaarheidsprofiel',
   persoonlijk_profiel: 'Persoonlijk profiel',
+  praktische_belemmeringen: 'Praktische belemmeringen',
   zoekprofiel: 'Zoekprofiel',
   advies_ad_passende_arbeid: 'AD advies over passende arbeid',
   visie_plaatsbaarheid: 'Visie op plaatsbaarheid',
@@ -62,15 +65,7 @@ export const TP2026_BASIS_FIELD_LABELS: Record<string, string> = {
 
 export const TP2026_TP3_FIELD_ORDER = [
   'inleiding',
-  'sociale_achtergrond',
-  'visie_werknemer',
-  'visie_loopbaanadviseur',
-  'prognose_bedrijfsarts',
-  'persoonlijk_profiel',
-  'zoekprofiel',
-  'advies_ad_passende_arbeid',
-  'visie_plaatsbaarheid',
-  'pow_meter',
+  ...TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
 ] as const;
 
 export function labelForTp3Field(key: string): string {

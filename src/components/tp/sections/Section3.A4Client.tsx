@@ -442,27 +442,15 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                 variant: "block",
             },
             {
-                key: "vlb",
-                title: "Visie van loopbaanadviseur",
-                text: tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS,
-                variant: "block",
-            },
-            {
-                key: "prog",
-                title: "Prognose van de bedrijfsarts",
-                text: tpData.prognose_bedrijfsarts || "—",
-                variant: "block",
-            },
-            {
                 key: "prof",
                 title: "Persoonlijk profiel",
                 text: tpData.persoonlijk_profiel || "—",
                 variant: "block",
             },
             {
-                key: "zp",
-                title: "Zoekprofiel",
-                text: tpData.zoekprofiel || "—",
+                key: "prog",
+                title: "Belastbaarheidsprofiel",
+                text: tpData.prognose_bedrijfsarts || "—",
                 variant: "block",
             },
             {
@@ -488,6 +476,18 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                 key: "plaats",
                 title: "Visie op plaatsbaarheid",
                 text: tpData.visie_plaatsbaarheid || "—",
+                variant: "block",
+            },
+            {
+                key: "vlb",
+                title: "Visie van loopbaanadviseur",
+                text: tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS,
+                variant: "block",
+            },
+            {
+                key: "zp",
+                title: "Zoekprofiel",
+                text: tpData.zoekprofiel || "—",
                 variant: "block",
             }
         );

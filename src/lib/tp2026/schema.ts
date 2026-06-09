@@ -1,4 +1,8 @@
 import {
+  TP2026_PROFIEL_PREVIEW_META,
+  TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+} from '@/lib/tp2026/basis-profiel-field-order';
+import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_VALUES,
   DUTCH_LANGUAGE_OPTIONS,
@@ -72,20 +76,23 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'tp_end_date', label: 'Einddatum (planning)', type: 'date' },
 ];
 
-export const TP2026BasisFields: TP2026FieldDef[] = [
+const TP2026_BASIS_INTRO_FIELDS: TP2026FieldDef[] = [
   { key: 'inleiding', label: 'Inleiding', type: 'multiline' },
   { key: 'inleiding_sub', label: 'Toelichting (bij inleiding)', type: 'multiline' },
   { key: 'wettelijke_kaders', label: 'Wettelijke kaders en terminologie', type: 'multiline' },
-  { key: 'sociale_achtergrond', label: 'Sociale achtergrond & maatschappelijke context', type: 'multiline' },
-  { key: 'visie_werknemer', label: 'Visie van werknemer', type: 'multiline' },
-  { key: 'visie_loopbaanadviseur', label: 'Visie van loopbaanadviseur', type: 'multiline' },
-  { key: 'prognose_bedrijfsarts', label: 'Prognose van de bedrijfsarts', type: 'multiline' },
-  { key: 'persoonlijk_profiel', label: 'Persoonlijk profiel', type: 'multiline' },
-  { key: 'zoekprofiel', label: 'Zoekprofiel', type: 'multiline' },
-  { key: 'praktische_belemmeringen', label: 'Praktische belemmeringen', type: 'multiline' },
-  { key: 'advies_ad_passende_arbeid', label: 'Advies passende arbeid (AD)', type: 'multiline' },
-  { key: 'pow_meter', label: 'Perspectief op Werk (PoW-meter)', type: 'multiline' },
-  { key: 'visie_plaatsbaarheid', label: 'Visie op plaatsbaarheid', type: 'multiline' },
+];
+
+const TP2026_BASIS_PROFIEL_FIELDS: TP2026FieldDef[] = TP2026_PROFIEL_WERKNEMER_FIELD_ORDER.map(
+  (key) => ({
+    key,
+    label: TP2026_PROFIEL_PREVIEW_META[key].editorLabel,
+    type: 'multiline' as const,
+  })
+);
+
+export const TP2026BasisFields: TP2026FieldDef[] = [
+  ...TP2026_BASIS_INTRO_FIELDS,
+  ...TP2026_BASIS_PROFIEL_FIELDS,
 ];
 
 export type TP2026Bijlage1Activity = {

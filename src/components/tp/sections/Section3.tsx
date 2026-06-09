@@ -365,6 +365,17 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
         }
     };
+    const runBelemmeringen = async (): Promise<RunResult> => {
+        try {
+            const res = await fetch(`/api/autofill-tp-3/belemmeringen?employeeId=${employeeId}`);
+            const json = await res.json();
+            if (json.error) return { success: false, error: json.error };
+            if (json.details) updateField("praktische_belemmeringen", json.details.praktische_belemmeringen || "");
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : 'Onbekende fout' };
+        }
+    };
     const runZoekprofiel = async (): Promise<RunResult> => {
         try {
             const res = await fetch(`/api/autofill-tp-3/zoekprofiel?employeeId=${employeeId}`);
@@ -589,18 +600,18 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         }
     };
 
-    // Bulk autofill: steps in order (Praktische belemmeringen excluded — no API)
     const BULK_AUTOFILL_STEPS = [
         { id: 'inleiding', label: 'Inleiding', run: runInleiding },
         { id: 'sociale-achtergrond', label: 'Sociale achtergrond', run: runSocialeAchtergrond },
         { id: 'visie-werknemer', label: 'Visie van werknemer', run: runVisieWerknemer },
-        { id: 'visie-adviseur', label: 'Visie van loopbaanadviseur', run: runVisieAdviseur },
-        { id: 'prognose', label: 'Prognose van de bedrijfsarts', run: runPrognose },
         { id: 'persoonlijk-profiel', label: 'Persoonlijk profiel', run: runPersoonlijkProfiel },
-        { id: 'zoekprofiel', label: 'Zoekprofiel', run: runZoekprofiel },
+        { id: 'prognose', label: 'Belastbaarheidsprofiel', run: runPrognose },
+        { id: 'praktische-belemmeringen', label: 'Praktische belemmeringen', run: runBelemmeringen },
         { id: 'ad-advies', label: 'AD advies over passende arbeid', run: runAdAdviesPassendeArbeid },
         { id: 'pow', label: 'PoW-meter', run: runPowMeter },
         { id: 'plaatsbaarheid', label: 'Visie op plaatsbaarheid', run: runVisiePlaatsbaarheid },
+        { id: 'visie-adviseur', label: 'Visie van loopbaanadviseur', run: runVisieAdviseur },
+        { id: 'zoekprofiel', label: 'Zoekprofiel', run: runZoekprofiel },
     ];
 
     const toggleBulkSelected = (id: string) => {
@@ -671,15 +682,15 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("wk", "Wettelijke kaders en terminologie", WETTELIJKE_KADERS),
         B("soc", "Sociale achtergrond & maatschappelijke context", tpData.sociale_achtergrond || "— nog niet ingevuld —"),
         B("visw", "Visie van werknemer", tpData.visie_werknemer || "— nog niet ingevuld —"),
-        B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
-        B("prog", "Prognose van de bedrijfsarts", tpData.prognose_bedrijfsarts || "— nog niet ingevuld —"),
         B("prof", "Persoonlijk profiel", tpData.persoonlijk_profiel || "— nog niet ingevuld —"),
+        B("prog", "Belastbaarheidsprofiel", tpData.prognose_bedrijfsarts || "— nog niet ingevuld —"),
         B("blem", "Praktische belemmeringen", tpData.praktische_belemmeringen || "Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject."),
-        B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
             tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "— nog niet ingevuld —")),
         B("pow", "Perspectief op Werk (PoW-meter)", tpData.pow_meter || "— door werknemer in te vullen —"),
         B("plaats", "Visie op plaatsbaarheid", tpData.visie_plaatsbaarheid || "— nog niet ingevuld —"),
+        B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
+        B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
 
         C("spoor2", <BasisSpoor2Block />, "spoor2"),
 
@@ -796,7 +807,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             onClick={() => setOpenModal('visie-adviseur')}
                         />
                         <SectionCard
-                            title="Prognose van de bedrijfsarts"
+                            title="Belastbaarheidsprofiel"
                             content={tpData.prognose_bedrijfsarts}
                             onClick={() => setOpenModal('prognose')}
                         />
@@ -889,7 +900,7 @@ export default function Section3({ employeeId }: { employeeId: string }) {
             <SectionEditorModal
                 isOpen={openModal === 'prognose'}
                 onClose={() => setOpenModal(null)}
-                title="Prognose van de bedrijfsarts"
+                title="Belastbaarheidsprofiel"
                 value={tpData.prognose_bedrijfsarts || ''}
                 onChange={(v) => updateField('prognose_bedrijfsarts', v)}
                 onAutofill={genPrognose}

@@ -21,6 +21,11 @@ import {
   TP_BASIS_TOELICHTING_DEFAULT,
   TP_WK_INTRO_LINE,
 } from '@/lib/tp2026/basis-document-layout';
+import {
+  TP2026_PROFIEL_PREVIEW_META,
+  TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+  type TP2026ProfielWerknemerFieldKey,
+} from '@/lib/tp2026/basis-profiel-field-order';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
@@ -183,6 +188,16 @@ function buildSpoor2Atoms(data: Record<string, unknown>): BasisAtom[] {
   return atoms;
 }
 
+function getProfielFieldFallback(
+  fieldKey: TP2026ProfielWerknemerFieldKey,
+  data: Record<string, any>
+): string {
+  if (fieldKey === 'advies_ad_passende_arbeid' && data.has_ad_report === false) {
+    return 'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
+  }
+  return '';
+}
+
 export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   const atoms: BasisAtom[] = [];
 
@@ -241,23 +256,15 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
     title: 'Profiel werknemer',
     pageBreakBefore: true,
   });
-  pushTextField('soc', 'Sociale achtergrond & maatschappelijke context', data.sociale_achtergrond, '');
-  pushTextField('visw', 'Visie van werknemer', data.visie_werknemer, '');
-  pushTextField('vlb', 'Visie van loopbaanadviseur', data.visie_loopbaanadviseur, '');
-  pushTextField('prog', 'Prognose van de bedrijfsarts', data.prognose_bedrijfsarts, '');
-  pushTextField('prof', 'Persoonlijk profiel', data.persoonlijk_profiel, '');
-  pushTextField('zp', 'Zoekprofiel', data.zoekprofiel, '');
-  pushTextField('blem', 'Praktische belemmeringen', data.praktische_belemmeringen, '');
-  pushTextField(
-    'ad',
-    'In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid',
-    data.advies_ad_passende_arbeid,
-    data.has_ad_report === false
-      ? 'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.'
-      : ''
-  );
-  pushTextField('pow', 'Perspectief op Werk (PoW-meter)', data.pow_meter, '');
-  pushTextField('plaats', 'Visie op plaatsbaarheid', data.visie_plaatsbaarheid, '');
+  for (const fieldKey of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
+    const meta = TP2026_PROFIEL_PREVIEW_META[fieldKey];
+    pushTextField(
+      meta.previewKey,
+      meta.title,
+      data[fieldKey],
+      getProfielFieldFallback(fieldKey, data)
+    );
+  }
 
   atoms.push(...buildSpoor2Atoms(data));
   atoms.push({ id: 'agree', kind: 'agreement' }, { id: 'sign', kind: 'signature' });
