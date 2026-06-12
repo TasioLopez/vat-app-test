@@ -32,12 +32,14 @@ type Props = {
   className?: string;
   itemTextClassName?: string;
   variant?: 'default' | 'sidebar';
+  showBullets?: boolean;
 };
 
 function SortableListRow({
   item,
   sortable,
   readOnly,
+  showBullets,
   onChange,
   onRemove,
   itemTextClassName,
@@ -45,6 +47,7 @@ function SortableListRow({
   item: Item;
   sortable: boolean;
   readOnly: boolean;
+  showBullets: boolean;
   onChange: (id: string, text: string) => void;
   onRemove: (id: string) => void;
   itemTextClassName: string;
@@ -71,7 +74,9 @@ function SortableListRow({
           <GripVertical className="h-3.5 w-3.5" />
         </button>
       )}
-      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+      {showBullets && (
+        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+      )}
       <div className="min-w-0 flex-1">
         <InlineEditableText
           value={item.text}
@@ -106,6 +111,7 @@ export default function InlineEditableList({
   className,
   itemTextClassName = 'text-gray-800',
   variant = 'default',
+  showBullets = true,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -120,6 +126,7 @@ export default function InlineEditableList({
           onChange={onChange}
           onRemove={onRemove}
           itemTextClassName={itemTextClassName}
+          showBullets={showBullets}
         />
       ))}
     </ul>

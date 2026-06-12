@@ -1,5 +1,8 @@
+import { SECTION_REGISTRY } from '@/lib/cv/section-registry';
 import type { CvLayoutSection, CvSectionLayout, CvSectionType } from '@/types/cv';
 import { newCvId } from '@/types/cv';
+
+const CONTAINER_LAYOUTS = new Set<CvSectionLayout>(['two_column', 'sidebar', 'main', 'grid_3']);
 
 export function cloneLayout(layout: CvLayoutSection[]): CvLayoutSection[] {
   return JSON.parse(JSON.stringify(layout)) as CvLayoutSection[];
@@ -82,13 +85,55 @@ export function removeLayoutSection(layout: CvLayoutSection[], sectionId: string
   return walk(layout);
 }
 
+export function findSectionByType(
+  layout: CvLayoutSection[],
+  type: CvSectionType
+): CvLayoutSection | null {
+  for (const section of layout) {
+    if (!CONTAINER_LAYOUTS.has(section.layout) && section.type === type) {
+      return section;
+    }
+    if (section.children?.length) {
+      const found = findSectionByType(section.children, type);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export type AddLayoutSectionResult =
+  | { ok: true; layout: CvLayoutSection[] }
+  | { ok: false; reason: 'duplicate_singleton' };
+
+export function canAddSection(layout: CvLayoutSection[], type: CvSectionType): boolean {
+  const entry = SECTION_REGISTRY[type];
+  if (!entry?.singleton) return true;
+  const existing = findSectionByType(layout, type);
+  if (!existing) return true;
+  return !existing.visible;
+}
+
 export function addLayoutSection(
   layout: CvLayoutSection[],
   parentId: string | null,
   type: CvSectionType,
   sectionLayout: CvSectionLayout,
   opts?: { title?: string; customKey?: string }
-): CvLayoutSection[] {
+): AddLayoutSectionResult {
+  const entry = SECTION_REGISTRY[type];
+  if (entry?.singleton) {
+    const existing = findSectionByType(layout, type);
+    if (existing) {
+      if (!existing.visible) {
+        return {
+          ok: true,
+          layout: updateLayoutSection(layout, existing.id, { visible: true }),
+        };
+      }
+      return { ok: false, reason: 'duplicate_singleton' };
+    }
+  }
+
   const newSection: CvLayoutSection = {
     id: newCvId(),
     type,
@@ -97,7 +142,10 @@ export function addLayoutSection(
     ...(opts?.title ? { title: opts.title } : {}),
     ...(opts?.customKey ? { customKey: opts.customKey } : {}),
   };
-  return updateChildren(layout, parentId, (children) => [...children, newSection]);
+  return {
+    ok: true,
+    layout: updateChildren(layout, parentId, (children) => [...children, newSection]),
+  };
 }
 
 export function flattenVisibleSections(layout: CvLayoutSection[]): CvLayoutSection[] {
@@ -122,8 +170,6 @@ export function flattenVisibleSections(layout: CvLayoutSection[]): CvLayoutSecti
   return result;
 }
 
-const CONTAINER_LAYOUTS = new Set(['two_column', 'sidebar', 'main', 'grid_3']);
-
 export function listStructureSections(layout: CvLayoutSection[]): CvLayoutSection[] {
   const result: CvLayoutSection[] = [];
   const walk = (nodes: CvLayoutSection[]) => {
@@ -139,15 +185,43 @@ export function listStructureSections(layout: CvLayoutSection[]): CvLayoutSectio
   return result;
 }
 
-/** Prefer main column (or root) when adding a new section from the structure panel. */
-export function getDefaultAddParentId(layout: CvLayoutSection[]): string | null {
+function findTwoColumnColumns(layout: CvLayoutSection[]): {
+  sidebarId: string | null;
+  mainId: string | null;
+} {
   for (const section of layout) {
     if (section.layout === 'two_column' && section.children?.length) {
+      const sidebar = section.children.find((c) => c.layout === 'sidebar');
       const main = section.children.find((c) => c.layout === 'main');
-      if (main) return main.id;
+      return {
+        sidebarId: sidebar?.id ?? null,
+        mainId: main?.id ?? null,
+      };
     }
   }
-  return null;
+  return { sidebarId: null, mainId: null };
+}
+
+/** Route new sections to sidebar or main column based on chosen layout. */
+export function resolveAddParentId(
+  layout: CvLayoutSection[],
+  sectionLayout: CvSectionLayout
+): string | null {
+  const { sidebarId, mainId } = findTwoColumnColumns(layout);
+  if (!sidebarId && !mainId) return null;
+
+  if (sectionLayout === 'sidebar') {
+    return sidebarId;
+  }
+  if (sectionLayout === 'main' || sectionLayout === 'full' || sectionLayout === 'half') {
+    return mainId;
+  }
+  return mainId;
+}
+
+/** @deprecated Use resolveAddParentId */
+export function getDefaultAddParentId(layout: CvLayoutSection[]): string | null {
+  return resolveAddParentId(layout, 'full');
 }
 
 export function reorderSectionsById(

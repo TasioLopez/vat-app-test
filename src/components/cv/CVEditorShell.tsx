@@ -458,9 +458,9 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-[1400px] gap-0 px-4 py-6">
+      <div className="mx-auto flex max-w-[1400px] gap-0 px-4 py-6 pb-8">
         <CvStructurePanel />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pb-8">
           <p className="cv-no-print mb-2 text-center text-xs text-gray-500">
             {employeeLabel} — {activeLocale === 'en' ? 'click text to edit' : 'klik op tekst om te bewerken'}.
           </p>

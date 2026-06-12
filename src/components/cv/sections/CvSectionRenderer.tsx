@@ -20,6 +20,7 @@ import CvPhotoFrame from '@/components/cv/CvPhotoFrame';
 import InlineEditableText from '@/components/cv/InlineEditableText';
 import InlineEditableList from '@/components/cv/InlineEditableList';
 import { getSectionTitle, uiLabel } from '@/lib/cv/section-labels';
+import { getCvTheme } from '@/lib/cv/theme-config';
 import type { CvLayoutSection } from '@/types/cv';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   const {
     cvData,
     activeLocale,
+    templateKey,
     photoDisplayUrl,
     readOnly,
     updatePersonal,
@@ -99,6 +101,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   } = useCV();
 
   const locale = activeLocale;
+  const theme = getCvTheme(templateKey);
   const labels = (key: string) => uiLabel(locale, key);
   const title = getSectionTitle(section.type, locale, section.title);
   const isSidebar = variant === 'sidebar';
@@ -163,14 +166,18 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   if (section.type === 'contact') {
     const textClass = isSidebar ? 'text-[11px] text-white' : 'text-[11px] text-gray-800';
     const iconClass = isSidebar ? 'text-white/90' : 'text-gray-500';
+    const contactTitleClass = isSidebar ? theme.sidebarTitleClass : cn(titleClass, 'mb-2');
     return (
       <section>
         {title && (
-          <h3 className={cn(titleClass, isSidebar && 'text-white')} style={titleStyle}>
+          <h3
+            className={cn(contactTitleClass, isSidebar && 'text-white')}
+            style={isSidebar ? undefined : titleStyle}
+          >
             {title}
           </h3>
         )}
-        <ul className={cn('space-y-2', isSidebar && 'text-white/95')}>
+        <ul className={cn('mt-1 space-y-2', isSidebar && 'text-white/95')}>
           <li className="flex items-start gap-2">
             <Phone className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', iconClass)} />
             <InlineEditableText
@@ -259,6 +266,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
         onRemove={removeSkill}
         onReorder={reorderSkills}
         sortable={!readOnly}
+        showBullets={!isSidebar}
         variant={isSidebar ? 'sidebar' : 'default'}
         itemTextClassName={isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'}
         readOnly={readOnly}
@@ -333,6 +341,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
         onRemove={removeInterest}
         onReorder={reorderInterests}
         sortable={!readOnly}
+        showBullets={!isSidebar}
         variant={isSidebar ? 'sidebar' : 'default'}
         itemTextClassName={isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'}
         readOnly={readOnly}
@@ -597,7 +606,9 @@ function LanguageRow({
           <GripVertical className="h-3.5 w-3.5" />
         </button>
       )}
-      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+      {!isSidebar && (
+        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+      )}
       <div className="min-w-0 flex-1 space-y-0.5">
         <InlineEditableText
           value={item.language}

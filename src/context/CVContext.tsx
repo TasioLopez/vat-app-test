@@ -12,10 +12,10 @@ import React, {
 import { supabase } from '@/lib/supabase/client';
 import {
   addLayoutSection,
-  getDefaultAddParentId,
   removeLayoutSection,
   reorderLayoutSections,
   reorderSectionsById,
+  resolveAddParentId,
   updateLayoutSection,
 } from '@/lib/cv/layout-utils';
 import { applyTemplateLayout } from '@/lib/cv/layout-presets';
@@ -78,7 +78,7 @@ export type CVContextValue = {
     type: CvSectionType,
     sectionLayout: CvSectionLayout,
     parentId?: string | null
-  ) => void;
+  ) => boolean;
   removeLayoutSection: (sectionId: string) => void;
   updateLayoutSection: (sectionId: string, patch: Partial<CvLayoutSection>) => void;
   photoDisplayUrl: string | null;
@@ -533,15 +533,21 @@ export function CVProvider({
   );
 
   const handleAddLayoutSection = useCallback(
-    (type: CvSectionType, sectionLayout: CvSectionLayout, parentId?: string | null) => {
+    (type: CvSectionType, sectionLayout: CvSectionLayout, parentId?: string | null): boolean => {
+      let success = false;
       updatePayload((prev) => {
         const targetParent =
-          parentId === undefined ? getDefaultAddParentId(prev.layout) : parentId;
-        return {
-          ...prev,
-          layout: addLayoutSection(prev.layout, targetParent, type, sectionLayout),
-        };
+          parentId === undefined ? resolveAddParentId(prev.layout, sectionLayout) : parentId;
+        const storedLayout: CvSectionLayout =
+          sectionLayout === 'sidebar' || sectionLayout === 'main' ? 'full' : sectionLayout;
+        const result = addLayoutSection(prev.layout, targetParent, type, storedLayout);
+        if (!result.ok) {
+          return prev;
+        }
+        success = true;
+        return { ...prev, layout: result.layout };
       });
+      return success;
     },
     [updatePayload]
   );
