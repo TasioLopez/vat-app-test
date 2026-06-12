@@ -3,16 +3,21 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { CvLocale } from '@/types/cv';
 import { cn } from '@/lib/utils';
 
 export function ExportCVButton({
   employeeId,
   cvId,
   variant = 'default',
+  locale = 'nl',
+  label,
 }: {
   employeeId: string;
   cvId: string;
   variant?: 'default' | 'icon';
+  locale?: CvLocale;
+  label?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const iconOnly = variant === 'icon';
@@ -21,11 +26,11 @@ export function ExportCVButton({
     if (busy) return;
     setBusy(true);
     try {
-      const filename = `CV-${cvId.slice(0, 8)}.pdf`;
+      const filename = `CV-${locale.toUpperCase()}-${cvId.slice(0, 8)}.pdf`;
       const res = await fetch(
         `/api/export-cv-pdf?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(
           cvId
-        )}&filename=${encodeURIComponent(filename)}&mode=json`,
+        )}&locale=${locale}&filename=${encodeURIComponent(filename)}&mode=json`,
         { method: 'GET' }
       );
       const data = await res.json();
@@ -50,6 +55,8 @@ export function ExportCVButton({
     }
   }
 
+  const ariaLabel = label ?? (busy ? 'PDF exporteren…' : `Download PDF (${locale.toUpperCase()})`);
+
   if (iconOnly) {
     return (
       <Button
@@ -57,12 +64,13 @@ export function ExportCVButton({
         size="icon"
         className={cn(
           'h-8 w-8 shrink-0 bg-[#00A3CC] hover:bg-[#0088aa] text-white',
-          'focus-visible:ring-2 focus-visible:ring-[#00A3CC]/50'
+          'focus-visible:ring-2 focus-visible:ring-[#00A3CC]/50',
+          locale === 'en' && 'bg-slate-600 hover:bg-slate-700'
         )}
         onClick={handleExport}
         disabled={busy}
-        aria-label={busy ? 'PDF exporteren…' : 'Download PDF'}
-        title="Download PDF"
+        aria-label={ariaLabel}
+        title={ariaLabel}
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
       </Button>
@@ -77,7 +85,7 @@ export function ExportCVButton({
       disabled={busy}
     >
       {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
-      {busy ? 'Bezig…' : 'Download PDF'}
+      {busy ? 'Bezig…' : label ?? `Download PDF (${locale.toUpperCase()})`}
     </Button>
   );
 }

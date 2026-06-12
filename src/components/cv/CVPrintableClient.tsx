@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { CVProvider } from '@/context/CVContext';
-import type { CvModel, CvTemplateKey } from '@/types/cv';
+import type { CvDocumentPayload, CvLocale, CvTemplateKey } from '@/types/cv';
 import CVPreview from '@/components/cv/CVPreview';
 
 type Props = {
@@ -11,8 +11,9 @@ type Props = {
   title: string;
   templateKey: CvTemplateKey;
   accentColor: string;
-  payload: CvModel;
+  payload: CvDocumentPayload;
   initialPhotoSignedUrl?: string | null;
+  printLocale?: CvLocale;
 };
 
 export default function CVPrintableClient({
@@ -23,6 +24,7 @@ export default function CVPrintableClient({
   accentColor,
   payload,
   initialPhotoSignedUrl,
+  printLocale,
 }: Props) {
   useEffect(() => {
     const root = document.getElementById('cv-print-root');
@@ -33,7 +35,9 @@ export default function CVPrintableClient({
       if (!cancelled) root.setAttribute('data-ready', '1');
     };
 
-    if (initialPhotoSignedUrl && payload.options?.includePhotoInCv) {
+    const activeModel =
+      printLocale === 'en' && payload.content.en ? payload.content.en : payload.content.nl;
+    if (initialPhotoSignedUrl && activeModel.options?.includePhotoInCv) {
       const img = new Image();
       img.onload = markReady;
       img.onerror = markReady;
@@ -50,7 +54,7 @@ export default function CVPrintableClient({
       cancelled = true;
       window.clearTimeout(to);
     };
-  }, [employeeId, cvId, payload, initialPhotoSignedUrl]);
+  }, [employeeId, cvId, payload, initialPhotoSignedUrl, printLocale]);
 
   return (
     <CVProvider
@@ -61,6 +65,8 @@ export default function CVPrintableClient({
       initialAccentColor={accentColor}
       initialPayload={payload}
       initialPhotoSignedUrl={initialPhotoSignedUrl}
+      readOnly
+      printLocale={printLocale}
     >
       <div id="cv-print-root" className="cv-print-root bg-gray-100 p-6 print:bg-white print:p-0">
         <CVPreview />

@@ -1,6 +1,11 @@
 import type { CvEducationItem, CvExperienceItem, CvLanguageItem, CvListItem, CvModel } from '@/types/cv';
 import { newCvId, emptyCvModel } from '@/types/cv';
 import { formatEducationLevel, parseWorkExperience } from '@/lib/utils';
+import {
+  formatCvComputerSkills,
+  formatCvDutchLanguageLevels,
+} from '@/lib/cv/format-display';
+import { EDUCATION_LEVEL_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
 
 type EmployeeRow = {
   first_name?: string | null;
@@ -62,17 +67,11 @@ function splitList(text: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-function levelLabel(level: string | null | undefined, kind: 'spreek' | 'schrijf' | 'lees'): string | null {
-  if (!level?.trim()) return null;
-  const map: Record<string, string> = {
-    '1': 'Geen',
-    '2': 'Matig',
-    '3': 'Gemiddeld',
-    '4': 'Goed',
-    '5': 'Zeer goed',
-  };
-  const v = map[level] ?? level;
-  return `${kind}: ${v}`;
+function formatEducationLevelLabel(level: string | null | undefined): string {
+  if (!level?.trim()) return '';
+  const trimmed = level.trim();
+  if ((EDUCATION_LEVEL_OPTIONS as readonly string[]).includes(trimmed)) return trimmed;
+  return trimmed;
 }
 
 function splitExperienceLines(raw: string): string[] {
@@ -158,7 +157,7 @@ function seedEducation(details: DetailsRow): CvEducationItem[] {
   const level = details.education_level;
   const name = details.education_name;
   if (!level?.trim() && !name?.trim()) return [];
-  const levelLabelText = level?.trim();
+  const levelLabelText = formatEducationLevelLabel(level);
   const nameText = name?.trim();
   const descParts = [
     levelLabelText ? `Opleidingsniveau: ${levelLabelText}` : '',
@@ -173,30 +172,39 @@ function seedEducation(details: DetailsRow): CvEducationItem[] {
   ];
 }
 
-function seedSkills(details: DetailsRow): CvListItem[] {
-  const parts = splitList(details.computer_skills);
-  return parts.map((text) => ({ id: newCvId(), text }));
+function seedSkills(_details: DetailsRow): CvListItem[] {
+  return [];
+}
+
+function seedDigitalSkills(details: DetailsRow): string | undefined {
+  const raw = details.computer_skills?.trim();
+  if (!raw) return undefined;
+  if (/^[1-5]$/.test(raw)) {
+    return formatCvComputerSkills(raw);
+  }
+  const parts = splitList(raw);
+  if (parts.length === 1 && /^[1-5]$/.test(parts[0])) {
+    return formatCvComputerSkills(parts[0]);
+  }
+  if (parts.length > 0) {
+    return parts.map((p) => (/^[1-5]$/.test(p) ? formatCvComputerSkills(p) : p)).join(', ');
+  }
+  return undefined;
 }
 
 function seedLanguages(details: DetailsRow): CvLanguageItem[] {
-  const lines: string[] = [];
-  const sp = levelLabel(details.dutch_speaking, 'spreek');
-  const wr = levelLabel(details.dutch_writing, 'schrijf');
-  const re = levelLabel(details.dutch_reading, 'lees');
-  if (sp) lines.push(sp);
-  if (wr) lines.push(wr);
-  if (re) lines.push(re);
-  if (lines.length === 0) return [];
+  const level = formatCvDutchLanguageLevels(
+    details.dutch_speaking,
+    details.dutch_writing,
+    details.dutch_reading
+  );
+  if (!level) return [];
   return [
     {
       id: newCvId(),
       language: 'Nederlands',
-      level: lines.join(', '),
+      level,
     },
-    ...lines.map((line) => ({
-    id: newCvId(),
-    language: `Nederlands (${line})`,
-  })),
   ];
 }
 
@@ -209,8 +217,7 @@ function seedInterests(details: DetailsRow): CvListItem[] {
   if (transport.length) {
     seeds.push('Flexibel inzetbaar op verschillende locaties');
   }
-  const skillParts = splitList(details.computer_skills);
-  if (skillParts.length) {
+  if (details.computer_skills?.trim()) {
     seeds.push('Digitale vaardigheden verder ontwikkelen');
   }
   if (details.contract_hours != null && details.contract_hours > 0) {
@@ -241,8 +248,9 @@ function seedExtra(details: DetailsRow): string {
 function seedProfile(employee: EmployeeRow, details: DetailsRow): string {
   const name = [employee.first_name, employee.last_name].filter(Boolean).join(' ');
   const job = details.current_job?.trim();
-  const skillParts = splitList(details.computer_skills);
-  const skillsHint = skillParts.slice(0, 4).join(', ');
+  const skillsHint = details.computer_skills?.trim()
+    ? formatCvComputerSkills(details.computer_skills)
+    : '';
   if (!name && !job && !skillsHint) return '';
 
   const sentences: string[] = [];
@@ -284,6 +292,7 @@ export function seedCvModelFromEmployee(employee: EmployeeRow, details: DetailsR
   base.experience = seedExperience(details);
   base.education = seedEducation(details);
   base.skills = seedSkills(details);
+  base.digitalSkills = seedDigitalSkills(details);
   base.languages = seedLanguages(details);
   base.interests = seedInterests(details);
   base.extra = seedExtra(details);

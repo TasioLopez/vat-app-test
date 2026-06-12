@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import type { CvModel } from '@/types/cv';
-import { DEFAULT_ACCENT_COLOR, type CvTemplateKey } from '@/types/cv';
+import type { CvDocumentPayload } from '@/types/cv';
+import { coerceCvTemplateKey, DEFAULT_ACCENT_COLOR, type CvTemplateKey } from '@/types/cv';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 
 export type CvDocumentRow = {
@@ -10,7 +10,7 @@ export type CvDocumentRow = {
   template_key: string;
   accent_color: string;
   status: string;
-  payload_json: CvModel;
+  payload_json: CvDocumentPayload;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -54,7 +54,7 @@ export async function loadCvDocumentForPrint(cvId: string, employeeId: string): 
 
   return {
     ...data,
-    payload_json: normalizeCvPayload(data.payload_json),
+    payload_json: normalizeCvPayload(data.payload_json, coerceCvTemplateKey(data.template_key)),
     template_key: data.template_key,
     accent_color: data.accent_color || DEFAULT_ACCENT_COLOR,
   } as CvDocumentRow;

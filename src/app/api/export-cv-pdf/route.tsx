@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
   const cvId = search.get('cvId');
   const filename = (search.get('filename') || 'CV.pdf').replace(/[^\w.\-]/g, '_');
   const mode = search.get('mode') || 'json';
+  const locale = search.get('locale') === 'en' ? 'en' : 'nl';
 
   if (!employeeId || !cvId) {
     return new Response(JSON.stringify({ error: 'Missing employeeId or cvId' }), {
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
 
   const base = getBaseUrl(req);
   const printUrl =
-    `${base}/cv/print?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&pdf=1` +
+    `${base}/cv/print?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&pdf=1&locale=${locale}` +
     (user?.id ? `&u=${encodeURIComponent(user.id)}` : '');
 
   let browser: any = null;

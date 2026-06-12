@@ -1,4 +1,4 @@
-import type { CvModel } from '@/types/cv';
+import type { CvLocale, CvModel } from '@/types/cv';
 import type { CvDocKind, CvFacts } from '@/lib/cv/facts';
 
 export function cvDocExtractionSystemPrompt(kind: CvDocKind): string {
@@ -63,10 +63,7 @@ ${text}
 Extraheer feiten volgens het schema en geef ALLEEN JSON terug.`;
 }
 
-export function cvComposeSystemPrompt(): string {
-  return `Je bent een ervaren Nederlandse CV-schrijver.
-Je antwoordt ALLEEN met geldige JSON volgens CvModel:
-{
+const CV_MODEL_SCHEMA = `{
   personal: { fullName, title, email, phone, location, dateOfBirth?, photoStoragePath?, photoUrl?, photoCrop? },
   profile: string,
   experience: [{ id, role, organization?, period?, description? }],
@@ -75,10 +72,23 @@ Je antwoordt ALLEEN met geldige JSON volgens CvModel:
   languages: [{ id, language, level? }],
   interests: [{ id, text }],
   extra: string,
+  digitalSkills?: string,
   options?: { includePhotoInCv?: boolean }
-}
+}`;
+
+export function cvComposeSystemPrompt(locale: CvLocale = 'nl'): string {
+  const langRule =
+    locale === 'en'
+      ? 'Write ALL narrative text in professional English.'
+      : 'Schrijf ALLE tekst in professioneel Nederlands.';
+
+  return `Je bent een ervaren CV-schrijver.
+${langRule}
+Je antwoordt ALLEEN met geldige JSON volgens CvModel:
+${CV_MODEL_SCHEMA}
 
 Behoud altijd personal.photoStoragePath, personal.photoCrop en options.includePhotoInCv uit de huidige CV tenzij expliciet leeg; verzin geen fotopaden.
+Gebruik NOOIT ruwe cijfercodes (1-5) voor computer/digital skills; schrijf beschrijvende tekst in digitalSkills.
 
 Kwaliteitseisen:
 - profile: 4-6 zinnen, professioneel en concreet.
@@ -89,6 +99,23 @@ Kwaliteitseisen:
 - extra: compacte alinea over inzetbaarheid (rijbewijs, vervoer, contracturen, beschikbaarheid).
 - Geen markdown, geen toelichting buiten JSON.
 - Behoud bestaande IDs wanneer een item logisch hetzelfde blijft.`;
+}
+
+export function cvGenerateEnUserPrompt(input: {
+  nlModel: CvModel;
+  facts: CvFacts;
+}): string {
+  return `Vertaal en localiseer dit Nederlandse CV naar een volledig Engels CvModel.
+Behoud dezelfde item-IDs waar items overeenkomen.
+Gebruik beschrijvende Engelse tekst voor digitalSkills (geen cijfercodes).
+
+Nederlands CV:
+${JSON.stringify(input.nlModel)}
+
+Bronfeiten:
+${JSON.stringify(input.facts)}
+
+Geef ALLEEN het volledige Engelse CvModel als JSON.`;
 }
 
 export function cvComposeUserPrompt(input: {

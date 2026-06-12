@@ -18,7 +18,10 @@ export default function CVEditorPageClient({
   employeeLabel: string;
   initialRow: CvRow;
 }) {
-  const payload = normalizeCvPayload(initialRow.payload_json);
+  const payload = normalizeCvPayload(
+    initialRow.payload_json,
+    coerceCvTemplateKey(initialRow.template_key)
+  );
 
   return (
     <CVProvider

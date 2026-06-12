@@ -10,6 +10,7 @@ type Props = {
   className?: string;
   placeholder?: string;
   as?: 'h1' | 'h2' | 'h3' | 'p' | 'span';
+  readOnly?: boolean;
 };
 
 export default function InlineEditableText({
@@ -19,6 +20,7 @@ export default function InlineEditableText({
   className,
   placeholder = '…',
   as: Tag = 'span',
+  readOnly = false,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -87,10 +89,14 @@ export default function InlineEditableText({
   }
 
   const displayClass = cn(
-    'cursor-text rounded px-0.5 transition-colors hover:bg-black/5',
+    readOnly ? '' : 'cursor-text rounded px-0.5 transition-colors hover:bg-black/5',
     !value && 'text-gray-400 italic',
     className
   );
+
+  if (readOnly) {
+    return <Tag className={displayClass}>{value || placeholder}</Tag>;
+  }
 
   return (
     <Tag

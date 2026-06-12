@@ -26,11 +26,13 @@ import {
 import { useCV } from '@/context/CVContext';
 import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
+import CvStructurePanel from '@/components/cv/CvStructurePanel';
 import { ExportCVButton } from '@/components/cv/ExportCVButton';
-import type { CvTemplateKey } from '@/types/cv';
+import { isLayoutCustomized } from '@/lib/cv/layout-presets';
+import { uiLabel } from '@/lib/cv/section-labels';
+import { getActiveCvModel, normalizeCvModel } from '@/lib/cv/normalize';
+import type { CvLocale, CvModel, CvTemplateKey } from '@/types/cv';
 import { cn } from '@/lib/utils';
-import { normalizeCvPayload } from '@/lib/cv/normalize';
-import type { CvModel } from '@/types/cv';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRef, useState } from 'react';
 import AiResultPreview from '@/components/cv/AiResultPreview';
@@ -57,6 +59,11 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
     saveError,
     cvData,
     applyAiPayload,
+    setEnContent,
+    activeLocale,
+    setActiveLocale,
+    payload,
+    layout,
     updateOptions,
     updatePersonal,
     photoDisplayUrl,
@@ -68,16 +75,18 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [aiPreview, setAiPreview] = useState<Record<string, unknown> | null>(null);
+  const [aiPreview, setAiPreview] = useState<CvModel | null>(null);
+  const [aiPreviewLocale, setAiPreviewLocale] = useState<CvLocale>('nl');
 
-  const runAi = async (mode: 'fill' | 'polish') => {
+  const runAi = async (mode: 'fill' | 'polish' | 'generate_en') => {
     setAiBusy(true);
     setAiError(null);
     try {
+      const localeParam = mode === 'generate_en' ? 'en' : activeLocale;
       const res = await fetch(
         `/api/autofill-cv?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(
           cvId
-        )}&mode=${mode}`,
+        )}&mode=${mode}&locale=${localeParam}`,
         { method: 'GET' }
       );
       const json = await res.json();
@@ -85,8 +94,9 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
         setAiError(json?.error || 'AI-aanroep mislukt');
         return;
       }
-      const payload = json?.data?.payload ?? json?.payload;
-      setAiPreview(payload as Record<string, unknown> | null);
+      const model = normalizeCvModel(json?.data?.payload ?? json?.payload);
+      setAiPreviewLocale((json?.data?.locale as CvLocale) ?? localeParam);
+      setAiPreview(model);
       setAiOpen(true);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'Fout');
@@ -97,9 +107,24 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
 
   const applyAi = () => {
     if (!aiPreview) return;
-    applyAiPayload(normalizeCvPayload(aiPreview) as Partial<CvModel>);
+    if (aiPreviewLocale === 'en') {
+      setEnContent(aiPreview);
+      setActiveLocale('en');
+    } else {
+      applyAiPayload(aiPreview, activeLocale);
+    }
     setAiOpen(false);
     setAiPreview(null);
+  };
+
+  const handleTemplateChange = (v: CvTemplateKey) => {
+    if (isLayoutCustomized(layout)) {
+      const ok = window.confirm(uiLabel(activeLocale, 'templateChangeConfirm'));
+      if (!ok) return;
+      setTemplateKey(v, { resetLayout: true });
+    } else {
+      setTemplateKey(v, { resetLayout: true });
+    }
   };
 
   const handlePrint = () => {
@@ -219,13 +244,39 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
             <div className="flex shrink-0 items-center gap-1">
               <Button
                 type="button"
+                variant={activeLocale === 'nl' ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => setActiveLocale('nl')}
+              >
+                NL
+              </Button>
+              <Button
+                type="button"
+                variant={activeLocale === 'en' ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => setActiveLocale('en')}
+              >
+                EN
+                {!payload.content.en && (
+                  <span className="ml-1 text-[10px] text-amber-600">*</span>
+                )}
+              </Button>
+            </div>
+
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
                 variant="secondary"
                 size="icon"
                 className="h-8 w-8 shrink-0"
                 disabled={aiBusy}
                 onClick={() => runAi('fill')}
-                aria-label="Lege velden invullen met AI"
-                title="Lege velden invullen met AI"
+                aria-label={uiLabel(activeLocale, 'aiFill')}
+                title={uiLabel(activeLocale, 'aiFill')}
               >
                 <Sparkles className="h-4 w-4" />
               </Button>
@@ -236,10 +287,20 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                 className="h-8 w-8 shrink-0"
                 disabled={aiBusy}
                 onClick={() => runAi('polish')}
-                aria-label="Teksten verfijnen met AI"
-                title="Teksten verfijnen met AI"
+                aria-label={uiLabel(activeLocale, 'aiPolish')}
+                title={uiLabel(activeLocale, 'aiPolish')}
               >
                 <Wand2 className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 text-xs"
+                disabled={aiBusy}
+                onClick={() => runAi('generate_en')}
+              >
+                {uiLabel(activeLocale, 'generateEn')}
               </Button>
               {aiError ? (
                 <span
@@ -327,7 +388,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
               <span id="cv-editor-template-label" className="sr-only">
                 Template
               </span>
-              <Select value={templateKey} onValueChange={(v) => setTemplateKey(v as CvTemplateKey)}>
+              <Select value={templateKey} onValueChange={(v) => handleTemplateChange(v as CvTemplateKey)}>
                 <SelectTrigger
                   className="h-8 w-[min(11rem,46vw)] text-xs"
                   aria-labelledby="cv-editor-template-label"
@@ -377,18 +438,35 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
                   <Mail className="h-4 w-4" />
                 </Button>
               )}
-              <ExportCVButton employeeId={employeeId} cvId={cvId} variant="icon" />
+              <ExportCVButton
+                employeeId={employeeId}
+                cvId={cvId}
+                variant="icon"
+                locale={activeLocale}
+              />
+              {payload.content.en && (
+                <ExportCVButton
+                  employeeId={employeeId}
+                  cvId={cvId}
+                  variant="icon"
+                  locale="en"
+                  label={uiLabel(activeLocale, 'exportEn')}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <p className="cv-no-print mb-2 text-center text-xs text-gray-500">
-          {employeeLabel} — klik op tekst om te bewerken.
-        </p>
-        <div className="flex justify-center overflow-x-auto">
-          <CVPreview />
+      <div className="mx-auto flex max-w-[1400px] gap-0 px-4 py-6">
+        <CvStructurePanel />
+        <div className="min-w-0 flex-1">
+          <p className="cv-no-print mb-2 text-center text-xs text-gray-500">
+            {employeeLabel} — {activeLocale === 'en' ? 'click text to edit' : 'klik op tekst om te bewerken'}.
+          </p>
+          <div className="flex justify-center overflow-x-auto">
+            <CVPreview />
+          </div>
         </div>
       </div>
 
@@ -413,7 +491,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
             </p>
           </DialogHeader>
           {aiPreview && (
-            <AiResultPreview data={normalizeCvPayload(aiPreview) as CvModel} />
+            <AiResultPreview data={aiPreview} />
           )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setAiOpen(false)}>

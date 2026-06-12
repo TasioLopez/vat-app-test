@@ -10,8 +10,26 @@ import React, {
   ReactNode,
 } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import type { CvModel, CvTemplateKey } from '@/types/cv';
-import { newCvId } from '@/types/cv';
+import {
+  addLayoutSection,
+  getDefaultAddParentId,
+  removeLayoutSection,
+  reorderLayoutSections,
+  reorderSectionsById,
+  updateLayoutSection,
+} from '@/lib/cv/layout-utils';
+import { applyTemplateLayout } from '@/lib/cv/layout-presets';
+import { getActiveCvModel } from '@/lib/cv/normalize';
+import type {
+  CvDocumentPayload,
+  CvLayoutSection,
+  CvLocale,
+  CvModel,
+  CvSectionLayout,
+  CvSectionType,
+  CvTemplateKey,
+} from '@/types/cv';
+import { emptyCvModel, newCvId } from '@/types/cv';
 import { updateCvDocument } from '@/lib/cv/service';
 
 export type CVContextValue = {
@@ -20,32 +38,49 @@ export type CVContextValue = {
   title: string;
   setTitle: (t: string) => void;
   templateKey: CvTemplateKey;
-  setTemplateKey: (k: CvTemplateKey) => void;
+  setTemplateKey: (k: CvTemplateKey, options?: { resetLayout?: boolean }) => void;
   accentColor: string;
   setAccentColor: (c: string) => void;
+  payload: CvDocumentPayload;
+  activeLocale: CvLocale;
+  setActiveLocale: (locale: CvLocale) => void;
   cvData: CvModel;
-  setCvData: React.Dispatch<React.SetStateAction<CvModel>>;
+  layout: CvLayoutSection[];
   updatePersonal: (patch: Partial<CvModel['personal']>) => void;
   setProfile: (v: string) => void;
   setExtra: (v: string) => void;
-  /** List helpers */
+  setDigitalSkills: (v: string) => void;
   addExperience: () => void;
   updateExperience: (id: string, patch: Partial<CvModel['experience'][0]>) => void;
   removeExperience: (id: string) => void;
+  reorderExperience: (fromIndex: number, toIndex: number) => void;
   addEducation: () => void;
   updateEducation: (id: string, patch: Partial<CvModel['education'][0]>) => void;
   removeEducation: (id: string) => void;
+  reorderEducation: (fromIndex: number, toIndex: number) => void;
   addSkill: () => void;
   updateSkill: (id: string, text: string) => void;
   removeSkill: (id: string) => void;
+  reorderSkills: (fromIndex: number, toIndex: number) => void;
   addLanguage: () => void;
   updateLanguage: (id: string, patch: Partial<CvModel['languages'][0]>) => void;
   removeLanguage: (id: string) => void;
+  reorderLanguages: (fromIndex: number, toIndex: number) => void;
   addInterest: () => void;
   updateInterest: (id: string, text: string) => void;
   removeInterest: (id: string) => void;
-  applyAiPayload: (partial: Partial<CvModel>) => void;
-  /** Signed read URL for personal.photoStoragePath (editor fetch or print bootstrap) */
+  reorderInterests: (fromIndex: number, toIndex: number) => void;
+  applyAiPayload: (partial: Partial<CvModel>, locale?: CvLocale) => void;
+  setEnContent: (model: CvModel) => void;
+  reorderLayoutSections: (parentId: string | null, fromIndex: number, toIndex: number) => void;
+  reorderSectionsById: (activeId: string, overId: string) => void;
+  addLayoutSection: (
+    type: CvSectionType,
+    sectionLayout: CvSectionLayout,
+    parentId?: string | null
+  ) => void;
+  removeLayoutSection: (sectionId: string) => void;
+  updateLayoutSection: (sectionId: string, patch: Partial<CvLayoutSection>) => void;
   photoDisplayUrl: string | null;
   updateOptions: (patch: Partial<NonNullable<CvModel['options']>>) => void;
   isDirty: boolean;
@@ -54,9 +89,17 @@ export type CVContextValue = {
   saving: boolean;
   lastSavedAt: string | null;
   saveError: string | null;
+  readOnly: boolean;
 };
 
 const Ctx = createContext<CVContextValue | undefined>(undefined);
+
+function arrayMove<T>(arr: T[], from: number, to: number): T[] {
+  const next = [...arr];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
 
 export function CVProvider({
   children,
@@ -68,6 +111,8 @@ export function CVProvider({
   initialPayload,
   initialUpdatedAt,
   initialPhotoSignedUrl,
+  readOnly = false,
+  printLocale,
 }: {
   children: ReactNode;
   employeeId: string;
@@ -75,26 +120,38 @@ export function CVProvider({
   initialTitle: string;
   initialTemplateKey: CvTemplateKey;
   initialAccentColor: string;
-  initialPayload: CvModel;
+  initialPayload: CvDocumentPayload;
   initialUpdatedAt?: string | null;
-  /** Server-signed URL for PDF/print; editor leaves undefined */
   initialPhotoSignedUrl?: string | null;
+  readOnly?: boolean;
+  printLocale?: CvLocale;
 }) {
   const [title, setTitleState] = useState(initialTitle);
   const [templateKey, setTemplateKeyState] = useState<CvTemplateKey>(initialTemplateKey);
   const [accentColor, setAccentColorState] = useState(initialAccentColor);
-  const [cvData, setCvDataInternal] = useState<CvModel>(initialPayload);
+  const [payload, setPayloadInternal] = useState<CvDocumentPayload>(initialPayload);
   const [photoDisplayUrl, setPhotoDisplayUrl] = useState<string | null>(initialPhotoSignedUrl ?? null);
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialUpdatedAt ?? null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const activeLocale = printLocale ?? payload.activeLocale;
+  const cvData = useMemo(() => {
+    if (printLocale === 'en' && payload.content.en) {
+      return getActiveCvModel({ ...payload, activeLocale: 'en' });
+    }
+    if (printLocale === 'nl') {
+      return getActiveCvModel({ ...payload, activeLocale: 'nl' });
+    }
+    return getActiveCvModel(payload);
+  }, [payload, printLocale]);
+
   useEffect(() => {
     setTitleState(initialTitle);
     setTemplateKeyState(initialTemplateKey);
     setAccentColorState(initialAccentColor);
-    setCvDataInternal(initialPayload);
+    setPayloadInternal(initialPayload);
     setPhotoDisplayUrl(initialPhotoSignedUrl ?? null);
     setIsDirty(false);
     setLastSavedAt(initialUpdatedAt ?? null);
@@ -137,12 +194,30 @@ export function CVProvider({
   const markDirty = useCallback(() => setIsDirty(true), []);
   const markSaved = useCallback(() => setIsDirty(false), []);
 
-  const setCvData = useCallback(
-    (up: React.SetStateAction<CvModel>) => {
-      setCvDataInternal(up);
+  const updatePayload = useCallback(
+    (up: (prev: CvDocumentPayload) => CvDocumentPayload) => {
+      setPayloadInternal((prev) => {
+        const next = up(prev);
+        return next;
+      });
       markDirty();
     },
     [markDirty]
+  );
+
+  const updateActiveModel = useCallback(
+    (up: (prev: CvModel) => CvModel) => {
+      updatePayload((prev) => {
+        const locale = prev.activeLocale;
+        const current = locale === 'en' && prev.content.en ? prev.content.en : prev.content.nl;
+        const updated = up(current);
+        if (locale === 'en') {
+          return { ...prev, content: { ...prev.content, en: updated } };
+        }
+        return { ...prev, content: { ...prev.content, nl: updated } };
+      });
+    },
+    [updatePayload]
   );
 
   const setTitle = useCallback(
@@ -154,11 +229,17 @@ export function CVProvider({
   );
 
   const setTemplateKey = useCallback(
-    (k: CvTemplateKey) => {
+    (k: CvTemplateKey, options?: { resetLayout?: boolean }) => {
       setTemplateKeyState(k);
+      if (options?.resetLayout) {
+        updatePayload((prev) => ({
+          ...prev,
+          layout: applyTemplateLayout(k, prev.layout),
+        }));
+      }
       markDirty();
     },
-    [markDirty]
+    [markDirty, updatePayload]
   );
 
   const setAccentColor = useCallback(
@@ -169,174 +250,320 @@ export function CVProvider({
     [markDirty]
   );
 
+  const setActiveLocale = useCallback(
+    (locale: CvLocale) => {
+      updatePayload((prev) => {
+        const next = { ...prev, activeLocale: locale };
+        if (locale === 'en' && !prev.content.en) {
+          next.content = { ...prev.content, en: emptyCvModel() };
+        }
+        return next;
+      });
+    },
+    [updatePayload]
+  );
+
   const updatePersonal = useCallback(
     (patch: Partial<CvModel['personal']>) => {
-      setCvDataInternal((prev) => ({ ...prev, personal: { ...prev.personal, ...patch } }));
-      markDirty();
+      updateActiveModel((prev) => ({ ...prev, personal: { ...prev.personal, ...patch } }));
     },
-    [markDirty]
+    [updateActiveModel]
   );
 
   const updateOptions = useCallback(
     (patch: Partial<NonNullable<CvModel['options']>>) => {
-      setCvDataInternal((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         options: { ...(prev.options ?? {}), ...patch },
       }));
-      markDirty();
     },
-    [markDirty]
+    [updateActiveModel]
   );
 
   const setProfile = useCallback(
-    (v: string) => {
-      setCvData((prev) => ({ ...prev, profile: v }));
-    },
-    [setCvData]
+    (v: string) => updateActiveModel((prev) => ({ ...prev, profile: v })),
+    [updateActiveModel]
   );
 
   const setExtra = useCallback(
-    (v: string) => {
-      setCvData((prev) => ({ ...prev, extra: v }));
-    },
-    [setCvData]
+    (v: string) => updateActiveModel((prev) => ({ ...prev, extra: v })),
+    [updateActiveModel]
+  );
+
+  const setDigitalSkills = useCallback(
+    (v: string) => updateActiveModel((prev) => ({ ...prev, digitalSkills: v })),
+    [updateActiveModel]
   );
 
   const addExperience = useCallback(() => {
-    setCvData((prev) => ({
+    updateActiveModel((prev) => ({
       ...prev,
       experience: [...prev.experience, { id: newCvId(), role: '', description: '' }],
     }));
-  }, [setCvData]);
+  }, [updateActiveModel]);
 
   const updateExperience = useCallback(
     (id: string, patch: Partial<CvModel['experience'][0]>) => {
-      setCvData((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         experience: prev.experience.map((x) => (x.id === id ? { ...x, ...patch } : x)),
       }));
     },
-    [setCvData]
+    [updateActiveModel]
   );
 
   const removeExperience = useCallback(
     (id: string) => {
-      setCvData((prev) => ({ ...prev, experience: prev.experience.filter((x) => x.id !== id) }));
+      updateActiveModel((prev) => ({
+        ...prev,
+        experience: prev.experience.filter((x) => x.id !== id),
+      }));
     },
-    [setCvData]
+    [updateActiveModel]
+  );
+
+  const reorderExperience = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      updateActiveModel((prev) => ({
+        ...prev,
+        experience: arrayMove(prev.experience, fromIndex, toIndex),
+      }));
+    },
+    [updateActiveModel]
   );
 
   const addEducation = useCallback(() => {
-    setCvData((prev) => ({
+    updateActiveModel((prev) => ({
       ...prev,
       education: [...prev.education, { id: newCvId(), institution: '' }],
     }));
-  }, [setCvData]);
+  }, [updateActiveModel]);
 
   const updateEducation = useCallback(
     (id: string, patch: Partial<CvModel['education'][0]>) => {
-      setCvData((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         education: prev.education.map((x) => (x.id === id ? { ...x, ...patch } : x)),
       }));
     },
-    [setCvData]
+    [updateActiveModel]
   );
 
   const removeEducation = useCallback(
     (id: string) => {
-      setCvData((prev) => ({ ...prev, education: prev.education.filter((x) => x.id !== id) }));
+      updateActiveModel((prev) => ({
+        ...prev,
+        education: prev.education.filter((x) => x.id !== id),
+      }));
     },
-    [setCvData]
+    [updateActiveModel]
+  );
+
+  const reorderEducation = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      updateActiveModel((prev) => ({
+        ...prev,
+        education: arrayMove(prev.education, fromIndex, toIndex),
+      }));
+    },
+    [updateActiveModel]
   );
 
   const addSkill = useCallback(() => {
-    setCvData((prev) => ({
+    updateActiveModel((prev) => ({
       ...prev,
       skills: [...prev.skills, { id: newCvId(), text: '' }],
     }));
-  }, [setCvData]);
+  }, [updateActiveModel]);
 
   const updateSkill = useCallback(
     (id: string, text: string) => {
-      setCvData((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         skills: prev.skills.map((x) => (x.id === id ? { ...x, text } : x)),
       }));
     },
-    [setCvData]
+    [updateActiveModel]
   );
 
   const removeSkill = useCallback(
     (id: string) => {
-      setCvData((prev) => ({ ...prev, skills: prev.skills.filter((x) => x.id !== id) }));
+      updateActiveModel((prev) => ({
+        ...prev,
+        skills: prev.skills.filter((x) => x.id !== id),
+      }));
     },
-    [setCvData]
+    [updateActiveModel]
+  );
+
+  const reorderSkills = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      updateActiveModel((prev) => ({
+        ...prev,
+        skills: arrayMove(prev.skills, fromIndex, toIndex),
+      }));
+    },
+    [updateActiveModel]
   );
 
   const addLanguage = useCallback(() => {
-    setCvData((prev) => ({
+    updateActiveModel((prev) => ({
       ...prev,
       languages: [...prev.languages, { id: newCvId(), language: '' }],
     }));
-  }, [setCvData]);
+  }, [updateActiveModel]);
 
   const updateLanguage = useCallback(
     (id: string, patch: Partial<CvModel['languages'][0]>) => {
-      setCvData((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         languages: prev.languages.map((x) => (x.id === id ? { ...x, ...patch } : x)),
       }));
     },
-    [setCvData]
+    [updateActiveModel]
   );
 
   const removeLanguage = useCallback(
     (id: string) => {
-      setCvData((prev) => ({ ...prev, languages: prev.languages.filter((x) => x.id !== id) }));
+      updateActiveModel((prev) => ({
+        ...prev,
+        languages: prev.languages.filter((x) => x.id !== id),
+      }));
     },
-    [setCvData]
+    [updateActiveModel]
+  );
+
+  const reorderLanguages = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      updateActiveModel((prev) => ({
+        ...prev,
+        languages: arrayMove(prev.languages, fromIndex, toIndex),
+      }));
+    },
+    [updateActiveModel]
   );
 
   const addInterest = useCallback(() => {
-    setCvData((prev) => ({
+    updateActiveModel((prev) => ({
       ...prev,
       interests: [...prev.interests, { id: newCvId(), text: '' }],
     }));
-  }, [setCvData]);
+  }, [updateActiveModel]);
 
   const updateInterest = useCallback(
     (id: string, text: string) => {
-      setCvData((prev) => ({
+      updateActiveModel((prev) => ({
         ...prev,
         interests: prev.interests.map((x) => (x.id === id ? { ...x, text } : x)),
       }));
     },
-    [setCvData]
+    [updateActiveModel]
   );
 
   const removeInterest = useCallback(
     (id: string) => {
-      setCvData((prev) => ({ ...prev, interests: prev.interests.filter((x) => x.id !== id) }));
+      updateActiveModel((prev) => ({
+        ...prev,
+        interests: prev.interests.filter((x) => x.id !== id),
+      }));
     },
-    [setCvData]
+    [updateActiveModel]
+  );
+
+  const reorderInterests = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      updateActiveModel((prev) => ({
+        ...prev,
+        interests: arrayMove(prev.interests, fromIndex, toIndex),
+      }));
+    },
+    [updateActiveModel]
   );
 
   const applyAiPayload = useCallback(
-    (partial: Partial<CvModel>) => {
-      setCvData((prev) => ({
+    (partial: Partial<CvModel>, locale?: CvLocale) => {
+      updatePayload((prev) => {
+        const loc = locale ?? prev.activeLocale;
+        const current = loc === 'en' && prev.content.en ? prev.content.en : prev.content.nl;
+        const merged: CvModel = {
+          ...current,
+          ...partial,
+          personal: partial.personal ? { ...current.personal, ...partial.personal } : current.personal,
+          options: partial.options ? { ...(current.options ?? {}), ...partial.options } : current.options,
+          experience: partial.experience ?? current.experience,
+          education: partial.education ?? current.education,
+          skills: partial.skills ?? current.skills,
+          languages: partial.languages ?? current.languages,
+          interests: partial.interests ?? current.interests,
+        };
+        if (loc === 'en') {
+          return { ...prev, content: { ...prev.content, en: merged } };
+        }
+        return { ...prev, content: { ...prev.content, nl: merged } };
+      });
+    },
+    [updatePayload]
+  );
+
+  const setEnContent = useCallback(
+    (model: CvModel) => {
+      updatePayload((prev) => ({ ...prev, content: { ...prev.content, en: model } }));
+    },
+    [updatePayload]
+  );
+
+  const handleReorderLayoutSections = useCallback(
+    (parentId: string | null, fromIndex: number, toIndex: number) => {
+      updatePayload((prev) => ({
         ...prev,
-        ...partial,
-        personal: partial.personal ? { ...prev.personal, ...partial.personal } : prev.personal,
-        options: partial.options ? { ...(prev.options ?? {}), ...partial.options } : prev.options,
-        experience: partial.experience ?? prev.experience,
-        education: partial.education ?? prev.education,
-        skills: partial.skills ?? prev.skills,
-        languages: partial.languages ?? prev.languages,
-        interests: partial.interests ?? prev.interests,
+        layout: reorderLayoutSections(prev.layout, parentId, fromIndex, toIndex),
       }));
     },
-    [setCvData]
+    [updatePayload]
+  );
+
+  const handleReorderSectionsById = useCallback(
+    (activeId: string, overId: string) => {
+      updatePayload((prev) => ({
+        ...prev,
+        layout: reorderSectionsById(prev.layout, activeId, overId),
+      }));
+    },
+    [updatePayload]
+  );
+
+  const handleAddLayoutSection = useCallback(
+    (type: CvSectionType, sectionLayout: CvSectionLayout, parentId?: string | null) => {
+      updatePayload((prev) => {
+        const targetParent =
+          parentId === undefined ? getDefaultAddParentId(prev.layout) : parentId;
+        return {
+          ...prev,
+          layout: addLayoutSection(prev.layout, targetParent, type, sectionLayout),
+        };
+      });
+    },
+    [updatePayload]
+  );
+
+  const handleRemoveLayoutSection = useCallback(
+    (sectionId: string) => {
+      updatePayload((prev) => ({
+        ...prev,
+        layout: removeLayoutSection(prev.layout, sectionId),
+      }));
+    },
+    [updatePayload]
+  );
+
+  const handleUpdateLayoutSection = useCallback(
+    (sectionId: string, patch: Partial<CvLayoutSection>) => {
+      updatePayload((prev) => ({
+        ...prev,
+        layout: updateLayoutSection(prev.layout, sectionId, patch),
+      }));
+    },
+    [updatePayload]
   );
 
   const save = useCallback(
@@ -348,7 +575,7 @@ export function CVProvider({
           title,
           template_key: templateKey,
           accent_color: accentColor,
-          payload_json: cvData,
+          payload_json: payload,
           saveVersion: options?.version ?? false,
         });
         markSaved();
@@ -360,7 +587,7 @@ export function CVProvider({
         setSaving(false);
       }
     },
-    [cvId, employeeId, title, templateKey, accentColor, cvData, markSaved]
+    [cvId, employeeId, title, templateKey, accentColor, payload, markSaved]
   );
 
   const value = useMemo(
@@ -373,27 +600,42 @@ export function CVProvider({
       setTemplateKey,
       accentColor,
       setAccentColor,
+      payload,
+      activeLocale,
+      setActiveLocale,
       cvData,
-      setCvData,
+      layout: payload.layout,
       updatePersonal,
       setProfile,
       setExtra,
+      setDigitalSkills,
       addExperience,
       updateExperience,
       removeExperience,
+      reorderExperience,
       addEducation,
       updateEducation,
       removeEducation,
+      reorderEducation,
       addSkill,
       updateSkill,
       removeSkill,
+      reorderSkills,
       addLanguage,
       updateLanguage,
       removeLanguage,
+      reorderLanguages,
       addInterest,
       updateInterest,
       removeInterest,
+      reorderInterests,
       applyAiPayload,
+      setEnContent,
+      reorderLayoutSections: handleReorderLayoutSections,
+      reorderSectionsById: handleReorderSectionsById,
+      addLayoutSection: handleAddLayoutSection,
+      removeLayoutSection: handleRemoveLayoutSection,
+      updateLayoutSection: handleUpdateLayoutSection,
       photoDisplayUrl,
       updateOptions,
       isDirty,
@@ -402,6 +644,7 @@ export function CVProvider({
       saving,
       lastSavedAt,
       saveError,
+      readOnly,
     }),
     [
       employeeId,
@@ -412,28 +655,41 @@ export function CVProvider({
       setTemplateKey,
       accentColor,
       setAccentColor,
+      payload,
+      activeLocale,
+      setActiveLocale,
       cvData,
-      photoDisplayUrl,
       updatePersonal,
-      updateOptions,
       setProfile,
       setExtra,
+      setDigitalSkills,
       addExperience,
       updateExperience,
       removeExperience,
+      reorderExperience,
       addEducation,
       updateEducation,
       removeEducation,
+      reorderEducation,
       addSkill,
       updateSkill,
       removeSkill,
+      reorderSkills,
       addLanguage,
       updateLanguage,
       removeLanguage,
+      reorderLanguages,
       addInterest,
       updateInterest,
       removeInterest,
+      reorderInterests,
       applyAiPayload,
+      setEnContent,
+      handleReorderLayoutSections,
+      handleReorderSectionsById,
+      handleAddLayoutSection,
+      handleRemoveLayoutSection,
+      handleUpdateLayoutSection,
       photoDisplayUrl,
       updateOptions,
       isDirty,
@@ -442,6 +698,7 @@ export function CVProvider({
       saving,
       lastSavedAt,
       saveError,
+      readOnly,
     ]
   );
 

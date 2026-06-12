@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { CvModel } from '@/types/cv';
-import { DEFAULT_ACCENT_COLOR, type CvTemplateKey } from '@/types/cv';
+import { getDefaultLayout } from '@/lib/cv/layout-presets';
 import { seedCvModelFromEmployee } from '@/lib/cv/seed';
+import type { CvDocumentPayload, CvModel } from '@/types/cv';
+import { DEFAULT_ACCENT_COLOR, type CvTemplateKey } from '@/types/cv';
 
 export type CvDocumentListItem = {
   id: string;
@@ -63,11 +64,12 @@ export async function createCvDocument(
     data: { user },
   } = await supabase.auth.getUser();
 
-  let payload: CvModel;
+  const templateKey = input.templateKey ?? 'modern_professional';
+  let nl: CvModel;
   if (input.seedPayload) {
-    payload = input.seedPayload;
+    nl = input.seedPayload;
   } else if (opts?.employee) {
-    payload = seedCvModelFromEmployee(opts.employee, opts.details ?? null);
+    nl = seedCvModelFromEmployee(opts.employee, opts.details ?? null);
   } else {
     const empRes = await supabase
       .from('employees')
@@ -75,15 +77,22 @@ export async function createCvDocument(
       .eq('id', input.employeeId)
       .maybeSingle();
     const detRes = await supabase.from('employee_details').select('*').eq('employee_id', input.employeeId).maybeSingle();
-    payload = seedCvModelFromEmployee(empRes.data ?? {}, detRes.data ?? null);
+    nl = seedCvModelFromEmployee(empRes.data ?? {}, detRes.data ?? null);
   }
+
+  const payload: CvDocumentPayload = {
+    schemaVersion: 2,
+    activeLocale: 'nl',
+    content: { nl },
+    layout: getDefaultLayout(templateKey),
+  };
 
   const { data, error } = await supabase
     .from('cv_documents')
     .insert({
       employee_id: input.employeeId,
       title: input.title ?? 'CV',
-      template_key: input.templateKey ?? 'modern_professional',
+      template_key: templateKey,
       accent_color: input.accentColor ?? DEFAULT_ACCENT_COLOR,
       status: 'draft',
       payload_json: payload as unknown as Record<string, unknown>,
@@ -104,7 +113,7 @@ export async function updateCvDocument(
     title?: string;
     template_key?: CvTemplateKey;
     accent_color?: string;
-    payload_json?: CvModel;
+    payload_json?: CvDocumentPayload;
     saveVersion?: boolean;
   }
 ) {
@@ -172,7 +181,7 @@ export async function duplicateCvDocument(
       template_key: (row as { template_key: string }).template_key,
       accent_color: (row as { accent_color: string }).accent_color ?? DEFAULT_ACCENT_COLOR,
       status: 'draft',
-      payload_json: (row as { payload_json: CvModel }).payload_json as unknown as Record<string, unknown>,
+      payload_json: (row as { payload_json: CvDocumentPayload }).payload_json as unknown as Record<string, unknown>,
       created_by: user?.id ?? null,
     })
     .select('id')

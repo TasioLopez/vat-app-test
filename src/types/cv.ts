@@ -93,7 +93,59 @@ export type CvModel = {
   interests: CvListItem[];
   /** Vrij tekstblok (rijbewijs, beschikbaarheid, etc.) */
   extra: string;
+  /** Formatted PC/digital literacy (seeded from employee_details.computer_skills) */
+  digitalSkills?: string;
   options?: CvModelOptions;
+};
+
+export type CvLocale = 'nl' | 'en';
+
+export type CvSectionType =
+  | 'personal_header'
+  | 'contact'
+  | 'photo'
+  | 'profile'
+  | 'experience'
+  | 'education'
+  | 'skills'
+  | 'languages'
+  | 'interests'
+  | 'extra'
+  | 'digital_skills'
+  | 'custom_text'
+  | 'custom_list';
+
+export type CvSectionLayout =
+  | 'full'
+  | 'half'
+  | 'sidebar'
+  | 'main'
+  | 'two_column'
+  | 'grid_3';
+
+export type CvLayoutSection = {
+  id: string;
+  type: CvSectionType;
+  layout: CvSectionLayout;
+  visible: boolean;
+  title?: string;
+  subsection?: string;
+  children?: CvLayoutSection[];
+  customKey?: string;
+};
+
+export type CvCustomSection = {
+  type: 'text' | 'list';
+  nl: string | CvListItem[];
+  en?: string | CvListItem[];
+};
+
+export type CvDocumentPayload = {
+  schemaVersion: 2;
+  activeLocale: CvLocale;
+  content: { nl: CvModel; en?: CvModel };
+  layout: CvLayoutSection[];
+  customSections?: Record<string, CvCustomSection>;
 };
 
 export function newCvId(): string {

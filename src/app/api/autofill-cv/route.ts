@@ -3,14 +3,16 @@ import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { normalizeCvPayload } from '@/lib/cv/normalize';
-import type { CvModel } from '@/types/cv';
+import { getActiveCvModel, normalizeCvModel, normalizeCvPayload } from '@/lib/cv/normalize';
+import type { CvLocale, CvModel } from '@/types/cv';
+import { coerceCvTemplateKey } from '@/types/cv';
 import { seedCvModelFromEmployee } from '@/lib/cv/seed';
 import { analyzeCvFactsForEmployee } from '@/lib/cv/docAnalysis';
 import { evaluateCvQuality } from '@/lib/cv/qualityGate';
 import {
   cvComposeSystemPrompt,
   cvComposeUserPrompt,
+  cvGenerateEnUserPrompt,
   cvRewriteUserPrompt,
 } from '@/lib/cv/prompts';
 import { emptyCvFacts } from '@/lib/cv/facts';
@@ -38,10 +40,29 @@ function stripCitations(text: string): string {
     .trim();
 }
 
+function sanitizeCvModel(payload: CvModel, source: CvModel): CvModel {
+  preserveCvPhotoFields(payload, source);
+  payload.profile = stripCitations(payload.profile);
+  payload.extra = stripCitations(payload.extra);
+  payload.experience = payload.experience.map((e) => ({
+    ...e,
+    description: e.description ? stripCitations(e.description) : e.description,
+  }));
+  payload.education = payload.education.map((ed) => ({
+    ...ed,
+    description: ed.description ? stripCitations(ed.description) : ed.description,
+    diploma: ed.diploma ? stripCitations(ed.diploma) : ed.diploma,
+  }));
+  return payload;
+}
+
 export async function GET(req: NextRequest) {
   const employeeId = req.nextUrl.searchParams.get('employeeId');
   const cvId = req.nextUrl.searchParams.get('cvId');
-  const mode = req.nextUrl.searchParams.get('mode') === 'polish' ? 'polish' : 'fill';
+  const modeParam = req.nextUrl.searchParams.get('mode');
+  const mode =
+    modeParam === 'polish' ? 'polish' : modeParam === 'generate_en' ? 'generate_en' : 'fill';
+  const locale: CvLocale = req.nextUrl.searchParams.get('locale') === 'en' ? 'en' : 'nl';
 
   if (!employeeId || !cvId) {
     return NextResponse.json({ success: false, error: 'employeeId and cvId required' }, { status: 400 });
@@ -77,7 +98,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
   }
 
-  const current = normalizeCvPayload(cvRow.payload_json);
+  const docPayload = normalizeCvPayload(
+    cvRow.payload_json,
+    coerceCvTemplateKey(cvRow.template_key)
+  );
+  const current = getActiveCvModel(docPayload);
 
   const { data: employee } = await service
     .from('employees')
@@ -106,11 +131,34 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    if (mode === 'generate_en') {
+      const nlModel = docPayload.content.nl;
+      const compose = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: cvComposeSystemPrompt('en') },
+          { role: 'user', content: cvGenerateEnUserPrompt({ nlModel, facts }) },
+        ],
+        temperature: 0.35,
+      });
+      const raw = compose.choices[0]?.message?.content;
+      if (!raw) {
+        return NextResponse.json({ success: false, error: 'Empty AI response' }, { status: 500 });
+      }
+      let payload = normalizeCvModel(JSON.parse(raw));
+      payload = sanitizeCvModel(payload, current);
+      return NextResponse.json({
+        success: true,
+        data: { payload, locale: 'en', quality: evaluateCvQuality(payload, facts) },
+      });
+    }
+
     const compose = await openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: cvComposeSystemPrompt() },
+        { role: 'system', content: cvComposeSystemPrompt(locale) },
         {
           role: 'user',
           content: cvComposeUserPrompt({
@@ -131,22 +179,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Empty AI response' }, { status: 500 });
     }
 
-    const parsedComposed = JSON.parse(rawComposed) as unknown;
-    let payload = normalizeCvPayload(parsedComposed) as CvModel;
-    preserveCvPhotoFields(payload, current);
-
-    // strip citations in narrative fields
-    payload.profile = stripCitations(payload.profile);
-    payload.extra = stripCitations(payload.extra);
-    payload.experience = payload.experience.map((e) => ({
-      ...e,
-      description: e.description ? stripCitations(e.description) : e.description,
-    }));
-    payload.education = payload.education.map((ed) => ({
-      ...ed,
-      description: ed.description ? stripCitations(ed.description) : ed.description,
-      diploma: ed.diploma ? stripCitations(ed.diploma) : ed.diploma,
-    }));
+    let payload = normalizeCvModel(JSON.parse(rawComposed) as unknown);
+    payload = sanitizeCvModel(payload, current);
 
     const quality = evaluateCvQuality(payload, facts);
     console.info('autofill-cv: first-pass quality', quality.metrics);
@@ -157,7 +191,7 @@ export async function GET(req: NextRequest) {
           response_format: { type: 'json_object' },
           temperature: 0.2,
           messages: [
-            { role: 'system', content: cvComposeSystemPrompt() },
+            { role: 'system', content: cvComposeSystemPrompt(locale) },
             {
               role: 'user',
               content: cvRewriteUserPrompt({
@@ -170,20 +204,10 @@ export async function GET(req: NextRequest) {
         });
         const rewriteRaw = rewrite.choices[0]?.message?.content;
         if (rewriteRaw) {
-          const rewriteParsed = JSON.parse(rewriteRaw) as unknown;
-          const rewritten = normalizeCvPayload(rewriteParsed) as CvModel;
-          rewritten.profile = stripCitations(rewritten.profile);
-          rewritten.extra = stripCitations(rewritten.extra);
-          rewritten.experience = rewritten.experience.map((e) => ({
-            ...e,
-            description: e.description ? stripCitations(e.description) : e.description,
-          }));
-          rewritten.education = rewritten.education.map((ed) => ({
-            ...ed,
-            description: ed.description ? stripCitations(ed.description) : ed.description,
-            diploma: ed.diploma ? stripCitations(ed.diploma) : ed.diploma,
-          }));
-          preserveCvPhotoFields(rewritten, current);
+          const rewritten = sanitizeCvModel(
+            normalizeCvModel(JSON.parse(rewriteRaw) as unknown),
+            current
+          );
           payload = rewritten;
         }
       } catch (rewriteErr) {
@@ -195,6 +219,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         payload,
+        locale,
         quality: evaluateCvQuality(payload, facts),
         facts_evidence: facts.evidence,
       },

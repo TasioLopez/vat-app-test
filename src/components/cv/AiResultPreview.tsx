@@ -110,6 +110,12 @@ export default function AiResultPreview({ data }: { data: CvModel }) {
         </Section>
       ) : null}
 
+      {data.digitalSkills?.trim() ? (
+        <Section icon={ListChecks} title="Digitale vaardigheden">
+          <p className="text-gray-800">{data.digitalSkills}</p>
+        </Section>
+      ) : null}
+
       {data.skills.length > 0 ? (
         <Section icon={ListChecks} title="Vaardigheden">
           <ul className="list-inside list-disc space-y-0.5">
