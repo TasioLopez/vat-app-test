@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader2, Save } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
@@ -516,30 +516,37 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
       <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-              disabled={currentStep === 1}
-            >
-              Terug
-            </Button>
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
-              <p className="text-sm text-gray-600">
-                Stap {currentStep} van {totalSteps}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
-              disabled={currentStep === totalSteps}
-            >
-              Volgende
-            </Button>
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
+            <span className="shrink-0 text-sm text-gray-400" aria-hidden>
+              ·
+            </span>
+            <p className="shrink-0 text-sm text-gray-600">
+              Stap {currentStep} van {totalSteps}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+              disabled={currentStep === 1}
+              aria-label="Vorige stap"
+              title="Vorige stap"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
+              disabled={currentStep === totalSteps}
+              aria-label="Volgende stap"
+              title="Volgende stap"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Button>
             <ExportButton
               employeeId={employeeId}
               tpInstanceId={tpInstanceId}

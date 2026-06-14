@@ -22,6 +22,12 @@ import FieldControl from '@/components/tp2026/FieldControl';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { Button } from '@/components/ui/button';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  Sparkles,
+} from 'lucide-react';
 
 export { Basis2026A4Pages } from '@/components/tp2026/Basis2026A4Measured';
 
@@ -154,12 +160,29 @@ function Basis2026SectionDetail({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={onBack}>
-          Terug
-        </Button>
-        <h2 className="text-sm font-semibold text-foreground">{section.label}</h2>
-        <BasisSectionStatusBadge status={status} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <IconActionButton label="Terug naar secties" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+          </IconActionButton>
+          <h2 className="text-sm font-semibold text-foreground">{section.label}</h2>
+          <BasisSectionStatusBadge status={status} />
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {canAutofill ? (
+            <IconActionButton label="Autofill" onClick={() => void onAutofillField!(sectionId)}>
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </IconActionButton>
+          ) : null}
+          <IconActionButton label="Valideren" onClick={handleValidate} disabled={isEmpty}>
+            <CheckCircle2 className="h-4 w-4" aria-hidden />
+          </IconActionButton>
+          {onOpenNext ? (
+            <IconActionButton label="Volgende sectie" onClick={onOpenNext}>
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </IconActionButton>
+          ) : null}
+        </div>
       </div>
 
       {section.kind === 'spoor2' ? (
@@ -180,29 +203,37 @@ function Basis2026SectionDetail({
           updateField={updateField}
           onAutofillField={onAutofillField}
           showAutofillButton={false}
+          hideLabel
         />
       )}
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-gray-200 pt-4">
-        {canAutofill ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => void onAutofillField!(sectionId)}>
-            Autofill
-          </Button>
-        ) : null}
-        <Button type="button" size="sm" disabled={isEmpty} onClick={handleValidate}>
-          Valideren
-        </Button>
-        {onOpenNext ? (
-          <button
-            type="button"
-            className="text-xs font-medium text-[#6d2a96] underline underline-offset-2 hover:no-underline"
-            onClick={onOpenNext}
-          >
-            Volgende sectie
-          </button>
-        ) : null}
-      </div>
     </div>
+  );
+}
+
+function IconActionButton({
+  label,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      className="h-8 w-8 shrink-0"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </Button>
   );
 }
 
@@ -227,12 +258,14 @@ function BasisFieldEditorRow({
   updateField,
   onAutofillField,
   showAutofillButton = true,
+  hideLabel = false,
 }: {
   field: TP2026FieldDef;
   data: Record<string, any>;
   updateField: (key: string, value: any) => void;
   onAutofillField?: (fieldKey: string) => Promise<void>;
   showAutofillButton?: boolean;
+  hideLabel?: boolean;
 }) {
   if (field.key === 'inleiding_sub' || field.key === 'wettelijke_kaders') {
     return null;
@@ -248,18 +281,20 @@ function BasisFieldEditorRow({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <label className="text-sm font-semibold text-foreground">{field.label}</label>
-        {canAutofill ? (
-          <button
-            type="button"
-            className="text-xs font-medium text-[#6d2a96] underline underline-offset-2 hover:no-underline"
-            onClick={() => void onAutofillField!(field.key)}
-          >
-            Autofill
-          </button>
-        ) : null}
-      </div>
+      {!hideLabel ? (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label className="text-sm font-semibold text-foreground">{field.label}</label>
+          {canAutofill ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-[#6d2a96] underline underline-offset-2 hover:no-underline"
+              onClick={() => void onAutofillField!(field.key)}
+            >
+              Autofill
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <Basis2026MarkdownFieldEditor
         markdown={String(data[field.key] ?? '')}
         onChange={(md) => updateField(field.key, md)}
