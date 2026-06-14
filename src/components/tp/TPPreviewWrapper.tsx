@@ -1,7 +1,9 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useLayoutEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+
+const PREVIEW_SCALE = 0.65;
 
 interface TPPreviewWrapperProps {
   children: ReactNode;
@@ -10,24 +12,49 @@ interface TPPreviewWrapperProps {
 
 /**
  * TPPreviewWrapper - Standardized wrapper for TP preview sections
- * 
- * This component maintains the critical structure for TP previews:
- * - 50/50 split layout between form and preview
- * - scale-[0.65] transform for A4 preview scaling
- * - Consistent styling container
- * 
- * DO NOT modify the container dimensions or scaling without careful testing.
+ *
+ * - 50% width preview pane with vertical scroll
+ * - scale(0.65) for A4 preview sizing
+ * - ResizeObserver sets outer height to measured × scale so scroll range matches visible content
+ *   (transform alone leaves ~35% phantom scroll per page)
  */
 export default function TPPreviewWrapper({ children, className }: TPPreviewWrapperProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scaledHeight, setScaledHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const node = contentRef.current;
+    if (!node) return;
+
+    const update = () => {
+      setScaledHeight(node.offsetHeight * PREVIEW_SCALE);
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [children]);
+
   return (
-    <div className={cn(
-      "w-[50%] min-h-0 flex justify-center items-start pt-4 overflow-y-auto overflow-x-hidden h-full",
-      className
-    )}>
-      <div className="transform scale-[0.65] origin-top">
-        {children}
+    <div
+      className={cn(
+        'flex h-full min-h-0 w-[50%] items-start justify-center overflow-y-auto overflow-x-hidden',
+        className
+      )}
+    >
+      <div
+        className="relative shrink-0 overflow-hidden"
+        style={{ height: scaledHeight ?? undefined }}
+      >
+        <div
+          ref={contentRef}
+          className="origin-top"
+          style={{ transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'top center' }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
 }
-

@@ -581,7 +581,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
-        <div className="relative h-full min-h-0 p-6">
+        <div className="relative h-full min-h-0 px-6 pt-6 pb-2">
           {autofilling && autofillProgress ? (
             <AutofillProgressOverlay
               progress={autofillProgress}
@@ -591,8 +591,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           ) : null}
           {sections.map((section, index) => (
             <div key={section.id} style={{ display: currentStep === index + 1 ? 'block' : 'none' }} className="h-full min-h-0">
-              <div className="flex min-h-0 h-full gap-10 items-stretch">
-                <div className="flex w-[50%] min-h-0 flex-col space-y-3 overflow-y-auto pr-2">
+              <div className="flex min-h-0 h-full gap-10 items-stretch overflow-hidden">
+                <div className="flex max-h-full w-[50%] min-h-0 flex-col space-y-3 overflow-y-auto pr-2">
                   {section.renderEditor()}
                 </div>
                 <TPPreviewWrapper>

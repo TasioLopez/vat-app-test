@@ -51,7 +51,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElemen
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { BIJLAGE1_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, Check, GripVertical, Plus, X } from 'lucide-react';
 
 function TextInput({
   value,
@@ -431,7 +432,7 @@ export function Bijlage1Editor({
               onClick={() => applyTemplate('3-fases')}
               disabled={!planStartDate || !planEndDate}
             >
-              3 fases (legacy)
+              3 fases
             </Button>
             <Button
               type="button"
@@ -440,9 +441,10 @@ export function Bijlage1Editor({
               onClick={() => applyTemplate('2-fases')}
               disabled={!planStartDate || !planEndDate}
             >
-              2 fases (legacy)
+              2 fases
             </Button>
-            <Button type="button" size="sm" onClick={addPhase}>
+            <Button type="button" size="sm" className="gap-1" onClick={addPhase}>
+              <Plus className="h-3.5 w-3.5" aria-hidden />
               Fase toevoegen
             </Button>
           </div>
@@ -749,6 +751,16 @@ export function Bijlage1A4Pages({
 
 const BIJLAGE2_CHECKLIST_GROUPS = ['willen', 'weten', 'kunnen', 'doen'] as const;
 
+const BIJLAGE_EDITOR_DETAILS_CLASS =
+  'group rounded-md border border-border bg-muted/15 open:bg-white [&>summary::-webkit-details-marker]:hidden';
+
+const BIJLAGE_EDITOR_SUMMARY_CLASS =
+  'flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-semibold text-[#6d2a96]';
+
+function bijlage2GroupLabel(group: (typeof BIJLAGE2_CHECKLIST_GROUPS)[number]): string {
+  return group.charAt(0).toUpperCase() + group.slice(1);
+}
+
 export function Bijlage2Editor({
   model,
   setModel,
@@ -780,37 +792,53 @@ export function Bijlage2Editor({
   };
 
   return (
-    <div className="space-y-4">
-      {BIJLAGE2_CHECKLIST_GROUPS.map((group) => (
-        <div key={group} className="border border-border rounded-md p-3">
-          <h4 className="font-semibold capitalize mb-2 text-[#6d2a96]">{group}</h4>
-          <div className="max-h-[320px] space-y-1 overflow-y-auto pr-1">
-            {model[group].map((row, idx) => (
-              <label key={idx} className="flex items-start gap-2 py-1 text-sm">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 shrink-0"
-                  checked={row.checked}
-                  onChange={(e) => updateChecklist(group, idx, e.target.checked)}
-                />
-                <span>{row.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="space-y-3">
+      {BIJLAGE2_CHECKLIST_GROUPS.map((group, groupIdx) => {
+        const rows = model[group];
+        const checkedCount = rows.filter((r) => r.checked).length;
+        return (
+          <details
+            key={group}
+            className={BIJLAGE_EDITOR_DETAILS_CLASS}
+            open={groupIdx === 0}
+          >
+            <summary className={BIJLAGE_EDITOR_SUMMARY_CLASS}>
+              <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+              <span>
+                {bijlage2GroupLabel(group)} ({checkedCount}/{rows.length})
+              </span>
+            </summary>
+            <div className="space-y-1 border-t border-border px-3 pb-3 pt-2">
+              {rows.map((row, idx) => (
+                <label key={idx} className="flex items-start gap-2 py-1 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 shrink-0"
+                    checked={row.checked}
+                    onChange={(e) => updateChecklist(group, idx, e.target.checked)}
+                  />
+                  <span>{row.label}</span>
+                </label>
+              ))}
+            </div>
+          </details>
+        );
+      })}
 
-      <div className="border border-border rounded-md p-3">
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-          <h4 className="font-semibold text-[#6d2a96]">Activeringsinterventies</h4>
-          <span className="text-sm font-semibold text-[#6d2a96]">POW-meter™</span>
-        </div>
-        <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
+      <details className={BIJLAGE_EDITOR_DETAILS_CLASS} open>
+        <summary className={BIJLAGE_EDITOR_SUMMARY_CLASS}>
+          <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+          <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span>Activeringsinterventies</span>
+            <span className="text-xs font-semibold text-[#6d2a96]/80">POW-meter™</span>
+          </span>
+        </summary>
+        <div className="space-y-2 border-t border-border px-3 pb-3 pt-2">
           {sortedPow.map((t) => (
             <details
               key={t.trede}
-              className="rounded border border-border bg-muted/15 open:bg-white"
-              open={t.trede <= 2}
+              className="rounded border border-border bg-muted/15 open:bg-white [&>summary::-webkit-details-marker]:hidden"
+              open={t.trede === 1}
             >
               <summary className="cursor-pointer px-2 py-1.5 text-sm font-semibold text-[#6d2a96]">
                 Trede {t.trede}
@@ -833,10 +861,10 @@ export function Bijlage2Editor({
               </div>
             </details>
           ))}
+          <p className="mt-2 text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[0]}</p>
+          <p className="text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[1]}</p>
         </div>
-        <p className="mt-3 text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[0]}</p>
-        <p className="text-xs italic text-muted-foreground">{BIJLAGE2_FOOTNOTES[1]}</p>
-      </div>
+      </details>
     </div>
   );
 }
@@ -1351,6 +1379,73 @@ function computeBijlage3PackingFromMeasurements(
   return { chunks };
 }
 
+function normalizeBijlage3EditorText(text?: string): string {
+  return String(text || '')
+    .replace(/\s*\n\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function truncateBijlage3Summary(text: string, maxLen = 80): string {
+  if (text.length <= maxLen) return text;
+  return `${text.slice(0, maxLen - 1).trim()}…`;
+}
+
+function bijlage3DoelStatusLabel(doelJa?: boolean, doelNee?: boolean): string | null {
+  if (doelJa) return 'ja';
+  if (doelNee) return 'nee';
+  return null;
+}
+
+function Bijlage3DoelToggle({
+  doelJa,
+  doelNee,
+  onSelectJa,
+  onSelectNee,
+}: {
+  doelJa?: boolean;
+  doelNee?: boolean;
+  onSelectJa: (checked: boolean) => void;
+  onSelectNee: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        aria-pressed={Boolean(doelJa)}
+        aria-label="Doel behaald: ja"
+        title="Doel behaald: ja"
+        onClick={() => onSelectJa(!doelJa)}
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm transition',
+          doelJa
+            ? 'border-green-500 bg-green-50 text-green-800'
+            : 'border-border bg-white text-foreground hover:bg-muted/50'
+        )}
+      >
+        <Check className="h-3.5 w-3.5" aria-hidden />
+        ja
+      </button>
+      <button
+        type="button"
+        aria-pressed={Boolean(doelNee)}
+        aria-label="Doel behaald: nee"
+        title="Doel behaald: nee"
+        onClick={() => onSelectNee(!doelNee)}
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm transition',
+          doelNee
+            ? 'border-red-300 bg-red-50 text-red-800'
+            : 'border-border bg-white text-foreground hover:bg-muted/50'
+        )}
+      >
+        <X className="h-3.5 w-3.5" aria-hidden />
+        nee
+      </button>
+    </div>
+  );
+}
+
 export function Bijlage3Editor({
   decisions,
   setDecisions,
@@ -1365,86 +1460,111 @@ export function Bijlage3Editor({
   const p2 = page2 || {};
 
   return (
-    <div className="space-y-4">
-      {decisions.map((decision, idx) => (
-        <div key={decision.id} className="border border-border rounded-md p-3">
-          <p className="text-sm font-semibold text-[#6d2a96] mb-1 whitespace-pre-line">{decision.question}</p>
-          {decision.hint ? (
-            <p className="text-xs text-neutral-700 mb-2 whitespace-pre-line">{decision.hint}</p>
-          ) : null}
-          <div className="flex flex-wrap gap-4 border-t border-border pt-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={Boolean(decision.doelJa)}
-                onChange={(e) =>
-                  setDecisions(
-                    decisions.map((d, i) =>
-                      i === idx
-                        ? {
-                            ...d,
-                            doelJa: e.target.checked,
-                            doelNee: e.target.checked ? false : Boolean(d.doelNee),
-                          }
-                        : d
-                    )
-                  )
-                }
-              />
-              Doel behaald: ja
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={Boolean(decision.doelNee)}
-                onChange={(e) =>
-                  setDecisions(
-                    decisions.map((d, i) =>
-                      i === idx
-                        ? {
-                            ...d,
-                            doelNee: e.target.checked,
-                            doelJa: e.target.checked ? false : Boolean(d.doelJa),
-                          }
-                        : d
-                    )
-                  )
-                }
-              />
-              Doel behaald: nee
-            </label>
-          </div>
-        </div>
-      ))}
+    <div className="space-y-3">
+      {decisions.map((decision, idx) => {
+        const question = normalizeBijlage3EditorText(decision.question);
+        const hint = decision.hint ? normalizeBijlage3EditorText(decision.hint) : '';
+        const status = bijlage3DoelStatusLabel(decision.doelJa, decision.doelNee);
 
-      <div className="rounded-md border border-border bg-muted/15 p-3">
-        <p className="text-sm font-semibold text-[#6d2a96] mb-2">Laatste stap (pagina 2) — doel behaald</p>
-        <p className="text-xs text-muted-foreground mb-2 whitespace-pre-line">
-          {BIJLAGE3_PAGE2.jaLeadIn} {BIJLAGE3_PAGE2.focusLine.replace(/\n/g, ' ')}
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(p2.doelJa)}
-              onChange={(e) =>
-                setPage2({ ...p2, doelJa: e.target.checked, doelNee: e.target.checked ? false : p2.doelNee })
-              }
-            />
-            Doel behaald: ja
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={Boolean(p2.doelNee)}
-              onChange={(e) =>
-                setPage2({ ...p2, doelNee: e.target.checked, doelJa: e.target.checked ? false : p2.doelJa })
-              }
-            />
-            Doel behaald: nee
-          </label>
+        return (
+          <details
+            key={decision.id}
+            className={BIJLAGE_EDITOR_DETAILS_CLASS}
+            open={idx === 0}
+          >
+            <summary className={BIJLAGE_EDITOR_SUMMARY_CLASS}>
+              <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="mr-2 shrink-0">Stap {idx + 1}</span>
+                <span className="font-normal text-neutral-700">{truncateBijlage3Summary(question)}</span>
+              </span>
+              {status ? (
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+                    status === 'ja'
+                      ? 'bg-green-50 text-green-800 ring-green-200'
+                      : 'bg-red-50 text-red-800 ring-red-200'
+                  )}
+                >
+                  {status}
+                </span>
+              ) : null}
+            </summary>
+            <div className="space-y-2 border-t border-border px-3 pb-3 pt-2">
+              <p className="text-sm font-semibold leading-snug text-[#6d2a96]">{question}</p>
+              {hint ? <p className="text-xs leading-snug text-neutral-700">{hint}</p> : null}
+              <div className="border-t border-border pt-2">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Doel behaald</p>
+                <Bijlage3DoelToggle
+                  doelJa={decision.doelJa}
+                  doelNee={decision.doelNee}
+                  onSelectJa={(checked) =>
+                    setDecisions(
+                      decisions.map((d, i) =>
+                        i === idx
+                          ? {
+                              ...d,
+                              doelJa: checked,
+                              doelNee: checked ? false : Boolean(d.doelNee),
+                            }
+                          : d
+                      )
+                    )
+                  }
+                  onSelectNee={(checked) =>
+                    setDecisions(
+                      decisions.map((d, i) =>
+                        i === idx
+                          ? {
+                              ...d,
+                              doelNee: checked,
+                              doelJa: checked ? false : Boolean(d.doelJa),
+                            }
+                          : d
+                      )
+                    )
+                  }
+                />
+              </div>
+            </div>
+          </details>
+        );
+      })}
+
+      <details className={BIJLAGE_EDITOR_DETAILS_CLASS}>
+        <summary className={BIJLAGE_EDITOR_SUMMARY_CLASS}>
+          <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden />
+          <span className="min-w-0 flex-1 text-left">Laatste stap (pagina 2) — doel behaald</span>
+          {bijlage3DoelStatusLabel(p2.doelJa, p2.doelNee) ? (
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+                p2.doelJa
+                  ? 'bg-green-50 text-green-800 ring-green-200'
+                  : 'bg-red-50 text-red-800 ring-red-200'
+              )}
+            >
+              {bijlage3DoelStatusLabel(p2.doelJa, p2.doelNee)}
+            </span>
+          ) : null}
+        </summary>
+        <div className="space-y-2 border-t border-border px-3 pb-3 pt-2">
+          <p className="text-xs leading-snug text-muted-foreground">
+            {normalizeBijlage3EditorText(`${BIJLAGE3_PAGE2.jaLeadIn} ${BIJLAGE3_PAGE2.focusLine}`)}
+          </p>
+          <Bijlage3DoelToggle
+            doelJa={p2.doelJa}
+            doelNee={p2.doelNee}
+            onSelectJa={(checked) =>
+              setPage2({ ...p2, doelJa: checked, doelNee: checked ? false : p2.doelNee })
+            }
+            onSelectNee={(checked) =>
+              setPage2({ ...p2, doelNee: checked, doelJa: checked ? false : p2.doelJa })
+            }
+          />
         </div>
-      </div>
+      </details>
     </div>
   );
 }
