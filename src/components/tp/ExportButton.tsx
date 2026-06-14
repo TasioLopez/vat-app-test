@@ -1,15 +1,19 @@
 'use client';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { Download, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function ExportButton({
   employeeId,
   tpInstanceId: tpInstanceIdProp,
   layoutKey: layoutKeyProp,
+  variant = 'default',
 }: {
   employeeId: string;
   tpInstanceId?: string;
   layoutKey?: 'tp_legacy' | 'tp_2026';
+  variant?: 'default' | 'icon';
 }) {
   const params = useParams() as { tpInstanceId?: string };
   const [busy, setBusy] = useState(false);
@@ -79,16 +83,38 @@ export function ExportButton({
     }
   }
 
-  return (
-    <div className="flex items-center gap-3">
-      <button
+  const label = busy ? 'PDF genereren…' : 'Downloaden PDF';
+
+  if (variant === 'icon') {
+    return (
+      <Button
+        type="button"
+        size="icon"
+        className="h-8 w-8 shrink-0 bg-black text-white hover:bg-gray-800"
         onClick={handleExport}
         disabled={busy}
-        className="rounded-2xl px-4 py-2 shadow bg-black text-white font-medium disabled:opacity-60 hover:cursor-pointer hover:bg-gray-800 transition-all-duration-200"
+        aria-label={label}
+        title={savedMsg ?? label}
+      >
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <Download className="h-4 w-4" aria-hidden />
+        )}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <Button
         type="button"
+        className="rounded-2xl bg-black text-white hover:bg-gray-800"
+        onClick={handleExport}
+        disabled={busy}
       >
         {busy ? 'Genereren…' : 'Downloaden PDF'}
-      </button>
+      </Button>
       {savedMsg && <span className="text-green-700 text-sm">{savedMsg}</span>}
     </div>
   );

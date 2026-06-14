@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -129,6 +129,7 @@ type SplitAutofillButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   currentStepDisabled?: boolean;
+  variant?: 'default' | 'icon';
   onRunAll: () => void;
   onRunCurrentStep: () => void;
 };
@@ -137,16 +138,36 @@ export function AutofillScopeDropdown({
   disabled,
   loading,
   currentStepDisabled,
+  variant = 'default',
   onRunAll,
   onRunCurrentStep,
 }: SplitAutofillButtonProps) {
+  const label = loading ? 'Autofill…' : 'Autofill met AI';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={disabled || loading} className="gap-1.5">
-          {loading ? 'Autofill…' : 'Autofill met AI'}
-          <ChevronDown className="h-4 w-4 opacity-70" />
-        </Button>
+        {variant === 'icon' ? (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            disabled={disabled || loading}
+            aria-label={label}
+            title={label}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
+          </Button>
+        ) : (
+          <Button variant="outline" disabled={disabled || loading} className="gap-1.5">
+            {loading ? 'Autofill…' : 'Autofill met AI'}
+            <ChevronDown className="h-4 w-4 opacity-70" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem disabled={currentStepDisabled} onSelect={onRunCurrentStep}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
@@ -39,6 +40,12 @@ import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
 import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
+import { isBasisEditorSectionField } from '@/lib/tp2026/basis-editor-sections';
+import {
+  applyAutofillReviewMarks,
+  markBasisSectionReview,
+} from '@/lib/tp2026/basis-section-review';
+import { TP2026_TP3_FIELD_ORDER } from '@/lib/autofill-progress';
 
 type Props = {
   employeeId: string;
@@ -97,7 +104,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       tpSnapshot: Record<string, any>,
       employeeSnapshot: Record<string, unknown> | null,
       stepCount: number,
-      singleFieldSuccessMessage?: string
+      singleFieldSuccessMessage?: string,
+      autofillReviewSectionIds?: string[]
     ) => {
       if (result.cancelled) {
         setTPData(tpSnapshot);
@@ -105,7 +113,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         return;
       }
 
-      setTPData(result.data as Record<string, any>);
+      let nextData = result.data as Record<string, any>;
+      if (autofillReviewSectionIds && autofillReviewSectionIds.length > 0 && result.completed > 0) {
+        nextData = applyAutofillReviewMarks(nextData, autofillReviewSectionIds);
+      }
+      setTPData(nextData);
 
       if (result.employeePersist) {
         const persistResult = await applyEmployeeAutofillDetails(
@@ -126,7 +138,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
       let savedSuffix = '';
       if (result.completed > 0) {
-        const { ok, error } = await persistDraftFromData(result.data);
+        const { ok, error } = await persistDraftFromData(nextData);
         if (ok) {
           savedSuffix = ' Opgeslagen.';
         } else {
@@ -219,7 +231,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           session.tpSnapshot,
           session.employeeSnapshot,
           session.stepCount,
-          'Basisveld ingevuld en opgeslagen.'
+          'Basisveld ingevuld en opgeslagen.',
+          [fieldKey]
         );
       } catch (error) {
         console.error('Basis field autofill failed', fieldKey, error);
@@ -227,6 +240,16 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       }
     },
     [autofilling, finalizeAutofillResult, runAutofillSession, showError]
+  );
+
+  const updateBasisField = useCallback(
+    (field: string, value: unknown) => {
+      updateField(field, value);
+      if (isBasisEditorSectionField(field)) {
+        markBasisSectionReview(field, 'review', tpData, updateField);
+      }
+    },
+    [tpData, updateField]
   );
 
   const sections = [
@@ -246,7 +269,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       id: 3,
       title: '03 Basisdocument',
       renderEditor: () => (
-        <Basis2026Editor data={tpData} updateField={updateField} onAutofillField={autofillBasisField} />
+        <Basis2026Editor data={tpData} updateField={updateBasisField} onAutofillField={autofillBasisField} />
       ),
       renderPreview: () => <Basis2026A4Pages data={tpData} />,
     },
@@ -454,11 +477,20 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       try {
         const session = await runAutofillSession(steps);
         if (!session) return;
+        const failedIds = new Set(session.result.failed.map((f) => f.id));
+        const reviewSectionIds =
+          scope === 'current_step' && currentStep === 3
+            ? steps.filter((step) => !failedIds.has(step.id)).map((step) => step.id)
+            : steps
+                .filter((step) => !failedIds.has(step.id) && (TP2026_TP3_FIELD_ORDER as readonly string[]).includes(step.id))
+                .map((step) => step.id);
         await finalizeAutofillResult(
           session.result,
           session.tpSnapshot,
           session.employeeSnapshot,
-          session.stepCount
+          session.stepCount,
+          undefined,
+          reviewSectionIds
         );
       } catch (error) {
         console.error('TP 2026 autofill failed', error);
@@ -483,24 +515,59 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
       <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
-            <span className="text-sm text-gray-500">•</span>
-            <p className="text-sm text-gray-600">
-              Stap {currentStep} van {totalSteps}
-            </p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+              disabled={currentStep === 1}
+            >
+              Terug
+            </Button>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
+              <p className="text-sm text-gray-600">
+                Stap {currentStep} van {totalSteps}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
+              disabled={currentStep === totalSteps}
+            >
+              Volgende
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <ExportButton employeeId={employeeId} tpInstanceId={tpInstanceId} layoutKey="tp_2026" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ExportButton
+              employeeId={employeeId}
+              tpInstanceId={tpInstanceId}
+              layoutKey="tp_2026"
+              variant="icon"
+            />
             <AutofillScopeDropdown
+              variant="icon"
               loading={autofilling}
               currentStepDisabled={!currentStepAutofillAvailable}
               onRunAll={() => void runAutofill('all')}
               onRunCurrentStep={() => void runAutofill('current_step')}
             />
-            <Button onClick={persist} disabled={saving || !isDirty}>
-              {saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+            <Button
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={persist}
+              disabled={saving || !isDirty}
+              aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+              title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : isDirty ? (
+                <Save className="h-4 w-4" aria-hidden />
+              ) : (
+                <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+              )}
             </Button>
           </div>
         </div>
@@ -529,15 +596,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           ))}
           {currentStep >= 4 ? <HiddenBasisPageMeasure data={tpData} /> : null}
         </div>
-      </div>
-
-      <div className="flex-shrink-0 px-6 py-3 border-t border-indigo-200/50 bg-white/90 backdrop-blur-sm flex justify-between items-center">
-        <Button variant="outline" onClick={() => setCurrentStep((s) => Math.max(1, s - 1))} disabled={currentStep === 1}>
-          Terug
-        </Button>
-        <Button onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))} disabled={currentStep === totalSteps}>
-          Volgende
-        </Button>
       </div>
     </div>
   );
