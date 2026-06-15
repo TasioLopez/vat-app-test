@@ -9,6 +9,7 @@ export const GEGEVENS_EMPLOYEE_KEYS = [
   'current_job',
   'work_experience',
   'education_level',
+  'education_name',
   'drivers_license',
   'drivers_license_type',
   'transport_type',

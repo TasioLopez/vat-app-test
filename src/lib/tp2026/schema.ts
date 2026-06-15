@@ -56,6 +56,7 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'current_job', label: 'Huidige functie', type: 'text' },
   { key: 'work_experience', label: 'Werkervaring', type: 'multiline' },
   { key: 'education_level', label: 'Opleidingsniveau', type: 'select', options: [...EDUCATION_LEVEL_OPTIONS] },
+  { key: 'education_name', label: 'Specialisatie', type: 'text' },
   { key: 'drivers_license', label: 'Rijbewijs aanwezig', type: 'boolean' },
   { key: 'drivers_license_type', label: 'Rijbewijstype', type: 'multiselect', options: [...DRIVERS_LICENSE_TYPE_VALUES] },
   { key: 'transport_type', label: 'Eigen vervoer', type: 'multiselect', options: [...TRANSPORT_TYPE_OPTIONS] },

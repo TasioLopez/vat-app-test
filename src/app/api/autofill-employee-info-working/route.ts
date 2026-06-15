@@ -20,6 +20,7 @@ import {
 } from '@/lib/document-analysis';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -186,10 +187,11 @@ async function processDocumentWithAssistant(
       if (educationLevels.length > 0) {
         const highestLevel = getHighestEducationLevel(educationLevels);
         if (highestLevel) {
+          const normalized = normalizeEducationLevel(highestLevel) ?? highestLevel;
           console.log(
-            `✅ Selected highest education level: ${highestLevel} from found levels: ${educationLevels.join(', ')}`
+            `✅ Selected highest education level: ${normalized} from found levels: ${educationLevels.join(', ')}`
           );
-          mapped.education_level = highestLevel;
+          mapped.education_level = normalized;
         }
       }
     }

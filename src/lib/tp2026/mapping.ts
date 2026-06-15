@@ -16,6 +16,7 @@ import {
   normalizeBasisSectionContentHash,
   normalizeBasisSectionReview,
 } from '@/lib/tp2026/basis-section-review';
+import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -272,6 +273,16 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   next.basis_section_review = normalizeBasisSectionReview(next.basis_section_review);
   next.basis_section_content_hash = normalizeBasisSectionContentHash(next.basis_section_content_hash);
+
+  const repairedEducation = repairEmployeeEducationFields(next.education_level, next.education_name);
+  if (repairedEducation.education_level) {
+    next.education_level = repairedEducation.education_level;
+  } else if (next.education_level != null) {
+    next.education_level = '';
+  }
+  if (repairedEducation.education_name !== undefined) {
+    next.education_name = repairedEducation.education_name;
+  }
 
   return next;
 }

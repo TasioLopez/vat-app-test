@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_OPTIONS,
+  normalizeEducationLevel,
 } from '@/lib/tp2026/gegevens-field-options';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 
@@ -251,9 +252,14 @@ export default function FieldControl({
 
   if (field.type === 'select' && field.options?.length) {
     const isComputerSkills = field.key === 'computer_skills';
+    const isEducationLevel = field.key === 'education_level';
     const selectOptions = isComputerSkills
       ? COMPUTER_SKILLS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
       : field.options.map((opt) => ({ value: opt, label: opt }));
+
+    const selectValue = isEducationLevel
+      ? normalizeEducationLevel(value) ?? undefined
+      : value || undefined;
 
     return (
       <FieldShell
@@ -261,7 +267,7 @@ export default function FieldControl({
         layout={layout}
         className={className}
         control={
-          <Select value={value || undefined} onValueChange={(x) => onChange(x)} disabled={disabled}>
+          <Select value={selectValue} onValueChange={(x) => onChange(x)} disabled={disabled}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecteer" />
             </SelectTrigger>

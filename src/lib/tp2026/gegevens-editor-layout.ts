@@ -77,7 +77,8 @@ export const GEGEVENS_EDITOR_SECTIONS: GegevensEditorSection[] = [
     rows: [
       { subsection: 'Werk & opleiding', keys: ['current_job'] },
       { keys: ['work_experience'] },
-      { keys: ['education_level', 'contract_hours'] },
+      { keys: ['education_level', 'education_name'] },
+      { keys: ['contract_hours'] },
       { subsection: 'Mobiliteit & vervoer', keys: ['drivers_license'] },
       { keys: ['drivers_license_type'] },
       { keys: ['transport_type'] },

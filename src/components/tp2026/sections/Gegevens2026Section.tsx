@@ -19,10 +19,12 @@ import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
 import {
   formatComputerSkills,
   formatDriversLicense,
+  formatEducationLevel,
   formatGegevensOtherEmployers,
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
+import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
@@ -200,7 +202,13 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
           <TP2026FieldTable>
             <DataRow label="Huidige functie" value={data.current_job || '—'} />
             <DataRow label="Werkervaring" value={data.work_experience || '—'} />
-            <DataRow label="Opleidingsniveau" value={data.education_level || '—'} />
+            <DataRow
+              label="Opleidingsniveau"
+              value={formatEducationLevel(
+                normalizeEducationLevel(data.education_level) ?? data.education_level,
+                data.education_name
+              )}
+            />
             <DataRow label="Rijbewijs" value={rijbewijs} />
             <DataRow label="Eigen vervoer" value={vervoertekst} />
             <DataRow label="Spreekvaardigheid NL-taal" value={data.dutch_speaking || '—'} />

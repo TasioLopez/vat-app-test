@@ -59,6 +59,19 @@ describe('mapAndValidateEmployeeDetails', () => {
     const result = mapAndValidateEmployeeDetails({ telefoonnummer: '0612345678' });
     assert.equal(result.phone, '06-12 34 56 78');
   });
+
+  it('normalizes education_level MBO-2 to MBO 2', () => {
+    const result = mapAndValidateEmployeeDetails({ education_level: 'MBO-2' });
+    assert.equal(result.education_level, 'MBO 2');
+  });
+
+  it('extracts education level from education_name when level missing', () => {
+    const result = mapAndValidateEmployeeDetails({
+      education_name: 'MBO-2 Facilitaire Dienstverlening',
+    });
+    assert.equal(result.education_level, 'MBO 2');
+    assert.equal(result.education_name, 'Facilitaire Dienstverlening');
+  });
 });
 
 describe('extractReferentFromRaw', () => {

@@ -1,4 +1,8 @@
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+import {
+  normalizeEducationLevel,
+  repairEmployeeEducationFields,
+} from '@/lib/tp2026/gegevens-field-options';
 
 const FIELD_MAPPING: Record<string, string> = {
   geslacht_werknemer: 'gender',
@@ -166,10 +170,32 @@ export function mapAndValidateEmployeeDetails(
       continue;
     }
 
+    if (mappedKey === 'education_level') {
+      const level = normalizeEducationLevel(rawValue);
+      if (level) mappedData[mappedKey] = level;
+      continue;
+    }
+
+    if (mappedKey === 'education_name') {
+      if (isPresent(rawValue)) {
+        mappedData[mappedKey] = String(rawValue).trim();
+      }
+      continue;
+    }
+
     if (isPresent(rawValue)) {
       mappedData[mappedKey] = rawValue;
     }
   }
+
+  const repaired = repairEmployeeEducationFields(
+    mappedData.education_level,
+    mappedData.education_name
+  );
+  if (repaired.education_level) mappedData.education_level = repaired.education_level;
+  else delete mappedData.education_level;
+  if (repaired.education_name) mappedData.education_name = repaired.education_name;
+  else delete mappedData.education_name;
 
   return mappedData;
 }

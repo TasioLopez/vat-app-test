@@ -5,7 +5,7 @@ import {
   formatCvComputerSkills,
   formatCvDutchLanguageLevels,
 } from '@/lib/cv/format-display';
-import { EDUCATION_LEVEL_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
+import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 
 type EmployeeRow = {
   first_name?: string | null;
@@ -65,13 +65,6 @@ function splitList(text: string | null | undefined): string[] {
     .split(/[\n,;]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-}
-
-function formatEducationLevelLabel(level: string | null | undefined): string {
-  if (!level?.trim()) return '';
-  const trimmed = level.trim();
-  if ((EDUCATION_LEVEL_OPTIONS as readonly string[]).includes(trimmed)) return trimmed;
-  return trimmed;
 }
 
 function splitExperienceLines(raw: string): string[] {
@@ -154,10 +147,10 @@ function seedExperience(details: DetailsRow): CvExperienceItem[] {
 }
 
 function seedEducation(details: DetailsRow): CvEducationItem[] {
-  const level = details.education_level;
+  const level = normalizeEducationLevel(details.education_level) ?? details.education_level;
   const name = details.education_name;
   if (!level?.trim() && !name?.trim()) return [];
-  const levelLabelText = formatEducationLevelLabel(level);
+  const levelLabelText = level?.trim() ?? '';
   const nameText = name?.trim();
   const descParts = [
     levelLabelText ? `Opleidingsniveau: ${levelLabelText}` : '',

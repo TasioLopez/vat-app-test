@@ -45,6 +45,11 @@ import {
     normalizeEmployeeDetailsPayload,
     processEmployeeAutofillRawDetails,
 } from '@/lib/employee/autofill-persist';
+import {
+    EDUCATION_LEVEL_OPTIONS,
+    normalizeEducationLevel,
+    repairEmployeeEducationFields,
+} from '@/lib/tp2026/gegevens-field-options';
 
 type Employee = {
     id: string;
@@ -352,6 +357,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
                 drivers_license_type: parsedLicenseType
             };
+            const repairedEducation = repairEmployeeEducationFields(
+                parsedData.education_level,
+                parsedData.education_name
+            );
+            if (repairedEducation.education_level !== undefined) {
+                parsedData.education_level = repairedEducation.education_level;
+            }
+            if (repairedEducation.education_name !== undefined) {
+                parsedData.education_name = repairedEducation.education_name;
+            }
             setEmployeeDetails(parsedData);
             setSavedDetailsSnapshot(toNormalizedDetailsPayload(parsedData, employeeId));
             if (data.autofilled_fields) {
@@ -1183,12 +1198,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             <GraduationCap className="w-4 h-4 text-purple-600" />
                             Opleidingsniveau
                         </label>
-                        <Select value={employeeDetails?.education_level || undefined} onValueChange={(v) => handleDetailChange('education_level', v)}>
+                        <Select
+                            value={normalizeEducationLevel(employeeDetails?.education_level) ?? undefined}
+                            onValueChange={(v) => handleDetailChange('education_level', v)}
+                        >
                             <SelectTrigger className={selectFieldClass('education_level')}>
                                 <SelectValue placeholder="Selecteer opleidingsniveau" />
                             </SelectTrigger>
                             <SelectContent>
-                                {['Praktijkonderwijs', 'VMBO', 'LTS', 'HAVO', 'VWO', 'MBO 1', 'MBO 2', 'MTS', 'MBO 3', 'MBO 4', 'HBO', 'WO'].map(level => (
+                                {EDUCATION_LEVEL_OPTIONS.map(level => (
                                     <SelectItem key={level} value={level}>{level}</SelectItem>
                                 ))}
                             </SelectContent>
