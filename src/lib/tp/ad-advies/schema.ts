@@ -15,13 +15,13 @@ export const AD_ADVIES_CONTENT_JSON_SCHEMA = {
   type: 'object',
   properties: {
     ad_auteur: nullableStringProperty(
-      'Naam van de arbeidsdeskundige auteur uit het AD-rapport. Null if not found.'
+      'Naam arbeidsdeskundige from intake Sectie 7 (fallback Sectie 6 Naam AD). Null if not found.'
     ),
     ad_datum_iso: nullableStringProperty(
-      'Datum van het AD-rapport in ISO-formaat (YYYY-MM-DD). Null if not found.'
+      'Datum AD-rapport from intake Sectie 6 in YYYY-MM-DD. Null if not found.'
     ),
     advies_citaat: nullableStringProperty(
-      'EXACT letterlijk hoofdadvies-paragraaf uit het AD-rapport over passende arbeid / 2e spoor. Exclude passend-werk definitie and job examples. Null if not found.'
+      'EXACT verbatim Quote advies spoor 2 from intake Sectie 7. Exclude passende functies. Null if not found.'
     ),
   },
   required: ['ad_auteur', 'ad_datum_iso', 'advies_citaat'],

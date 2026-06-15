@@ -6,6 +6,7 @@ export type AdAdviesBuildContext = {
   meta: {
     ad_report_date?: string | null;
     has_ad_report?: boolean | null;
+    occupational_doctor_name?: string | null;
   };
 };
 
@@ -24,7 +25,11 @@ export function stripCitations(text: string): string {
 }
 
 function resolveAuteur(content: AdAdviesContentResult, ctx: AdAdviesBuildContext): string {
-  return content.ad_auteur?.trim() || '[naam arbeidsdeskundige]';
+  return (
+    content.ad_auteur?.trim() ||
+    ctx.meta.occupational_doctor_name?.trim() ||
+    '[naam arbeidsdeskundige]'
+  );
 }
 
 function resolveDatum(content: AdAdviesContentResult, ctx: AdAdviesBuildContext): string {

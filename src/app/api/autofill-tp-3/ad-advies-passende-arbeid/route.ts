@@ -5,6 +5,7 @@ import {
   ADVIES_NB_NO_REPORT,
   generateAdAdvies,
   GENERATION_FALLBACK,
+  parseAdAdvies,
 } from '@/lib/tp/ad-advies';
 
 const supabase = createClient(
@@ -23,21 +24,9 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from('tp_meta')
-      .select('has_ad_report, ad_report_date')
+      .select('has_ad_report, ad_report_date, occupational_doctor_name')
       .eq('employee_id', employeeId)
       .single();
-
-    if (meta?.has_ad_report === false) {
-      const advies_ad_passende_arbeid = ADVIES_NB_NO_REPORT;
-      await supabase.from('tp_meta').upsert(
-        { employee_id: employeeId, advies_ad_passende_arbeid } as any,
-        { onConflict: 'employee_id' }
-      );
-      return NextResponse.json({
-        details: { advies_ad_passende_arbeid },
-        autofilled_fields: ['advies_ad_passende_arbeid'],
-      });
-    }
 
     const { data: docs } = await supabase
       .from('documents')
@@ -47,7 +36,7 @@ export async function GET(req: NextRequest) {
 
     if (!docs?.length) {
       return NextResponse.json(
-        { error: 'Geen AD-rapport documenten gevonden', details: {} },
+        { error: 'Geen intakeformulier gevonden', details: {} },
         { status: 200 }
       );
     }
@@ -58,15 +47,23 @@ export async function GET(req: NextRequest) {
     try {
       const result = await generateAdAdvies(openai, supabase, ctx, docs);
       advies_ad_passende_arbeid = result.advies_ad_passende_arbeid;
-      if (!advies_ad_passende_arbeid.trim()) {
-        return NextResponse.json(
-          { error: 'Geen AD-advies gevonden', details: {} },
-          { status: 200 }
-        );
+      const { citaat } = parseAdAdvies(advies_ad_passende_arbeid);
+
+      if (!citaat.trim()) {
+        advies_ad_passende_arbeid =
+          meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : '';
       }
     } catch (error) {
       console.error('❌ AD advies generation failed:', error);
-      advies_ad_passende_arbeid = GENERATION_FALLBACK;
+      advies_ad_passende_arbeid =
+        meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : GENERATION_FALLBACK;
+    }
+
+    if (!advies_ad_passende_arbeid.trim()) {
+      return NextResponse.json(
+        { error: 'Geen advies in intake Sectie 7 gevonden', details: {} },
+        { status: 200 }
+      );
     }
 
     await supabase.from('tp_meta').upsert(

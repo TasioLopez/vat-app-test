@@ -9,57 +9,61 @@ import {
 import { ADVIES_DELIMITER } from '../constants';
 import type { AdAdviesContentResult } from '../schema';
 
+const CALVIN_ADVIES =
+  'Er is nu geen perspectief op volledige hervatting in werk bij de voormalige eigen werkgever waardoor een 2e spoor traject dient te worden opgestart. Uitgangspunt hierbij is dat werknemer arbeidsmogelijkheden heeft, maar hij is nog niet direct (volledig) inzetbaar. Nadruk op: activering en opbouw inzetbaarheid (bijv. WEP of activeringstraject), met als doel (partiële) werkhervatting in eigen of ander (beter) passend werk.';
+
 const ctx = {
   meta: {
-    ad_report_date: '2026-02-10',
+    ad_report_date: '2026-02-02',
     has_ad_report: true,
+    occupational_doctor_name: 'Bea Delhaes',
   },
 };
 
 describe('buildAdAdviesFields', () => {
-  it('assembles intro with delimiter and quote only', () => {
+  it('assembles Calvin intake Sectie 7 advies quote only', () => {
     const content: AdAdviesContentResult = {
-      ad_auteur: 'Marc Arendsen',
-      ad_datum_iso: '2026-02-10',
-      advies_citaat:
-        'Voorbeelden van passend werk zijn op dit moment: Administratieve werkzaamheden.',
+      ad_auteur: 'Bea Delhaes',
+      ad_datum_iso: '2026-02-02',
+      advies_citaat: CALVIN_ADVIES,
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
 
     assert.match(
       advies_ad_passende_arbeid,
-      /In het arbeidsdeskundigrapport, opgesteld door Marc Arendsen, op 10 februari 2026 staat het volgende advies over passende arbeid:/
+      /In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:/
     );
     assert.ok(advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
-    assert.match(advies_ad_passende_arbeid, /Administratieve werkzaamheden/);
-    assert.doesNotMatch(advies_ad_passende_arbeid, /Passend werk sluit aan/);
-    assert.doesNotMatch(advies_ad_passende_arbeid, /•/);
+    assert.match(advies_ad_passende_arbeid, /geen perspectief op volledige hervatting/);
+    assert.doesNotMatch(advies_ad_passende_arbeid, /Computergericht/);
+    assert.doesNotMatch(advies_ad_passende_arbeid, /Facilitair/);
   });
 
-  it('uses meta date when model returns no date', () => {
+  it('uses meta occupational_doctor_name when model returns no auteur', () => {
     const content: AdAdviesContentResult = {
-      ad_auteur: 'Bea Delhaes',
+      ad_auteur: null,
       ad_datum_iso: null,
-      advies_citaat: 'Advies over 2e spoor.',
+      advies_citaat: CALVIN_ADVIES,
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
-    assert.match(advies_ad_passende_arbeid, /op 10 februari 2026/);
+    assert.match(advies_ad_passende_arbeid, /opgesteld door Bea Delhaes/);
+    assert.match(advies_ad_passende_arbeid, /op 2 februari 2026/);
   });
 
   it('buildAdAdviesIntro matches expected format', () => {
-    const intro = buildAdAdviesIntro('Marc Arendsen', '10 februari 2026');
+    const intro = buildAdAdviesIntro('Bea Delhaes', '2 februari 2026');
     assert.equal(
       intro,
-      'In het arbeidsdeskundigrapport, opgesteld door Marc Arendsen, op 10 februari 2026 staat het volgende advies over passende arbeid:'
+      'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
   });
 
   it('parseAdAdvies and buildAdAdviesBlock round-trip', () => {
     const intro =
       'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:';
-    const citaat = 'Advies over 2e spoor re-integratie.';
+    const citaat = CALVIN_ADVIES;
     const block = buildAdAdviesBlock(intro, citaat);
 
     assert.ok(block.includes(ADVIES_DELIMITER));

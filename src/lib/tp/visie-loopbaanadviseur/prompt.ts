@@ -17,7 +17,7 @@ ALGEMENE REGELS
 
 FUNCTIESELECTIE
 - Selecteer exact vier functies
-- Zijn in AD al voorbeeldfuncties genoemd? Kies vier ANDERE functies (niet dupliceren)
+- Baseer functies op FML/IZP/LAB en intake wanneer geen Sectie 7 categorieën beschikbaar zijn
 - Houd rekening met fysieke, psychische, energetische en vervoersbeperkingen
 - Vermijd functies met structurele deadlines, productiepieken, hoog handelingstempo indien beperkt
 - Vierde functie: naam "${EN_SOORTGELIJK}", toelichting leeg string

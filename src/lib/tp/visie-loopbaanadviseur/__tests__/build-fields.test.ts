@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVisieLoopbaanadviseurFields } from '../build-fields';
+import {
+  buildVisieLoopbaanadviseurContentFromIntake,
+  buildVisieLoopbaanadviseurFields,
+} from '../build-fields';
 import {
   AD_FUNCTIES_INTRO,
   FUNCTIE_FOOTER,
@@ -9,6 +12,23 @@ import {
   TOELICHTING_VROUW,
 } from '../constants';
 import type { VisieLoopbaanadviseurContentResult } from '../schema';
+
+const CALVIN_CATEGORIES = [
+  {
+    naam: 'Computergericht/Administratief',
+    toelichting:
+      'gegevensverwerking, documentcontrole, digitalisering en archivering, e-learning modules beheren.',
+  },
+  {
+    naam: 'Facilitair',
+    toelichting: 'materiaalbeheer, lichte logistiek zonder tijdsdruk, gebouwencontrole.',
+  },
+  {
+    naam: 'En vergelijkbaar',
+    toelichting:
+      'middels arbeidsmarktonderzoek moet gezocht worden naar meer passende taken/functies en de omstandigheden waarbinnen passend werk kan worden uitgevoerd.',
+  },
+];
 
 const baseCtx = {
   details: { gender: 'Vrouw' },
@@ -40,6 +60,18 @@ const sampleFuncties: VisieLoopbaanadviseurContentResult = {
 };
 
 describe('buildVisieLoopbaanadviseurFields', () => {
+  it('uses verbatim Calvin intake categories with AD intro', () => {
+    const content = buildVisieLoopbaanadviseurContentFromIntake(CALVIN_CATEGORIES);
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(baseCtx, content);
+
+    assert.ok(visie_loopbaanadviseur.includes(AD_FUNCTIES_INTRO));
+    assert.match(visie_loopbaanadviseur, /• Computergericht\/Administratief – gegevensverwerking/);
+    assert.match(visie_loopbaanadviseur, /• Facilitair – materiaalbeheer/);
+    assert.match(visie_loopbaanadviseur, /• En vergelijkbaar – middels arbeidsmarktonderzoek/);
+    assert.match(visie_loopbaanadviseur, /• En soortgelijk/);
+    assert.doesNotMatch(visie_loopbaanadviseur, /Medewerker uitkeringsadministratie/);
+  });
+
   it('uses female toelichting template with haar', () => {
     const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
       baseCtx,

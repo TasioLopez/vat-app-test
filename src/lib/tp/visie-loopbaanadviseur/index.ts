@@ -7,6 +7,7 @@ export {
   GENERATION_FALLBACK,
 } from './constants';
 export {
+  buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
   stripCitations,
   type VisieLoopbaanadviseurBuildContext,

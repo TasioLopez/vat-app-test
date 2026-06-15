@@ -3,6 +3,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
+  generateIntakeSectie7Content,
+  hasIntakeFunctieCategories,
+  type EmployeeDoc,
+} from '@/lib/tp/intake-sectie7';
+import {
+  buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
@@ -30,12 +36,6 @@ const DOC_PRIORITY: Record<string, number> = {
   ad_rapportage: 3,
   ad_rapport: 3,
   ad: 3,
-};
-
-type EmployeeDoc = {
-  type: string | null;
-  url: string | null;
-  uploaded_at?: string | null;
 };
 
 function docPriority(type: string | null | undefined): number {
@@ -113,7 +113,7 @@ function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string,
   };
 }
 
-export async function generateVisieLoopbaanadviseurContent(
+async function generateVisieLoopbaanadviseurContentFallback(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
@@ -165,6 +165,30 @@ export async function generateVisieLoopbaanadviseurContent(
   }
 }
 
+export async function generateVisieLoopbaanadviseurContent(
+  openai: OpenAI,
+  supabase: SupabaseClient,
+  ctx: VisieLoopbaanadviseurBuildContext,
+  docs: EmployeeDoc[]
+): Promise<VisieLoopbaanadviseurContentResult> {
+  try {
+    const intake = await generateIntakeSectie7Content(openai, supabase, docs, {
+      meta: {
+        ad_report_date: ctx.meta.fml_izp_lab_date,
+        has_ad_report: Boolean(ctx.meta.advies_ad_passende_arbeid),
+      },
+    });
+
+    if (hasIntakeFunctieCategories(intake)) {
+      return buildVisieLoopbaanadviseurContentFromIntake(intake.functie_categorien);
+    }
+  } catch (error) {
+    console.warn('⚠️ Visie loopbaanadviseur: intake Sectie 7 extraction failed, using fallback', error);
+  }
+
+  return generateVisieLoopbaanadviseurContentFallback(openai, supabase, ctx, docs);
+}
+
 export async function generateVisieLoopbaanadviseur(
   openai: OpenAI,
   supabase: SupabaseClient,
@@ -175,4 +199,4 @@ export async function generateVisieLoopbaanadviseur(
   return buildVisieLoopbaanadviseurFields(ctx, content);
 }
 
-export type { VisieLoopbaanadviseurBuildContext, VisieLoopbaanadviseurFields };
+export type { VisieLoopbaanadviseurBuildContext, VisieLoopbaanadviseurFields, EmployeeDoc };

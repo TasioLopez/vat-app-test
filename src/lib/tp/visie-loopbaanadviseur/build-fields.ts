@@ -15,6 +15,10 @@ import {
   TOELICHTING_ONBEKEND,
   TOELICHTING_VROUW,
 } from './constants';
+import {
+  buildFunctiesFromIntakeCategories,
+  type IntakeSectie7FunctieCategorie,
+} from '@/lib/tp/intake-sectie7';
 import type { VisieLoopbaanadviseurContentResult } from './schema';
 
 export type VisieLoopbaanadviseurBuildContext = {
@@ -78,6 +82,15 @@ function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): stri
       return `• ${naam} – ${toel}`;
     })
     .join('\n');
+}
+
+export function buildVisieLoopbaanadviseurContentFromIntake(
+  categories: IntakeSectie7FunctieCategorie[]
+): VisieLoopbaanadviseurContentResult {
+  return {
+    ad_functies_bekend: true,
+    functies: buildFunctiesFromIntakeCategories(categories),
+  };
 }
 
 export function buildVisieLoopbaanadviseurFields(
