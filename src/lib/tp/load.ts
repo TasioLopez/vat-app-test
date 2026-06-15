@@ -1,6 +1,7 @@
 // src/lib/tp/load.ts
 import { createClient } from "@supabase/supabase-js";
-import { formatEmployeeName } from "@/lib/utils";
+import { formatEmployeeName, normalizePersonName } from "@/lib/utils";
+import { normalizePhoneForStorage } from "@/lib/phone/format-dutch-display";
 import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
 
 export type TPData = Record<string, any>;
@@ -58,8 +59,12 @@ export async function loadTP(
   const data = preferFilledMerge<TPData>(employee || {}, details || {}, meta || {});
 
   // 3) Always force name from employees
-  if (employee?.first_name) data.first_name = employee.first_name;
-  if (employee?.last_name) data.last_name = employee.last_name;
+  if (employee?.first_name) {
+    data.first_name = normalizePersonName(employee.first_name) ?? employee.first_name;
+  }
+  if (employee?.last_name) {
+    data.last_name = normalizePersonName(employee.last_name) ?? employee.last_name;
+  }
 
   // 4) Client name + referent (from referents table only; tp_meta snapshot wins, then resolved referent fills blanks)
   if (employee?.client_id) {
@@ -198,6 +203,12 @@ export async function loadTP(
     consultant_phone: data.consultant_phone,
     consultant_email: data.consultant_email,
   });
+
+  for (const key of ['phone', 'consultant_phone', 'client_referent_phone'] as const) {
+    if (typeof data[key] === 'string' && data[key].trim()) {
+      data[key] = normalizePhoneForStorage(data[key]) ?? data[key];
+    }
+  }
 
   return data;
 }

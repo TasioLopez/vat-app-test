@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 // Validation Schemas
 export const employeeSchema = z.object({
-  first_name: z.string().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
-  last_name: z.string().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
+  first_name: z.string().trim().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
+  last_name: z.string().trim().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
   email: z.string().email('Ongeldig e-mailadres'),
   client_id: z.string().uuid('Ongeldig client ID'),
   current_job: z.string().optional(),
@@ -26,8 +26,8 @@ export const clientSchema = z.object({
 
 export const userSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres'),
-  first_name: z.string().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
-  last_name: z.string().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
+  first_name: z.string().trim().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
+  last_name: z.string().trim().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
   role: z.enum(["admin", "user"], {
     message: "Rol moet admin of user zijn",
   }),
@@ -42,8 +42,8 @@ export const signupSchema = z.object({
   email: z.string().email('Ongeldig e-mailadres'),
   password: z.string().min(8, 'Wachtwoord moet minimaal 8 karakters zijn'),
   confirmPassword: z.string(),
-  first_name: z.string().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
-  last_name: z.string().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
+  first_name: z.string().trim().min(1, 'Voornaam is verplicht').max(50, 'Voornaam mag maximaal 50 karakters zijn'),
+  last_name: z.string().trim().min(1, 'Achternaam is verplicht').max(50, 'Achternaam mag maximaal 50 karakters zijn'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Wachtwoorden komen niet overeen",
   path: ["confirmPassword"],

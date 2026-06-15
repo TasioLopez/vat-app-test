@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -64,7 +65,7 @@ export default function AddClientPage() {
                 name: form.name,
                 industry: form.industry || null,
                 contact_email: form.contact_email || null,
-                phone: form.phone || null,
+                phone: normalizePhoneForStorage(form.phone),
                 plaats: form.plaats || null,
             })
             .select('id')
@@ -81,7 +82,7 @@ export default function AddClientPage() {
                 client_id: newClient.id,
                 first_name: form.referent_first_name?.trim() || null,
                 last_name: form.referent_last_name?.trim() || null,
-                phone: form.referent_phone?.trim() || null,
+                phone: normalizePhoneForStorage(form.referent_phone),
                 email: form.referent_email?.trim() || null,
                 referent_function: form.referent_function?.trim() || null,
                 gender: form.referent_gender?.trim() || null,

@@ -14,6 +14,14 @@ export { getIntakeContextForTp } from './tpIntakeContext';
 export { getEmployeeDocumentContext } from './getEmployeeDocumentContext';
 export { INTAKE_LAYOUT_V75_HINT } from './prompts/intake-layout-v75';
 export {
+  INTAKE_TP2_PROMPT,
+  INTAKE_TP2_USER_MESSAGE,
+  AD_TP2_DATE_PROMPT,
+  AD_TP2_DATE_USER_MESSAGE,
+  FML_TP2_DATE_PROMPT,
+  FML_TP2_DATE_USER_MESSAGE,
+} from './prompts/intake-tp2';
+export {
   INTAKE_EMPLOYEE_PROMPT,
   INTAKE_EMPLOYEE_USER_MESSAGE,
 } from './prompts/intake-employee';

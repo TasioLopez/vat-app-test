@@ -15,6 +15,7 @@ import {
   formatComputerSkills,
   filterOtherEmployers
 } from "@/lib/utils";
+import { formatPhoneForDisplay } from "@/lib/phone/format-dutch-display";
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
@@ -125,7 +126,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
                 </>
               ),
             },
-            { label: "Telefoon", value: data.phone || "—" },
+            { label: "Telefoon", value: formatPhoneForDisplay(data.phone) },
             { label: "Email", value: data.email || "—" },
             { label: "Geboortedatum", value: formatDutchDate(data.date_of_birth) || "—" },
           ]}
@@ -175,7 +176,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
           rows={[
             { label: "Werkgever", value: data.client_name || "—" },
             { label: "Contactpersoon", value: data.client_referent_name || "—" },
-            { label: "Telefoon", value: data.client_referent_phone || "—" },
+            { label: "Telefoon", value: formatPhoneForDisplay(data.client_referent_phone) },
             { label: "Email", value: data.client_referent_email || "—" },
           ]}
         />
@@ -190,7 +191,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
           rows={[
             { label: "Opdrachtnemer", value: "ValentineZ" },
             { label: "Loopbaanadviseur", value: data.consultant_name || "—" },
-            { label: "Telefoon", value: data.consultant_phone || "—" },
+            { label: "Telefoon", value: formatPhoneForDisplay(data.consultant_phone) },
             { label: "Email", value: data.consultant_email || "—" },
           ]}
         />

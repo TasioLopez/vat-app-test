@@ -90,14 +90,16 @@ export function getGegevensAutofillPlan(data: Record<string, unknown>): {
 export function mergeGegevensAutofill(
   current: Record<string, unknown>,
   payload: Record<string, unknown>,
-  keys: readonly string[]
+  keys: readonly string[],
+  options?: { overwrite?: boolean }
 ): Record<string, unknown> {
   const next = { ...current };
+  const overwrite = options?.overwrite ?? false;
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) continue;
     const incoming = payload[key];
     if (isEmptyGegevensField(key, incoming)) continue;
-    if (isEmptyGegevensField(key, next[key])) {
+    if (overwrite || isEmptyGegevensField(key, next[key])) {
       next[key] = incoming;
     }
   }

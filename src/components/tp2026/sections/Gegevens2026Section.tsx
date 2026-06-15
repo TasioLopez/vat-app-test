@@ -24,6 +24,7 @@ import {
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
+import { formatPhoneForDisplay } from '@/lib/phone/format-dutch-display';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { Mail, Phone, User } from 'lucide-react';
@@ -76,7 +77,7 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
           {data.consultant_phone ? (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Phone className="h-3 w-3 shrink-0" aria-hidden />
-              {data.consultant_phone}
+              {formatPhoneForDisplay(data.consultant_phone)}
             </span>
           ) : null}
           {data.consultant_email ? (
@@ -136,7 +137,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
           <SectionBand title="Gegevens werknemer" />
           <TP2026FieldTable>
             <DataRow label="Naam" value={<GegevensNaamBlock data={data} />} />
-            <DataRow label="Telefoon" value={data.phone || '—'} />
+            <DataRow label="Telefoon" value={formatPhoneForDisplay(data.phone)} />
             <DataRow label="E-mail" value={data.email || '—'} />
             <DataRow label="Geboortedatum" value={formatNLDate(data.date_of_birth)} />
           </TP2026FieldTable>
@@ -162,7 +163,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
           <TP2026FieldTable>
             <DataRow label="Werkgever" value={data.employer_name || '—'} />
             <DataRow label="Contactpersoon" value={data.client_referent_name || '—'} />
-            <DataRow label="Telefoon" value={data.client_referent_phone || '—'} />
+            <DataRow label="Telefoon" value={formatPhoneForDisplay(data.client_referent_phone)} />
             <DataRow label="E-mail" value={data.client_referent_email || '—'} />
           </TP2026FieldTable>
         </div>
@@ -172,7 +173,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
           <TP2026FieldTable>
             <DataRow label="Opdrachtnemer" value="ValentineZ" />
             <DataRow label="Loopbaanadviseur" value={data.consultant_name || '—'} />
-            <DataRow label="Telefoon" value={data.consultant_phone || '—'} />
+            <DataRow label="Telefoon" value={formatPhoneForDisplay(data.consultant_phone)} />
             <DataRow label="E-mail" value={data.consultant_email || '—'} />
           </TP2026FieldTable>
         </div>

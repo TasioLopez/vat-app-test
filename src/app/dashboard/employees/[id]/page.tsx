@@ -24,13 +24,12 @@ import {
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { parseWorkExperience } from '@/lib/utils';
+import { parseWorkExperience, cn, normalizePersonName } from '@/lib/utils';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
-import { cn } from '@/lib/utils';
-import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -166,7 +165,11 @@ function toEditableEmployeePayload(employee: Employee): EditableEmployeePayload 
     const filtered = Object.fromEntries(
         EDITABLE_EMPLOYEE_FIELD_KEYS.map((key) => [key, employee[key] ?? null])
     ) as EditableEmployeePayload;
-    return filtered;
+    return {
+        ...filtered,
+        first_name: normalizePersonName(filtered.first_name),
+        last_name: normalizePersonName(filtered.last_name),
+    };
 }
 
 function toEmployeeDetailsPayload(
@@ -195,6 +198,7 @@ function toNormalizedDetailsPayload(
 
     const normalizedDetails: Partial<EmployeeDetails> = {
         ...details,
+        phone: normalizePhoneForStorage(details?.phone) ?? details?.phone,
         work_experience: normalizedWorkExperience,
         transport_type: normalizeStringArray(details?.transport_type),
         drivers_license_type: normalizeStringArray(details?.drivers_license_type),
@@ -299,7 +303,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             return;
         }
 
-        setEmployee(data);
+        setEmployee({
+            ...data,
+            first_name: normalizePersonName(data.first_name) ?? data.first_name,
+            last_name: normalizePersonName(data.last_name) ?? data.last_name,
+        });
         setSavedEmployeeSnapshot(toEditableEmployeePayload(data));
         if (data.client_id) {
             fetchClient(data.client_id);
@@ -354,6 +362,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             
             const parsedData = {
                 ...data,
+                phone: normalizePhoneForStorage(data.phone) ?? data.phone,
                 work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
                 drivers_license_type: parsedLicenseType
             };
@@ -715,10 +724,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 .from('referents' as any)
                 .insert({
                     client_id: employee.client_id,
-                    first_name: suggestedReferent.first_name,
-                    last_name: suggestedReferent.last_name,
+                    first_name: normalizePersonName(suggestedReferent.first_name),
+                    last_name: normalizePersonName(suggestedReferent.last_name),
                     referent_function: suggestedReferent.referent_function ?? null,
-                    phone: suggestedReferent.phone ?? null,
+                    phone: normalizePhoneForStorage(suggestedReferent.phone),
                     email: suggestedReferent.email ?? null,
                     gender: suggestedReferent.gender ?? null,
                     is_default: isFirst,

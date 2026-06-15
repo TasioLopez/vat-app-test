@@ -57,7 +57,7 @@ describe('mapAndValidateEmployeeDetails', () => {
 
   it('formats phone from telefoonnummer alias', () => {
     const result = mapAndValidateEmployeeDetails({ telefoonnummer: '0612345678' });
-    assert.equal(result.phone, '06-12 34 56 78');
+    assert.equal(result.phone, '06 - 12 34 56 78');
   });
 
   it('normalizes education_level MBO-2 to MBO 2', () => {
@@ -77,7 +77,7 @@ describe('mapAndValidateEmployeeDetails', () => {
 describe('extractReferentFromRaw', () => {
   it('formats referent_phone', () => {
     const ref = extractReferentFromRaw({ referent_phone: '0612345678' });
-    assert.equal(ref.referent_phone, '06-12 34 56 78');
+    assert.equal(ref.referent_phone, '06 - 12 34 56 78');
   });
 
   it('splits naam_contactpersoon when first/last missing', () => {
@@ -105,6 +105,13 @@ describe('splitContactPersonName', () => {
     assert.deepEqual(splitContactPersonName('Herleen Brama'), {
       first_name: 'Herleen',
       last_name: 'Brama',
+    });
+  });
+
+  it('trims outer whitespace and normalizes inner spacing', () => {
+    assert.deepEqual(splitContactPersonName('  Jan  de  Vries  '), {
+      first_name: 'Jan de',
+      last_name: 'Vries',
     });
   });
 });

@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { normalizePersonName } from '@/lib/utils';
 
 export default function ProfileInformation() {
     const supabase = createBrowserClient(
@@ -36,8 +37,8 @@ export default function ProfileInformation() {
                         .single();
 
                     if (userData) {
-                        setFirstName(userData.first_name || "");
-                        setLastName(userData.last_name || "");
+                        setFirstName(normalizePersonName(userData.first_name) ?? '');
+                        setLastName(normalizePersonName(userData.last_name) ?? '');
                     }
                 }
             } catch (error) {
@@ -69,8 +70,8 @@ export default function ProfileInformation() {
             const { error: updateError } = await supabase
                 .from("users")
                 .update({
-                    first_name: firstName,
-                    last_name: lastName,
+                    first_name: normalizePersonName(firstName),
+                    last_name: normalizePersonName(lastName),
                 })
                 .eq("id", user.id);
 

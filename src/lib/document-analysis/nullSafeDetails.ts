@@ -1,4 +1,5 @@
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+import { normalizePersonName } from '@/lib/utils';
 import {
   normalizeEducationLevel,
   repairEmployeeEducationFields,
@@ -58,10 +59,10 @@ function normalizeDutchLevel(value: unknown): string | undefined {
 export function splitContactPersonName(fullName: string): { first_name: string; last_name: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first_name: '', last_name: '' };
-  if (parts.length === 1) return { first_name: '', last_name: parts[0] };
+  if (parts.length === 1) return { first_name: '', last_name: parts[0].trim() };
   return {
-    first_name: parts.slice(0, -1).join(' '),
-    last_name: parts[parts.length - 1],
+    first_name: parts.slice(0, -1).join(' ').trim(),
+    last_name: parts[parts.length - 1].trim(),
   };
 }
 
@@ -256,6 +257,13 @@ export function extractReferentFromRaw(
 
   if (isLikelyWrongReferent(out)) {
     return {};
+  }
+
+  if (typeof out.referent_first_name === 'string') {
+    out.referent_first_name = normalizePersonName(out.referent_first_name) ?? '';
+  }
+  if (typeof out.referent_last_name === 'string') {
+    out.referent_last_name = normalizePersonName(out.referent_last_name) ?? '';
   }
 
   return out;

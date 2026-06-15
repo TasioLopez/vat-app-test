@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
-import { cn } from '@/lib/utils';
+import { cn, normalizePersonName } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -160,8 +160,8 @@ export default function NewEmployeePage() {
             .from('employees')
             .insert([
                 {
-                    first_name: form.first_name,
-                    last_name: form.last_name,
+                    first_name: normalizePersonName(form.first_name) ?? '',
+                    last_name: normalizePersonName(form.last_name) ?? '',
                     email: form.email || null,
                     client_id: form.client_id || null,
                 },

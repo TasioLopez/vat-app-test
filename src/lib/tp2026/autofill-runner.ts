@@ -180,7 +180,9 @@ async function runTp2AutofillStep(
     if (!json.details || Object.keys(json.details).length === 0) {
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }
-    const next = mergeGegevensAutofill(currentData, json.details, GEGEVENS_TP2_KEYS);
+    const next = mergeGegevensAutofill(currentData, json.details, GEGEVENS_TP2_KEYS, {
+      overwrite: true,
+    });
     return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;

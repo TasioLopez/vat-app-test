@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Trash2, Pencil, Search, ChevronUp, ChevronDown, Building2, Tag, Mail, Phone, MapPin, User, Users, Briefcase } from 'lucide-react';
 import { trackAccess } from '@/lib/tracking';
 import { cn } from '@/lib/utils';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -184,7 +185,7 @@ export default function ClientsPage() {
         name: selectedClient.name,
         industry: selectedClient.industry,
         contact_email: selectedClient.contact_email,
-        phone: selectedClient.phone || null,
+        phone: normalizePhoneForStorage(selectedClient.phone),
         plaats: selectedClient.plaats || null,
       })
       .eq('id', selectedClient.id);
@@ -203,7 +204,7 @@ export default function ClientsPage() {
       client_id: selectedClient.id,
       first_name: (newReferent.first_name ?? '').trim() || null,
       last_name: (newReferent.last_name ?? '').trim() || null,
-      phone: (newReferent.phone as string)?.trim() || null,
+      phone: normalizePhoneForStorage(newReferent.phone as string),
       email: (newReferent.email as string)?.trim() || null,
       referent_function: (newReferent.referent_function as string)?.trim() || null,
       gender: (newReferent.gender as string)?.trim() || null,
@@ -257,7 +258,7 @@ export default function ClientsPage() {
     await updateReferent(editingReferentId, {
       first_name: (editingReferentDraft.first_name ?? '').trim() || null,
       last_name: (editingReferentDraft.last_name ?? '').trim() || null,
-      phone: (editingReferentDraft.phone as string)?.trim() || null,
+      phone: normalizePhoneForStorage(editingReferentDraft.phone as string),
       email: (editingReferentDraft.email as string)?.trim() || null,
       referent_function: (editingReferentDraft.referent_function as string)?.trim() || null,
       gender: (editingReferentDraft.gender as string)?.trim() || null,

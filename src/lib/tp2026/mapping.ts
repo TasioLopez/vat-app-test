@@ -1,4 +1,5 @@
-import { formatEmployeeName, normalizeStringArrayField } from '@/lib/utils';
+import { formatEmployeeName, normalizePersonName, normalizeStringArrayField } from '@/lib/utils';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
 import type {
   TP2026Bijlage1Activity,
@@ -215,6 +216,19 @@ function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
 
 export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any> {
   const next = { ...raw };
+
+  if (typeof next.first_name === 'string') {
+    next.first_name = normalizePersonName(next.first_name) ?? '';
+  }
+  if (typeof next.last_name === 'string') {
+    next.last_name = normalizePersonName(next.last_name) ?? '';
+  }
+
+  for (const key of ['phone', 'consultant_phone', 'client_referent_phone'] as const) {
+    if (typeof next[key] === 'string' && next[key].trim()) {
+      next[key] = normalizePhoneForStorage(next[key]) ?? '';
+    }
+  }
 
   if (next.first_name && next.last_name) {
     next.employee_name = formatEmployeeName(next.first_name, next.last_name, next.gender);

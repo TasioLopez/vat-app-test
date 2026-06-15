@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { parseWorkExperience } from '@/lib/utils';
 
 export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
@@ -106,6 +107,7 @@ export function normalizeEmployeeDetailsPayload(
   return buildEmployeeDetailsPayload(
     {
       ...details,
+      phone: normalizePhoneForStorage(details?.phone) ?? details?.phone,
       work_experience: normalizedWorkExperience,
       transport_type: normalizeStringArray(details?.transport_type),
       drivers_license_type: normalizeStringArray(details?.drivers_license_type),

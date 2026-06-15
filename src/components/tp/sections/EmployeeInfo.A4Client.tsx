@@ -12,6 +12,7 @@ import {
   formatComputerSkills,
   filterOtherEmployers
 } from "@/lib/utils";
+import { formatPhoneForDisplay } from "@/lib/phone/format-dutch-display";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 
@@ -153,7 +154,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
                 </>
               ),
             },
-            { label: "Telefoon", value: safe(tpData.phone) },
+            { label: "Telefoon", value: formatPhoneForDisplay(tpData.phone) },
             { label: "Email", value: safe(tpData.email) },
             { label: "Geboortedatum", value: formatDutchDate(tpData.date_of_birth) || "—" },
           ]}
@@ -207,7 +208,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
           rows={[
             { label: "Werkgever", value: safe(tpData.client_name) },
             { label: "Contactpersoon", value: safe(tpData.client_referent_name) },
-            { label: "Telefoon", value: safe(tpData.client_referent_phone) },
+            { label: "Telefoon", value: formatPhoneForDisplay(tpData.client_referent_phone) },
             { label: "Email", value: safe(tpData.client_referent_email) },
           ]}
         />
@@ -224,7 +225,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
           rows={[
             { label: "Opdrachtnemer", value: "ValentineZ" },
             { label: "Loopbaanadviseur", value: safe(tpData.consultant_name) },
-            { label: "Telefoon", value: safe(tpData.consultant_phone) },
+            { label: "Telefoon", value: formatPhoneForDisplay(tpData.consultant_phone) },
             { label: "Email", value: safe(tpData.consultant_email) },
           ]}
         />

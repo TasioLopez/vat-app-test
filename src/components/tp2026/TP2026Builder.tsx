@@ -8,6 +8,7 @@ import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
+import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
   buildAutofillSteps,
   buildSingleTp3AutofillStep,
@@ -366,7 +367,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           .maybeSingle();
         if (appUser) {
           appUserDisplayName = [appUser.first_name, appUser.last_name].filter(Boolean).join(' ').trim();
-          appUserPhone = (appUser.phone || '').trim();
+          appUserPhone = normalizePhoneForStorage(appUser.phone) ?? '';
           appUserEmail = (appUser.email || '').trim();
         }
       }

@@ -22,8 +22,10 @@ export const commonValidators = {
 // Employee validation schemas
 const employeeBasicSchema = z.object({
   first_name: commonValidators.required('Voornaam is verplicht')
+    .transform((s) => s.trim())
     .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
   last_name: commonValidators.required('Achternaam is verplicht')
+    .transform((s) => s.trim())
     .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
   email: commonValidators.email,
   client_id: commonValidators.uuid,
@@ -64,8 +66,10 @@ export const clientValidation = z.object({
 const userBasicSchema = z.object({
   email: commonValidators.email,
   first_name: commonValidators.required('Voornaam is verplicht')
+    .transform((s) => s.trim())
     .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
   last_name: commonValidators.required('Achternaam is verplicht')
+    .transform((s) => s.trim())
     .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
   role: z.enum(["admin", "user"], {
     message: "Rol moet admin of user zijn",
@@ -134,8 +138,10 @@ export const authValidation = {
     password: passwordValidation.strong,
     confirmPassword: z.string(),
     first_name: commonValidators.required('Voornaam is verplicht')
+      .transform((s) => s.trim())
       .and(commonValidators.maxLength(50, 'Voornaam mag maximaal 50 karakters zijn')),
     last_name: commonValidators.required('Achternaam is verplicht')
+      .transform((s) => s.trim())
       .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
   }).refine((data) => data.password === data.confirmPassword, {
     message: "Wachtwoorden komen niet overeen",

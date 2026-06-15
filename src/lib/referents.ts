@@ -5,6 +5,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizePhoneForStorage } from "@/lib/phone/format-dutch-display";
 
 export type ReferentRow = {
   id: string;
@@ -73,7 +74,7 @@ export function referentToClientReferentFields(ref: ReferentRow | null): {
   const fullName = [ref.first_name, ref.last_name].filter(Boolean).join(" ").trim() || null;
   return {
     client_referent_name: fullName,
-    client_referent_phone: ref.phone ?? null,
+    client_referent_phone: normalizePhoneForStorage(ref.phone),
     client_referent_email: ref.email ?? null,
     client_referent_function: ref.referent_function ?? null,
     client_referent_gender: ref.gender ?? null,

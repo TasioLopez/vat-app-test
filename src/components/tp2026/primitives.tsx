@@ -8,6 +8,7 @@ import {
   TP2026_DATA_ROW_VALUE_CLASS,
   TP2026_FIELD_TABLE_CLASS,
 } from '@/lib/tp2026/tp2026-colors';
+import { formatTP2026CoverVoorName } from '@/lib/utils';
 
 export const A4_W = 794;
 export const A4_H = 1123;
@@ -85,13 +86,13 @@ export function FooterIdentity({
   dateOfBirth?: string | null;
   pageNumber?: number;
 }) {
-  const name = [lastName, firstName].filter(Boolean).join(' ') || '—';
+  const name = formatTP2026CoverVoorName(firstName, lastName);
   return (
     <div className="mt-auto shrink-0 py-2.5">
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 text-[10px] leading-tight text-neutral-900">
         <div className="flex flex-col gap-1 text-left">
           <div>
-            <span className="font-normal">Naam: </span>
+            <span className="font-normal">Naam : </span>
             <span className="text-neutral-800">{name}</span>
           </div>
           <div>

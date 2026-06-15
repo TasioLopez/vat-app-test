@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Trim leading/trailing whitespace; empty strings become null. */
+export function normalizePersonName(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim();
+  return trimmed || null;
+}
+
 /**
  * Formats employee name as "Title Initial. LastName (FirstName)"
  * e.g., "Mevrouw K. Baaijens (Kim)"
@@ -19,29 +25,27 @@ export function formatEmployeeName(
   lastName: string | null | undefined,
   gender: string | null | undefined
 ): string {
-  // Return em dash if both names are missing
-  if (!firstName && !lastName) {
+  const first = normalizePersonName(firstName);
+  const last = normalizePersonName(lastName);
+
+  if (!first && !last) {
     return "—";
   }
 
-  // Return whatever we have if either name is missing
-  if (!firstName || !lastName) {
-    return [firstName, lastName].filter(Boolean).join(' ');
+  if (!first || !last) {
+    return [first, last].filter(Boolean).join(' ');
   }
 
-  // If we have gender, format with title and initial
-  // Support both Dutch (Man/Vrouw) and English (Male/Female) values
   const isFemale = gender === 'Female' || gender === 'Vrouw' || gender?.toLowerCase() === 'vrouw';
   const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
   
   if (isFemale || isMale) {
     const title = isFemale ? 'Mevrouw' : 'Meneer';
-    const initial = firstName.charAt(0).toUpperCase();
-    return `${title} ${initial}. ${lastName} (${firstName})`;
+    const initial = first.charAt(0).toUpperCase();
+    return `${title} ${initial}. ${last} (${first})`;
   }
 
-  // Fallback to simple format if gender not specified
-  return `${firstName} ${lastName}`;
+  return `${first} ${last}`;
 }
 
 /**
@@ -59,27 +63,25 @@ export function formatEmployeeNameWithoutPrefix(
   lastName: string | null | undefined,
   gender: string | null | undefined
 ): string {
-  // Return em dash if both names are missing
-  if (!firstName && !lastName) {
+  const first = normalizePersonName(firstName);
+  const last = normalizePersonName(lastName);
+
+  if (!first && !last) {
     return "—";
   }
 
-  // Return whatever we have if either name is missing
-  if (!firstName || !lastName) {
-    return [firstName, lastName].filter(Boolean).join(' ');
+  if (!first || !last) {
+    return [first, last].filter(Boolean).join(' ');
   }
 
-  // If we have gender, format without initial (no title)
-  // Support both Dutch (Man/Vrouw) and English (Male/Female) values
   const isFemale = gender === 'Female' || gender === 'Vrouw' || gender?.toLowerCase() === 'vrouw';
   const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
   
   if (isFemale || isMale) {
-    return `${lastName} (${firstName})`;
+    return `${last} (${first})`;
   }
 
-  // Fallback to simple format if gender not specified
-  return `${firstName} ${lastName}`;
+  return `${first} ${last}`;
 }
 
 /**
@@ -92,11 +94,14 @@ export function formatTP2026CoverVoorName(
   firstName: string | null | undefined,
   lastName: string | null | undefined
 ): string {
-  if (!firstName && !lastName) return '—';
-  if (!firstName || !lastName) {
-    return [firstName, lastName].filter(Boolean).join(' ').trim() || '—';
+  const first = normalizePersonName(firstName);
+  const last = normalizePersonName(lastName);
+
+  if (!first && !last) return '—';
+  if (!first || !last) {
+    return [first, last].filter(Boolean).join(' ') || '—';
   }
-  return `${lastName} (${firstName})`;
+  return `${last} (${first})`;
 }
 
 /**
