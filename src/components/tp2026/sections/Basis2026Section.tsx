@@ -193,8 +193,8 @@ function Basis2026SectionDetail({
       {section.kind === 'spoor2' ? (
         <div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Selecteer welke onderdelen in het trajectplan verschijnen. Optioneel kunt u per onderdeel een subtekst met
-            Z-logo toevoegen.
+            Selecteer welke onderdelen in het trajectplan verschijnen. Optioneel kunt u bij Scholing, Social
+            Media, Webinars en Sollicitatievaardigheden een notitie toevoegen.
           </p>
           <Spoor2ActivitiesEditor
             tp3Activities={data.tp3_activities}

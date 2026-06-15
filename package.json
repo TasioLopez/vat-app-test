@@ -17,6 +17,7 @@
     "test:visie-loopbaanadviseur": "tsx --test src/lib/tp/visie-loopbaanadviseur/__tests__/*.test.ts",
     "test:ad-advies": "tsx --test src/lib/tp/ad-advies/__tests__/*.test.ts",
     "test:intake-sectie7": "tsx --test src/lib/tp/intake-sectie7/__tests__/*.test.ts",
+    "test:tp-activities": "tsx --test src/lib/tp/__tests__/tp_activities.test.ts",
     "test:pow-meter": "tsx --test src/lib/tp/pow-meter/__tests__/*.test.ts",
     "test:persoonlijk-profiel": "tsx --test src/lib/tp/persoonlijk-profiel/__tests__/*.test.ts",
     "test:zoekprofiel": "tsx --test src/lib/tp/zoekprofiel/__tests__/*.test.ts",

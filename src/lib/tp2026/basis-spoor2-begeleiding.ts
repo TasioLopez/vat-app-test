@@ -13,23 +13,20 @@ export type Spoor2Subsection = {
   subTextTemplates?: [string, string, string];
 };
 
-/** Preset subtext variants (Z-logo bullet) per subsection — editable via partner copy updates. */
+/** Subsections that may have an optional notitie (Z-logo bullet) in the editor. */
+export const SPOOR2_NOTITIE_ELIGIBLE_IDS = [
+  'scholing',
+  'social-media',
+  'webinars',
+  'sollicitatievaardigheden-en-sollicitatietools',
+] as const;
+
+export function isSpoor2NotitieEligible(id: string): boolean {
+  return (SPOOR2_NOTITIE_ELIGIBLE_IDS as readonly string[]).includes(id);
+}
+
+/** Preset notitie variants per eligible subsection — editable via partner copy updates. */
 export const SPOOR2_SUBTEXT_TEMPLATES: Record<string, [string, string, string]> = {
-  'verwerking-verlies-acceptatie': [
-    'Werknemer is bereid om in gesprekken het verlies van de baan te verwerken en stappen te zetten richting een nieuwe toekomst.',
-    'De loopbaanadviseur ondersteunt werknemer bij het verwerken van het baanverlies en het vinden van een nieuwe richting.',
-    'Verwerking en acceptatie van het verlies maken onderdeel uit van de begeleiding; werknemer staat hiervoor open.',
-  ],
-  empowerment: [
-    'Werknemer is gemotiveerd om met de methodiek weten, willen, kunnen, doen aan de slag te gaan en de regie te hernemen.',
-    'Empowerment wordt ingezet waar nodig; werknemer staat open voor gesprekken en huiswerkopdrachten die het zelfvertrouwen versterken.',
-    'De loopbaanadviseur zet empowerment in zodat werknemer weer vertrouwen krijgt in eigen kunnen.',
-  ],
-  orientatie: [
-    'Werknemer staat open voor een oriëntatie op persoonlijkheid, competenties en beroepen; een interesse- of competentietest kan worden ingezet indien nodig.',
-    'Tijdens de oriëntatie wordt gewerkt aan een persoonlijk zoekprofiel dat aansluit bij de mogelijkheden van werknemer.',
-    'De loopbaanadviseur begeleidt werknemer bij het in kaart brengen van wensen en mogelijkheden op de arbeidsmarkt.',
-  ],
   scholing: [
     'Werknemer staat open om de mogelijkheden voor scholing of cursus te onderzoeken. Een cursus MS-Office zou van toegevoegde waarde kunnen zijn voor werknemer en ze zou hiervoor open staan.',
     'Werknemer is bereid om scholingsmogelijkheden te verkennen indien dit het traject ondersteunt.',
@@ -50,34 +47,10 @@ export const SPOOR2_SUBTEXT_TEMPLATES: Record<string, [string, string, string]> 
     'CV en sollicitatievaardigheden worden samen met de loopbaanadviseur op maat bijgewerkt.',
     'De loopbaanadviseur ondersteunt werknemer bij cv, sollicitatiebrieven en het gebruik van sollicitatietools.',
   ],
-  netwerken: [
-    'Werknemer brengt het persoonlijke en zakelijke netwerk in kaart; de loopbaanadviseur ondersteunt bij het verder uitbreiden.',
-    'Netwerkbijeenkomsten en arbeidsmarktgerelateerde evenementen maken onderdeel uit van het traject; werknemer staat hiervoor open.',
-    'De loopbaanadviseur begeleidt werknemer bij het inzetten van het netwerk voor passende functies.',
-  ],
-  solliciteren: [
-    'Werknemer zal wekelijks actief solliciteren op passende vacatures, in overleg met de loopbaanadviseur.',
-    'Solliciteren gebeurt op basis van het zoekprofiel en de FML/IZP/LAB; werknemer neemt hierin actief deel.',
-    'De loopbaanadviseur ondersteunt bij het vinden en beantwoorden van vacatures; werknemer zet wekelijks stappen.',
-  ],
-  'stage-en-werkervaringsplek': [
-    'Werknemer staat open voor een werkervaringsplek zodra de belastbaarheid het toelaat, bij voorkeur met kans op betaald werk.',
-    'Indien passend wordt werknemer bemiddeld naar een stage of werkervaringsplek om vaardigheden op te bouwen.',
-    'De loopbaanadviseur zoekt mee naar een geschikte werkervaringsplek die aansluit bij de mogelijkheden van werknemer.',
-  ],
-  'bemiddeling-en-jobhunting': [
-    'De jobhunter van ValentineZ zoekt actief mee naar passende vacatures; werknemer reageert op voorgelegde kansen.',
-    'Werknemer wordt ondersteund bij het vinden van vacatures en open sollicitaties; bemiddeling en jobhunting maken onderdeel uit van het traject.',
-    'Met het zoekprofiel als basis zoekt de loopbaanadviseur mee naar kansrijke vacatures; werknemer neemt sollicitaties zelf ter hand.',
-  ],
-  detachering: [
-    'Werknemer staat open voor detachering als tussenstap richting een andere werkgever wanneer dit passend is.',
-    'Detachering kan worden verkend als werknemer de huidige functie moeilijk kan loslaten; de loopbaanadviseur licht de mogelijkheden toe.',
-    'Indien detachering een passende route is, wordt werknemer hierin begeleid en bemiddeld.',
-  ],
 };
 
 function withSubTextTemplates(sub: Omit<Spoor2Subsection, 'subTextTemplates'>): Spoor2Subsection {
+  if (!isSpoor2NotitieEligible(sub.id)) return sub;
   const templates = SPOOR2_SUBTEXT_TEMPLATES[sub.id];
   return templates ? { ...sub, subTextTemplates: templates } : sub;
 }

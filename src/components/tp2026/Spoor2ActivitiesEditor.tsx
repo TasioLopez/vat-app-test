@@ -2,7 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import TP_ACTIVITIES, {
+  formatSpoor2NotitieLabel,
+  isSpoor2NotitieEligible,
   resolveSpoor2Selections,
+  sanitizeSpoor2Selections,
   type TPActivity,
   type TPActivitySelection,
 } from '@/lib/tp/tp_activities';
@@ -27,11 +30,15 @@ export function Spoor2ActivitiesEditor({
 
   const selections = useMemo(() => resolveSpoor2Selections(tp3Activities), [tp3Activities]);
 
+  const persist = (next: TPActivitySelection[]) => {
+    onChange(sanitizeSpoor2Selections(next));
+  };
+
   const getSubText = (id: string) => selections.find((s) => s.id === id)?.subText ?? null;
 
   const setSubText = (id: string, value: string | null) => {
     const next = selections.map((s) => (s.id === id ? { ...s, subText: value } : s));
-    onChange(next);
+    persist(next);
   };
 
   const toggleActivity = (id: string) => {
@@ -39,7 +46,7 @@ export function Spoor2ActivitiesEditor({
     const next = isSelected
       ? selections.filter((s) => s.id !== id)
       : [...selections, { id, subText: null }];
-    onChange(next);
+    persist(next);
     if (!isSelected) setEditingSubTextForId(null);
   };
 
@@ -48,7 +55,7 @@ export function Spoor2ActivitiesEditor({
       {TP_ACTIVITIES.map((a: TPActivity) => {
         const checked = selections.some((s) => s.id === a.id);
         const templates = a.subTextTemplates ?? [];
-        const hasTemplates = templates.length === 3;
+        const canAddNotitie = checked && isSpoor2NotitieEligible(a.id) && templates.length === 3;
         const currentSub = getSubText(a.id);
         const subTextOption = getSubTextOption(currentSub, templates);
 
@@ -69,9 +76,9 @@ export function Spoor2ActivitiesEditor({
                 <div className="line-clamp-2 text-xs text-muted-foreground">{a.body}</div>
               </div>
             </label>
-            {checked && hasTemplates ? (
+            {canAddNotitie ? (
               <div className="ml-6 space-y-1 border-l border-border pl-2">
-                <label className="text-xs text-muted-foreground">Subtekst (Z-logo):</label>
+                <label className="text-xs text-muted-foreground">Notitie:</label>
                 <Select
                   value={subTextOption}
                   onValueChange={(v) => {
@@ -86,13 +93,13 @@ export function Spoor2ActivitiesEditor({
                   }}
                 >
                   <SelectTrigger className={SELECT_CLASS}>
-                    <SelectValue placeholder="Subtekst" />
+                    <SelectValue placeholder="Notitie" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="geen">Geen</SelectItem>
-                    <SelectItem value="sjabloon-1">Sjabloon 1</SelectItem>
-                    <SelectItem value="sjabloon-2">Sjabloon 2</SelectItem>
-                    <SelectItem value="sjabloon-3">Sjabloon 3</SelectItem>
+                    <SelectItem value="sjabloon-1">{formatSpoor2NotitieLabel(templates[0])}</SelectItem>
+                    <SelectItem value="sjabloon-2">{formatSpoor2NotitieLabel(templates[1])}</SelectItem>
+                    <SelectItem value="sjabloon-3">{formatSpoor2NotitieLabel(templates[2])}</SelectItem>
                     <SelectItem value="custom">Aangepast</SelectItem>
                   </SelectContent>
                 </Select>

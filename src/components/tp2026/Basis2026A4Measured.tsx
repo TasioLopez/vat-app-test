@@ -44,6 +44,7 @@ import {
   TP_SPOOR2_TOELICHTING_TITLE,
 } from '@/lib/tp2026/basis-spoor2-begeleiding';
 import { resolveSpoor2Selections } from '@/lib/tp/tp_activities';
+import { isSpoor2NotitieEligible } from '@/lib/tp2026/basis-spoor2-begeleiding';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 
 const NB_AVG_INLEIDING =
@@ -199,7 +200,7 @@ function buildSpoor2Atoms(data: Record<string, unknown>): BasisAtom[] {
       body: sub.body,
       showMainBand: false,
       showSubsectionTitle: true,
-      subText: sel.subText ?? null,
+      subText: isSpoor2NotitieEligible(sub.id) ? (sel.subText ?? null) : null,
     });
   }
 
