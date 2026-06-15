@@ -22,10 +22,9 @@ import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
-import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
+import { AdviesPassendeArbeidEditor } from '@/components/tp/AdviesPassendeArbeidEditor';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
-import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
-import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
+import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { Button } from '@/components/ui/button';
 import {
@@ -301,11 +300,24 @@ function BasisFieldEditorRow({
           ) : null}
         </div>
       ) : null}
-      <Basis2026MarkdownFieldEditor
-        markdown={String(data[field.key] ?? '')}
-        onChange={(md) => updateField(field.key, md)}
-        placeholder={field.placeholder}
-      />
+      {field.key === 'pow_meter' ? (
+        <PowInschalingEditor
+          raw={String(data[field.key] ?? '')}
+          onChange={(md) => updateField(field.key, md)}
+        />
+      ) : field.key === 'advies_ad_passende_arbeid' ? (
+        <AdviesPassendeArbeidEditor
+          raw={String(data[field.key] ?? '')}
+          hasAdReport={data.has_ad_report}
+          onChange={(md) => updateField(field.key, md)}
+        />
+      ) : (
+        <Basis2026MarkdownFieldEditor
+          markdown={String(data[field.key] ?? '')}
+          onChange={(md) => updateField(field.key, md)}
+          placeholder={field.placeholder}
+        />
+      )}
       {inleidingSub ? (
         <div className="mt-3">
           <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
@@ -323,35 +335,6 @@ function BasisFieldEditorRow({
               className="text-sm leading-relaxed"
             />
           </div>
-        </div>
-      ) : null}
-      {field.key === 'advies_ad_passende_arbeid' && String(data[field.key] ?? '').trim() ? (
-        <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
-          <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-            <AdviesPassendeArbeidBlock
-              text={String(data[field.key] ?? '')}
-              className="text-sm leading-relaxed"
-            />
-          </div>
-        </div>
-      ) : null}
-      {field.key === 'pow_meter' ? (
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Perspectief op werk (vast)</p>
-            <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-              <PerspectiefOpWerkBlock className="text-sm leading-relaxed" />
-            </div>
-          </div>
-          {String(data[field.key] ?? '').trim() ? (
-            <div>
-              <p className="mb-1 text-xs font-medium text-muted-foreground">Inschaling (voorbeeldweergave)</p>
-              <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-                <PowInschalingTable raw={String(data[field.key] ?? '')} />
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
       {field.key === 'visie_plaatsbaarheid' && String(data[field.key] ?? '').trim() ? (

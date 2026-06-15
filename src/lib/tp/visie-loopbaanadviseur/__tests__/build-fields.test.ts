@@ -74,8 +74,8 @@ describe('buildVisieLoopbaanadviseurFields', () => {
       sampleFuncties
     );
     assert.ok(visie_loopbaanadviseur.includes(FUNCTIES_DELIMITER));
-    assert.match(visie_loopbaanadviseur, /\*\*Medewerker uitkeringsadministratie\*\* –/);
-    assert.match(visie_loopbaanadviseur, /\*\*En soortgelijk\*\*/);
+    assert.match(visie_loopbaanadviseur, /• Medewerker uitkeringsadministratie –/);
+    assert.match(visie_loopbaanadviseur, /• En soortgelijk/);
     assert.ok(visie_loopbaanadviseur.includes(FUNCTIE_FOOTER));
   });
 });

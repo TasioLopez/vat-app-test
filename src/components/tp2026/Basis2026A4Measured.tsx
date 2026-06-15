@@ -454,10 +454,8 @@ function TextBlockBody({
   if (variant === 'powGraphic') {
     return (
       <div>
-        <div className="my-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[240px] max-w-full" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/pow-meter-v2.png" alt="PoW-meter" className="mt-1 w-full h-auto" />
         <p className="mt-4 text-[10px] italic text-[#6d2a96]">{POW_METER_FOOTNOTE}</p>
       </div>
     );
@@ -519,11 +517,13 @@ function TextAtomPreview({
   atom: Extract<BasisAtom, { kind: 'text' }>;
 }) {
   const toelichtingLabel = getBasisToelichtingLabel(atom.key);
+  const bodyClass =
+    atom.variant === 'powGraphic' ? 'text-neutral-900' : TP_BASIS_BODY_BOX_CLASS;
 
   return (
     <div>
       {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
-      <div className={TP_BASIS_BODY_BOX_CLASS}>
+      <div className={bodyClass}>
         {toelichtingLabel ? <BasisToelichtingHeading label={toelichtingLabel} /> : null}
         <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
       </div>

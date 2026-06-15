@@ -625,10 +625,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     ) : s.key === 'pow-static' ? (
                                         <div className={paperText}><PerspectiefOpWerkBlock /></div>
                                     ) : s.key === 'pow-graphic' ? (
-                                        <div className={paperText}>
-                                          <div className="my-4">
-                                            <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={240} className="mx-auto" loading="eager" />
-                                          </div>
+                                        <div className="p-2">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src="/pow-meter-v2.png" alt="PoW-meter" className="w-full h-auto" loading="eager" />
                                           <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
                                         </div>
                                     ) : s.key === 'pow-inschaling' ? (
@@ -958,10 +957,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                 ) : s.key === 'pow-static' ? (
                                                     <div className={paperText}><PerspectiefOpWerkBlock /></div>
                                                 ) : s.key === 'pow-graphic' ? (
-                                                    <div className={paperText}>
-                                                      <div className="my-4">
-                                                        <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={240} className="mx-auto" />
-                                                      </div>
+                                                    <div className="p-2">
+                                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                      <img src="/pow-meter-v2.png" alt="PoW-meter" className="w-full h-auto" />
                                                       <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
                                                     </div>
                                                 ) : s.key === 'pow-inschaling' ? (

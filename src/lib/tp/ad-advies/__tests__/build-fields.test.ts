@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   buildAdAdviesFields,
   buildAdAdviesIntro,
+  buildAdAdviesBlock,
+  parseAdAdvies,
 } from '../build-fields';
 import { ADVIES_DELIMITER } from '../constants';
 import type { AdAdviesContentResult } from '../schema';
@@ -52,5 +54,24 @@ describe('buildAdAdviesFields', () => {
       intro,
       'In het arbeidsdeskundigrapport, opgesteld door Marc Arendsen, op 10 februari 2026 staat het volgende advies over passende arbeid:'
     );
+  });
+
+  it('parseAdAdvies and buildAdAdviesBlock round-trip', () => {
+    const intro =
+      'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:';
+    const citaat = 'Advies over 2e spoor re-integratie.';
+    const block = buildAdAdviesBlock(intro, citaat);
+
+    assert.ok(block.includes(ADVIES_DELIMITER));
+    const parsed = parseAdAdvies(block);
+    assert.equal(parsed.intro, intro);
+    assert.equal(parsed.citaat, citaat);
+  });
+
+  it('parseAdAdvies legacy text without delimiter', () => {
+    const legacy = 'Oude vrije tekst zonder delimiter.';
+    const parsed = parseAdAdvies(legacy);
+    assert.equal(parsed.intro, legacy);
+    assert.equal(parsed.citaat, '');
   });
 });

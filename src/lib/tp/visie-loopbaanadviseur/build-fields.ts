@@ -73,9 +73,9 @@ function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): stri
       const naam = f.naam.trim();
       const toel = stripCitations(f.toelichting.trim());
       if (naam.toLowerCase() === EN_SOORTGELIJK.toLowerCase() || !toel) {
-        return `• **${naam || EN_SOORTGELIJK}**`;
+        return `• ${naam || EN_SOORTGELIJK}`;
       }
-      return `• **${naam}** – ${toel}`;
+      return `• ${naam} – ${toel}`;
     })
     .join('\n');
 }

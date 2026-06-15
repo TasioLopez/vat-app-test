@@ -6,11 +6,14 @@ export {
   GENERATION_FALLBACK,
 } from './constants';
 export {
+  buildAdAdviesBlock,
   buildAdAdviesFields,
   buildAdAdviesIntro,
+  parseAdAdvies,
   stripCitations,
   type AdAdviesBuildContext,
   type AdAdviesFields,
+  type ParsedAdAdvies,
 } from './build-fields';
 export { generateAdAdvies, generateAdAdviesContent } from './generate';
 export {

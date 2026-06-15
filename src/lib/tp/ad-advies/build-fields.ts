@@ -58,3 +58,28 @@ export function buildAdAdviesFields(
 
   return { advies_ad_passende_arbeid: parts.join('\n\n') };
 }
+
+export type ParsedAdAdvies = {
+  intro: string;
+  citaat: string;
+};
+
+export function parseAdAdvies(raw: string): ParsedAdAdvies {
+  const text = String(raw || '').trim();
+  if (!text) return { intro: '', citaat: '' };
+
+  if (text.includes(ADVIES_DELIMITER)) {
+    const [intro, citaat] = text.split(ADVIES_DELIMITER);
+    return { intro: intro.trim(), citaat: (citaat ?? '').trim() };
+  }
+
+  return { intro: text, citaat: '' };
+}
+
+export function buildAdAdviesBlock(intro: string, citaat: string): string {
+  const introTrim = intro.trim();
+  const citaatTrim = citaat.trim();
+  if (!citaatTrim) return introTrim;
+  if (!introTrim) return `${ADVIES_DELIMITER}\n${citaatTrim}`;
+  return `${introTrim}\n\n${ADVIES_DELIMITER}\n${citaatTrim}`;
+}
