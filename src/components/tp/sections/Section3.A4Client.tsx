@@ -10,6 +10,8 @@ import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
+import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { BasisSpoor2Block } from '@/components/tp2026/BasisSpoor2Block';
 import {
   TP_BASIS_AGREEMENT_INTRO,
@@ -254,10 +256,6 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
     });
 }
 
-// Alias for backward compatibility
-function renderVisieLoopbaanadviseurText(text: string): React.ReactNode {
-    return renderTextWithLogoBullets(text, false);
-}
 
 type PreviewItem = {
     key: string;
@@ -589,7 +587,11 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     <div className={blockTitle}>{s.title}</div>
                                     {s.key === 'inl_sub' ? (
                                         <div className={paperText}><InleidingSubBlock text={s.text} /></div>
-                                    ) : s.key === 'vlb' || s.key === 'wk' ? (
+                                    ) : s.key === 'prog' ? (
+                                        <div className={paperText}><BelastbaarheidsprofielBlock text={s.text} /></div>
+                                    ) : s.key === 'vlb' ? (
+                                        <div className={paperText}><VisieLoopbaanadviseurBlock text={s.text} /></div>
+                                    ) : s.key === 'wk' ? (
                                         <div className={paperText}>{renderTextWithLogoBullets(s.text, false, true)}</div>
                                     ) : s.key === 'plaats' ? (
                                         <div className={paperText}>{renderTextWithLogoBullets(s.text, true, true)}</div>
@@ -904,7 +906,11 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                         ) : s.variant === "block" && s.text ? (
                                             <>
                                                 <div className={blockTitle}>{s.title}</div>
-                                                {s.key === 'vlb' || s.key === 'wk' ? (
+                                                {s.key === 'prog' ? (
+                                                    <div className={paperText}><BelastbaarheidsprofielBlock text={s.text} /></div>
+                                                ) : s.key === 'vlb' ? (
+                                                    <div className={paperText}><VisieLoopbaanadviseurBlock text={s.text} /></div>
+                                                ) : s.key === 'wk' ? (
                                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
                                                 ) : s.key === 'plaats' ? (
                                                     <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>

@@ -21,6 +21,8 @@ import {
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
+import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -305,6 +307,28 @@ function BasisFieldEditorRow({
           <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
           <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
             <InleidingSubBlock text={inleidingSub} className="text-sm leading-relaxed text-neutral-900" />
+          </div>
+        </div>
+      ) : null}
+      {field.key === 'prognose_bedrijfsarts' && String(data[field.key] ?? '').trim() ? (
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
+          <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
+            <BelastbaarheidsprofielBlock
+              text={String(data[field.key] ?? '')}
+              className="text-sm leading-relaxed"
+            />
+          </div>
+        </div>
+      ) : null}
+      {field.key === 'visie_loopbaanadviseur' && String(data[field.key] ?? '').trim() ? (
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
+          <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
+            <VisieLoopbaanadviseurBlock
+              text={String(data[field.key] ?? '')}
+              className="text-sm leading-relaxed"
+            />
           </div>
         </div>
       ) : null}

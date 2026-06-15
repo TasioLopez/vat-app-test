@@ -31,6 +31,8 @@ import { formatNLDate } from '@/lib/tp2026/schema';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
+import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import {
   TP_SPOOR2_SUBSECTIONS,
@@ -43,7 +45,7 @@ import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
 
-export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb';
+export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb' | 'belastbaarheid' | 'visieLa';
 
 /** Body atoms only — front page is always rendered separately on page 1. */
 export type BasisAtom =
@@ -150,9 +152,11 @@ function splitTextAggressive(text: string): [string, string] | null {
 
 function textVariant(key: string, text: string): BasisTextVariant {
   const t = text.trim();
+  if (key === 'prog') return 'belastbaarheid';
+  if (key === 'vlb') return 'visieLa';
   if (key === 'pow') return 'pow';
   if (key === 'ad' && t.startsWith('N.B.')) return 'adNb';
-  if (key === 'wk' || key === 'vlb' || key === 'plaats' || key === 'ad') return 'logo';
+  if (key === 'wk' || key === 'plaats' || key === 'ad') return 'logo';
   return 'markdown';
 }
 
@@ -432,6 +436,14 @@ function TextBlockBody({
         {renderTextWithLogoBullets(trimmed, fieldKey === 'plaats', true)}
       </div>
     );
+  }
+
+  if (variant === 'belastbaarheid') {
+    return <BelastbaarheidsprofielBlock text={trimmed} />;
+  }
+
+  if (variant === 'visieLa') {
+    return <VisieLoopbaanadviseurBlock text={trimmed} />;
   }
 
   return <Basis2026MarkdownBody markdown={trimmed} />;

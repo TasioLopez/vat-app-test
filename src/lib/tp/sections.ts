@@ -1,4 +1,12 @@
 // Sections that never change (paste your exact boilerplates here)
+import {
+  TOELICHTING_DELIMITER,
+  TOELICHTING_ONBEKEND,
+  FUNCTIES_DELIMITER,
+  AD_FUNCTIES_INTRO,
+  FUNCTIE_FOOTER,
+} from '@/lib/tp/visie-loopbaanadviseur/constants';
+
 export const ALWAYS_SAME: Record<string, string> = {
   wettelijke_kaders: `• Het doel van het intakegesprek;
 • Het doel, de inhoud en fasering van het tweede spoortraject;
@@ -7,13 +15,7 @@ export const ALWAYS_SAME: Record<string, string> = {
 • Wat de procedure is als een werknemer 2 jaar ziek is en geen ander passend werk heeft gevonden.
 • Toelichting op de WIA-aanvraag. Wanneer een werknemer na twee jaar ziekte een WIA-uitkering aanvraagt, beoordeelt het UWV wat de werknemer nog kan verdienen, rekening houdend met de beperkingen in belastbaarheid.
 • Waar het ValentineZ privacy- en klachtenreglement vindbaar zijn.`,
-  visie_loopbaanadviseur: `Werknemer heeft conform de FML/ IZP/ LAB van (datum) beperkingen in de volgende rubrieken:
-• Persoonlijk functioneren
-• Sociaal functioneren
-• Aanpassing aan fysieke omgevingseisen
-• Dynamische handelingen
-• Statische houdingen
-• Werktijden`,
+  visie_loopbaanadviseur: `${TOELICHTING_DELIMITER}\n${TOELICHTING_ONBEKEND}\n\n${FUNCTIES_DELIMITER}\n${AD_FUNCTIES_INTRO}\n\n• **En soortgelijk**\n\n${FUNCTIE_FOOTER}`,
   akkoordtekst: `Door het trajectplan te ondertekenen, gaat u met onderstaande akkoord;
 • ValentineZ vraagt eventuele benodigde informatie op bij uw werkgever, zoals een Arbeidsdeskundig Rapport en/of een Inzetbaarheidsprofiel/Functie Mogelijkheden Lijst. ...
 • Uw loopbaan adviseur kan de verstrekte informatie gebruiken om een rapportage te schrijven over de voortgang van uw begeleiding, ...

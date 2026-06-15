@@ -39,7 +39,6 @@ export const TP_BASIS_TOELICHTING_TEXT_KEYS = new Set([
   'visw',
   'prof',
   'blem',
-  'vlb',
   'zp',
 ]);
 
