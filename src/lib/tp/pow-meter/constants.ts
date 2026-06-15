@@ -33,7 +33,28 @@ Trede 5: Werknemer verricht betaald werk bij eigen of andere werkgever. Meer dan
 Trede 6: Werknemer is duurzaam werkzaam bij eigen of andere werkgever. Minimaal 65% loonwaarde of volledig hersteld gemeld.
 `.trim();
 
-export const SPOOR2_OPTIONAL_PHRASING =
+/** Target length for inschaling table cells (PDF reference style). */
+export const MAX_WORDS_WERKZAME_UREN = 25;
+
+export const MAX_SENTENCES_WERKZAME_UREN = 2;
+
+export const MAX_WORDS_VERWACHTING = 60;
+
+export const MAX_SENTENCES_VERWACHTING = 3;
+
+/** Style reference — length and tone only; do not copy content. */
+export const INSCHALING_STYLE_REFERENCE = `
+Huidige trede: Werknemer bevindt zich in trede 2 van de POW-meter™.
+Huidige werkzame uren: 0,5 uur per week.
+Verwachting over 3 maanden: Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats. Binnen deze setting kan werknemer de belastbaarheid en het aantal uren zorgvuldig opbouwen en toetsen.
+`.trim();
+
+/** Optional short clause for verwachting table row only (~15 words). */
+export const SPOOR2_TABLE_CLAUSE =
+  'Indien passend kan spoor 2 worden ingezet voor arbeidsoriëntatie en verkenning van passend werk.';
+
+/** Fuller Spoor 2 guidance for toelichting_pow only — never paste into table rows. */
+export const SPOOR2_TOELICHTING_HINT =
   'Daarnaast kunnen binnen het tweede spoor arbeidsoriëntatie, netwerkactiviteiten, een werkervaringsplaats, stage of andere passende activiteiten worden ingezet om de mogelijkheden richting passend werk verder te verkennen. Wanneer hieruit een beter passende en haalbare werksetting naar voren komt, kan werknemer ook binnen deze context verder werken aan het opbouwen en toetsen van de belastbaarheid.';
 
 export const VERWACHTING_OPENER = 'Werknemer bevindt zich vermoedelijk in trede';

@@ -4,7 +4,7 @@ import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
   buildPowMeterFields,
-  stripCitations,
+  sanitizePowMeterContent,
   type PowMeterFields,
 } from './build-fields';
 import { DEFAULT_POW_METER_MODEL } from './constants';
@@ -126,11 +126,7 @@ export async function generatePowMeterContent(
     }
 
     const parsed = JSON.parse(outputText) as unknown;
-    const content = parsePowMeterContentResult(parsed);
-    content.huidige_trede_tekst = stripCitations(content.huidige_trede_tekst);
-    content.huidige_werkzame_uren = stripCitations(content.huidige_werkzame_uren);
-    content.verwachting_3_maanden = stripCitations(content.verwachting_3_maanden);
-    content.toelichting_pow = stripCitations(content.toelichting_pow);
+    const content = sanitizePowMeterContent(parsePowMeterContentResult(parsed));
     return content;
   } finally {
     await deleteUploadedFiles(openai, fileIds);

@@ -16,12 +16,12 @@ export const POW_METER_CONTENT_JSON_SCHEMA = {
     huidige_werkzame_uren: {
       type: 'string',
       description:
-        'One short paragraph: weekly hours, type of work, employer context, ratio to contract hours.',
+        'Max 2 sentences, ~25 words. Lead with weekly hours (e.g. "0,5 uur per week."). No narrative paragraph.',
     },
     verwachting_3_maanden: {
       type: 'string',
       description:
-        'Max ~100 words. Must start with "Werknemer bevindt zich vermoedelijk in trede [nummer] van de POW-meter™."',
+        'Max 3 sentences, ~60 words. Must start with "Werknemer bevindt zich vermoedelijk in trede [nummer] van de POW-meter™." No long Spoor 2 block.',
     },
     toelichting_pow: {
       type: 'string',
