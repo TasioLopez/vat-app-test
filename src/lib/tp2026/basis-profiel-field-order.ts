@@ -52,13 +52,13 @@ export const TP2026_PROFIEL_PREVIEW_META: Record<
   },
   advies_ad_passende_arbeid: {
     previewKey: 'ad',
-    title: 'In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid',
+    title: 'Advies passende arbeid',
     editorLabel: 'Advies passende arbeid (AD)',
   },
   pow_meter: {
     previewKey: 'pow',
-    title: 'Perspectief op Werk (PoW-meter)',
-    editorLabel: 'Perspectief op Werk (PoW-meter)',
+    title: 'Inschaling POW-meter™',
+    editorLabel: 'Inschaling POW-meter™',
   },
   visie_plaatsbaarheid: {
     previewKey: 'plaats',

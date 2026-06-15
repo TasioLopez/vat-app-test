@@ -31,8 +31,12 @@ import { formatNLDate } from '@/lib/tp2026/schema';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
+import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
+import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
+import { POW_METER_FOOTNOTE } from '@/lib/tp/pow-meter/constants';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import {
   TP_SPOOR2_SUBSECTIONS,
@@ -45,7 +49,17 @@ import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 const NB_AVG_INLEIDING =
   'NB: in het kader van de AVG worden in deze rapportage geen medische termen en diagnoses vermeld.';
 
-export type BasisTextVariant = 'markdown' | 'logo' | 'pow' | 'adNb' | 'belastbaarheid' | 'visieLa';
+export type BasisTextVariant =
+  | 'markdown'
+  | 'logo'
+  | 'adNb'
+  | 'adAdvies'
+  | 'belastbaarheid'
+  | 'visieLa'
+  | 'powStatic'
+  | 'powGraphic'
+  | 'powInschaling'
+  | 'pow';
 
 /** Body atoms only — front page is always rendered separately on page 1. */
 export type BasisAtom =
@@ -154,9 +168,9 @@ function textVariant(key: string, text: string): BasisTextVariant {
   const t = text.trim();
   if (key === 'prog') return 'belastbaarheid';
   if (key === 'vlb') return 'visieLa';
-  if (key === 'pow') return 'pow';
   if (key === 'ad' && t.startsWith('N.B.')) return 'adNb';
-  if (key === 'wk' || key === 'plaats' || key === 'ad') return 'logo';
+  if (key === 'ad') return 'adAdvies';
+  if (key === 'wk') return 'logo';
   return 'markdown';
 }
 
@@ -223,19 +237,6 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
     const raw = String(value ?? '').trim();
     const fallbackTrim = String(fallback ?? '').trim();
 
-    if (key === 'pow') {
-      atoms.push({
-        id: 'pow-0',
-        kind: 'text',
-        key,
-        title,
-        md: raw,
-        showSectionTitle: true,
-        variant: 'pow',
-      });
-      return;
-    }
-
     const baseText = raw || fallbackTrim;
     atoms.push({
       id: key,
@@ -262,6 +263,40 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   });
   for (const fieldKey of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
     const meta = TP2026_PROFIEL_PREVIEW_META[fieldKey];
+
+    if (fieldKey === 'pow_meter') {
+      atoms.push(
+        {
+          id: 'pow-static',
+          kind: 'text',
+          key: 'pow-static',
+          title: 'Perspectief op werk',
+          md: '',
+          showSectionTitle: true,
+          variant: 'powStatic',
+        },
+        {
+          id: 'pow-graphic',
+          kind: 'text',
+          key: 'pow-graphic',
+          title: 'Grafische weergave POW-meter™',
+          md: '',
+          showSectionTitle: true,
+          variant: 'powGraphic',
+        },
+        {
+          id: 'pow-inschaling',
+          kind: 'text',
+          key: 'pow-inschaling',
+          title: meta.title,
+          md: String(data.pow_meter ?? '').trim(),
+          showSectionTitle: true,
+          variant: 'powInschaling',
+        }
+      );
+      continue;
+    }
+
     pushTextField(
       meta.previewKey,
       meta.title,
@@ -281,11 +316,18 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   if (!atom) return null;
 
   if (atom.kind === 'text') {
+    if (
+      atom.variant === 'powStatic' ||
+      atom.variant === 'powGraphic' ||
+      atom.variant === 'powInschaling'
+    ) {
+      return null;
+    }
     const parts = splitTextAggressive(atom.md);
     if (!parts) return null;
     const [a, b] = parts;
-    const nextVariantA = atom.key === 'pow' ? 'pow' : textVariant(atom.key, a);
-    const nextVariantB = atom.key === 'pow' ? 'markdown' : textVariant(atom.key, b);
+    const nextVariantA = textVariant(atom.key, a);
+    const nextVariantB = textVariant(atom.key, b);
     return [
       ...atoms.slice(0, idx),
       {
@@ -404,12 +446,37 @@ function TextBlockBody({
   fieldKey: string;
 }) {
   const trimmed = String(markdown || '').trim();
+
+  if (variant === 'powStatic') {
+    return <PerspectiefOpWerkBlock />;
+  }
+
+  if (variant === 'powGraphic') {
+    return (
+      <div>
+        <div className="my-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[240px] max-w-full" />
+        </div>
+        <p className="mt-4 text-[10px] italic text-[#6d2a96]">{POW_METER_FOOTNOTE}</p>
+      </div>
+    );
+  }
+
   if (!trimmed) {
     return <span className="text-[12px] text-neutral-600">— nog niet ingevuld —</span>;
   }
 
   if (variant === 'adNb') {
     return <span className="text-[12px] font-bold text-neutral-900">{trimmed}</span>;
+  }
+
+  if (variant === 'adAdvies') {
+    return <AdviesPassendeArbeidBlock text={trimmed} />;
+  }
+
+  if (variant === 'powInschaling') {
+    return <PowInschalingTable raw={trimmed} />;
   }
 
   if (variant === 'pow') {
@@ -420,12 +487,9 @@ function TextBlockBody({
         </div>
         <div className="my-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/pow-meter.png" alt="PoW-meter" className="mx-auto max-h-[200px] max-w-full" />
+          <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[200px] max-w-full" />
         </div>
-        <p className="mt-4 text-[10px] italic text-[#6d2a96]">
-          * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de
-          werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-        </p>
+        <p className="mt-4 text-[10px] italic text-[#6d2a96]">{POW_METER_FOOTNOTE}</p>
       </div>
     );
   }
@@ -606,7 +670,7 @@ function BasisBodyPage({
   );
 }
 
-const BASIS_PRELOAD_IMG_SRC = ['/pow-meter.png', '/val-logo.jpg'] as const;
+const BASIS_PRELOAD_IMG_SRC = ['/pow-meter-v2.png', '/val-logo.jpg'] as const;
 
 function preloadImages(srcs: readonly string[]): Promise<void> {
   return Promise.all(

@@ -216,9 +216,6 @@ async function runTp3FieldStep(
     if (json?.details && typeof json.details === 'object') {
       next = mergeAutofillIntoTP2026(next, json.details);
     }
-    if (json?.data?.pow_meter) {
-      next.pow_meter = json.data.pow_meter;
-    }
     return { data: ensureTP2026Shape(next) };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;

@@ -10,8 +10,12 @@ import { supabase } from "@/lib/supabase/client";
 import Logo2 from "@/assets/images/logo-2.png";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
+import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
+import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
+import { POW_METER_FOOTNOTE } from '@/lib/tp/pow-meter/constants';
 import { BasisSpoor2Block } from '@/components/tp2026/BasisSpoor2Block';
 import {
   TP_BASIS_AGREEMENT_INTRO,
@@ -23,6 +27,12 @@ const page =
 const blockTitle = "font-bold text-[#660066] px-2 py-1";
 const paperText = "p-2 whitespace-pre-wrap leading-relaxed bg-[#e7e6e6]";
 const subtle = "bg-[#e7e6e6] px-3 py-1 whitespace-pre-wrap leading-relaxed italic";
+
+function isRenderableBlockSection(s: { variant: string; text?: string; key: string }): boolean {
+  if (s.variant !== 'block') return false;
+  if (s.key === 'pow-static' || s.key === 'pow-graphic') return true;
+  return Boolean(s.text);
+}
 
 // Helper to format Dutch date
 function formatDutchDate(dateStr?: string | null) {
@@ -459,14 +469,25 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
             },
             {
                 key: "ad",
-                title:
-                    "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
+                title: "Advies passende arbeid",
                 text: tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "—"),
                 variant: "block",
             },
             {
-                key: "pow",
-                title: "Perspectief op Werk (PoW-meter)",
+                key: "pow-static",
+                title: "Perspectief op werk",
+                text: "",
+                variant: "block",
+            },
+            {
+                key: "pow-graphic",
+                title: "Grafische weergave POW-meter™",
+                text: "",
+                variant: "block",
+            },
+            {
+                key: "pow-inschaling",
+                title: "Inschaling POW-meter™",
                 text: tpData.pow_meter || "—",
                 variant: "block",
             },
@@ -582,36 +603,49 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                         >
                             {s.variant === "subtle" && s.text ? (
                                 <div className={subtle}>{s.text}</div>
-                            ) : s.variant === "block" && s.text ? (
+                            ) : isRenderableBlockSection(s) ? (
                                 <>
                                     <div className={blockTitle}>{s.title}</div>
-                                    {s.key === 'inl_sub' ? (
-                                        <div className={paperText}><InleidingSubBlock text={s.text} /></div>
+                                    {(() => {
+                                      const blockText = s.text ?? '';
+                                      return s.key === 'inl_sub' ? (
+                                        <div className={paperText}><InleidingSubBlock text={blockText} /></div>
                                     ) : s.key === 'prog' ? (
-                                        <div className={paperText}><BelastbaarheidsprofielBlock text={s.text} /></div>
+                                        <div className={paperText}><BelastbaarheidsprofielBlock text={blockText} /></div>
                                     ) : s.key === 'vlb' ? (
-                                        <div className={paperText}><VisieLoopbaanadviseurBlock text={s.text} /></div>
+                                        <div className={paperText}><VisieLoopbaanadviseurBlock text={blockText} /></div>
                                     ) : s.key === 'wk' ? (
-                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, false, true)}</div>
+                                        <div className={paperText}>{renderTextWithLogoBullets(blockText, false, true)}</div>
                                     ) : s.key === 'plaats' ? (
-                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, true, true)}</div>
-                                    ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                        <div className={`${paperText} font-bold text-black`}>{s.text}</div>
+                                        <div className={paperText}>{formatTextWithParagraphs(blockText)}</div>
+                                    ) : s.key === 'ad' && blockText.startsWith('N.B.') ? (
+                                        <div className={`${paperText} font-bold text-black`}>{blockText}</div>
                                     ) : s.key === 'ad' ? (
-                                        <div className={paperText}>{renderTextWithLogoBullets(s.text, false, true)}</div>
+                                        <div className={paperText}><AdviesPassendeArbeidBlock text={blockText} /></div>
+                                    ) : s.key === 'pow-static' ? (
+                                        <div className={paperText}><PerspectiefOpWerkBlock /></div>
+                                    ) : s.key === 'pow-graphic' ? (
+                                        <div className={paperText}>
+                                          <div className="my-4">
+                                            <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={240} className="mx-auto" loading="eager" />
+                                          </div>
+                                          <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
+                                        </div>
+                                    ) : s.key === 'pow-inschaling' ? (
+                                        <div className={paperText}>
+                                          {blockText && blockText !== '—' ? <PowInschalingTable raw={blockText} /> : '—'}
+                                        </div>
                                     ) : s.key === 'pow' ? (
                                         <div className={paperText}>
-                                          {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                          {blockText && blockText !== '—' && <p className="mb-4">{formatTextWithParagraphs(blockText)}</p>}
                                           <div className="my-4">
-                                            <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" loading="eager" />
+                                            <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={200} className="mx-auto" loading="eager" />
                                           </div>
-                                          <p className="text-purple-600 italic text-[10px] mt-4">
-                                            * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                          </p>
+                                          <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
                                         </div>
                                     ) : s.key === 'inl' ? (
                                         <div className={paperText}>
-                                            {formatTextWithParagraphs(s.text)}
+                                            {formatTextWithParagraphs(blockText)}
                                             {tpData.has_ad_report === false && (
                                                 <p className="mt-4 font-bold text-black">
                                                     N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
@@ -619,8 +653,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                             )}
                                         </div>
                                     ) : (
-                                        <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
-                                    )}
+                                        <div className={paperText}>{formatTextWithParagraphs(blockText)}</div>
+                                    );
+                                    })()}
                                 </>
                             ) : (
                                 <div>{s.node}</div>
@@ -720,7 +755,7 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
         
         // Preload images before measuring
         const preloadImages = (): Promise<void> => {
-            const imageUrls = ['/val-logo.jpg', '/pow-meter.png'];
+            const imageUrls = ['/val-logo.jpg', '/pow-meter-v2.png'];
             const preloadPromises = imageUrls.map((url) => {
                 return new Promise<void>((resolve) => {
                     const img = document.createElement('img');
@@ -903,36 +938,49 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                     <div key={s.key} className="mb-3">
                                         {s.variant === "subtle" && s.text ? (
                                             <div className={subtle}>{s.text}</div>
-                                        ) : s.variant === "block" && s.text ? (
+                                        ) : isRenderableBlockSection(s) ? (
                                             <>
                                                 <div className={blockTitle}>{s.title}</div>
-                                                {s.key === 'prog' ? (
-                                                    <div className={paperText}><BelastbaarheidsprofielBlock text={s.text} /></div>
+                                                {(() => {
+                                                  const blockText = s.text ?? '';
+                                                  return s.key === 'prog' ? (
+                                                    <div className={paperText}><BelastbaarheidsprofielBlock text={blockText} /></div>
                                                 ) : s.key === 'vlb' ? (
-                                                    <div className={paperText}><VisieLoopbaanadviseurBlock text={s.text} /></div>
+                                                    <div className={paperText}><VisieLoopbaanadviseurBlock text={blockText} /></div>
                                                 ) : s.key === 'wk' ? (
-                                                    <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                                    <div className={paperText}>{renderTextWithLogoBullets(blockText, false)}</div>
                                                 ) : s.key === 'plaats' ? (
-                                                    <div className={paperText}>{renderTextWithLogoBullets(s.text, true)}</div>
-                                                ) : s.key === 'ad' && s.text?.startsWith('N.B.') ? (
-                                                    <div className={`${paperText} font-bold text-black`}>{s.text}</div>
+                                                    <div className={paperText}>{formatTextWithParagraphs(blockText)}</div>
+                                                ) : s.key === 'ad' && blockText.startsWith('N.B.') ? (
+                                                    <div className={`${paperText} font-bold text-black`}>{blockText}</div>
                                                 ) : s.key === 'ad' ? (
-                                                    <div className={paperText}>{renderTextWithLogoBullets(s.text, false)}</div>
+                                                    <div className={paperText}><AdviesPassendeArbeidBlock text={blockText} /></div>
+                                                ) : s.key === 'pow-static' ? (
+                                                    <div className={paperText}><PerspectiefOpWerkBlock /></div>
+                                                ) : s.key === 'pow-graphic' ? (
+                                                    <div className={paperText}>
+                                                      <div className="my-4">
+                                                        <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={240} className="mx-auto" />
+                                                      </div>
+                                                      <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
+                                                    </div>
+                                                ) : s.key === 'pow-inschaling' ? (
+                                                    <div className={paperText}>
+                                                      {blockText && blockText !== '—' ? <PowInschalingTable raw={blockText} /> : '—'}
+                                                    </div>
                                                 ) : s.key === 'pow' ? (
                                                     <div className={paperText}>
-                                                      {s.text && s.text !== '—' && <p className="mb-4">{formatTextWithParagraphs(s.text)}</p>}
+                                                      {blockText && blockText !== '—' && <p className="mb-4">{formatTextWithParagraphs(blockText)}</p>}
                                                       <div className="my-4">
-                                                        <img src="/pow-meter.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
+                                                        <img src="/pow-meter-v2.png" alt="PoW-meter" width={700} height={200} className="mx-auto" />
                                                       </div>
-                                                      <p className="text-purple-600 italic text-[10px] mt-4">
-                                                        * De Perspectief op Werk meter (PoW-meter) zegt niets over het opleidingsniveau of de werkervaring van de werknemer. Het is een momentopname, welke de huidige afstand tot de arbeidsmarkt grafisch weergeeft.
-                                                      </p>
+                                                      <p className="text-purple-600 italic text-[10px] mt-4">{POW_METER_FOOTNOTE}</p>
                                                     </div>
                                                 ) : s.key === 'inl_sub' ? (
-                                                    <div className={paperText}><InleidingSubBlock text={s.text} /></div>
+                                                    <div className={paperText}><InleidingSubBlock text={blockText} /></div>
                                                 ) : s.key === 'inl' ? (
                                                     <div className={paperText}>
-                                                        {formatTextWithParagraphs(s.text)}
+                                                        {formatTextWithParagraphs(blockText)}
                                                         {tpData.has_ad_report === false && (
                                                             <p className="mt-4 font-bold text-black">
                                                                 N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.
@@ -940,8 +988,9 @@ function PaginatedA4({ sections, tpData }: { sections: PreviewItem[]; tpData: an
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <div className={paperText}>{formatTextWithParagraphs(s.text)}</div>
-                                                )}
+                                                    <div className={paperText}>{formatTextWithParagraphs(blockText)}</div>
+                                                );
+                                                })()}
                                             </>
                                         ) : (
                                             s.node
