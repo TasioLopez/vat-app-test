@@ -25,7 +25,8 @@ import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidEditor } from '@/components/tp/AdviesPassendeArbeidEditor';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
-import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
+import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadviseurEditor';
+import { BasisValidationProgress } from '@/components/tp2026/BasisValidationProgress';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -97,13 +98,11 @@ function Basis2026SectionList({
 }) {
   const summary = useMemo(() => {
     let validated = 0;
-    let filled = 0;
     for (const section of BASIS_EDITOR_SECTIONS) {
       const status = getBasisSectionDisplayStatus(section.id, data);
-      if (status !== 'empty') filled += 1;
       if (status === 'validated') validated += 1;
     }
-    return { validated, total: BASIS_EDITOR_SECTIONS.length, filled };
+    return { validated, total: BASIS_EDITOR_SECTIONS.length };
   }, [data]);
 
   return (
@@ -114,6 +113,8 @@ function Basis2026SectionList({
           Open een sectie om te bewerken, autofill te gebruiken of te valideren.
         </p>
       </div>
+
+      <BasisValidationProgress validated={summary.validated} total={summary.total} />
 
       <ul className="space-y-2">
         {BASIS_EDITOR_SECTIONS.map((section) => {
@@ -132,11 +133,6 @@ function Basis2026SectionList({
           );
         })}
       </ul>
-
-      <p className="text-xs text-muted-foreground">
-        {summary.validated} van {summary.total} gevalideerd
-        {summary.filled < summary.total ? ` · ${summary.filled} ingevuld` : ''}
-      </p>
     </div>
   );
 }
@@ -311,6 +307,11 @@ function BasisFieldEditorRow({
           hasAdReport={data.has_ad_report}
           onChange={(md) => updateField(field.key, md)}
         />
+      ) : field.key === 'visie_loopbaanadviseur' ? (
+        <VisieLoopbaanadviseurEditor
+          raw={String(data[field.key] ?? '')}
+          onChange={(md) => updateField(field.key, md)}
+        />
       ) : (
         <Basis2026MarkdownFieldEditor
           markdown={String(data[field.key] ?? '')}
@@ -342,17 +343,6 @@ function BasisFieldEditorRow({
           <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
           <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2 text-sm leading-relaxed text-neutral-900">
             <Basis2026MarkdownBody markdown={String(data[field.key] ?? '')} />
-          </div>
-        </div>
-      ) : null}
-      {field.key === 'visie_loopbaanadviseur' && String(data[field.key] ?? '').trim() ? (
-        <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
-          <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-            <VisieLoopbaanadviseurBlock
-              text={String(data[field.key] ?? '')}
-              className="text-sm leading-relaxed"
-            />
           </div>
         </div>
       ) : null}

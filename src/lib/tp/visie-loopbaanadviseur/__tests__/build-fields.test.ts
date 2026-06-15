@@ -1,8 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildVisieLoopbaanadviseurBlock,
   buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
+  parseVisieLoopbaanadviseur,
 } from '../build-fields';
 import {
   AD_FUNCTIES_INTRO,
@@ -109,5 +111,36 @@ describe('buildVisieLoopbaanadviseurFields', () => {
     assert.match(visie_loopbaanadviseur, /• Medewerker uitkeringsadministratie –/);
     assert.match(visie_loopbaanadviseur, /• En soortgelijk/);
     assert.ok(visie_loopbaanadviseur.includes(FUNCTIE_FOOTER));
+  });
+});
+
+describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
+  it('round-trips buildVisieLoopbaanadviseurFields output', () => {
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
+      baseCtx,
+      sampleFuncties
+    );
+    const parsed = parseVisieLoopbaanadviseur(visie_loopbaanadviseur);
+    const rebuilt = buildVisieLoopbaanadviseurBlock(parsed);
+
+    assert.equal(rebuilt, visie_loopbaanadviseur);
+    assert.ok(parsed.toelichting.includes(TOELICHTING_VROUW));
+    assert.equal(parsed.functiesIntro, AD_FUNCTIES_INTRO);
+    assert.match(parsed.functieBullets, /• Medewerker uitkeringsadministratie –/);
+    assert.equal(parsed.footer, FUNCTIE_FOOTER);
+  });
+
+  it('falls back to plain toelichting when delimiters are missing', () => {
+    const legacy = 'Enkelvoudige tekst zonder delimiters.';
+    const parsed = parseVisieLoopbaanadviseur(legacy);
+
+    assert.equal(parsed.toelichting, legacy);
+    assert.equal(parsed.functiesIntro, '');
+    assert.equal(parsed.functieBullets, '');
+    assert.equal(parsed.footer, FUNCTIE_FOOTER);
+
+    const rebuilt = buildVisieLoopbaanadviseurBlock(parsed);
+    assert.ok(rebuilt.includes(TOELICHTING_DELIMITER));
+    assert.ok(rebuilt.includes(legacy));
   });
 });

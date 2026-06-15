@@ -9,7 +9,10 @@ export {
 export {
   buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
+  buildVisieLoopbaanadviseurBlock,
+  parseVisieLoopbaanadviseur,
   stripCitations,
+  type ParsedVisieLoopbaanadviseur,
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
 } from './build-fields';

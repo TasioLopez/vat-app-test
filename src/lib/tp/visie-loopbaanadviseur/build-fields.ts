@@ -93,6 +93,91 @@ export function buildVisieLoopbaanadviseurContentFromIntake(
   };
 }
 
+export type ParsedVisieLoopbaanadviseur = {
+  toelichting: string;
+  functiesIntro: string;
+  functieBullets: string;
+  footer: string;
+};
+
+function splitFunctiesBody(body: string): { intro: string; bullets: string; footer: string } {
+  const trimmed = body.trim();
+  if (!trimmed) return { intro: '', bullets: '', footer: '' };
+
+  let footerIdx = trimmed.indexOf(FUNCTIE_FOOTER);
+  if (footerIdx === -1) {
+    const footerMarker = FUNCTIE_FOOTER.replace(/^\*/, '').slice(0, 40);
+    footerIdx = trimmed.indexOf(footerMarker);
+  }
+  if (footerIdx === -1) {
+    const lines = trimmed.split('\n');
+    const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
+    if (bulletStart <= 0) return { intro: trimmed, bullets: '', footer: '' };
+    return {
+      intro: lines.slice(0, bulletStart).join('\n').trim(),
+      bullets: lines.slice(bulletStart).join('\n').trim(),
+      footer: '',
+    };
+  }
+
+  const beforeFooter = trimmed.slice(0, footerIdx).trim();
+  const footer = trimmed.slice(footerIdx).trim();
+  const lines = beforeFooter.split('\n');
+  const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
+  if (bulletStart <= 0) {
+    return { intro: beforeFooter, bullets: '', footer };
+  }
+  return {
+    intro: lines.slice(0, bulletStart).join('\n').trim(),
+    bullets: lines.slice(bulletStart).join('\n').trim(),
+    footer,
+  };
+}
+
+export function parseVisieLoopbaanadviseur(raw: string): ParsedVisieLoopbaanadviseur {
+  const text = String(raw ?? '').trim();
+  if (!text) {
+    return { toelichting: '', functiesIntro: '', functieBullets: '', footer: FUNCTIE_FOOTER };
+  }
+
+  if (!text.includes(TOELICHTING_DELIMITER)) {
+    return { toelichting: text, functiesIntro: '', functieBullets: '', footer: FUNCTIE_FOOTER };
+  }
+
+  const afterToelichting = text.split(TOELICHTING_DELIMITER)[1] ?? '';
+  const [toelichtingBody, functiesBody = ''] = afterToelichting.split(FUNCTIES_DELIMITER);
+  const { intro, bullets, footer } = splitFunctiesBody(functiesBody);
+
+  return {
+    toelichting: toelichtingBody.trim(),
+    functiesIntro: intro,
+    functieBullets: bullets,
+    footer: footer || FUNCTIE_FOOTER,
+  };
+}
+
+export function buildVisieLoopbaanadviseurBlock(parsed: ParsedVisieLoopbaanadviseur): string {
+  const toelichting = parsed.toelichting.trim();
+  const functiesIntro = parsed.functiesIntro.trim();
+  const functieBullets = parsed.functieBullets.trim();
+  const footer = (parsed.footer || FUNCTIE_FOOTER).trim();
+
+  if (!toelichting && !functiesIntro && !functieBullets) return '';
+
+  if (!functiesIntro && !functieBullets) {
+    return [TOELICHTING_DELIMITER, toelichting].join('\n\n');
+  }
+
+  return [
+    TOELICHTING_DELIMITER,
+    toelichting,
+    FUNCTIES_DELIMITER,
+    functiesIntro,
+    functieBullets,
+    footer,
+  ].join('\n\n');
+}
+
 export function buildVisieLoopbaanadviseurFields(
   ctx: VisieLoopbaanadviseurBuildContext,
   content: VisieLoopbaanadviseurContentResult

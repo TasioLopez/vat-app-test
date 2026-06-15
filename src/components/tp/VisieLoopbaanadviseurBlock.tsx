@@ -2,46 +2,14 @@
 
 import React from 'react';
 import {
-  FUNCTIE_FOOTER,
-  FUNCTIES_DELIMITER,
   FUNCTIES_SUBHEADING,
   TOELICHTING_DELIMITER,
   TOELICHTING_SUBHEADING,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
+import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
 import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
-
-function splitFunctiesBody(body: string): { intro: string; bullets: string; footer: string } {
-  const trimmed = body.trim();
-  if (!trimmed) return { intro: '', bullets: '', footer: '' };
-
-  const footerMarker = FUNCTIE_FOOTER.replace(/^\*/, '').slice(0, 40);
-  const footerIdx = trimmed.indexOf(footerMarker);
-  if (footerIdx === -1) {
-    const lines = trimmed.split('\n');
-    const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
-    if (bulletStart <= 0) return { intro: trimmed, bullets: '', footer: '' };
-    return {
-      intro: lines.slice(0, bulletStart).join('\n').trim(),
-      bullets: lines.slice(bulletStart).join('\n').trim(),
-      footer: '',
-    };
-  }
-
-  const beforeFooter = trimmed.slice(0, footerIdx).trim();
-  const footer = trimmed.slice(footerIdx).trim();
-  const lines = beforeFooter.split('\n');
-  const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
-  if (bulletStart <= 0) {
-    return { intro: beforeFooter, bullets: '', footer };
-  }
-  return {
-    intro: lines.slice(0, bulletStart).join('\n').trim(),
-    bullets: lines.slice(bulletStart).join('\n').trim(),
-    footer,
-  };
-}
 
 function parseFunctieLine(line: string): { title: string; description: string } | null {
   const content = line.trim().replace(/^[•☑✓\-]\s*/, '');
@@ -121,20 +89,18 @@ export function VisieLoopbaanadviseurBlock({
     );
   }
 
-  const afterToelichting = text.split(TOELICHTING_DELIMITER)[1] ?? '';
-  const [toelichtingBody, functiesBody = ''] = afterToelichting.split(FUNCTIES_DELIMITER);
-  const { intro, bullets, footer } = splitFunctiesBody(functiesBody);
+  const { toelichting, functiesIntro, functieBullets, footer } = parseVisieLoopbaanadviseur(text);
 
   return (
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       <BasisToelichtingHeading label={TOELICHTING_SUBHEADING} />
-      <p className="mb-4">{toelichtingBody.trim()}</p>
+      <p className="mb-4">{toelichting}</p>
 
-      {functiesBody.trim() ? (
+      {functiesIntro || functieBullets || footer ? (
         <>
           <BasisToelichtingHeading label={FUNCTIES_SUBHEADING} />
-          {intro ? <p className="mb-2">{intro}</p> : null}
-          {bullets ? <div className="mt-1">{renderVisieLaFunctieBullets(bullets)}</div> : null}
+          {functiesIntro ? <p className="mb-2">{functiesIntro}</p> : null}
+          {functieBullets ? <div className="mt-1">{renderVisieLaFunctieBullets(functieBullets)}</div> : null}
           {footer ? (
             <p className="mt-4 text-[#6d2a96] italic">{formatInlineText(footer)}</p>
           ) : null}
