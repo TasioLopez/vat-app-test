@@ -25,6 +25,7 @@ import {
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience, cn, normalizePersonName } from '@/lib/utils';
+import { SELECT_CLASS } from '@/lib/select-class';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,8 +168,8 @@ function toEditableEmployeePayload(employee: Employee): EditableEmployeePayload 
     ) as EditableEmployeePayload;
     return {
         ...filtered,
-        first_name: normalizePersonName(filtered.first_name),
-        last_name: normalizePersonName(filtered.last_name),
+        first_name: normalizePersonName(filtered.first_name) ?? '',
+        last_name: normalizePersonName(filtered.last_name) ?? '',
     };
 }
 

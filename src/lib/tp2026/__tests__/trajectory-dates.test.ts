@@ -54,7 +54,7 @@ describe('applyTrajectoryDateDerivations', () => {
       tp_end_date: '2027-07-05',
     };
 
-    const result = applyTrajectoryDateDerivations(input);
+    const result = applyTrajectoryDateDerivations(input) as typeof input & { tp_lead_time?: string };
     assert.equal(result.tp_start_date, '2026-06-05');
     assert.equal(result.tp_end_date, '2027-07-05');
     assert.equal(result.tp_lead_time, '57');
