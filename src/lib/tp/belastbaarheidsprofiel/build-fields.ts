@@ -65,7 +65,7 @@ export function buildBelastbaarheidsprofielFields(
 
   const parts = [fmlIntro, rubriekenLines, spreekuurIntro];
   if (quoteParts.length > 0) {
-    parts.push(`${PROGNOSE_DELIMITER}\n${quoteParts.join('\n\n')}`);
+    parts.push(`${PROGNOSE_DELIMITER}\n${quoteParts.join('\n')}`);
   }
 
   return { prognose_bedrijfsarts: parts.filter(Boolean).join('\n\n') };

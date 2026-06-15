@@ -2,12 +2,37 @@
 
 import React from 'react';
 import { PROGNOSE_DELIMITER } from '@/lib/tp/belastbaarheidsprofiel/constants';
-import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 
-const TEAL_CLASS = TP_BASIS_TOELICHTING_CLASS.replace('font-bold', 'font-normal');
+const TEAL_BOLD_CLASS = 'text-[12px] font-bold leading-tight text-[#64b6a6]';
+
+function renderPrognoseQuote(quote: string): React.ReactNode {
+  const segments = quote.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
+  if (segments.length <= 1) {
+    return (
+      <p className="mt-2">
+        <em>&ldquo;{quote}&rdquo;</em>
+      </p>
+    );
+  }
+
+  return (
+    <p className="mt-2">
+      <em>
+        &ldquo;{segments[0]}
+        {segments.slice(1).map((segment, index) => (
+          <React.Fragment key={index}>
+            <br />
+            {segment}
+          </React.Fragment>
+        ))}
+        &rdquo;
+      </em>
+    </p>
+  );
+}
 
 function splitBeforeRubrieken(text: string): { intro: string; rest: string } {
   const bulletIdx = text.search(/\n•\s/);
@@ -64,17 +89,15 @@ export function BelastbaarheidsprofielBlock({
 
   return (
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      {intro ? <p className={TEAL_CLASS}>{intro}</p> : null}
+      {intro ? <p className={TEAL_BOLD_CLASS}>{intro}</p> : null}
       {bullets ? (
         <div className="my-3">{renderTextWithLogoBullets(bullets, false, true)}</div>
       ) : null}
-      {spreekuurIntro ? <p className={`${TEAL_CLASS} mt-3`}>{spreekuurIntro}</p> : null}
+      {spreekuurIntro ? <p className={`${TEAL_BOLD_CLASS} mt-3`}>{spreekuurIntro}</p> : null}
       {quote ? (
         <div className="mt-4">
           <BasisToelichtingHeading label="Prognose:" />
-          <p className="mt-2">
-            <em>&ldquo;{quote}&rdquo;</em>
-          </p>
+          {renderPrognoseQuote(quote)}
         </div>
       ) : null}
     </div>
