@@ -46,6 +46,15 @@ import {
     processEmployeeAutofillRawDetails,
 } from '@/lib/employee/autofill-persist';
 import {
+  EMPLOYEE_DETAIL_FIELD_KEYS,
+  computeEmployeeFieldHash,
+  getEmployeeFieldDisplayStatus,
+  normalizeEmployeeFieldContentHash,
+  normalizeEmployeeFieldReviewStatus,
+  type EmployeeDetailFieldKey,
+  type EmployeeFieldReviewStatus,
+} from '@/lib/employee/field-review';
+import {
     EDUCATION_LEVEL_OPTIONS,
     normalizeEducationLevel,
     repairEmployeeEducationFields,
@@ -92,6 +101,8 @@ type EmployeeDetails = {
     contract_hours?: number;
     other_employers?: string;
     autofilled_fields?: string[];
+  field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
+  field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
 };
 
 type Client = {
@@ -138,6 +149,8 @@ const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'contract_hours',
     'other_employers',
     'autofilled_fields',
+  'field_review_status',
+  'field_content_hash',
 ];
 
 const EDITABLE_EMPLOYEE_FIELD_KEYS: (keyof EditableEmployeePayload)[] = [
@@ -365,8 +378,29 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 ...data,
                 phone: normalizePhoneForStorage(data.phone) ?? data.phone,
                 work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
-                drivers_license_type: parsedLicenseType
+                drivers_license_type: parsedLicenseType,
+                field_review_status: undefined as any,
+                field_content_hash: undefined as any,
             };
+
+            const normalizedReviewStatus = normalizeEmployeeFieldReviewStatus((data as any).field_review_status);
+            const normalizedContentHash = normalizeEmployeeFieldContentHash((data as any).field_content_hash);
+
+            // Backward compatibility: if the employee row has legacy `autofilled_fields` but no review metadata yet,
+            // treat those fields as "review" so the UI can show yellow until the user validates.
+            const hasReviewMetadata = Object.keys(normalizedReviewStatus).length > 0;
+            const legacyAutofillFields = Array.isArray((data as any).autofilled_fields) ? (data as any).autofilled_fields : [];
+            const legacyReviewStatus: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> = {};
+            if (!hasReviewMetadata && legacyAutofillFields.length > 0) {
+                const keySet = new Set<string>(EMPLOYEE_DETAIL_FIELD_KEYS);
+                for (const key of legacyAutofillFields) {
+                    if (!keySet.has(key)) continue;
+                    legacyReviewStatus[key as EmployeeDetailFieldKey] = 'review';
+                }
+            }
+
+            parsedData.field_review_status = hasReviewMetadata ? normalizedReviewStatus : legacyReviewStatus;
+            parsedData.field_content_hash = normalizedContentHash;
             const repairedEducation = repairEmployeeEducationFields(
                 parsedData.education_level,
                 parsedData.education_name
@@ -452,11 +486,111 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     };
 
     const handleDetailChange = (field: keyof EmployeeDetails, value: any) => {
-        setEmployeeDetails(prev => ({
-            ...prev,
-            [field]: value,
-            employee_id: employeeId
-        }));
+        setEmployeeDetails((prev) => {
+            if (!prev) return prev;
+
+            const next: EmployeeDetails = {
+                ...prev,
+                [field]: value,
+                employee_id: employeeId,
+            };
+
+            // Only apply validation lifecycle for actual validate-able fields.
+            if (!EMPLOYEE_DETAIL_FIELD_KEYS.includes(field as EmployeeDetailFieldKey)) {
+                return next;
+            }
+
+            const reviewMap = prev.field_review_status || {};
+            const contentHashMap = prev.field_content_hash || {};
+            const typedField = field as EmployeeDetailFieldKey;
+
+            // If the user clears the field, remove any review metadata so it returns to normal.
+            const cleared =
+                value === null ||
+                value === undefined ||
+                (typeof value === 'string' && value.trim().length === 0);
+            if (cleared) {
+                if (!reviewMap[typedField] && !contentHashMap[typedField]) return next;
+                const { [typedField]: _removed1, ...restReview } = reviewMap;
+                const { [typedField]: _removed2, ...restHash } = contentHashMap;
+                return {
+                    ...next,
+                    field_review_status: restReview,
+                    field_content_hash: restHash,
+                };
+            }
+
+            // If the field was validated but content changed, downgrade to review.
+            if (reviewMap[typedField] === 'validated') {
+                const nextHash = computeEmployeeFieldHash(typedField, next as any);
+                const storedHash = contentHashMap[typedField];
+                if (storedHash !== nextHash) {
+                    return {
+                        ...next,
+                        field_review_status: {
+                            ...reviewMap,
+                            [typedField]: 'review',
+                        },
+                        field_content_hash: Object.fromEntries(
+                            Object.entries(contentHashMap).filter(([k]) => k !== typedField)
+                        ) as Partial<Record<EmployeeDetailFieldKey, string>>,
+                    };
+                }
+            }
+
+            return next;
+        });
+    };
+
+    const pendingValidationFields = useMemo(() => {
+        if (!employeeDetails) return [] as EmployeeDetailFieldKey[];
+        const reviewMap = employeeDetails.field_review_status || {};
+        const hashMap = employeeDetails.field_content_hash || {};
+        return EMPLOYEE_DETAIL_FIELD_KEYS.filter((field) => {
+            return getEmployeeFieldDisplayStatus(field, employeeDetails as any, reviewMap, hashMap) === 'review';
+        });
+    }, [employeeDetails]);
+
+    const validateField = (field: EmployeeDetailFieldKey) => {
+        if (!employeeDetails) return;
+        const nextHash = computeEmployeeFieldHash(field, employeeDetails as any);
+
+        setEmployeeDetails((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                field_review_status: {
+                    ...(prev.field_review_status || {}),
+                    [field]: 'validated',
+                },
+                field_content_hash: {
+                    ...(prev.field_content_hash || {}),
+                    [field]: nextHash,
+                },
+            };
+        });
+    };
+
+    const validateAllPendingFields = () => {
+        if (!employeeDetails) return;
+        if (pendingValidationFields.length === 0) return;
+
+        setEmployeeDetails((prev) => {
+            if (!prev) return prev;
+            const reviewMap = { ...(prev.field_review_status || {}) };
+            const hashMap = { ...(prev.field_content_hash || {}) };
+
+            for (const field of pendingValidationFields) {
+                reviewMap[field] = 'validated';
+                hashMap[field] = computeEmployeeFieldHash(field, prev as any);
+            }
+
+            return {
+                ...prev,
+                field_review_status: reviewMap,
+                field_content_hash: hashMap,
+            };
+        });
     };
 
     const currentEmployeePayload = useMemo(
@@ -783,10 +917,27 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
-    const fieldClass = (field: keyof EmployeeDetails) =>
-        `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${autofilledFields.has(field) ? 'border-yellow-400 bg-yellow-50/30' : ''}`;
-    const selectFieldClass = (field: keyof EmployeeDetails) =>
-        cn(SELECT_CLASS, autofilledFields.has(field) && '!border-yellow-400 bg-yellow-50/30');
+    const getFieldStatusClass = (status: 'empty' | 'review' | 'validated') => {
+        if (status === 'validated') return 'border-green-500 bg-green-50/30';
+        if (status === 'review') return 'border-yellow-400 bg-yellow-50/30';
+        return '';
+    };
+
+    const getFieldDisplayStatus = (field: EmployeeDetailFieldKey) =>
+        getEmployeeFieldDisplayStatus(
+            field,
+            employeeDetails as any,
+            employeeDetails?.field_review_status,
+            employeeDetails?.field_content_hash
+        );
+
+    const fieldClass = (field: EmployeeDetailFieldKey) =>
+        `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${getFieldStatusClass(
+            getFieldDisplayStatus(field)
+        )}`;
+
+    const selectFieldClass = (field: EmployeeDetailFieldKey) =>
+        cn(SELECT_CLASS, getFieldStatusClass(getFieldDisplayStatus(field)));
 
     const openTpBuilder = async (layoutKey: 'tp_legacy' | 'tp_2026') => {
         setTpOpening(layoutKey);
@@ -903,19 +1054,74 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 ) : null}
                             </div>
 
-                            <div className="flex flex-col gap-2 w-2/5">
-                                <Select value={employeeDetails?.gender || undefined} onValueChange={(v) => handleDetailChange('gender', v)}>
-                                    <SelectTrigger className={selectFieldClass('gender')}>
-                                        <SelectValue placeholder="Geslacht selecteren" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Man">Man</SelectItem>
-                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
-                                        <SelectItem value="Anders">Anders</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <input className={fieldClass('phone')} placeholder="Telefoon" value={employeeDetails?.phone || ''} onChange={e => handleDetailChange('phone', e.target.value)} />
-                                <input className={fieldClass('date_of_birth')} type="date" value={employeeDetails?.date_of_birth || ''} onChange={e => handleDetailChange('date_of_birth', e.target.value)} />
+                            <div className="flex flex-col gap-3 w-2/5">
+                                <div className="flex flex-col gap-1">
+                                    <Select
+                                        value={employeeDetails?.gender || undefined}
+                                        onValueChange={(v) => handleDetailChange('gender', v)}
+                                    >
+                                        <SelectTrigger className={selectFieldClass('gender')}>
+                                            <SelectValue placeholder="Geslacht selecteren" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Man">Man</SelectItem>
+                                            <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                            <SelectItem value="Anders">Anders</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => validateField('gender')}
+                                            disabled={getFieldDisplayStatus('gender') !== 'review'}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                            aria-label="Valideer geslacht"
+                                            title="Valideer geslacht"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <input
+                                        className={fieldClass('phone')}
+                                        placeholder="Telefoon"
+                                        value={employeeDetails?.phone || ''}
+                                        onChange={(e) => handleDetailChange('phone', e.target.value)}
+                                    />
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => validateField('phone')}
+                                            disabled={getFieldDisplayStatus('phone') !== 'review'}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                            aria-label="Valideer telefoon"
+                                            title="Valideer telefoon"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <input
+                                        className={fieldClass('date_of_birth')}
+                                        type="date"
+                                        value={employeeDetails?.date_of_birth || ''}
+                                        onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
+                                    />
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => validateField('date_of_birth')}
+                                            disabled={getFieldDisplayStatus('date_of_birth') !== 'review'}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                            aria-label="Valideer geboortedatum"
+                                            title="Valideer geboortedatum"
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1145,15 +1351,27 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <FileText className="w-5 h-5 text-purple-600" />
                         Werknemersprofiel
                     </h2>
-                    <Button 
-                        onClick={autofillWithAI} 
-                        disabled={aiLoading}
-                        variant="secondary"
-                        className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-                    >
-                        <Sparkles className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
-                        {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            onClick={autofillWithAI}
+                            disabled={aiLoading}
+                            variant="secondary"
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                            <Sparkles className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
+                            {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={validateAllPendingFields}
+                            disabled={aiLoading || pendingValidationFields.length === 0 || updating}
+                            variant="outline"
+                            className="h-10 border-green-200 text-green-700 hover:border-green-300 bg-white"
+                        >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Valideer alles
+                        </Button>
+                    </div>
                 </div>
 
                 {suggestedReferent && (employee?.client_id) && (
@@ -1175,10 +1393,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Current Job */}
                 <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-purple-600" />
-                        Huidig werk
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-purple-600" />
+                            Huidig werk
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('current_job')}
+                            disabled={getFieldDisplayStatus('current_job') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer huidig werk"
+                            title="Valideer huidig werk"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <Input 
                         className={fieldClass('current_job')} 
                         placeholder="Bijv. Jobcoach/stagebegeleider" 
@@ -1189,10 +1419,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Work Experience */}
                 <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-purple-600" />
-                        Werkervaring
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-purple-600" />
+                            Werkervaring
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('work_experience')}
+                            disabled={getFieldDisplayStatus('work_experience') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer werkervaring"
+                            title="Valideer werkervaring"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <Textarea 
                         className={fieldClass('work_experience') + ' min-h-[100px]'} 
                         placeholder="Beschrijf de werkervaring..." 
@@ -1204,10 +1446,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 {/* Education */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2 group">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-purple-600" />
-                            Opleidingsniveau
-                        </label>
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4 text-purple-600" />
+                                Opleidingsniveau
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => validateField('education_level')}
+                                disabled={getFieldDisplayStatus('education_level') !== 'review'}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label="Valideer opleidingsniveau"
+                                title="Valideer opleidingsniveau"
+                            >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                            </button>
+                        </div>
                         <Select
                             value={normalizeEducationLevel(employeeDetails?.education_level) ?? undefined}
                             onValueChange={(v) => handleDetailChange('education_level', v)}
@@ -1223,10 +1477,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         </Select>
                     </div>
                     <div className="space-y-2 group">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-purple-600" />
-                            Specialisatie
-                        </label>
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4 text-purple-600" />
+                                Specialisatie
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => validateField('education_name')}
+                                disabled={getFieldDisplayStatus('education_name') !== 'review'}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label="Valideer specialisatie"
+                                title="Valideer specialisatie"
+                            >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                            </button>
+                        </div>
                         <Input 
                             className={fieldClass('education_name')} 
                             placeholder="Bijv. Kappersopleiding" 
@@ -1253,9 +1519,41 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 className="w-5 h-5 rounded border-2 border-purple-300 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 cursor-pointer transition-all checked:bg-purple-600 checked:border-purple-600"
                             />
                             <div className="flex items-center gap-2">
-                                <Icon className={`w-4 h-4 ${autofilledFields.has(key) ? 'text-yellow-500' : 'text-purple-600'}`} />
-                                <span className={`font-medium ${autofilledFields.has(key) ? 'text-yellow-600' : 'text-gray-700'}`}>{label}</span>
+                                <Icon
+                                    className={`w-4 h-4 ${
+                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
+                                            ? 'text-green-600'
+                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
+                                              ? 'text-yellow-600'
+                                              : 'text-purple-600'
+                                    }`}
+                                />
+                                <span
+                                    className={`font-medium ${
+                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
+                                            ? 'text-green-700'
+                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
+                                              ? 'text-yellow-600'
+                                              : 'text-gray-700'
+                                    }`}
+                                >
+                                    {label}
+                                </span>
                             </div>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    validateField(key as EmployeeDetailFieldKey);
+                                }}
+                                disabled={getFieldDisplayStatus(key as EmployeeDetailFieldKey) !== 'review'}
+                                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Valideer ${label}`}
+                                title={`Valideer ${label}`}
+                            >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                            </button>
                         </label>
                     ))}
                 </div>
@@ -1263,10 +1561,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 {/* Multi-select driver's license types */}
                 {employeeDetails?.drivers_license && (
                     <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                        <label className="block text-sm font-semibold mb-3 flex items-center gap-2 text-gray-700">
-                            <Car className="w-4 h-4 text-purple-600" />
-                            Rijbewijstype
-                        </label>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                            <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
+                                <Car className="w-4 h-4 text-purple-600" />
+                                Rijbewijstype
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => validateField('drivers_license_type')}
+                                disabled={getFieldDisplayStatus('drivers_license_type') !== 'review'}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label="Valideer rijbewijstype"
+                                title="Valideer rijbewijstype"
+                            >
+                                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                            </button>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                             {[
                                 { value: 'B', label: 'B (Auto)' },
@@ -1323,10 +1633,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Multi-select transport */}
                 <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2 text-gray-700">
-                        <Car className="w-4 h-4 text-purple-600" />
-                        Eigen vervoer
-                    </label>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
+                            <Car className="w-4 h-4 text-purple-600" />
+                            Eigen vervoer
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('transport_type')}
+                            disabled={getFieldDisplayStatus('transport_type') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer eigen vervoer"
+                            title="Valideer eigen vervoer"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'].map((option) => {
                             const selected = Array.isArray(employeeDetails?.transport_type) 
@@ -1358,7 +1680,17 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         }}
                                         className="rounded border-border text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                     />
-                                    <span className={`text-sm font-medium ${selected ? 'text-purple-700' : 'text-gray-600'} ${autofilledFields.has('transport_type') ? 'text-yellow-600' : ''}`}>
+                                    <span
+                                        className={`text-sm font-medium ${
+                                            selected ? 'text-purple-700' : 'text-gray-600'
+                                        } ${
+                                            getFieldDisplayStatus('transport_type') === 'review'
+                                                ? 'text-yellow-600'
+                                                : getFieldDisplayStatus('transport_type') === 'validated'
+                                                  ? 'text-green-700'
+                                                  : ''
+                                        }`}
+                                    >
                                         {option}
                                     </span>
                                 </label>
@@ -1375,7 +1707,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
+                                <button
+                                    type="button"
+                                    onClick={() => validateField('dutch_speaking')}
+                                    disabled={getFieldDisplayStatus('dutch_speaking') !== 'review'}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Valideer spreekvaardigheid"
+                                    title="Valideer spreekvaardigheid"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                                </button>
+                            </div>
                             <Select value={employeeDetails?.dutch_speaking || undefined} onValueChange={(v) => handleDetailChange('dutch_speaking', v || null)}>
                                 <SelectTrigger className={selectFieldClass('dutch_speaking')}>
                                     <SelectValue placeholder="Selecteer..." />
@@ -1388,7 +1732,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </Select>
                         </div>
                         <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
+                                <button
+                                    type="button"
+                                    onClick={() => validateField('dutch_writing')}
+                                    disabled={getFieldDisplayStatus('dutch_writing') !== 'review'}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Valideer schrijfvaardigheid"
+                                    title="Valideer schrijfvaardigheid"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                                </button>
+                            </div>
                             <Select value={employeeDetails?.dutch_writing || undefined} onValueChange={(v) => handleDetailChange('dutch_writing', v || null)}>
                                 <SelectTrigger className={selectFieldClass('dutch_writing')}>
                                     <SelectValue placeholder="Selecteer..." />
@@ -1401,7 +1757,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </Select>
                         </div>
                         <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
+                                <button
+                                    type="button"
+                                    onClick={() => validateField('dutch_reading')}
+                                    disabled={getFieldDisplayStatus('dutch_reading') !== 'review'}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Valideer leesvaardigheid"
+                                    title="Valideer leesvaardigheid"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                                </button>
+                            </div>
                             <Select value={employeeDetails?.dutch_reading || undefined} onValueChange={(v) => handleDetailChange('dutch_reading', v || null)}>
                                 <SelectTrigger className={selectFieldClass('dutch_reading')}>
                                     <SelectValue placeholder="Selecteer..." />
@@ -1418,10 +1786,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Computer Skills */}
                 <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Computer className="w-4 h-4 text-purple-600" />
-                        Computervaardigheden
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Computer className="w-4 h-4 text-purple-600" />
+                            Computervaardigheden
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('computer_skills')}
+                            disabled={getFieldDisplayStatus('computer_skills') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer computervaardigheden"
+                            title="Valideer computervaardigheden"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <Select value={employeeDetails?.computer_skills || undefined} onValueChange={(v) => handleDetailChange('computer_skills', v)}>
                         <SelectTrigger className={selectFieldClass('computer_skills')}>
                             <SelectValue placeholder="Selecteer computervaardigheden" />
@@ -1438,10 +1818,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Contract Hours */}
                 <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        Contracturen
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-purple-600" />
+                            Contracturen
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('contract_hours')}
+                            disabled={getFieldDisplayStatus('contract_hours') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer contracturen"
+                            title="Valideer contracturen"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <Input 
                         className={fieldClass('contract_hours')} 
                         type="number" 
@@ -1453,10 +1845,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 
                 {/* Other Employers */}
                 <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-purple-600" />
-                        Andere werkgevers
-                    </label>
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-purple-600" />
+                            Andere werkgevers
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => validateField('other_employers')}
+                            disabled={getFieldDisplayStatus('other_employers') !== 'review'}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Valideer andere werkgevers"
+                            title="Valideer andere werkgevers"
+                        >
+                            <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        </button>
+                    </div>
                     <Textarea 
                         className={fieldClass('other_employers') + ' min-h-[100px]'} 
                         placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..." 

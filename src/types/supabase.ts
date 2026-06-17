@@ -243,6 +243,8 @@ export type Database = {
         Row: {
           ad_report_date: string | null
           autofilled_fields: string[] | null
+          field_content_hash: Json
+          field_review_status: Json
           computer_skills: string | null
           contract_hours: number | null
           created_at: string | null
@@ -268,6 +270,8 @@ export type Database = {
         Insert: {
           ad_report_date?: string | null
           autofilled_fields?: string[] | null
+          field_content_hash?: Json
+          field_review_status?: Json
           computer_skills?: string | null
           contract_hours?: number | null
           created_at?: string | null
@@ -293,6 +297,8 @@ export type Database = {
         Update: {
           ad_report_date?: string | null
           autofilled_fields?: string[] | null
+          field_content_hash?: Json
+          field_review_status?: Json
           computer_skills?: string | null
           contract_hours?: number | null
           created_at?: string | null

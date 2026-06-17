@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { parseWorkExperience } from '@/lib/utils';
+import {
+  applyEmployeeAutofillReviewMarks,
+  type EmployeeDetailFieldKey,
+  type EmployeeFieldReviewStatus,
+} from '@/lib/employee/field-review';
 
 export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'gender',
@@ -20,6 +25,8 @@ export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'computer_skills',
   'contract_hours',
   'other_employers',
+  'field_review_status',
+  'field_content_hash',
   'autofilled_fields',
 ] as const;
 
@@ -42,6 +49,8 @@ export type EmployeeDetailsPersist = {
   computer_skills?: string;
   contract_hours?: number;
   other_employers?: string;
+  field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>>;
+  field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>>;
   autofilled_fields?: string[];
 };
 
@@ -121,6 +130,8 @@ export function listAutofilledEmployeeDetailKeys(
 ): (keyof EmployeeDetailsPersist)[] {
   return EMPLOYEE_DETAILS_PERSIST_KEYS.filter((key) => {
     if (key === 'autofilled_fields') return false;
+    if (key === 'field_review_status') return false;
+    if (key === 'field_content_hash') return false;
     if (!Object.prototype.hasOwnProperty.call(details, key)) return false;
     const v = details[key as keyof typeof details];
     if (key === 'transport_type' && Array.isArray(v) && v.length === 0) return false;
@@ -149,11 +160,19 @@ export async function applyEmployeeAutofillDetails(
   const processed = processEmployeeAutofillRawDetails(rawDetails);
   const autofilledFields = listAutofilledEmployeeDetailKeys(processed);
 
+  const { nextReviewStatusMap, nextContentHashMap } = applyEmployeeAutofillReviewMarks(
+    autofilledFields as EmployeeDetailFieldKey[],
+    existingDetails?.field_review_status,
+    existingDetails?.field_content_hash
+  );
+
   const updatedDetails: EmployeeDetailsPersist = {
     ...(existingDetails || { employee_id: employeeId }),
     ...buildEmployeeDetailsPayload(processed as Partial<EmployeeDetailsPersist>, employeeId),
     employee_id: employeeId,
     autofilled_fields: autofilledFields,
+    field_review_status: nextReviewStatusMap,
+    field_content_hash: nextContentHashMap,
   };
 
   const { error: persistError } = await supabase
