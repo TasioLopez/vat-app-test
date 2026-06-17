@@ -54,7 +54,11 @@ export default function CvEditableColumnFlow({
     const section = sections[i];
 
     if (section.layout === 'two_column' && renderTwoColumn) {
-      nodes.push(<div key={section.id}>{renderTwoColumn(section)}</div>);
+      nodes.push(
+        <div key={section.id} className="w-full min-h-[297mm]">
+          {renderTwoColumn(section)}
+        </div>
+      );
       i += 1;
       continue;
     }

@@ -36,17 +36,19 @@ function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   return next;
 }
 
-function SortableColumnShell({
+function SortableColumn({
   id,
   label,
   gripSide,
-  variant,
+  className,
+  style,
   children,
 }: {
   id: string;
   label: string;
   gripSide: 'left' | 'right';
-  variant: 'sidebar' | 'main';
+  className?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -55,20 +57,18 @@ function SortableColumnShell({
   const { activeLocale } = useCV();
   const dragLabel = uiLabel(activeLocale, 'dragColumnToSwap');
 
-  const style = {
+  const sortableStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.85 : 1,
+    ...style,
   };
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={cn(
-        'group/column relative min-h-full self-stretch',
-        variant === 'main' ? 'min-w-0 flex-1' : 'shrink-0'
-      )}
+      style={sortableStyle}
+      className={cn('group/column relative min-h-full self-stretch', className)}
     >
       <div
         className={cn(
@@ -142,43 +142,37 @@ export default function CvTwoColumnEditable({ section, accent, showPhoto }: Prop
             sidebarPosition === 'right' && 'flex-row-reverse'
           )}
         >
-          <SortableColumnShell
+          <SortableColumn
             id={sidebar.id}
             label={labels('columnSidebar')}
             gripSide="left"
-            variant="sidebar"
+            className={cn(theme.sidebarClass, 'min-h-full')}
+            style={{ backgroundColor: accent }}
           >
-            <aside
-              className={cn(theme.sidebarClass, 'min-h-full h-full self-stretch')}
-              style={{ backgroundColor: accent }}
-            >
-              <CvEditableColumnFlow
-                sections={sidebar.children ?? []}
-                parentId={sidebar.id}
-                columnHint="sidebar"
-                accent={accent}
-                variant="sidebar"
-                isFirstColumnSection={!sidebarHasPhotoFirst()}
-              />
-            </aside>
-          </SortableColumnShell>
+            <CvEditableColumnFlow
+              sections={sidebar.children ?? []}
+              parentId={sidebar.id}
+              columnHint="sidebar"
+              accent={accent}
+              variant="sidebar"
+              isFirstColumnSection={!sidebarHasPhotoFirst()}
+            />
+          </SortableColumn>
 
-          <SortableColumnShell
+          <SortableColumn
             id={main.id}
             label={labels('columnMain')}
             gripSide="right"
-            variant="main"
+            className={cn(theme.mainClass, 'min-h-full')}
           >
-            <div className={cn(theme.mainClass, 'min-h-full h-full flex-1')}>
-              <CvEditableColumnFlow
-                sections={main.children ?? []}
-                parentId={main.id}
-                columnHint="main"
-                accent={accent}
-                variant="default"
-              />
-            </div>
-          </SortableColumnShell>
+            <CvEditableColumnFlow
+              sections={main.children ?? []}
+              parentId={main.id}
+              columnHint="main"
+              accent={accent}
+              variant="default"
+            />
+          </SortableColumn>
         </div>
       </SortableContext>
     </DndContext>

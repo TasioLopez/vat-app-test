@@ -30,7 +30,7 @@ export default function CvLayoutRenderer() {
     return (
       <CVA4Canvas>
         <div
-          className={cn(theme.rootClass, 'w-full')}
+          className={cn(theme.rootClass, 'w-full flex-col')}
           style={{ '--cv-accent': accent } as React.CSSProperties}
         >
           <CvEditableColumnFlow
