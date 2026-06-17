@@ -13,8 +13,6 @@ import {
   Upload,
   Crop,
   Trash2,
-  PanelLeft,
-  PanelRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +28,6 @@ import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
 import { ExportCVButton } from '@/components/cv/ExportCVButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
-import { layoutHasTwoColumn } from '@/lib/cv/layout-utils';
 import { uiLabel } from '@/lib/cv/section-labels';
 import { getActiveCvModel, normalizeCvModel } from '@/lib/cv/normalize';
 import type { CvLocale, CvModel, CvTemplateKey } from '@/types/cv';
@@ -66,8 +63,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
     setActiveLocale,
     payload,
     layout,
-    layoutOptions,
-    setSidebarPosition,
     updateOptions,
     updatePersonal,
     photoDisplayUrl,
@@ -140,8 +135,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
     : '#';
 
   const includePhoto = cvData.options?.includePhotoInCv === true;
-  const sidebarOnRight = layoutOptions.sidebarPosition === 'right';
-  const showSidebarToggle = layoutHasTwoColumn(layout);
 
   const statusText = saving
     ? 'Opslaan…'
@@ -200,7 +193,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
   return (
     <div className="min-h-screen bg-gray-100 pb-24 print:bg-white print:pb-0">
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2">
+        <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-gray-600" asChild>
               <Link
@@ -323,24 +316,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
 
             <div className="flex shrink-0 items-center gap-1">
               <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
-              {showSidebarToggle ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  aria-label={sidebarOnRight ? 'Zijbalk rechts' : 'Zijbalk links'}
-                  title={sidebarOnRight ? 'Zijbalk rechts' : 'Zijbalk links'}
-                  aria-pressed={sidebarOnRight}
-                  onClick={() => setSidebarPosition(sidebarOnRight ? 'left' : 'right')}
-                >
-                  {sidebarOnRight ? (
-                    <PanelRight className="h-4 w-4" />
-                  ) : (
-                    <PanelLeft className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 variant={includePhoto ? 'secondary' : 'outline'}
@@ -482,7 +457,7 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl px-4 py-6 pb-8">
+      <div className="mx-auto w-full max-w-[min(100%,1400px)] px-6 py-6 pb-8">
         <div className="pb-8">
           <p className="cv-no-print mb-2 text-center text-xs text-gray-500">
             {employeeLabel} — {uiLabel(activeLocale, 'editLayoutHint')}.

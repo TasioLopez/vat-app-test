@@ -2,6 +2,7 @@
 
 import ColumnSectionFlow from '@/components/cv/ColumnSectionFlow';
 import CvEditableColumnFlow from '@/components/cv/CvEditableColumnFlow';
+import CvTwoColumnEditable from '@/components/cv/CvTwoColumnEditable';
 import CvSectionRenderer from '@/components/cv/sections/CvSectionRenderer';
 import { useCV } from '@/context/CVContext';
 import CVA4Canvas from '@/components/cv/CVA4Canvas';
@@ -21,45 +22,9 @@ export default function CvLayoutRenderer() {
     return Boolean(photo?.visible && showPhoto);
   };
 
-  const renderTwoColumn = (section: CvLayoutSection) => {
-    const sidebar = section.children?.find((c) => c.layout === 'sidebar');
-    const main = section.children?.find((c) => c.layout === 'main');
-    return (
-      <div
-        className={cn(
-          'flex min-h-[297mm] w-full flex-1 items-stretch',
-          sidebarPosition === 'right' && 'flex-row-reverse'
-        )}
-      >
-        {sidebar ? (
-          <aside
-            className={cn(theme.sidebarClass, 'min-h-full self-stretch')}
-            style={{ backgroundColor: accent }}
-          >
-            <CvEditableColumnFlow
-              sections={sidebar.children ?? []}
-              parentId={sidebar.id}
-              columnHint="sidebar"
-              accent={accent}
-              variant="sidebar"
-              isFirstColumnSection={!sidebarHasPhotoFirst(sidebar.children ?? [])}
-            />
-          </aside>
-        ) : null}
-        {main ? (
-          <div className={cn(theme.mainClass, 'min-h-full flex-1')}>
-            <CvEditableColumnFlow
-              sections={main.children ?? []}
-              parentId={main.id}
-              columnHint="main"
-              accent={accent}
-              variant="default"
-            />
-          </div>
-        ) : null}
-      </div>
-    );
-  };
+  const renderTwoColumn = (section: CvLayoutSection) => (
+    <CvTwoColumnEditable section={section} accent={accent} showPhoto={showPhoto} />
+  );
 
   if (!readOnly) {
     return (
@@ -74,6 +39,7 @@ export default function CvLayoutRenderer() {
             columnHint="root"
             accent={accent}
             variant="default"
+            showAddControl={false}
             renderTwoColumn={renderTwoColumn}
           />
         </div>

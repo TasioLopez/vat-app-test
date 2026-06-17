@@ -1,4 +1,4 @@
-import type { CvLocale, CvSectionLayout, CvSectionType } from '@/types/cv';
+import type { CvLocale, CvSectionLayout, CvSectionType, CvSidebarPosition } from '@/types/cv';
 import { SECTION_REGISTRY } from '@/lib/cv/section-registry';
 import { uiLabel } from '@/lib/cv/section-labels';
 
@@ -36,4 +36,16 @@ export function getDefaultAddLayoutForColumn(
   if (columnHint === 'sidebar') return 'sidebar';
   if (columnHint === 'main') return 'main';
   return 'full';
+}
+
+/** Derive sidebar side from horizontal column order after drag. */
+export function sidebarPositionFromColumnOrder(
+  orderedIds: string[],
+  sidebarId: string,
+  mainId: string
+): CvSidebarPosition {
+  const sidebarIndex = orderedIds.indexOf(sidebarId);
+  const mainIndex = orderedIds.indexOf(mainId);
+  if (sidebarIndex < 0 || mainIndex < 0) return 'left';
+  return sidebarIndex < mainIndex ? 'left' : 'right';
 }

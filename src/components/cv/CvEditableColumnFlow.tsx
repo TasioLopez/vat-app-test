@@ -54,11 +54,7 @@ export default function CvEditableColumnFlow({
     const section = sections[i];
 
     if (section.layout === 'two_column' && renderTwoColumn) {
-      nodes.push(
-        <SortableContainerShell key={section.id} section={section}>
-          {renderTwoColumn(section)}
-        </SortableContainerShell>
-      );
+      nodes.push(<div key={section.id}>{renderTwoColumn(section)}</div>);
       i += 1;
       continue;
     }
