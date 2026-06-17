@@ -49,8 +49,8 @@ export type EmployeeDetailsPersist = {
   computer_skills?: string;
   contract_hours?: number;
   other_employers?: string;
-  field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>>;
-  field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>>;
+  field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
+  field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
   autofilled_fields?: string[];
 };
 

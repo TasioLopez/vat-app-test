@@ -101,8 +101,8 @@ type EmployeeDetails = {
     contract_hours?: number;
     other_employers?: string;
     autofilled_fields?: string[];
-  field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
-  field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
+    field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
+    field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
 };
 
 type Client = {
