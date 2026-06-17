@@ -8,8 +8,6 @@ import {
   Check,
   Sparkles,
   Wand2,
-  Image,
-  ImageOff,
   Upload,
   Crop,
   Trash2,
@@ -133,8 +131,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
   const mailto = cvData.personal.email
     ? `mailto:?subject=${encodeURIComponent(`CV ${cvData.personal.fullName || title}`)}`
     : '#';
-
-  const includePhoto = cvData.options?.includePhotoInCv === true;
 
   const statusText = saving
     ? 'Opslaan…'
@@ -316,18 +312,6 @@ export default function CVEditorShell({ employeeId, employeeLabel }: Props) {
 
             <div className="flex shrink-0 items-center gap-1">
               <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
-              <Button
-                type="button"
-                variant={includePhoto ? 'secondary' : 'outline'}
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                aria-label={includePhoto ? 'Foto verbergen op CV' : 'Foto tonen op CV'}
-                title={includePhoto ? 'Foto verbergen op CV' : 'Foto tonen op CV'}
-                aria-pressed={includePhoto}
-                onClick={() => updateOptions({ includePhotoInCv: !includePhoto })}
-              >
-                {includePhoto ? <Image className="h-4 w-4" /> : <ImageOff className="h-4 w-4" />}
-              </Button>
               <input
                 ref={photoFileRef}
                 type="file"

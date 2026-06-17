@@ -17,7 +17,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import { useCV } from '@/context/CVContext';
 import CvEditableColumnFlow from '@/components/cv/CvEditableColumnFlow';
-import { sidebarPositionFromColumnOrder } from '@/lib/cv/layout-editor-utils';
 import { getCvTheme } from '@/lib/cv/theme-config';
 import { uiLabel } from '@/lib/cv/section-labels';
 import type { CvLayoutSection } from '@/types/cv';
@@ -28,13 +27,6 @@ type Props = {
   accent: string;
   showPhoto: boolean;
 };
-
-function arrayMove<T>(arr: T[], from: number, to: number): T[] {
-  const next = [...arr];
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-  return next;
-}
 
 function SortableColumn({
   id,
@@ -120,6 +112,8 @@ export default function CvTwoColumnEditable({ section, accent, showPhoto }: Prop
 
   const columnIds = [sidebar.id, main.id];
   const labels = (key: string) => uiLabel(activeLocale, key);
+  const sidebarGripSide = sidebarPosition === 'right' ? 'right' : 'left';
+  const mainGripSide = sidebarPosition === 'right' ? 'left' : 'right';
 
   return (
     <DndContext
@@ -128,11 +122,11 @@ export default function CvTwoColumnEditable({ section, accent, showPhoto }: Prop
       onDragEnd={(e: DragEndEvent) => {
         const { active, over } = e;
         if (!over || active.id === over.id) return;
-        const from = columnIds.indexOf(String(active.id));
-        const to = columnIds.indexOf(String(over.id));
-        if (from < 0 || to < 0) return;
-        const newOrder = arrayMove(columnIds, from, to);
-        setSidebarPosition(sidebarPositionFromColumnOrder(newOrder, sidebar.id, main.id));
+        const isColumnSwap =
+          (active.id === sidebar.id && over.id === main.id) ||
+          (active.id === main.id && over.id === sidebar.id);
+        if (!isColumnSwap) return;
+        setSidebarPosition(sidebarPosition === 'right' ? 'left' : 'right');
       }}
     >
       <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
@@ -145,7 +139,7 @@ export default function CvTwoColumnEditable({ section, accent, showPhoto }: Prop
           <SortableColumn
             id={sidebar.id}
             label={labels('columnSidebar')}
-            gripSide="left"
+            gripSide={sidebarGripSide}
             className={cn(theme.sidebarClass, 'min-h-full')}
             style={{ backgroundColor: accent }}
           >
@@ -162,7 +156,7 @@ export default function CvTwoColumnEditable({ section, accent, showPhoto }: Prop
           <SortableColumn
             id={main.id}
             label={labels('columnMain')}
-            gripSide="right"
+            gripSide={mainGripSide}
             className={cn(theme.mainClass, 'min-h-full')}
           >
             <CvEditableColumnFlow

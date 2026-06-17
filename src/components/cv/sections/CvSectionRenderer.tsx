@@ -141,8 +141,8 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   }
 
   if (section.type === 'photo') {
-    const showPhoto = cvData.options?.includePhotoInCv === true;
-    if (!showPhoto) return null;
+    const showPhotoOption = cvData.options?.includePhotoInCv === true;
+    if (!showPhotoOption && readOnly) return null;
     return (
       <div className="flex flex-col items-center gap-2">
         <CvPhotoFrame
