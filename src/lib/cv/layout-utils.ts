@@ -240,3 +240,22 @@ export function reorderSectionsById(
     overPath.index
   );
 }
+
+export function layoutHasTwoColumn(layout: CvLayoutSection[]): boolean {
+  for (const section of layout) {
+    if (section.layout === 'two_column') return true;
+    if (section.children?.length && layoutHasTwoColumn(section.children)) return true;
+  }
+  return false;
+}
+
+/** Direct children of a layout container (root when parentId is null). */
+export function findColumnChildren(
+  layout: CvLayoutSection[],
+  parentId: string | null
+): CvLayoutSection[] {
+  if (parentId === null) return layout;
+  const path = findSectionPath(layout, parentId);
+  if (!path) return [];
+  return path.section.children ?? [];
+}

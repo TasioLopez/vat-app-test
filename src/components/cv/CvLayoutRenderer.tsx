@@ -1,6 +1,7 @@
 'use client';
 
 import ColumnSectionFlow from '@/components/cv/ColumnSectionFlow';
+import CvEditableColumnFlow from '@/components/cv/CvEditableColumnFlow';
 import CvSectionRenderer from '@/components/cv/sections/CvSectionRenderer';
 import { useCV } from '@/context/CVContext';
 import CVA4Canvas from '@/components/cv/CVA4Canvas';
@@ -9,15 +10,76 @@ import type { CvLayoutSection } from '@/types/cv';
 import { cn } from '@/lib/utils';
 
 export default function CvLayoutRenderer() {
-  const { layout, accentColor, templateKey, cvData } = useCV();
+  const { layout, accentColor, templateKey, cvData, layoutOptions, readOnly } = useCV();
   const theme = getCvTheme(templateKey);
   const accent = accentColor;
   const showPhoto = cvData.options?.includePhotoInCv === true;
+  const sidebarPosition = layoutOptions.sidebarPosition ?? 'left';
 
   const sidebarHasPhotoFirst = (children: CvLayoutSection[]) => {
     const photo = children.find((c) => c.type === 'photo');
     return Boolean(photo?.visible && showPhoto);
   };
+
+  const renderTwoColumn = (section: CvLayoutSection) => {
+    const sidebar = section.children?.find((c) => c.layout === 'sidebar');
+    const main = section.children?.find((c) => c.layout === 'main');
+    return (
+      <div
+        className={cn(
+          'flex min-h-[297mm] w-full flex-1 items-stretch',
+          sidebarPosition === 'right' && 'flex-row-reverse'
+        )}
+      >
+        {sidebar ? (
+          <aside
+            className={cn(theme.sidebarClass, 'min-h-full self-stretch')}
+            style={{ backgroundColor: accent }}
+          >
+            <CvEditableColumnFlow
+              sections={sidebar.children ?? []}
+              parentId={sidebar.id}
+              columnHint="sidebar"
+              accent={accent}
+              variant="sidebar"
+              isFirstColumnSection={!sidebarHasPhotoFirst(sidebar.children ?? [])}
+            />
+          </aside>
+        ) : null}
+        {main ? (
+          <div className={cn(theme.mainClass, 'min-h-full flex-1')}>
+            <CvEditableColumnFlow
+              sections={main.children ?? []}
+              parentId={main.id}
+              columnHint="main"
+              accent={accent}
+              variant="default"
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  if (!readOnly) {
+    return (
+      <CVA4Canvas>
+        <div
+          className={cn(theme.rootClass, 'w-full')}
+          style={{ '--cv-accent': accent } as React.CSSProperties}
+        >
+          <CvEditableColumnFlow
+            sections={layout}
+            parentId={null}
+            columnHint="root"
+            accent={accent}
+            variant="default"
+            renderTwoColumn={renderTwoColumn}
+          />
+        </div>
+      </CVA4Canvas>
+    );
+  }
 
   return (
     <CVA4Canvas>
@@ -32,7 +94,10 @@ export default function CvLayoutRenderer() {
             return (
               <div
                 key={section.id}
-                className="flex min-h-[297mm] w-full flex-1 items-stretch"
+                className={cn(
+                  'flex min-h-[297mm] w-full flex-1 items-stretch',
+                  sidebarPosition === 'right' && 'flex-row-reverse'
+                )}
               >
                 {sidebar && (
                   <aside

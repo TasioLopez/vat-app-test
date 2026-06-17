@@ -32,4 +32,36 @@ describe('normalizeCvPayload', () => {
     assert.match(m.digitalSkills ?? '', /Gemiddeld/);
     assert.equal(m.skills.length, 0);
   });
+
+  it('preserves layoutOptions.sidebarPosition right', () => {
+    const p = normalizeCvPayload({
+      schemaVersion: 2,
+      activeLocale: 'nl',
+      content: { nl: { personal: { fullName: 'A' } } },
+      layout: [],
+      layoutOptions: { sidebarPosition: 'right' },
+    });
+    assert.equal(p.layoutOptions?.sidebarPosition, 'right');
+  });
+
+  it('defaults invalid sidebarPosition to left', () => {
+    const p = normalizeCvPayload({
+      schemaVersion: 2,
+      activeLocale: 'nl',
+      content: { nl: { personal: { fullName: 'A' } } },
+      layout: [],
+      layoutOptions: { sidebarPosition: 'invalid' },
+    });
+    assert.equal(p.layoutOptions?.sidebarPosition, 'left');
+  });
+
+  it('omits layoutOptions when absent from payload', () => {
+    const p = normalizeCvPayload({
+      schemaVersion: 2,
+      activeLocale: 'nl',
+      content: { nl: { personal: { fullName: 'A' } } },
+      layout: [],
+    });
+    assert.equal(p.layoutOptions, undefined);
+  });
 });

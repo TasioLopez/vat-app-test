@@ -4,6 +4,7 @@ import { getDefaultLayout } from '../layout-presets';
 import {
   addLayoutSection,
   canAddSection,
+  findColumnChildren,
   findSectionByType,
   resolveAddParentId,
 } from '../layout-utils';
@@ -70,5 +71,21 @@ describe('addLayoutSection singleton guard', () => {
       return n;
     })(result.layout);
     assert.equal(allProfiles, 1);
+  });
+});
+
+describe('findColumnChildren', () => {
+  it('returns root layout when parentId is null', () => {
+    const layout = getDefaultLayout('corporate_minimal');
+    assert.deepEqual(findColumnChildren(layout, null), layout);
+  });
+
+  it('returns sidebar children for modern_professional', () => {
+    const layout = getDefaultLayout('modern_professional');
+    const sidebarId = resolveAddParentId(layout, 'sidebar');
+    assert.ok(sidebarId);
+    const children = findColumnChildren(layout, sidebarId);
+    assert.ok(children.length > 0);
+    assert.ok(children.every((c) => c.layout === 'full' || c.layout === 'half'));
   });
 });

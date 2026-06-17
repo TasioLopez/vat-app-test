@@ -43,6 +43,7 @@ function SortableListRow({
   onChange,
   onRemove,
   itemTextClassName,
+  variant,
 }: {
   item: Item;
   sortable: boolean;
@@ -51,6 +52,7 @@ function SortableListRow({
   onChange: (id: string, text: string) => void;
   onRemove: (id: string) => void;
   itemTextClassName: string;
+  variant: 'default' | 'sidebar';
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: item.id,
@@ -60,13 +62,21 @@ function SortableListRow({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const isSidebar = variant === 'sidebar';
 
   return (
-    <li ref={setNodeRef} style={style} className="group flex items-start gap-2">
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={cn('group flex items-start gap-2', isSidebar && 'relative')}
+    >
       {sortable && !readOnly && (
         <button
           type="button"
-          className="mt-0.5 shrink-0 rounded p-0.5 text-gray-400 opacity-0 print:hidden group-hover:opacity-100"
+          className={cn(
+            'shrink-0 rounded p-0.5 text-gray-400 opacity-0 print:hidden group-hover:opacity-100',
+            isSidebar ? 'absolute left-0 top-0 mt-0.5' : 'mt-0.5'
+          )}
           {...attributes}
           {...listeners}
           aria-label="Versleep"
@@ -116,7 +126,7 @@ export default function InlineEditableList({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const listContent = (
-    <ul className="space-y-1">
+    <ul className={cn('space-y-1', variant === 'sidebar' && 'm-0 list-none p-0')}>
       {items.map((item) => (
         <SortableListRow
           key={item.id}
@@ -127,6 +137,7 @@ export default function InlineEditableList({
           onRemove={onRemove}
           itemTextClassName={itemTextClassName}
           showBullets={showBullets}
+          variant={variant}
         />
       ))}
     </ul>

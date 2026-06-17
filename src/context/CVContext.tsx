@@ -22,11 +22,13 @@ import { applyTemplateLayout } from '@/lib/cv/layout-presets';
 import { getActiveCvModel } from '@/lib/cv/normalize';
 import type {
   CvDocumentPayload,
+  CvLayoutOptions,
   CvLayoutSection,
   CvLocale,
   CvModel,
   CvSectionLayout,
   CvSectionType,
+  CvSidebarPosition,
   CvTemplateKey,
 } from '@/types/cv';
 import { emptyCvModel, newCvId } from '@/types/cv';
@@ -46,6 +48,8 @@ export type CVContextValue = {
   setActiveLocale: (locale: CvLocale) => void;
   cvData: CvModel;
   layout: CvLayoutSection[];
+  layoutOptions: CvLayoutOptions;
+  setSidebarPosition: (position: CvSidebarPosition) => void;
   updatePersonal: (patch: Partial<CvModel['personal']>) => void;
   setProfile: (v: string) => void;
   setExtra: (v: string) => void;
@@ -278,6 +282,16 @@ export function CVProvider({
       }));
     },
     [updateActiveModel]
+  );
+
+  const setSidebarPosition = useCallback(
+    (position: CvSidebarPosition) => {
+      updatePayload((prev) => ({
+        ...prev,
+        layoutOptions: { ...(prev.layoutOptions ?? {}), sidebarPosition: position },
+      }));
+    },
+    [updatePayload]
   );
 
   const setProfile = useCallback(
@@ -611,6 +625,8 @@ export function CVProvider({
       setActiveLocale,
       cvData,
       layout: payload.layout,
+      layoutOptions: payload.layoutOptions ?? { sidebarPosition: 'left' },
+      setSidebarPosition,
       updatePersonal,
       setProfile,
       setExtra,
@@ -665,6 +681,7 @@ export function CVProvider({
       activeLocale,
       setActiveLocale,
       cvData,
+      setSidebarPosition,
       updatePersonal,
       setProfile,
       setExtra,

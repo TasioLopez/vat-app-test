@@ -2,9 +2,11 @@ import { coerceCvModelDisplay } from '@/lib/cv/format-display';
 import { getDefaultLayout } from '@/lib/cv/layout-presets';
 import type {
   CvDocumentPayload,
+  CvLayoutOptions,
   CvLocale,
   CvModel,
   CvPhotoCrop,
+  CvSidebarPosition,
   CvTemplateKey,
 } from '@/types/cv';
 import { coerceCvTemplateKey, emptyCvModel } from '@/types/cv';
@@ -95,6 +97,17 @@ function isV2Payload(raw: Record<string, unknown>): boolean {
   return raw.schemaVersion === 2 && raw.content != null && Array.isArray(raw.layout);
 }
 
+function normalizeSidebarPosition(raw: unknown): CvSidebarPosition {
+  return raw === 'right' ? 'right' : 'left';
+}
+
+function normalizeLayoutOptions(raw: unknown): CvLayoutOptions | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const sidebarPosition = normalizeSidebarPosition(o.sidebarPosition);
+  return { sidebarPosition };
+}
+
 /** Client/server safe normalization for JSON from DB → v2 payload. */
 export function normalizeCvPayload(
   raw: unknown,
@@ -124,6 +137,7 @@ export function normalizeCvPayload(
       o.customSections && typeof o.customSections === 'object'
         ? (o.customSections as CvDocumentPayload['customSections'])
         : undefined;
+    const layoutOptions = normalizeLayoutOptions(o.layoutOptions);
 
     return {
       schemaVersion: 2,
@@ -131,6 +145,7 @@ export function normalizeCvPayload(
       content: { nl, ...(en ? { en } : {}) },
       layout,
       ...(customSections ? { customSections } : {}),
+      ...(layoutOptions ? { layoutOptions } : {}),
     };
   }
 

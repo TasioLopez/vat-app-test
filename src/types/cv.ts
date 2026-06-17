@@ -140,12 +140,19 @@ export type CvCustomSection = {
   en?: string | CvListItem[];
 };
 
+export type CvSidebarPosition = 'left' | 'right';
+
+export type CvLayoutOptions = {
+  sidebarPosition?: CvSidebarPosition;
+};
+
 export type CvDocumentPayload = {
   schemaVersion: 2;
   activeLocale: CvLocale;
   content: { nl: CvModel; en?: CvModel };
   layout: CvLayoutSection[];
   customSections?: Record<string, CvCustomSection>;
+  layoutOptions?: CvLayoutOptions;
 };
 
 export function newCvId(): string {

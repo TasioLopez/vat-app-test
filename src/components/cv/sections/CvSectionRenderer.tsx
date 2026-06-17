@@ -177,7 +177,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
             {title}
           </h3>
         )}
-        <ul className={cn('mt-1 space-y-2', isSidebar && 'text-white/95')}>
+        <ul className={cn('mt-1 space-y-2', isSidebar && 'm-0 list-none p-0 text-white/95')}>
           <li className="flex items-start gap-2">
             <Phone className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', iconClass)} />
             <InlineEditableText
@@ -312,7 +312,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
           }}
         >
           <SortableContext items={cvData.languages.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-2">
+        <ul className={cn('space-y-2', isSidebar && 'm-0 list-none p-0')}>
               {cvData.languages.map((item) => (
                 <LanguageRow
                   key={item.id}
@@ -595,11 +595,18 @@ function LanguageRow({
   };
   const textClass = isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800';
   return (
-    <li ref={setNodeRef} style={style} className="group flex items-start gap-2">
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={cn('group flex items-start gap-2', isSidebar && 'relative')}
+    >
       {!readOnly && (
         <button
           type="button"
-          className="mt-1 shrink-0 rounded p-0.5 text-gray-400 opacity-0 print:hidden group-hover:opacity-100"
+          className={cn(
+            'shrink-0 rounded p-0.5 text-gray-400 opacity-0 print:hidden group-hover:opacity-100',
+            isSidebar ? 'absolute left-0 top-0 mt-1' : 'mt-1'
+          )}
           {...attributes}
           {...listeners}
         >
