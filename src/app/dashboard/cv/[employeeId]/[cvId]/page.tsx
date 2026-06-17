@@ -27,11 +27,18 @@ export default async function CVEditorPage({
 
   const { data: emp } = await supabase
     .from('employees')
-    .select('first_name, last_name')
+    .select('first_name, last_name, email')
     .eq('id', employeeId)
     .maybeSingle();
 
   const employeeLabel = [emp?.first_name, emp?.last_name].filter(Boolean).join(' ') || 'Werknemer';
 
-  return <CVEditorPageClient employeeId={employeeId} employeeLabel={employeeLabel} initialRow={row} />;
+  return (
+    <CVEditorPageClient
+      employeeId={employeeId}
+      employeeLabel={employeeLabel}
+      employeeEmail={emp?.email ?? null}
+      initialRow={row}
+    />
+  );
 }

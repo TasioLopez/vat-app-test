@@ -207,6 +207,66 @@ export type Database = {
           },
         ]
       }
+      cv_share_links: {
+        Row: {
+          id: string
+          cv_document_id: string
+          employee_id: string
+          token_hash: string
+          recipient_email: string
+          created_by: string | null
+          message: string | null
+          expires_at: string
+          revoked_at: string | null
+          last_accessed_at: string | null
+          last_saved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cv_document_id: string
+          employee_id: string
+          token_hash: string
+          recipient_email: string
+          created_by?: string | null
+          message?: string | null
+          expires_at: string
+          revoked_at?: string | null
+          last_accessed_at?: string | null
+          last_saved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cv_document_id?: string
+          employee_id?: string
+          token_hash?: string
+          recipient_email?: string
+          created_by?: string | null
+          message?: string | null
+          expires_at?: string
+          revoked_at?: string | null
+          last_accessed_at?: string | null
+          last_saved_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_share_links_cv_document_id_fkey"
+            columns: ["cv_document_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cv_share_links_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cv_versions: {
         Row: {
           id: string

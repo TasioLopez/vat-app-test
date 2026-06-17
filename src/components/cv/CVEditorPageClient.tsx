@@ -12,10 +12,12 @@ type CvRow = Database['public']['Tables']['cv_documents']['Row'];
 export default function CVEditorPageClient({
   employeeId,
   employeeLabel,
+  employeeEmail,
   initialRow,
 }: {
   employeeId: string;
   employeeLabel: string;
+  employeeEmail: string | null;
   initialRow: CvRow;
 }) {
   const payload = normalizeCvPayload(
@@ -34,7 +36,11 @@ export default function CVEditorPageClient({
       initialUpdatedAt={initialRow.updated_at}
     >
       <CVSyncGuard />
-      <CVEditorShell employeeId={employeeId} employeeLabel={employeeLabel} />
+      <CVEditorShell
+        employeeId={employeeId}
+        employeeLabel={employeeLabel}
+        employeeEmail={employeeEmail}
+      />
     </CVProvider>
   );
 }

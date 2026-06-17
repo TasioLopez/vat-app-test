@@ -94,6 +94,8 @@ export type CVContextValue = {
   lastSavedAt: string | null;
   saveError: string | null;
   readOnly: boolean;
+  editorMode: 'advisor' | 'guest';
+  shareToken?: string;
 };
 
 const Ctx = createContext<CVContextValue | undefined>(undefined);
@@ -117,6 +119,8 @@ export function CVProvider({
   initialPhotoSignedUrl,
   readOnly = false,
   printLocale,
+  editorMode = 'advisor',
+  shareToken,
 }: {
   children: ReactNode;
   employeeId: string;
@@ -129,6 +133,8 @@ export function CVProvider({
   initialPhotoSignedUrl?: string | null;
   readOnly?: boolean;
   printLocale?: CvLocale;
+  editorMode?: 'advisor' | 'guest';
+  shareToken?: string;
 }) {
   const [title, setTitleState] = useState(initialTitle);
   const [templateKey, setTemplateKeyState] = useState<CvTemplateKey>(initialTemplateKey);
@@ -180,9 +186,11 @@ export function CVProvider({
       return;
     }
     let cancelled = false;
-    fetch(
-      `/api/cv-photo/sign?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&path=${encodeURIComponent(path)}`
-    )
+    const signUrl =
+      editorMode === 'guest' && shareToken
+        ? `/api/cv-share/${encodeURIComponent(shareToken)}/photo/sign?path=${encodeURIComponent(path)}`
+        : `/api/cv-photo/sign?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&path=${encodeURIComponent(path)}`;
+    fetch(signUrl)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('sign failed'))))
       .then((d: { signedUrl?: string }) => {
         if (!cancelled && d.signedUrl) setPhotoDisplayUrl(d.signedUrl);
@@ -193,7 +201,7 @@ export function CVProvider({
     return () => {
       cancelled = true;
     };
-  }, [employeeId, cvId, cvData.personal.photoStoragePath, initialPhotoSignedUrl]);
+  }, [employeeId, cvId, cvData.personal.photoStoragePath, initialPhotoSignedUrl, editorMode, shareToken]);
 
   const markDirty = useCallback(() => setIsDirty(true), []);
   const markSaved = useCallback(() => setIsDirty(false), []);
@@ -591,15 +599,34 @@ export function CVProvider({
       setSaving(true);
       setSaveError(null);
       try {
-        const row = await updateCvDocument(supabase, cvId, employeeId, {
-          title,
-          template_key: templateKey,
-          accent_color: accentColor,
-          payload_json: payload,
-          saveVersion: options?.version ?? false,
-        });
-        markSaved();
-        if (row?.updated_at) setLastSavedAt(row.updated_at as string);
+        if (editorMode === 'guest' && shareToken) {
+          const res = await fetch(`/api/cv-share/${encodeURIComponent(shareToken)}/document`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title,
+              template_key: templateKey,
+              accent_color: accentColor,
+              payload_json: payload,
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            throw new Error(json?.error || 'Opslaan mislukt');
+          }
+          markSaved();
+          if (json?.updated_at) setLastSavedAt(json.updated_at as string);
+        } else {
+          const row = await updateCvDocument(supabase, cvId, employeeId, {
+            title,
+            template_key: templateKey,
+            accent_color: accentColor,
+            payload_json: payload,
+            saveVersion: options?.version ?? false,
+          });
+          markSaved();
+          if (row?.updated_at) setLastSavedAt(row.updated_at as string);
+        }
       } catch (e: unknown) {
         setSaveError(e instanceof Error ? e.message : 'Opslaan mislukt');
         throw e;
@@ -607,7 +634,7 @@ export function CVProvider({
         setSaving(false);
       }
     },
-    [cvId, employeeId, title, templateKey, accentColor, payload, markSaved]
+    [cvId, employeeId, title, templateKey, accentColor, payload, markSaved, editorMode, shareToken]
   );
 
   const value = useMemo(
@@ -667,6 +694,8 @@ export function CVProvider({
       lastSavedAt,
       saveError,
       readOnly,
+      editorMode,
+      shareToken,
     }),
     [
       employeeId,
@@ -722,6 +751,8 @@ export function CVProvider({
       lastSavedAt,
       saveError,
       readOnly,
+      editorMode,
+      shareToken,
     ]
   );
 

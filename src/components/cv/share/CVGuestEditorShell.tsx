@@ -1,17 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import {
-  ArrowLeft,
   Printer,
-  Send,
   Check,
-  Sparkles,
-  Wand2,
   Upload,
   Crop,
   Trash2,
-  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,27 +19,21 @@ import {
 import { useCV } from '@/context/CVContext';
 import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
-import { ExportCVButton } from '@/components/cv/ExportCVButton';
+import { ExportCVShareButton } from '@/components/cv/share/ExportCVShareButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
 import { uiLabel } from '@/lib/cv/section-labels';
-import { getActiveCvModel, normalizeCvModel } from '@/lib/cv/normalize';
-import type { CvLocale, CvModel, CvTemplateKey } from '@/types/cv';
+import type { CvTemplateKey } from '@/types/cv';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useRef, useState, useEffect } from 'react';
-import AiResultPreview from '@/components/cv/AiResultPreview';
+import { useRef, useState } from 'react';
 import CvPhotoCropDialog from '@/components/cv/CvPhotoCropDialog';
-import CvShareModal from '@/components/cv/share/CvShareModal';
 
 type Props = {
-  employeeId: string;
+  shareToken: string;
   employeeLabel: string;
-  employeeEmail: string | null;
 };
 
-export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail }: Props) {
+export default function CVGuestEditorShell({ shareToken, employeeLabel }: Props) {
   const {
-    cvId,
     title,
     setTitle,
     templateKey,
@@ -58,8 +46,6 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     lastSavedAt,
     saveError,
     cvData,
-    applyAiPayload,
-    setEnContent,
     activeLocale,
     setActiveLocale,
     payload,
@@ -71,93 +57,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
 
   const photoFileRef = useRef<HTMLInputElement>(null);
   const [cropOpen, setCropOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [aiPreview, setAiPreview] = useState<CvModel | null>(null);
-  const [aiPreviewLocale, setAiPreviewLocale] = useState<CvLocale>('nl');
-  const [shareOpen, setShareOpen] = useState(false);
-  const [activeShare, setActiveShare] = useState<{
-    id: string;
-    recipientEmail: string;
-    expiresAt: string;
-  } | null>(null);
-  const [revoking, setRevoking] = useState(false);
-
-  const loadActiveShare = async () => {
-    try {
-      const res = await fetch(
-        `/api/cv-share?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}`
-      );
-      const json = await res.json();
-      if (json?.active && json?.share) {
-        setActiveShare(json.share);
-      } else {
-        setActiveShare(null);
-      }
-    } catch {
-      setActiveShare(null);
-    }
-  };
-
-  useEffect(() => {
-    loadActiveShare();
-  }, [employeeId, cvId]);
-
-  const handleRevokeShare = async () => {
-    if (!activeShare) return;
-    setRevoking(true);
-    try {
-      const res = await fetch('/api/cv-share/revoke', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shareId: activeShare.id }),
-      });
-      if (res.ok) setActiveShare(null);
-    } finally {
-      setRevoking(false);
-    }
-  };
-
-  const runAi = async (mode: 'fill' | 'polish' | 'generate_en') => {
-    setAiBusy(true);
-    setAiError(null);
-    try {
-      const localeParam = mode === 'generate_en' ? 'en' : activeLocale;
-      const res = await fetch(
-        `/api/autofill-cv?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(
-          cvId
-        )}&mode=${mode}&locale=${localeParam}`,
-        { method: 'GET' }
-      );
-      const json = await res.json();
-      if (!res.ok || !json?.success) {
-        setAiError(json?.error || 'AI-aanroep mislukt');
-        return;
-      }
-      const model = normalizeCvModel(json?.data?.payload ?? json?.payload);
-      setAiPreviewLocale((json?.data?.locale as CvLocale) ?? localeParam);
-      setAiPreview(model);
-      setAiOpen(true);
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'Fout');
-    } finally {
-      setAiBusy(false);
-    }
-  };
-
-  const applyAi = () => {
-    if (!aiPreview) return;
-    if (aiPreviewLocale === 'en') {
-      setEnContent(aiPreview);
-      setActiveLocale('en');
-    } else {
-      applyAiPayload(aiPreview, activeLocale);
-    }
-    setAiOpen(false);
-    setAiPreview(null);
-  };
 
   const handleTemplateChange = (v: CvTemplateKey) => {
     if (isLayoutCustomized(layout)) {
@@ -187,11 +87,12 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('employeeId', employeeId);
-    fd.append('cvId', cvId);
     setPhotoError(null);
     try {
-      const res = await fetch('/api/cv-photo/upload', { method: 'POST', body: fd });
+      const res = await fetch(`/api/cv-share/${encodeURIComponent(shareToken)}/photo/upload`, {
+        method: 'POST',
+        body: fd,
+      });
       const json = await res.json();
       if (!res.ok) {
         setPhotoError(json?.error || 'Upload mislukt');
@@ -209,10 +110,10 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     const path = cvData.personal.photoStoragePath?.trim();
     if (path) {
       try {
-        await fetch('/api/cv-photo', {
+        await fetch(`/api/cv-share/${encodeURIComponent(shareToken)}/photo`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId, cvId, path }),
+          body: JSON.stringify({ path }),
         });
       } catch {
         /* still clear local state */
@@ -232,16 +133,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-gray-600" asChild>
-              <Link
-                href={`/dashboard/employees/${employeeId}`}
-                aria-label="Terug naar werknemer"
-                title="Terug naar werknemer"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="hidden h-6 w-px shrink-0 bg-gray-200 sm:block" aria-hidden />
+            <span className="text-sm font-semibold text-gray-800">CV bewerken</span>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -304,54 +196,6 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
 
             <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                disabled={aiBusy}
-                onClick={() => runAi('fill')}
-                aria-label={uiLabel(activeLocale, 'aiFill')}
-                title={uiLabel(activeLocale, 'aiFill')}
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                disabled={aiBusy}
-                onClick={() => runAi('polish')}
-                aria-label={uiLabel(activeLocale, 'aiPolish')}
-                title={uiLabel(activeLocale, 'aiPolish')}
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 shrink-0 text-xs"
-                disabled={aiBusy}
-                onClick={() => runAi('generate_en')}
-              >
-                {uiLabel(activeLocale, 'generateEn')}
-              </Button>
-              {aiError ? (
-                <span
-                  className="ml-1 max-w-[9rem] shrink-0 truncate text-xs text-red-600"
-                  role="alert"
-                  title={aiError}
-                >
-                  {aiError}
-                </span>
-              ) : null}
-            </div>
-
-            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
-
-            <div className="flex shrink-0 items-center gap-1">
               <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
               <input
                 ref={photoFileRef}
@@ -409,13 +253,13 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
 
             <div className="flex shrink-0 items-center gap-1">
-              <span id="cv-editor-template-label" className="sr-only">
+              <span id="cv-guest-template-label" className="sr-only">
                 Template
               </span>
               <Select value={templateKey} onValueChange={(v) => handleTemplateChange(v as CvTemplateKey)}>
                 <SelectTrigger
                   className="h-8 w-[min(11rem,46vw)] text-xs"
-                  aria-labelledby="cv-editor-template-label"
+                  aria-labelledby="cv-guest-template-label"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -443,32 +287,10 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
               >
                 <Printer className="h-4 w-4" />
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                disabled={!employeeEmail}
-                onClick={() => setShareOpen(true)}
-                aria-label="CV delen met werknemer"
-                title={
-                  employeeEmail
-                    ? 'CV delen met werknemer'
-                    : 'Geen e-mailadres bij werknemer'
-                }
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-              <ExportCVButton
-                employeeId={employeeId}
-                cvId={cvId}
-                variant="icon"
-                locale={activeLocale}
-              />
+              <ExportCVShareButton shareToken={shareToken} variant="icon" locale={activeLocale} />
               {payload.content.en && (
-                <ExportCVButton
-                  employeeId={employeeId}
-                  cvId={cvId}
+                <ExportCVShareButton
+                  shareToken={shareToken}
                   variant="icon"
                   locale="en"
                   label={uiLabel(activeLocale, 'exportEn')}
@@ -477,29 +299,6 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             </div>
           </div>
         </div>
-        {activeShare ? (
-          <div className="flex flex-wrap items-center gap-2 border-t border-amber-100 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
-            <span>
-              Gedeeld met {activeShare.recipientEmail} — verloopt{' '}
-              {new Date(activeShare.expiresAt).toLocaleDateString('nl-NL', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="ml-auto h-7 text-xs text-amber-900 hover:bg-amber-100"
-              disabled={revoking}
-              onClick={handleRevokeShare}
-            >
-              <X className="mr-1 h-3 w-3" />
-              Intrekken
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       <div className="mx-auto w-full max-w-[min(100%,1400px)] px-6 py-6 pb-8">
@@ -523,41 +322,6 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
           await save();
         }}
       />
-
-      <CvShareModal
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        employeeId={employeeId}
-        cvId={cvId}
-        employeeLabel={employeeLabel}
-        recipientEmail={employeeEmail}
-        isDirty={isDirty}
-        onSaveFirst={() => save()}
-        onShared={loadActiveShare}
-      />
-
-      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>AI-resultaat toepassen?</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              De voorgestelde inhoud vervangt de huidige secties. Je kunt daarna nog handmatig
-              aanpassen.
-            </p>
-          </DialogHeader>
-          {aiPreview && (
-            <AiResultPreview data={aiPreview} />
-          )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setAiOpen(false)}>
-              Annuleren
-            </Button>
-            <Button type="button" onClick={applyAi}>
-              Toepassen
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

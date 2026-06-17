@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:cv": "tsx --test src/lib/cv/__tests__/*.test.ts",
+    "test:cv-share": "tsx --test src/lib/cv-share/__tests__/*.test.ts",
     "test:doc-analysis": "tsx --test src/lib/document-analysis/__tests__/*.test.ts src/lib/__tests__/openai-file-upload.test.ts",
     "test:tp2026-autofill": "tsx --test src/lib/tp2026/__tests__/*.test.ts",
     "test:inleiding": "tsx --test src/lib/tp/inleiding/__tests__/*.test.ts",
