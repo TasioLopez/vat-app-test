@@ -29,9 +29,22 @@ function formatDateNl(d: Date): string {
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+/** Build RFC5322 From with display name, e.g. `"VAT App" <contact@vat-app.nl>`. */
+function getMailFrom(): string {
+  const address = (process.env.SMTP_FROM ?? process.env.SMTP_USER)?.trim();
+  if (!address) throw new Error('SMTP_FROM is not configured');
+
+  // Already formatted: "Name" <email@domain.com>
+  if (/^[^<]*<[^>]+>$/.test(address)) {
+    return address;
+  }
+
+  const name = (process.env.SMTP_FROM_NAME ?? 'VAT App').trim() || 'VAT App';
+  return `"${name.replace(/"/g, '\\"')}" <${address}>`;
+}
+
 export async function sendCvShareEmail(params: ShareEmailParams): Promise<void> {
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER;
-  if (!from) throw new Error('SMTP_FROM is not configured');
+  const from = getMailFrom();
 
   const { to, shareUrl, employeeName, advisorName, message, expiresAt } = params;
   const expiryStr = formatDateNl(expiresAt);
