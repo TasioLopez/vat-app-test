@@ -1,7 +1,7 @@
 'use client';
 
 import { CVProvider } from '@/context/CVContext';
-import CVSyncGuard from '@/components/cv/CVSyncGuard';
+import CVGuestSyncGuard from '@/components/cv/share/CVGuestSyncGuard';
 import CVGuestEditorShell from '@/components/cv/share/CVGuestEditorShell';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 import { coerceCvTemplateKey, DEFAULT_ACCENT_COLOR } from '@/types/cv';
@@ -46,7 +46,7 @@ export default function CVGuestPageClient({
       editorMode="guest"
       shareToken={shareToken}
     >
-      <CVSyncGuard />
+      <CVGuestSyncGuard />
       <CVGuestEditorShell shareToken={shareToken} employeeLabel={employeeLabel} />
     </CVProvider>
   );
