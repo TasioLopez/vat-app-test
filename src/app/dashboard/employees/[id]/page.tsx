@@ -1007,20 +1007,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Voornaam" value={employee.first_name || ''} onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })} />
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
                                 <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
-                                {userRole === 'admin' ? (
-                                    <Select value={employee.client_id || undefined} onValueChange={(v) => { setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
-                                        <SelectTrigger className={SELECT_CLASS}>
-                                            <SelectValue placeholder="Selecteer werkgever" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {clients.map((client) => (
-                                                <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <input className="w-full border border-gray-500/30 p-2 rounded bg-gray-100 text-gray-500" value={clientName || ''} disabled />
-                                )}
+                                <Select value={employee.client_id || undefined} onValueChange={(v) => { setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
+                                    <SelectTrigger className={SELECT_CLASS}>
+                                        <SelectValue placeholder="Selecteer werkgever" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {clients.map((client) => (
+                                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 {employee.client_id ? (
                                     <div className="space-y-1">
                                         <label className="text-sm text-gray-600">Contactpersoon</label>

@@ -1,7 +1,7 @@
 ---
 slug: gebruikersbeheer-admin
 title: Gebruikersbeheer
-excerpt: Gebruikers uitnodigen, rollen en toegang.
+excerpt: Gebruikers uitnodigen en rollen beheren.
 category_slug: beheer-admin
 translation_group_id: c6213a70-52fb-4e4c-9294-3ef2bf9d7ef1
 locale: nl
@@ -9,7 +9,7 @@ locale: nl
 
 # Gebruikersbeheer
 
-Beheerders beheren accounts: uitnodigen, rollen (admin of standaard) en koppeling aan werknemers voor juiste zichtbaarheid op dossiers en TP Docs.
+Beheerders beheren accounts: uitnodigen en rollen (admin of standaard) instellen.
 
 ## Waar in de app
 
@@ -19,9 +19,10 @@ Menu Gebruikers, route /dashboard/users (alleen voor admins).
 
 1. Open Gebruikers in de zijbalk.
 2. Nodig iemand uit of zoek een bestaand account.
-3. Stel de rol in.
-4. Koppel aan werknemers waar uw proces dat vereist.
-5. Informeer over eerste login.
+3. Stel de rol in (beheerder of gebruiker).
+4. Informeer over eerste login.
+
+Alle gebruikers hebben toegang tot alle werkgevers en werknemers; er is geen aparte toewijzing meer nodig.
 
 > **Schermafbeelding (nog toe te voegen)**  
 > Toon: gebruikerslijst (geanonimiseerd).  
@@ -29,7 +30,5 @@ Menu Gebruikers, route /dashboard/users (alleen voor admins).
 
 ## Zie ook
 
-- [Admin versus standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
-- [Werknemer koppelen aan gebruiker](/dashboard/help/a/werknemer-koppelen-aan-gebruiker)
-- [TP-documenten: wie ziet wat](/dashboard/help/a/tp-documenten-wie-ziet-wat)
-
+- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [TP-documenten: wie ziet wat?](/dashboard/help/a/tp-documenten-wie-ziet-wat)

@@ -22,7 +22,7 @@ Elke **werknemer** hoort bij **een werkgever** (organisatie). Zo blijven dossier
 
 ## Zichtbaarheid
 
-Standaardgebruikers zien alleen werknemers binnen **toegewezen dossiers**.
+Alle ingelogde gebruikers zien **alle** werkgevers en werknemers. Alleen beheerders kunnen werkgevers of werknemers **verwijderen**.
 
 ## Zie ook
 

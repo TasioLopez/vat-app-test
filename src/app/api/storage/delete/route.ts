@@ -36,27 +36,6 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await ssr.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: me } = await ssr.from("users").select("role").eq("id", user.id).maybeSingle();
-    const role = (me?.role as "admin" | "user" | string) || "user";
-
-    // If not admin, optionally restrict deletes to employees assigned to the user:
-    if (role !== "admin") {
-      // extract employee_id from "documents/<employee_id>/<file>"
-      const withoutBucket = key.replace(/^documents\//i, "");
-      const employeeId = withoutBucket.split("/")[0] || "";
-      if (!employeeId) {
-        return NextResponse.json({ error: "Invalid path format" }, { status: 400 });
-      }
-      const { data: links } = await ssr
-        .from("employee_users")
-        .select("employee_id")
-        .eq("user_id", user.id);
-      const allowed = new Set((links || []).map((r: any) => r.employee_id));
-      if (!allowed.has(employeeId)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
-
     // Use service role to delete from Storage (and DB if requested).
     const admin = createAdmin(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -750,6 +750,30 @@ export type Database = {
           },
         ]
       }
+      user_entity_activity: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          last_accessed_at: string | null
+          last_modified_at: string | null
+          user_id: string
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          last_accessed_at?: string | null
+          last_modified_at?: string | null
+          user_id: string
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          last_accessed_at?: string | null
+          last_modified_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_clients: {
         Row: {
           assigned_by: string | null

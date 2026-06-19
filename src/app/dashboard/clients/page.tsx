@@ -106,31 +106,12 @@ export default function ClientsPage() {
       setUserRole(null);
     }
 
-    if (userRecord.role === 'admin') {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (!error && data) setClients(data);
-    } else {
-      const { data: userClients, error: ucError } = await supabase
-        .from('user_clients')
-        .select('client_id')
-        .eq('user_id', user.id);
-
-      if (ucError || !userClients) return console.error('user_clients error:', ucError);
-
-      const clientIds = userClients.map((uc) => uc.client_id);
-
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .in('id', clientIds)
-        .order('created_at', { ascending: false });
-
-      if (!error && data) setClients(data);
-    }
+    if (!error && data) setClients(data);
   };
 
   const fetchEmployees = async (clientId: string) => {
@@ -354,15 +335,8 @@ export default function ClientsPage() {
                   </div>
                 </div>
 
-                {userRole === 'admin' && (
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(client)}
-                    >
-                      <Pencil className="w-4 h-4 mr-2" /> Bewerken
-                    </Button>
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  {userRole === 'admin' && (
                     <Button
                       size="sm"
                       variant="destructive"
@@ -370,15 +344,15 @@ export default function ClientsPage() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Edit Modal – open for admin and for users (associated clients); users can edit referents only */}
+      {/* Edit Modal */}
       {selectedClient && (
         <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
           <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -400,7 +374,6 @@ export default function ClientsPage() {
                     value={selectedClient.name}
                     onChange={(e) => setSelectedClient({ ...selectedClient, name: e.target.value })}
                     placeholder="Company Name"
-                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -411,7 +384,6 @@ export default function ClientsPage() {
                   <Select
                     value={selectedClient.industry || undefined}
                     onValueChange={(v) => setSelectedClient({ ...selectedClient, industry: v })}
-                    disabled={userRole !== 'admin'}
                   >
                     <SelectTrigger className={cn(SELECT_CLASS)}>
                       <SelectValue placeholder="Selecteer een branche" />
@@ -436,7 +408,6 @@ export default function ClientsPage() {
                     value={selectedClient.contact_email || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, contact_email: e.target.value })}
                     placeholder="Contact Email"
-                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -449,7 +420,6 @@ export default function ClientsPage() {
                     value={selectedClient.phone || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, phone: e.target.value })}
                     placeholder="010-1234567"
-                    disabled={userRole !== 'admin'}
                   />
                 </div>
                 <div>
@@ -462,7 +432,6 @@ export default function ClientsPage() {
                     value={selectedClient.plaats || ''}
                     onChange={(e) => setSelectedClient({ ...selectedClient, plaats: e.target.value })}
                     placeholder="Rotterdam"
-                    disabled={userRole !== 'admin'}
                   />
                 </div>
               </div>
@@ -567,13 +536,11 @@ export default function ClientsPage() {
 
             <div className="mt-8 flex justify-end gap-4 pt-6 border-t border-purple-200/50">
               <Button variant="outline" onClick={() => setSelectedClient(null)} size="lg">
-                {userRole === 'admin' ? 'Annuleren' : 'Sluiten'}
+                Annuleren
               </Button>
-              {userRole === 'admin' && (
-                <Button onClick={handleSave} size="lg">
-                  Opslaan
-                </Button>
-              )}
+              <Button onClick={handleSave} size="lg">
+                Opslaan
+              </Button>
             </div>
           </div>
         </div>

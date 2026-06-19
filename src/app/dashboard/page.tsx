@@ -17,7 +17,6 @@ type TpDoc = Database["public"]["Tables"]["tp_docs"]["Row"];
 export default async function DashboardPage() {
   const supabase = await getSupabaseServerClient();
 
-  // Get current user and their role
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -36,63 +35,19 @@ export default async function DashboardPage() {
     return <div className="text-error-600 p-6">User profile not found.</div>;
   }
 
-  let users: User[] = [];
-  let clients: Client[] = [];
-  let employees: Employee[] = [];
-  let tpDocs: TpDoc[] = [];
+  const isAdmin = profile.role === "admin";
 
-  if (profile.role === "admin") {
-    // Admin sees everything
-    const [usersRes, clientsRes, employeesRes, tpDocsRes] = await Promise.all([
-      supabase.from("users").select("*"),
-      supabase.from("clients").select("*"),
-      supabase.from("employees").select("*"),
-      supabase.from("tp_docs").select("*"),
-    ]);
-    users = usersRes.data || [];
-    clients = clientsRes.data || [];
-    employees = employeesRes.data || [];
-    tpDocs = tpDocsRes.data || [];
-  } else {
-    // Standard user: show only assigned data
+  const [usersRes, clientsRes, employeesRes, tpDocsRes] = await Promise.all([
+    isAdmin ? supabase.from("users").select("*") : Promise.resolve({ data: [] as User[] }),
+    supabase.from("clients").select("*"),
+    supabase.from("employees").select("*"),
+    supabase.from("tp_docs").select("*"),
+  ]);
 
-    // Get assigned employees via employee_users
-    const { data: employeeLinks } = await supabase
-      .from("employee_users")
-      .select("employee_id")
-      .eq("user_id", user.id);
-
-    const employeeIds = employeeLinks?.map((link) => link.employee_id) || [];
-
-    if (employeeIds.length) {
-      const [employeeRes, tpRes] = await Promise.all([
-        supabase
-          .from("employees")
-          .select("*")
-          .in("id", employeeIds),
-        supabase
-          .from("tp_docs")
-          .select("*")
-          .in("employee_id", employeeIds),
-      ]);
-
-      employees = employeeRes.data || [];
-      tpDocs = tpRes.data || [];
-
-      // Get clients tied to those employees
-      const clientIds = [
-        ...new Set(employees.map((e) => e.client_id).filter(Boolean)),
-      ] as string[];
-
-      if (clientIds.length) {
-        const { data: clientRes } = await supabase
-          .from("clients")
-          .select("*")
-          .in("id", clientIds);
-        clients = clientRes || [];
-      }
-    }
-  }
+  const users = usersRes.data || [];
+  const clients = clientsRes.data || [];
+  const employees = employeesRes.data || [];
+  const tpDocs = tpDocsRes.data || [];
 
   const thisMonth = new Date().toISOString().slice(0, 7);
   const newTPs =
@@ -100,53 +55,39 @@ export default async function DashboardPage() {
   const newEmployees =
     employees.filter((e) => e.created_at?.startsWith(thisMonth)).length || 0;
 
-  // Get user's recent employee activity from employee_users
-  // Note: This will work after migration is applied. If columns don't exist, it will return empty.
   let recentEmployeeIds: string[] = [];
-  try {
-    // Use type assertion to bypass TypeScript checking for columns that may not exist yet
-    const { data: recentEmployeeActivity, error: employeeActivityError } = await (supabase
-      .from("employee_users") as any)
-      .select("employee_id, last_modified_at, last_accessed_at")
-      .eq("user_id", user.id)
-      .order("last_modified_at", { ascending: false, nullsFirst: false })
-      .order("last_accessed_at", { ascending: false, nullsFirst: false })
-      .limit(5);
-
-    if (recentEmployeeActivity && !employeeActivityError) {
-      recentEmployeeIds = (recentEmployeeActivity as any[])
-        .map((a: any) => a.employee_id)
-        .filter(Boolean);
-    }
-  } catch (error) {
-    // Columns don't exist yet, will use fallback
-    console.log('Activity tracking columns not available yet');
-  }
-
-  // Get user's recent client activity from user_clients
-  // Note: This will work after migration is applied. If columns don't exist, it will return empty.
   let recentClientIds: string[] = [];
-  try {
-    // Use type assertion to bypass TypeScript checking for columns that may not exist yet
-    const { data: recentClientActivity, error: clientActivityError } = await (supabase
-      .from("user_clients") as any)
-      .select("client_id, last_modified_at, last_accessed_at")
-      .eq("user_id", user.id)
-      .order("last_modified_at", { ascending: false, nullsFirst: false })
-      .order("last_accessed_at", { ascending: false, nullsFirst: false })
-      .limit(5);
 
-    if (recentClientActivity && !clientActivityError) {
-      recentClientIds = (recentClientActivity as any[])
-        .map((a: any) => a.client_id)
-        .filter(Boolean);
-    }
-  } catch (error) {
-    // Columns don't exist yet, will use fallback
-    console.log('Activity tracking columns not available yet');
+  const { data: recentEmployeeActivity } = await supabase
+    .from("user_entity_activity")
+    .select("entity_id, last_modified_at, last_accessed_at")
+    .eq("user_id", user.id)
+    .eq("entity_type", "employee")
+    .order("last_modified_at", { ascending: false, nullsFirst: false })
+    .order("last_accessed_at", { ascending: false, nullsFirst: false })
+    .limit(5);
+
+  if (recentEmployeeActivity) {
+    recentEmployeeIds = recentEmployeeActivity
+      .map((a) => a.entity_id)
+      .filter(Boolean);
   }
 
-  // Get the actual records in the same order
+  const { data: recentClientActivity } = await supabase
+    .from("user_entity_activity")
+    .select("entity_id, last_modified_at, last_accessed_at")
+    .eq("user_id", user.id)
+    .eq("entity_type", "client")
+    .order("last_modified_at", { ascending: false, nullsFirst: false })
+    .order("last_accessed_at", { ascending: false, nullsFirst: false })
+    .limit(5);
+
+  if (recentClientActivity) {
+    recentClientIds = recentClientActivity
+      .map((a) => a.entity_id)
+      .filter(Boolean);
+  }
+
   const last5Employees = recentEmployeeIds.length > 0
     ? employees
         .filter(e => recentEmployeeIds.includes(e.id))
@@ -186,7 +127,7 @@ export default async function DashboardPage() {
         <p className="text-lg text-gray-600">Overzicht van uw gegevens</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {profile.role === "admin" && (
+        {isAdmin && (
           <StatCard title="Total Gebruikers" value={users.length} />
         )}
         <StatCard title="Werkgevers" value={clients.length} />
@@ -196,9 +137,7 @@ export default async function DashboardPage() {
         <StatCard title="Nieuwe werknemers deze maand" value={newEmployees} />
       </div>
 
-      {/* Recent Items Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Last 5 Employees Card */}
         <Card className="hover:shadow-xl hover:shadow-purple-500/20 border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -257,7 +196,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Last 5 Clients Card */}
         <Card className="hover:shadow-xl hover:shadow-purple-500/20 border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -286,7 +224,7 @@ export default async function DashboardPage() {
                 {last5Clients.map((client) => (
                   <Link
                     key={client.id}
-                    href={`/dashboard/clients/${client.id}`}
+                    href={`/dashboard/clients`}
                     className="block group"
                   >
                     <div className="flex items-center justify-between p-4 rounded-lg border border-purple-100 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 cursor-pointer">

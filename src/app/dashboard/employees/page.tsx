@@ -66,24 +66,12 @@ export default function EmployeesPage() {
     const role = userData?.role || 'user';
     setUserRole(role);
 
-    if (role === 'admin') {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*, clients(name)')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*, clients(name)')
+      .order('created_at', { ascending: false });
 
-      if (!error && data) setEmployees(data as Employee[]);
-    } else {
-      const { data, error } = await supabase
-        .from('employee_users')
-        .select('employee_id, employees(*, clients(name))')
-        .eq('user_id', user.id);
-
-      if (!error && data) {
-        const associated = data.map((row) => row.employees).filter(Boolean) as Employee[];
-        setEmployees(associated);
-      }
-    }
+    if (!error && data) setEmployees(data as Employee[]);
   };
 
   const fetchClients = async () => {
@@ -246,7 +234,7 @@ export default function EmployeesPage() {
           </div>
 
           {/* Client Filter */}
-          {userRole === 'admin' && clients.length > 0 && (
+          {clients.length > 0 && (
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <Select value={selectedClient} onValueChange={setSelectedClient}>
@@ -315,14 +303,12 @@ export default function EmployeesPage() {
               >
                 Email <SortIcon field="email" />
               </TableHead>
-              {userRole === 'admin' && (
-                <TableHead 
-                  className="cursor-pointer hover:bg-purple-100/50"
-                  onClick={() => handleSort('client')}
-                >
-                  Werkgever <SortIcon field="client" />
-                </TableHead>
-              )}
+              <TableHead 
+                className="cursor-pointer hover:bg-purple-100/50"
+                onClick={() => handleSort('client')}
+              >
+                Werkgever <SortIcon field="client" />
+              </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-purple-100/50"
                 onClick={() => handleSort('created_at')}
@@ -343,9 +329,7 @@ export default function EmployeesPage() {
                       {employee.first_name} {employee.last_name}
                 </TableCell>
                 <TableCell>{employee.email}</TableCell>
-                {userRole === 'admin' && (
-                  <TableCell>{employee.clients?.name || '—'}</TableCell>
-                )}
+                <TableCell>{employee.clients?.name || '—'}</TableCell>
                 <TableCell>
                   {employee.created_at 
                     ? new Date(employee.created_at).toLocaleDateString('nl-NL')
@@ -360,16 +344,18 @@ export default function EmployeesPage() {
                     >
                       <Eye className="w-4 h-4 mr-2" /> Bekijk
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        setSelectedEmployeeId(employee.id);
-                        setShowDeleteModal(true);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {userRole === 'admin' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedEmployeeId(employee.id);
+                          setShowDeleteModal(true);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -408,6 +394,7 @@ export default function EmployeesPage() {
                         >
                           <Eye className="w-4 h-4 mr-2" /> Bekijk
                         </Button>
+                        {userRole === 'admin' && (
                         <Button
                           size="sm"
                           variant="destructive"
@@ -418,6 +405,7 @@ export default function EmployeesPage() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+                        )}
                   </div>
                 </CardContent>
               </Card>

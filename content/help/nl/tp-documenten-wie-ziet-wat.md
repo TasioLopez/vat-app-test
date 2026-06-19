@@ -1,7 +1,7 @@
 ---
 slug: tp-documenten-wie-ziet-wat
 title: TP-documenten: wie ziet wat?
-excerpt: Verschil tussen beheerder en standaardgebruiker.
+excerpt: Alle gebruikers zien alle TP-documenten; alleen verwijderen van dossiers is admin-only.
 category_slug: tp-documenten
 translation_group_id: f7057508-a4e6-4d54-b03b-19fda2239385
 locale: nl
@@ -9,35 +9,33 @@ locale: nl
 
 # TP-documenten: wie ziet wat?
 
-Zichtbaarheid op TP Docs hangt af van uw **rol** en **koppeling aan werknemers**. Zo blijven dossiers binnen de juiste groep gebruikers.
+Alle ingelogde gebruikers zien **alle** TP-documenten in TP Docs, ongeacht rol.
 
 ## Korte samenvatting
 
-Beheerders zien breder; standaardgebruikers vooral documenten van **hun** werknemers.
+Iedereen kan TP-documenten bekijken en beheren voor elke werknemer. Alleen **beheerders** kunnen werkgevers en werknemers verwijderen.
 
 ## Beheerder (admin)
 
-- Ziet TP-documenten die horen bij **alle werknemers** in de omgeving (conform uw tenant-configuratie).
-- Kan toegang en koppelingen beheren via [Gebruikersbeheer](/dashboard/help/a/gebruikersbeheer-admin).
+- Zelfde zicht op TP Docs als standaardgebruikers.
+- Extra: Gebruikersbeheer, Helpbeheer, en verwijderen van werkgevers/werknemers.
 
 ## Standaardgebruiker
 
-- Ziet documenten **alleen** voor werknemers waaraan hij of zij is **gekoppeld**.
-- Zonder koppeling blijft de lijst leeg of mist u specifieke dossiers.
+- Ziet en beheert TP-documenten voor **alle** werknemers.
+- Geen aparte koppeling of toewijzing nodig.
 
 ## Veelvoorkomende vragen
 
-- **Ik zie niets in TP Docs** — controleer of u aan werknemers gekoppeld bent ([Werknemer koppelen aan gebruiker](/dashboard/help/a/werknemer-koppelen-aan-gebruiker)) of vraag een beheerder.
-- **Collega ziet wel een document, ik niet** — vergelijk rollen en werknemerskoppelingen.
-- **Mag ik dit delen extern?** — volg uw interne privacy- en werkgeverafspraken; dit artikel beschrijft alleen zichtbaarheid in de app.
+- **Ik zie niets in TP Docs** — controleer of er TP-exporten bestaan, of vraag een collega.
+- **Mag ik dit delen extern?** — volg uw interne privacy- en werkgeverafspraken.
 
 > **Schermafbeelding (nog toe te voegen)**  
-> Toon: TP Docs voor een standaardgebruiker met beperkte lijst (geanonimiseerd).  
+> Toon: TP Docs-overzicht (geanonimiseerd).  
 > **Bestandsnaam:** `tp-docs-zichtbaarheid.png`
 
 ## Zie ook
 
 - [Wat zijn TP-documenten?](/dashboard/help/a/tp-documenten-wat-zijn-dit)
-- [Admin versus standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
 - [Gebruikersbeheer](/dashboard/help/a/gebruikersbeheer-admin)
-

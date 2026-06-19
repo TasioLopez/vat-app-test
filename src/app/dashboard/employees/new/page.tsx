@@ -34,71 +34,23 @@ export default function NewEmployeePage() {
 
     useEffect(() => {
         const fetchClients = async () => {
-            const {
-                data: { user },
-                error: userError,
-            } = await supabase.auth.getUser();
+            const { error: userError } = await supabase.auth.getUser();
 
-            if (userError || !user) {
+            if (userError) {
                 setError('User not authenticated');
                 return;
             }
 
-            // Fetch user role
-            const { data: userRecord, error: roleError } = await supabase
-                .from('users')
-                .select('role')
-                .eq('id', user.id)
-                .single();
+            const { data: allClients, error: allError } = await supabase
+                .from('clients')
+                .select('*');
 
-            if (roleError || !userRecord) {
-                setError('Failed to determine user role');
+            if (allError || !allClients) {
+                setError('Failed to fetch clients');
                 return;
             }
 
-            if (userRecord.role === 'admin') {
-                // Admin: fetch all clients
-                const { data: allClients, error: allError } = await supabase
-                    .from('clients')
-                    .select('*');
-
-                if (allError || !allClients) {
-                    setError('Failed to fetch clients');
-                    return;
-                }
-
-                setClients(allClients);
-            } else {
-                // User: fetch associated clients only
-                const { data: clientUserLinks, error: linkError } = await supabase
-                    .from('user_clients')
-                    .select('client_id')
-                    .eq('user_id', user.id);
-
-                if (linkError || !clientUserLinks) {
-                    setError('Failed to fetch client associations');
-                    return;
-                }
-
-                const clientIds = clientUserLinks.map((link) => link.client_id);
-
-                if (clientIds.length === 0) {
-                    setClients([]);
-                    return;
-                }
-
-                const { data: userClients, error: clientError } = await supabase
-                    .from('clients')
-                    .select('*')
-                    .in('id', clientIds);
-
-                if (clientError || !userClients) {
-                    setError('Failed to load clients');
-                    return;
-                }
-
-                setClients(userClients);
-            }
+            setClients(allClients);
         };
 
         fetchClients();
@@ -123,37 +75,6 @@ export default function NewEmployeePage() {
             setError('Not authenticated. Please log in again.');
             setLoading(false);
             return;
-        }
-
-        // Fetch user role to check if admin
-        const { data: userRecord, error: roleError } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (roleError || !userRecord) {
-            setError('Failed to verify user role.');
-            setLoading(false);
-            return;
-        }
-
-        const isAdmin = userRecord.role === 'admin';
-
-        // Verify user has client access (skip for admins - they have access to all clients)
-        if (form.client_id && !isAdmin) {
-            const { data: clientCheck, error: clientCheckError } = await supabase
-                .from('user_clients')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('client_id', form.client_id)
-                .single();
-
-            if (!clientCheck) {
-                setError('You do not have access to this client.');
-                setLoading(false);
-                return;
-            }
         }
 
         const { data: newEmployees, error: employeeError } = await supabase
@@ -184,23 +105,6 @@ export default function NewEmployeePage() {
             setError('Employee created, but failed to initialize employee details: ' + detailsError.message);
             setLoading(false);
             return;
-        }
-
-        // Assign the employee to the user who created it (user is already defined above)
-        if (user) {
-            const { error: assignmentError } = await supabase.from('employee_users').insert([
-                { 
-                    user_id: user.id, 
-                    employee_id: newEmployeeId,
-                    assigned_at: new Date().toISOString()
-                },
-            ]);
-
-            if (assignmentError) {
-                setError('Employee created, but failed to assign to user: ' + assignmentError.message);
-                setLoading(false);
-                return;
-            }
         }
 
         router.push('/dashboard/employees');

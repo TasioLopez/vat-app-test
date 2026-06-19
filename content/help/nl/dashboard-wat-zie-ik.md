@@ -9,12 +9,12 @@ locale: nl
 
 # Wat toont het dashboard?
 
-Het **dashboard** is uw **startpagina** na inloggen. U ziet vaak **kaarten** (aantallen) en **links** naar lijsten of recent werk.
+Het **dashboard** is uw **startpagina** na inloggen. U ziet **kaarten** (aantallen) en **recent geopende** werkgevers en werknemers.
 
 ## Rol
 
-- **Admin**: vaak **organisatiebrede** totalen.
-- **Standaard**: alleen data rond **uw gekoppelde werknemers**.
+- **Admin**: zelfde werkgever/werknemer-overzicht als standaardgebruikers, plus het totaal aantal **gebruikers**.
+- **Standaard**: organisatiebrede totalen voor werkgevers, werknemers en TP-documenten.
 
 Zie [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker).
 
@@ -24,10 +24,9 @@ Zie [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker
 
 ## Gebruik
 
-Klik **tegels** of **koppelingen** om naar Werknemers, TP Docs of Help te gaan. Recent-werknemers (indien zichtbaar) leidt snel naar een dossier: [Snel naar werknemer](/dashboard/help/a/dashboard-snel-naar-werknemer).
+Klik **tegels** of **koppelingen** om naar Werknemers, TP Docs of Help te gaan. Recent geopende werknemers en werkgevers leidt snel naar een dossier: [Snel naar werknemer](/dashboard/help/a/dashboard-snel-naar-werknemer).
 
 ## Zie ook
 
 - [Eerste stappen in de applicatie](/dashboard/help/a/eerste-stappen-in-de-app)
 - [Wat zijn TP-documenten?](/dashboard/help/a/tp-documenten-wat-zijn-dit)
-
