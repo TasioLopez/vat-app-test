@@ -8,7 +8,16 @@ export const TP_BASIS_TOELICHTING_CLASS =
   'mb-1.5 text-[12px] font-bold leading-tight text-[#64b6a6]';
 
 export const TP_BASIS_DISCLAIMER_CLASS =
-  'text-[10px] italic leading-relaxed text-[#6d2a96]';
+  'text-[10px] leading-relaxed text-[#6d2a96]';
+
+/** Display footnote disclaimers with a leading asterisk and no markdown-italic wrapper. */
+export function formatBasisFootnoteDisplay(text: string): string {
+  let t = String(text || '').trim();
+  if (t.startsWith('*') && t.endsWith('*') && t.length > 2 && !t.startsWith('* ')) {
+    t = t.slice(1, -1).trim();
+  }
+  return t.startsWith('*') ? t : `*${t}`;
+}
 
 export const TP_BASIS_TOELICHTING_POW = 'Toelichting POW-meter™';
 

@@ -9,6 +9,10 @@ import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/buil
 import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
+import {
+  formatBasisFootnoteDisplay,
+  TP_BASIS_DISCLAIMER_CLASS,
+} from '@/lib/tp2026/basis-document-layout';
 
 function parseFunctieLine(line: string): { title: string; description: string } | null {
   const content = line.trim().replace(/^[•☑✓\-]\s*/, '');
@@ -100,7 +104,9 @@ export function VisieLoopbaanadviseurBlock({
           {functiesIntro ? <p className="mb-2">{functiesIntro}</p> : null}
           {functieBullets ? <div className="mt-1">{renderVisieLaFunctieBullets(functieBullets)}</div> : null}
           {footer ? (
-            <p className="mt-4 text-[#6d2a96] italic">{formatInlineText(footer)}</p>
+            <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
+              {formatBasisFootnoteDisplay(footer)}
+            </p>
           ) : null}
         </>
       ) : null}
