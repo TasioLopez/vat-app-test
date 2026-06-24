@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -51,6 +52,7 @@ type Props = {
 };
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
+  const router = useRouter();
   const { tpData, setTPData, updateField, saveAll, isDirty, markDirty, markSaved } = useTPInstance();
   const { showSuccess, showError, showInfo } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
@@ -481,6 +483,15 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     currentStepHasAutofill && buildAutofillSteps('current_step', currentStep, tpData).length > 0;
 
   const totalSteps = sections.length;
+  const backLabel = currentStep === 1 ? 'Terug naar werknemer' : 'Vorige stap';
+
+  const goBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((s) => s - 1);
+      return;
+    }
+    router.push(`/dashboard/employees/${employeeId}`);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
@@ -500,10 +511,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-              disabled={currentStep === 1}
-              aria-label="Vorige stap"
-              title="Vorige stap"
+              onClick={goBack}
+              aria-label={backLabel}
+              title={backLabel}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </Button>

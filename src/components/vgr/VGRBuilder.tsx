@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -21,6 +22,7 @@ type Props = {
 };
 
 function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vgrInstanceId: string }) {
+  const router = useRouter();
   const { vgrData, updateField, saveAll, isDirty, markSaved } = useVGRInstance();
   const { showSuccess, showError } = useToastHelpers();
   const supabase = useMemo(
@@ -101,6 +103,15 @@ function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vg
   ];
 
   const totalSteps = sections.length;
+  const backLabel = currentStep === 1 ? 'Terug naar werknemer' : 'Vorige stap';
+
+  const goBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((s) => s - 1);
+      return;
+    }
+    router.push(`/dashboard/employees/${employeeId}`);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -120,10 +131,9 @@ function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vg
               variant="outline"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-              disabled={currentStep === 1}
-              aria-label="Vorige stap"
-              title="Vorige stap"
+              onClick={goBack}
+              aria-label={backLabel}
+              title={backLabel}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </Button>
