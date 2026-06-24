@@ -92,7 +92,7 @@ export function FooterIdentity({
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4 text-[10px] leading-tight text-neutral-900">
         <div className="flex flex-col gap-1 text-left">
           <div>
-            <span className="font-normal">Naam : </span>
+            <span className="font-normal">Naam: </span>
             <span className="text-neutral-800">{name}</span>
           </div>
           <div>
