@@ -5,9 +5,10 @@ import { CheckCircle2 } from 'lucide-react';
 type Props = {
   validated: number;
   total: number;
+  className?: string;
 };
 
-export function BasisValidationProgress({ validated, total }: Props) {
+export function BasisValidationProgress({ validated, total, className }: Props) {
   const pct = total > 0 ? Math.round((validated / total) * 100) : 0;
   const complete = validated >= total && total > 0;
   const ringColor = complete ? '#22c55e' : '#f59e0b';
@@ -16,7 +17,7 @@ export function BasisValidationProgress({ validated, total }: Props) {
 
   return (
     <div
-      className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2"
+      className={`flex w-auto shrink-0 items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-3 py-2 ${className ?? ''}`}
       title={`${validated} van ${total} gevalideerd`}
       aria-label={`${validated} van ${total} gevalideerd`}
     >

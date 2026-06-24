@@ -109,12 +109,17 @@ function Basis2026SectionList({
     <div className="space-y-3">
       <div>
         <h2 className="text-sm font-semibold text-foreground">Secties basisdocument</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Open een sectie om te bewerken, autofill te gebruiken of te valideren.
-        </p>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Open een sectie om te bewerken, autofill te gebruiken of te valideren.
+          </p>
+          <BasisValidationProgress
+            validated={summary.validated}
+            total={summary.total}
+            className="shrink-0"
+          />
+        </div>
       </div>
-
-      <BasisValidationProgress validated={summary.validated} total={summary.total} />
 
       <ul className="space-y-2">
         {BASIS_EDITOR_SECTIONS.map((section) => {
