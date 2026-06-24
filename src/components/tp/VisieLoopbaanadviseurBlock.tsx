@@ -4,7 +4,6 @@ import React from 'react';
 import {
   FUNCTIES_SUBHEADING,
   TOELICHTING_DELIMITER,
-  TOELICHTING_SUBHEADING,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
 import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
@@ -70,7 +69,7 @@ function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
 }
 
 /**
- * Renders Visie loopbaanadviseur with internal Toelichting + Mogelijk passende functies subheadings.
+ * Renders Visie loopbaanadviseur with internal Mogelijk passende functies subheading.
  */
 export function VisieLoopbaanadviseurBlock({
   text,
@@ -93,7 +92,6 @@ export function VisieLoopbaanadviseurBlock({
 
   return (
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      <BasisToelichtingHeading label={TOELICHTING_SUBHEADING} />
       <p className="mb-4">{toelichting}</p>
 
       {functiesIntro || functieBullets || footer ? (

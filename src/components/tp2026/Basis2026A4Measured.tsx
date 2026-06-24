@@ -19,7 +19,6 @@ import {
   normalizeWkMarkdown,
   TP_BASIS_BODY_BOX_CLASS,
   TP_BASIS_DISCLAIMER_CLASS,
-  TP_BASIS_TOELICHTING_DEFAULT,
   TP_WK_INTRO_LINE,
 } from '@/lib/tp2026/basis-document-layout';
 import {

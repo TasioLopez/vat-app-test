@@ -10,8 +10,6 @@ export const TP_BASIS_TOELICHTING_CLASS =
 export const TP_BASIS_DISCLAIMER_CLASS =
   'text-[10px] italic leading-relaxed text-[#6d2a96]';
 
-export const TP_BASIS_TOELICHTING_DEFAULT = 'Toelichting';
-
 export const TP_BASIS_TOELICHTING_POW = 'Toelichting POW-meter™';
 
 export const TP_WK_INTRO_LINE =
@@ -36,17 +34,7 @@ export function normalizeWkMarkdown(md: string): string {
   return body || WETTELIJKE_KADERS.trim();
 }
 
-/** Field keys that get an in-box Toelichting heading (inleiding handled separately). */
-export const TP_BASIS_TOELICHTING_TEXT_KEYS = new Set([
-  'soc',
-  'visw',
-  'prof',
-  'blem',
-  'zp',
-]);
-
 export function getBasisToelichtingLabel(key: string): string | null {
   if (key === 'plaats') return TP_BASIS_TOELICHTING_POW;
-  if (TP_BASIS_TOELICHTING_TEXT_KEYS.has(key)) return TP_BASIS_TOELICHTING_DEFAULT;
   return null;
 }
