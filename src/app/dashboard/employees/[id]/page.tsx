@@ -59,6 +59,8 @@ import {
     normalizeEducationLevel,
     repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
+import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
+import { ValidatableField } from '@/components/employee/ValidatableField';
 
 type Employee = {
     id: string;
@@ -934,6 +936,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             employeeDetails?.field_content_hash
         );
 
+    const canValidateField = (field: EmployeeDetailFieldKey) =>
+        getFieldDisplayStatus(field) === 'review';
+
     const fieldClass = (field: EmployeeDetailFieldKey) =>
         `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${getFieldStatusClass(
             getFieldDisplayStatus(field)
@@ -1067,12 +1072,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </div>
 
                             <div className="flex flex-col gap-3 w-2/5">
-                                <div className="flex flex-col gap-1">
+                                <ValidatableField
+                                    onValidate={() => validateField('gender')}
+                                    canValidate={canValidateField('gender')}
+                                    validateLabel="Valideer geslacht"
+                                >
                                     <Select
                                         value={employeeDetails?.gender || undefined}
                                         onValueChange={(v) => handleDetailChange('gender', v)}
                                     >
-                                        <SelectTrigger className={selectFieldClass('gender')}>
+                                        <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
                                             <SelectValue placeholder="Geslacht selecteren" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1081,59 +1090,31 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             <SelectItem value="Anders">Anders</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => validateField('gender')}
-                                            disabled={getFieldDisplayStatus('gender') !== 'review'}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                            aria-label="Valideer geslacht"
-                                            title="Valideer geslacht"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-1">
+                                </ValidatableField>
+                                <ValidatableField
+                                    onValidate={() => validateField('phone')}
+                                    canValidate={canValidateField('phone')}
+                                    validateLabel="Valideer telefoon"
+                                >
                                     <input
-                                        className={fieldClass('phone')}
+                                        className={cn(fieldClass('phone'), 'pr-10')}
                                         placeholder="Telefoon"
                                         value={employeeDetails?.phone || ''}
                                         onChange={(e) => handleDetailChange('phone', e.target.value)}
                                     />
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => validateField('phone')}
-                                            disabled={getFieldDisplayStatus('phone') !== 'review'}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                            aria-label="Valideer telefoon"
-                                            title="Valideer telefoon"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-1">
+                                </ValidatableField>
+                                <ValidatableField
+                                    onValidate={() => validateField('date_of_birth')}
+                                    canValidate={canValidateField('date_of_birth')}
+                                    validateLabel="Valideer geboortedatum"
+                                >
                                     <input
-                                        className={fieldClass('date_of_birth')}
+                                        className={cn(fieldClass('date_of_birth'), 'pr-10')}
                                         type="date"
                                         value={employeeDetails?.date_of_birth || ''}
                                         onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
                                     />
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={() => validateField('date_of_birth')}
-                                            disabled={getFieldDisplayStatus('date_of_birth') !== 'review'}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                            aria-label="Valideer geboortedatum"
-                                            title="Valideer geboortedatum"
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                                        </button>
-                                    </div>
-                                </div>
+                                </ValidatableField>
                             </div>
                         </div>
                     </div>
@@ -1405,112 +1386,89 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                 {/* Current Job */}
                 <div className="space-y-2 group">
-                    <div className="flex items-center justify-between gap-3">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Briefcase className="w-4 h-4 text-purple-600" />
-                            Huidig werk
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('current_job')}
-                            disabled={getFieldDisplayStatus('current_job') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer huidig werk"
-                            title="Valideer huidig werk"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
-                    <Input 
-                        className={fieldClass('current_job')} 
-                        placeholder="Bijv. Jobcoach/stagebegeleider" 
-                        value={employeeDetails?.current_job || ''} 
-                        onChange={e => handleDetailChange('current_job', e.target.value)} 
-                    />
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-purple-600" />
+                        Huidig werk
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('current_job')}
+                        canValidate={canValidateField('current_job')}
+                        validateLabel="Valideer huidig werk"
+                    >
+                        <Input
+                            className={cn(fieldClass('current_job'), 'pr-10')}
+                            placeholder="Bijv. Jobcoach/stagebegeleider"
+                            value={employeeDetails?.current_job || ''}
+                            onChange={e => handleDetailChange('current_job', e.target.value)}
+                        />
+                    </ValidatableField>
                 </div>
 
                 {/* Work Experience */}
                 <div className="space-y-2 group">
-                    <div className="flex items-center justify-between gap-3">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Briefcase className="w-4 h-4 text-purple-600" />
-                            Werkervaring
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('work_experience')}
-                            disabled={getFieldDisplayStatus('work_experience') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer werkervaring"
-                            title="Valideer werkervaring"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
-                    <Textarea 
-                        className={fieldClass('work_experience') + ' min-h-[100px]'} 
-                        placeholder="Beschrijf de werkervaring..." 
-                        value={employeeDetails?.work_experience || ''} 
-                        onChange={e => handleDetailChange('work_experience', e.target.value)} 
-                    />
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-purple-600" />
+                        Werkervaring
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('work_experience')}
+                        canValidate={canValidateField('work_experience')}
+                        validateLabel="Valideer werkervaring"
+                        placement="textarea-top"
+                    >
+                        <Textarea
+                            className={cn(fieldClass('work_experience'), 'min-h-[100px] pr-10')}
+                            placeholder="Beschrijf de werkervaring..."
+                            value={employeeDetails?.work_experience || ''}
+                            onChange={e => handleDetailChange('work_experience', e.target.value)}
+                        />
+                    </ValidatableField>
                 </div>
                 
                 {/* Education */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2 group">
-                        <div className="flex items-center justify-between gap-3">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <GraduationCap className="w-4 h-4 text-purple-600" />
-                                Opleidingsniveau
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => validateField('education_level')}
-                                disabled={getFieldDisplayStatus('education_level') !== 'review'}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label="Valideer opleidingsniveau"
-                                title="Valideer opleidingsniveau"
-                            >
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                            </button>
-                        </div>
-                        <Select
-                            value={normalizeEducationLevel(employeeDetails?.education_level) ?? undefined}
-                            onValueChange={(v) => handleDetailChange('education_level', v)}
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-purple-600" />
+                            Opleidingsniveau
+                        </label>
+                        <ValidatableField
+                            onValidate={() => validateField('education_level')}
+                            canValidate={canValidateField('education_level')}
+                            validateLabel="Valideer opleidingsniveau"
                         >
-                            <SelectTrigger className={selectFieldClass('education_level')}>
-                                <SelectValue placeholder="Selecteer opleidingsniveau" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {EDUCATION_LEVEL_OPTIONS.map(level => (
-                                    <SelectItem key={level} value={level}>{level}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            <Select
+                                value={normalizeEducationLevel(employeeDetails?.education_level) ?? undefined}
+                                onValueChange={(v) => handleDetailChange('education_level', v)}
+                            >
+                                <SelectTrigger className={cn(selectFieldClass('education_level'), 'pr-10')}>
+                                    <SelectValue placeholder="Selecteer opleidingsniveau" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {EDUCATION_LEVEL_OPTIONS.map(level => (
+                                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </ValidatableField>
                     </div>
                     <div className="space-y-2 group">
-                        <div className="flex items-center justify-between gap-3">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <GraduationCap className="w-4 h-4 text-purple-600" />
-                                Specialisatie
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => validateField('education_name')}
-                                disabled={getFieldDisplayStatus('education_name') !== 'review'}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label="Valideer specialisatie"
-                                title="Valideer specialisatie"
-                            >
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                            </button>
-                        </div>
-                        <Input 
-                            className={fieldClass('education_name')} 
-                            placeholder="Bijv. Kappersopleiding" 
-                            value={employeeDetails?.education_name || ''} 
-                            onChange={e => handleDetailChange('education_name', e.target.value)} 
-                        />
+                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4 text-purple-600" />
+                            Specialisatie
+                        </label>
+                        <ValidatableField
+                            onValidate={() => validateField('education_name')}
+                            canValidate={canValidateField('education_name')}
+                            validateLabel="Valideer specialisatie"
+                        >
+                            <Input
+                                className={cn(fieldClass('education_name'), 'pr-10')}
+                                placeholder="Bijv. Kappersopleiding"
+                                value={employeeDetails?.education_name || ''}
+                                onChange={e => handleDetailChange('education_name', e.target.value)}
+                            />
+                        </ValidatableField>
                     </div>
                 </div>
 
@@ -1552,43 +1510,33 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     {label}
                                 </span>
                             </div>
-                            <button
-                                type="button"
+                            <FieldValidateButton
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
                                     validateField(key as EmployeeDetailFieldKey);
                                 }}
-                                disabled={getFieldDisplayStatus(key as EmployeeDetailFieldKey) !== 'review'}
-                                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label={`Valideer ${label}`}
-                                title={`Valideer ${label}`}
-                            >
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                            </button>
+                                disabled={!canValidateField(key as EmployeeDetailFieldKey)}
+                                label={`Valideer ${label}`}
+                                className="ml-auto"
+                            />
                         </label>
                     ))}
                 </div>
 
                 {/* Multi-select driver's license types */}
                 {employeeDetails?.drivers_license && (
-                    <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                        <div className="flex items-center justify-between gap-3 mb-3">
-                            <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
-                                <Car className="w-4 h-4 text-purple-600" />
-                                Rijbewijstype
-                            </label>
-                            <button
-                                type="button"
-                                onClick={() => validateField('drivers_license_type')}
-                                disabled={getFieldDisplayStatus('drivers_license_type') !== 'review'}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                aria-label="Valideer rijbewijstype"
-                                title="Valideer rijbewijstype"
-                            >
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                            </button>
-                        </div>
+                    <div className="relative p-4 bg-purple-50/50 rounded-lg border border-purple-100">
+                        <FieldValidateButton
+                            onClick={() => validateField('drivers_license_type')}
+                            disabled={!canValidateField('drivers_license_type')}
+                            label="Valideer rijbewijstype"
+                            className="absolute right-3 top-3 z-10"
+                        />
+                        <label className="mb-3 block pr-10 text-sm font-semibold flex items-center gap-2 text-gray-700">
+                            <Car className="w-4 h-4 text-purple-600" />
+                            Rijbewijstype
+                        </label>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                             {[
                                 { value: 'B', label: 'B (Auto)' },
@@ -1644,23 +1592,17 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 )}
 
                 {/* Multi-select transport */}
-                <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                        <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
-                            <Car className="w-4 h-4 text-purple-600" />
-                            Eigen vervoer
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('transport_type')}
-                            disabled={getFieldDisplayStatus('transport_type') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer eigen vervoer"
-                            title="Valideer eigen vervoer"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
+                <div className="relative p-4 bg-purple-50/50 rounded-lg border border-purple-100">
+                    <FieldValidateButton
+                        onClick={() => validateField('transport_type')}
+                        disabled={!canValidateField('transport_type')}
+                        label="Valideer eigen vervoer"
+                        className="absolute right-3 top-3 z-10"
+                    />
+                    <label className="mb-3 block pr-10 text-sm font-semibold flex items-center gap-2 text-gray-700">
+                        <Car className="w-4 h-4 text-purple-600" />
+                        Eigen vervoer
+                    </label>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'].map((option) => {
                             const selected = Array.isArray(employeeDetails?.transport_type) 
@@ -1719,166 +1661,134 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2 group">
-                            <div className="flex items-center justify-between gap-2">
-                                <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
-                                <button
-                                    type="button"
-                                    onClick={() => validateField('dutch_speaking')}
-                                    disabled={getFieldDisplayStatus('dutch_speaking') !== 'review'}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                    aria-label="Valideer spreekvaardigheid"
-                                    title="Valideer spreekvaardigheid"
-                                >
-                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                                </button>
-                            </div>
-                            <Select value={employeeDetails?.dutch_speaking || undefined} onValueChange={(v) => handleDetailChange('dutch_speaking', v || null)}>
-                                <SelectTrigger className={selectFieldClass('dutch_speaking')}>
-                                    <SelectValue placeholder="Selecteer..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                    <SelectItem value="Goed">Goed</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
+                            <ValidatableField
+                                onValidate={() => validateField('dutch_speaking')}
+                                canValidate={canValidateField('dutch_speaking')}
+                                validateLabel="Valideer spreekvaardigheid"
+                                buttonSize="sm"
+                            >
+                                <Select value={employeeDetails?.dutch_speaking || undefined} onValueChange={(v) => handleDetailChange('dutch_speaking', v || null)}>
+                                    <SelectTrigger className={cn(selectFieldClass('dutch_speaking'), 'pr-9')}>
+                                        <SelectValue placeholder="Selecteer..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                        <SelectItem value="Goed">Goed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
                         </div>
                         <div className="space-y-2 group">
-                            <div className="flex items-center justify-between gap-2">
-                                <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
-                                <button
-                                    type="button"
-                                    onClick={() => validateField('dutch_writing')}
-                                    disabled={getFieldDisplayStatus('dutch_writing') !== 'review'}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                    aria-label="Valideer schrijfvaardigheid"
-                                    title="Valideer schrijfvaardigheid"
-                                >
-                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                                </button>
-                            </div>
-                            <Select value={employeeDetails?.dutch_writing || undefined} onValueChange={(v) => handleDetailChange('dutch_writing', v || null)}>
-                                <SelectTrigger className={selectFieldClass('dutch_writing')}>
-                                    <SelectValue placeholder="Selecteer..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                    <SelectItem value="Goed">Goed</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
+                            <ValidatableField
+                                onValidate={() => validateField('dutch_writing')}
+                                canValidate={canValidateField('dutch_writing')}
+                                validateLabel="Valideer schrijfvaardigheid"
+                                buttonSize="sm"
+                            >
+                                <Select value={employeeDetails?.dutch_writing || undefined} onValueChange={(v) => handleDetailChange('dutch_writing', v || null)}>
+                                    <SelectTrigger className={cn(selectFieldClass('dutch_writing'), 'pr-9')}>
+                                        <SelectValue placeholder="Selecteer..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                        <SelectItem value="Goed">Goed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
                         </div>
                         <div className="space-y-2 group">
-                            <div className="flex items-center justify-between gap-2">
-                                <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
-                                <button
-                                    type="button"
-                                    onClick={() => validateField('dutch_reading')}
-                                    disabled={getFieldDisplayStatus('dutch_reading') !== 'review'}
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                    aria-label="Valideer leesvaardigheid"
-                                    title="Valideer leesvaardigheid"
-                                >
-                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-                                </button>
-                            </div>
-                            <Select value={employeeDetails?.dutch_reading || undefined} onValueChange={(v) => handleDetailChange('dutch_reading', v || null)}>
-                                <SelectTrigger className={selectFieldClass('dutch_reading')}>
-                                    <SelectValue placeholder="Selecteer..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                    <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                    <SelectItem value="Goed">Goed</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
+                            <ValidatableField
+                                onValidate={() => validateField('dutch_reading')}
+                                canValidate={canValidateField('dutch_reading')}
+                                validateLabel="Valideer leesvaardigheid"
+                                buttonSize="sm"
+                            >
+                                <Select value={employeeDetails?.dutch_reading || undefined} onValueChange={(v) => handleDetailChange('dutch_reading', v || null)}>
+                                    <SelectTrigger className={cn(selectFieldClass('dutch_reading'), 'pr-9')}>
+                                        <SelectValue placeholder="Selecteer..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
+                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
+                                        <SelectItem value="Goed">Goed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
                         </div>
                     </div>
                 </div>
 
                 {/* Computer Skills */}
                 <div className="space-y-2 group">
-                    <div className="flex items-center justify-between gap-3">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Computer className="w-4 h-4 text-purple-600" />
-                            Computervaardigheden
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('computer_skills')}
-                            disabled={getFieldDisplayStatus('computer_skills') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer computervaardigheden"
-                            title="Valideer computervaardigheden"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
-                    <Select value={employeeDetails?.computer_skills || undefined} onValueChange={(v) => handleDetailChange('computer_skills', v)}>
-                        <SelectTrigger className={selectFieldClass('computer_skills')}>
-                            <SelectValue placeholder="Selecteer computervaardigheden" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="1">1 - Geen</SelectItem>
-                            <SelectItem value="2">2 - Basis (e-mail, browsen)</SelectItem>
-                            <SelectItem value="3">3 - Gemiddeld (Word, Excel)</SelectItem>
-                            <SelectItem value="4">4 - Geavanceerd (meerdere programma's)</SelectItem>
-                            <SelectItem value="5">5 - Expert (IT-gerelateerde vaardigheden)</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Computer className="w-4 h-4 text-purple-600" />
+                        Computervaardigheden
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('computer_skills')}
+                        canValidate={canValidateField('computer_skills')}
+                        validateLabel="Valideer computervaardigheden"
+                    >
+                        <Select value={employeeDetails?.computer_skills || undefined} onValueChange={(v) => handleDetailChange('computer_skills', v)}>
+                            <SelectTrigger className={cn(selectFieldClass('computer_skills'), 'pr-10')}>
+                                <SelectValue placeholder="Selecteer computervaardigheden" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1">1 - Geen</SelectItem>
+                                <SelectItem value="2">2 - Basis (e-mail, browsen)</SelectItem>
+                                <SelectItem value="3">3 - Gemiddeld (Word, Excel)</SelectItem>
+                                <SelectItem value="4">4 - Geavanceerd (meerdere programma's)</SelectItem>
+                                <SelectItem value="5">5 - Expert (IT-gerelateerde vaardigheden)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </ValidatableField>
                 </div>
 
                 {/* Contract Hours */}
                 <div className="space-y-2 group">
-                    <div className="flex items-center justify-between gap-3">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-purple-600" />
-                            Contracturen
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('contract_hours')}
-                            disabled={getFieldDisplayStatus('contract_hours') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer contracturen"
-                            title="Valideer contracturen"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
-                    <Input 
-                        className={fieldClass('contract_hours')} 
-                        type="number" 
-                        placeholder="Bijv. 40" 
-                        value={employeeDetails?.contract_hours || ''} 
-                        onChange={e => handleDetailChange('contract_hours', Number(e.target.value))} 
-                    />
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        Contracturen
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('contract_hours')}
+                        canValidate={canValidateField('contract_hours')}
+                        validateLabel="Valideer contracturen"
+                    >
+                        <Input
+                            className={cn(fieldClass('contract_hours'), 'pr-10')}
+                            type="number"
+                            placeholder="Bijv. 40"
+                            value={employeeDetails?.contract_hours || ''}
+                            onChange={e => handleDetailChange('contract_hours', Number(e.target.value))}
+                        />
+                    </ValidatableField>
                 </div>
                 
                 {/* Other Employers */}
                 <div className="space-y-2 group">
-                    <div className="flex items-center justify-between gap-3">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-purple-600" />
-                            Andere werkgevers
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => validateField('other_employers')}
-                            disabled={getFieldDisplayStatus('other_employers') !== 'review'}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-green-200 bg-white text-green-700 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label="Valideer andere werkgevers"
-                            title="Valideer andere werkgevers"
-                        >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        </button>
-                    </div>
-                    <Textarea 
-                        className={fieldClass('other_employers') + ' min-h-[100px]'} 
-                        placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..." 
-                        value={isAbsentText(employeeDetails?.other_employers) ? '' : (employeeDetails?.other_employers || '')} 
-                        onChange={e => handleDetailChange('other_employers', e.target.value)} 
-                    />
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-purple-600" />
+                        Andere werkgevers
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('other_employers')}
+                        canValidate={canValidateField('other_employers')}
+                        validateLabel="Valideer andere werkgevers"
+                        placement="textarea-top"
+                    >
+                        <Textarea
+                            className={cn(fieldClass('other_employers'), 'min-h-[100px] pr-10')}
+                            placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..."
+                            value={isAbsentText(employeeDetails?.other_employers) ? '' : (employeeDetails?.other_employers || '')}
+                            onChange={e => handleDetailChange('other_employers', e.target.value)}
+                        />
+                    </ValidatableField>
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                         <span className="text-purple-500">ℹ️</span>
                         Vul hier alleen andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever ({clientName})
