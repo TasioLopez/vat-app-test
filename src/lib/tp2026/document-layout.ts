@@ -15,9 +15,10 @@ export const TP2026_BODY_MARGIN_X_PX = 96;
 /**
  * In-flow spacer so first section starts below the logo asset + gap
  * (logo is `position: absolute` and does not reserve space; tagline is in the PNG).
+ * Gap below logo: 12 + 20px (~1.5 lines); was 12 + 40.
  */
 export const TP2026_BODY_FLOW_START_SPACER_PX =
-  TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 12 + 40;
+  TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 12 + 20;
 
 /** Bijlage 1: tighter gap between logo and page title. */
 export const TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX =
