@@ -25,7 +25,6 @@ import {
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
 import type { TP2026Bijlage1Activity, TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
-import { TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/tp2026/schema';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
@@ -642,7 +641,7 @@ export function Bijlage1A4Pages({
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       {/* Scroll main body; footer stays pinned to bottom of A4 (avoids clipped fase 3 + stray gap). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-        <A4LogoHeader flowStartSpacerPx={TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX} />
+        <A4LogoHeader />
         <div className="mb-1 shrink-0">
           {/* Google Doc: "Bijlage 1" 11 pt; subtitle "Voortgang en planning" 10 pt (smaller). */}
           <div className="text-[11pt] leading-tight font-bold tracking-tight text-[#d4694a]">Bijlage 1</div>

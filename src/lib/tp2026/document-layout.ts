@@ -19,7 +19,3 @@ export const TP2026_BODY_MARGIN_X_PX = 96;
  */
 export const TP2026_BODY_FLOW_START_SPACER_PX =
   TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 12 + 20;
-
-/** Bijlage 1: tighter gap between logo and page title. */
-export const TP2026_BIJLAGE1_BODY_FLOW_START_SPACER_PX =
-  TP2026_BODY_FLOW_START_SPACER_PX - 28;
