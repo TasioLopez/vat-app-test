@@ -80,12 +80,7 @@ Daarnaast kan een interesse- en competentietest worden ingezet wanneer de werkne
   {
     id: 'scholing',
     title: 'Scholing',
-    body: `Scholing wordt alleen ingezet wanneer dit noodzakelijk blijkt. Hierbij wordt het uitgangspunt van redelijkheid en billijkheid toegepast. Dit betekent dat het moet gaan om een relatief korte cursus of opleiding, waarbij de kosten in verhouding staan tot het beoogde resultaat. Alle cursussen en opleidingen worden altijd ter goedkeuring voorgelegd aan de werkgever.
-
-- Heeft een cursus (behalve taalvaardigheid) een toegevoegde waarde gezien de passende functies?
-- Benoemt de arbeidsdeskundige eventuele opleidingen in zijn rapport?
-- Is er een concrete cursus die in het geval van de werknemer al gewenst is om te benoemen?
-- Controleer of er geen beperkingen zijn op het gebied van concentratie en het verdelen van aandacht.`,
+    body: `Scholing wordt alleen ingezet wanneer dit noodzakelijk blijkt. Hierbij wordt het uitgangspunt van redelijkheid en billijkheid toegepast. Dit betekent dat het moet gaan om een relatief korte cursus of opleiding, waarbij de kosten in verhouding staan tot het beoogde resultaat. Alle cursussen en opleidingen worden altijd ter goedkeuring voorgelegd aan de werkgever.`,
   },
   {
     id: 'social-media',

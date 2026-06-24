@@ -9,7 +9,7 @@ export function ActivityBody({ bodyMain, subText, className = "" }: ActivityBody
 
   return (
     <div className={className}>
-      <p className={hasSubText ? "mb-2" : ""}>{bodyMain}</p>
+      <p className={`text-[12px] leading-relaxed text-neutral-900 ${hasSubText ? 'mb-2' : ''}`}>{bodyMain}</p>
       {hasSubText && (
         <div className="flex items-start gap-2 mt-2">
           <img
@@ -19,7 +19,7 @@ export function ActivityBody({ bodyMain, subText, className = "" }: ActivityBody
             height={14}
             className="mt-1 flex-shrink-0"
           />
-          <span>{subText!.trim()}</span>
+          <span className="text-[12px] leading-relaxed text-neutral-900">{subText!.trim()}</span>
         </div>
       )}
     </div>

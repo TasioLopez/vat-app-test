@@ -39,7 +39,7 @@ export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
   return (
     <div className="mt-2 flex items-start gap-2">
       <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-1 flex-shrink-0" />
-      <span>{subText.trim()}</span>
+      <span className="text-[12px] leading-relaxed text-neutral-900">{subText.trim()}</span>
     </div>
   );
 }
