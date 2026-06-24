@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
 
 /** Inline **bold**, *italic*, ***both***, and "quoted" segments (legacy TP preview semantics). */
 export function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
@@ -68,7 +69,7 @@ export function renderTextWithLogoBullets(
 
     if (isPlaatsbaarheid && trimmedPara.startsWith('Dit is geen limitatieve opsomming')) {
       return (
-        <p key={paraIdx} className="mt-4 text-[#6d2a96] italic">
+        <p key={paraIdx} className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
           {formatInlineText(trimmedPara)}
         </p>
       );

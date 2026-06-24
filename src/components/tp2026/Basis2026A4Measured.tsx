@@ -18,6 +18,7 @@ import {
   getBasisToelichtingLabel,
   normalizeWkMarkdown,
   TP_BASIS_BODY_BOX_CLASS,
+  TP_BASIS_DISCLAIMER_CLASS,
   TP_BASIS_TOELICHTING_DEFAULT,
   TP_WK_INTRO_LINE,
 } from '@/lib/tp2026/basis-document-layout';
@@ -457,7 +458,7 @@ function TextBlockBody({
       <div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/pow-meter-v2.png" alt="PoW-meter" className="mt-1 w-full h-auto" />
-        <p className="mt-4 text-[10px] italic text-[#6d2a96]">{POW_METER_FOOTNOTE}</p>
+        <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{POW_METER_FOOTNOTE}</p>
       </div>
     );
   }
@@ -488,7 +489,7 @@ function TextBlockBody({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[200px] max-w-full" />
         </div>
-        <p className="mt-4 text-[10px] italic text-[#6d2a96]">{POW_METER_FOOTNOTE}</p>
+        <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{POW_METER_FOOTNOTE}</p>
       </div>
     );
   }

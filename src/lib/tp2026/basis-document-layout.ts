@@ -7,6 +7,9 @@ export const TP_BASIS_BODY_BOX_CLASS = 'bg-[#f3efe4] p-2.5 text-neutral-900';
 export const TP_BASIS_TOELICHTING_CLASS =
   'mb-1.5 text-[12px] font-bold leading-tight text-[#64b6a6]';
 
+export const TP_BASIS_DISCLAIMER_CLASS =
+  'text-[10px] italic leading-relaxed text-[#6d2a96]';
+
 export const TP_BASIS_TOELICHTING_DEFAULT = 'Toelichting';
 
 export const TP_BASIS_TOELICHTING_POW = 'Toelichting POW-meter™';
