@@ -9,7 +9,7 @@ import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { SectionBand } from '@/components/tp2026/primitives';
 
 const paperText =
-  'bg-[#f5efe6] p-2.5 text-[12px] leading-relaxed text-neutral-900';
+  'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
 
 export function BasisAgreementBlock() {
   return (
