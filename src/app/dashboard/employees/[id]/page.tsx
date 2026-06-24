@@ -118,6 +118,8 @@ type Document = {
     type: string | null;
     tp_export_id: string | null;
     tp_instance_id: string | null;
+    vgr_export_id: string | null;
+    vgr_instance_id: string | null;
     uploaded_at: string | null;
     url: string;
 };
@@ -258,6 +260,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [tpVariantModalOpen, setTpVariantModalOpen] = useState(false);
     const [tpOpening, setTpOpening] = useState<null | 'tp_legacy' | 'tp_2026'>(null);
+    const [vgrOpening, setVgrOpening] = useState(false);
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -994,6 +997,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const openVgrBuilder = async () => {
+        setVgrOpening(true);
+        try {
+            setDocsModalOpen(false);
+            router.push(`/dashboard/vgr/${employeeId}`);
+        } catch (error) {
+            console.error(error);
+            showError('Fout', 'Kon VGR bouwer niet openen.');
+        } finally {
+            setVgrOpening(false);
+        }
+    };
+
     return (
         <div className="p-4 space-y-6">
             <h1 className="text-xl font-bold">Werknemer Details</h1>
@@ -1244,18 +1260,18 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setDocsModalOpen(false);
-                                                router.push(`/dashboard/vgr/${employeeId}`);
-                                            }}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2"
+                                            onClick={() => void openVgrBuilder()}
+                                            disabled={vgrOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:opacity-60"
                                         >
                                             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
                                                 <Compass className="h-6 w-6" />
                                             </span>
                                             <span className="min-w-0 flex-1">
                                                 <span className="block font-semibold text-gray-900">VGR</span>
-                                                <span className="text-sm text-gray-600">Placeholder (coming soon)</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {vgrOpening ? 'Openen…' : 'Voortgangsrapportage-editor'}
+                                                </span>
                                             </span>
                                         </button>
                                         <button

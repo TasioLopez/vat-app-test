@@ -113,6 +113,8 @@ export type Database = {
           tp_instance_id: string | null
           uploaded_at: string | null
           url: string
+          vgr_export_id: string | null
+          vgr_instance_id: string | null
         }
         Insert: {
           employee_id?: string | null
@@ -124,6 +126,8 @@ export type Database = {
           tp_instance_id?: string | null
           uploaded_at?: string | null
           url: string
+          vgr_export_id?: string | null
+          vgr_instance_id?: string | null
         }
         Update: {
           employee_id?: string | null
@@ -135,6 +139,8 @@ export type Database = {
           tp_instance_id?: string | null
           uploaded_at?: string | null
           url?: string
+          vgr_export_id?: string | null
+          vgr_instance_id?: string | null
         }
         Relationships: [
           {
@@ -149,6 +155,20 @@ export type Database = {
             columns: ["tp_export_id"]
             isOneToOne: false
             referencedRelation: "tp_exports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_vgr_export_id_fkey"
+            columns: ["vgr_export_id"]
+            isOneToOne: false
+            referencedRelation: "vgr_exports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_vgr_instance_id_fkey"
+            columns: ["vgr_instance_id"]
+            isOneToOne: false
+            referencedRelation: "vgr_instances"
             referencedColumns: ["id"]
           },
           {
@@ -551,6 +571,115 @@ export type Database = {
             columns: ["tp_instance_id"]
             isOneToOne: false
             referencedRelation: "tp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vgr_exports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          filename: string | null
+          id: string
+          layout_key: string
+          snapshot_json: Json
+          storage_path: string | null
+          vgr_instance_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          filename?: string | null
+          id?: string
+          layout_key: string
+          snapshot_json?: Json
+          storage_path?: string | null
+          vgr_instance_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          filename?: string | null
+          id?: string
+          layout_key?: string
+          snapshot_json?: Json
+          storage_path?: string | null
+          vgr_instance_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vgr_exports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_exports_vgr_instance_id_fkey"
+            columns: ["vgr_instance_id"]
+            isOneToOne: false
+            referencedRelation: "vgr_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vgr_instances: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_json: Json
+          employee_id: string
+          id: string
+          layout_key: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          employee_id: string
+          id?: string
+          layout_key: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_json?: Json
+          employee_id?: string
+          id?: string
+          layout_key?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vgr_instances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_instances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_instances_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

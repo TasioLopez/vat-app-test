@@ -31,11 +31,7 @@ import { Basis2026A4Pages, Basis2026Editor } from '@/components/tp2026/sections/
 import {
   Bijlage1A4Pages,
   Bijlage1Editor,
-  Bijlage2A4Pages,
-  Bijlage2Editor,
-  Bijlage3A4Pages,
-  Bijlage3Editor,
-} from '@/components/tp2026/sections/Bijlage2026Sections';
+} from '@/components/tp2026/sections/Bijlage1Section';
 import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
 import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
@@ -286,33 +282,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         />
       ),
       renderPreview: () => <Bijlage1A4Pages data={tpData} phases={tpData.bijlage1_phases || []} />,
-    },
-    {
-      id: 5,
-      title: 'Bijlage 2',
-      renderEditor: () => (
-        <Bijlage2Editor model={tpData.bijlage2_model} setModel={(next) => updateField('bijlage2_model', next)} />
-      ),
-      renderPreview: () => <Bijlage2A4Pages data={tpData} model={tpData.bijlage2_model} />,
-    },
-    {
-      id: 6,
-      title: 'Bijlage 3',
-      renderEditor: () => (
-        <Bijlage3Editor
-          decisions={tpData.bijlage3_decisions || []}
-          setDecisions={(next) => updateField('bijlage3_decisions', next)}
-          page2={tpData.bijlage3_page2 || {}}
-          setPage2={(next) => updateField('bijlage3_page2', next)}
-        />
-      ),
-      renderPreview: () => (
-        <Bijlage3A4Pages
-          data={tpData}
-          decisions={tpData.bijlage3_decisions || []}
-          page2={tpData.bijlage3_page2 || {}}
-        />
-      ),
     },
   ];
 

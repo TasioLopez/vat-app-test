@@ -8,9 +8,7 @@ export type TP2026SectionKey =
   | "cover2026"
   | "gegevens2026"
   | "basis2026"
-  | "bijlage12026"
-  | "bijlage22026"
-  | "bijlage32026";
+  | "bijlage12026";
 export type RegistrySectionKey = SectionKey | TP2026SectionKey;
 export type TPLayoutRegistryKey = "tp_legacy" | "tp_2026";
 type WithEmployeeId = React.ComponentType<{ employeeId: string }>;
@@ -93,8 +91,6 @@ export const TP_2026_SECTIONS: SectionConfig[] = [
   { key: "gegevens2026", title: "02 Gegevens", Edit: TP2026Placeholder, Preview: TP2026Placeholder, PreviewWithData: TP2026PlaceholderWithData, selfPages: true },
   { key: "basis2026", title: "03 Basisdocument", Edit: TP2026Placeholder, Preview: TP2026Placeholder, PreviewWithData: TP2026PlaceholderWithData, selfPages: true },
   { key: "bijlage12026", title: "Bijlage 1", Edit: TP2026Placeholder, Preview: TP2026Placeholder, PreviewWithData: TP2026PlaceholderWithData, selfPages: true },
-  { key: "bijlage22026", title: "Bijlage 2", Edit: TP2026Placeholder, Preview: TP2026Placeholder, PreviewWithData: TP2026PlaceholderWithData, selfPages: true },
-  { key: "bijlage32026", title: "Bijlage 3", Edit: TP2026Placeholder, Preview: TP2026Placeholder, PreviewWithData: TP2026PlaceholderWithData, selfPages: true },
 ];
 
 function getSectionsForLayout(layoutKey: TPLayoutRegistryKey): SectionConfig[] {

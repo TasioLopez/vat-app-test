@@ -1,4 +1,4 @@
-import type { TP2026Bijlage3Decision } from '@/lib/tp2026/schema';
+import type { VGRBijlage3Decision } from '@/lib/vgr/schema';
 
 /** Official stroomschema rows (ValentineZ Trajectplan Stroomschema Bijlage 3). */
 export const BIJLAGE3_TABLE_HEADERS = [
@@ -9,7 +9,7 @@ export const BIJLAGE3_TABLE_HEADERS = [
   'Doel behaald',
 ] as const;
 
-export type Bijlage3OfficialStepDef = Omit<TP2026Bijlage3Decision, 'reached' | 'doelJa' | 'doelNee'>;
+export type Bijlage3OfficialStepDef = Omit<VGRBijlage3Decision, 'reached' | 'doelJa' | 'doelNee'>;
 
 /** Trede 5 row (`Kan een functie zonder aanpassingen…`) — always starts its own page chunk after Trede 4. */
 export const BIJLAGE3_STEP_7_ID = 'b3_step_7' as const;
@@ -113,11 +113,10 @@ export const BIJLAGE3_PAGE2 = {
   tredeNum: 6 as const,
   tredeLabel: 'Trede 6:',
   tredeBody: 'Weer volledig werkzaam binnen of buiten de organisatie',
-  /** Doel uren % column — voltijd / duurzaam betaald werk. */
   doelUren: '≥ 100% van het contract (duurzaam voltijd)',
 } as const;
 
-export function createOfficialBijlage3Decisions(): TP2026Bijlage3Decision[] {
+export function createOfficialBijlage3Decisions(): VGRBijlage3Decision[] {
   return BIJLAGE3_OFFICIAL_STEPS.map((s) => ({
     ...s,
     werkboeken: [...s.werkboeken],

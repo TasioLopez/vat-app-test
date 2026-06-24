@@ -14,9 +14,7 @@ export type TPInstanceSectionKey =
   | 'cover2026'
   | 'gegevens2026'
   | 'basis2026'
-  | 'bijlage12026'
-  | 'bijlage22026'
-  | 'bijlage32026';
+  | 'bijlage12026';
 
 export type TPInstanceData = Record<string, any>;
 
@@ -40,8 +38,6 @@ const SECTION_SAVE_ORDER: TPInstanceSectionKey[] = [
   'gegevens2026',
   'basis2026',
   'bijlage12026',
-  'bijlage22026',
-  'bijlage32026',
 ];
 
 const TPInstanceCtx = createContext<TPInstanceContextValue | undefined>(undefined);

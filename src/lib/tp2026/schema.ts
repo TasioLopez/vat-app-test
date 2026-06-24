@@ -108,50 +108,6 @@ export type TP2026Bijlage1Phase = {
   activities: TP2026Bijlage1Activity[];
 };
 
-export type TP2026BijlageChecklistRow = {
-  label: string;
-  checked: boolean;
-};
-
-export type TP2026Bijlage2PowTrede = {
-  trede: number;
-  /** Completion criteria from the official Bijlage 2 template (checkbox each). */
-  criteria: TP2026BijlageChecklistRow[];
-};
-
-export type TP2026Bijlage2Model = {
-  willen: TP2026BijlageChecklistRow[];
-  weten: TP2026BijlageChecklistRow[];
-  kunnen: TP2026BijlageChecklistRow[];
-  doen: TP2026BijlageChecklistRow[];
-  powTredes: TP2026Bijlage2PowTrede[];
-};
-
-export type TP2026Bijlage3Decision = {
-  /** Stable id for merge/migration (`b3_step_1` … `b3_step_7`). */
-  id: string;
-  /** Main question text (may contain `\n`). */
-  question: string;
-  questionSubtitle?: string;
-  /** “Denk aan:” block; optional. */
-  hint?: string;
-  /** Trede number for NEE-branch styling (1–5). */
-  neeTredeNum: number;
-  neeTredeLabel: string;
-  /** Body text inside Trede-bepaling cell (line breaks preserved). */
-  neeTredeBody: string;
-  /** Doel uren % column (may be empty for early steps). */
-  doelUren: string;
-  werkboeken: string[];
-  /** Short hints for editor (Ja / Nee path). */
-  yesOutcome: string;
-  noOutcome: string;
-  reached?: 'yes' | 'no' | null;
-  /** Doel behaald column — optional checkboxes mirroring PDF. */
-  doelJa?: boolean;
-  doelNee?: boolean;
-};
-
 export function ensureArray<T>(value: unknown, fallback: T[]): T[] {
   return Array.isArray(value) ? (value as T[]) : fallback;
 }

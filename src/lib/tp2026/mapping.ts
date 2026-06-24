@@ -4,13 +4,7 @@ import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static
 import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
-  TP2026Bijlage2Model,
-  TP2026Bijlage2PowTrede,
-  TP2026Bijlage3Decision,
-  TP2026BijlageChecklistRow,
 } from './schema';
-import { createOfficialBijlage2Model } from '@/lib/tp2026/bijlage2-official';
-import { createOfficialBijlage3Decisions } from '@/lib/tp2026/bijlage3-official';
 import { resolveBijlage1PhaseDates } from '@/lib/tp2026/bijlage1-dates';
 import { normalizeTp3Activities } from '@/lib/tp/tp_activities';
 import {
@@ -65,130 +59,6 @@ const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
     ].map((name) => ({ name, status: 'P' })),
   },
 ];
-
-const bijlage2Default: TP2026Bijlage2Model = createOfficialBijlage2Model();
-
-function normChecklistLabel(label: string): string {
-  return String(label || '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/\u2019/g, "'");
-}
-
-/** Map legacy dev labels to official PDF labels so checked state is preserved. */
-const BIJLAGE2_CHECKLIST_LEGACY: Record<string, string> = {
-  'Opstellen verzorgd cv': 'Opstellen verzorgd c.v.',
-  '(Werk)ervaring via spoor 1': '(Werk)ervaring opgedaan via Spoor 1',
-  '(Werk)ervaring via stage/WEP': '(Werk)ervaring opgedaan via een werkervaringsplaats/ stage (WEP)',
-  'Jobhunting/actieve bemiddeling': 'Jobhunting/ actieve bemiddeling',
-};
-
-function canonicalChecklistLabel(label: string): string {
-  const n = normChecklistLabel(label);
-  const mapped = BIJLAGE2_CHECKLIST_LEGACY[n];
-  return mapped ? normChecklistLabel(mapped) : n;
-}
-
-function mergeChecklistGroup(
-  defaults: TP2026BijlageChecklistRow[],
-  saved: unknown
-): TP2026BijlageChecklistRow[] {
-  const savedArr = Array.isArray(saved) ? saved : [];
-  const checkedByCanonical = new Map<string, boolean>();
-  for (const row of savedArr) {
-    if (!row || typeof row !== 'object' || typeof (row as { label?: unknown }).label !== 'string') continue;
-    const r = row as TP2026BijlageChecklistRow;
-    const key = canonicalChecklistLabel(r.label);
-    checkedByCanonical.set(key, checkedByCanonical.get(key) || Boolean(r.checked));
-  }
-  return defaults.map((d) => ({
-    label: d.label,
-    checked: checkedByCanonical.get(normChecklistLabel(d.label)) ?? false,
-  }));
-}
-
-function isLegacyPowPlaceholder(row: Record<string, unknown>): boolean {
-  const raw = row.criteria ?? row.checks;
-  if (!Array.isArray(raw) || raw.length !== 1) return false;
-  const first = raw[0] as { label?: unknown };
-  return typeof first?.label === 'string' && /behaald/i.test(first.label);
-}
-
-function normalizePowTredes(savedPow: unknown): TP2026Bijlage2PowTrede[] {
-  const defaults = createOfficialBijlage2Model().powTredes;
-  if (!Array.isArray(savedPow)) return defaults;
-
-  const savedRows = savedPow
-    .filter((x) => x && typeof x === 'object')
-    .map((x) => x as Record<string, unknown>);
-
-  return defaults.map((def) => {
-    const tredeNum = def.trede;
-    const saved = savedRows.find((r) => Number(r.trede) === tredeNum);
-    if (!saved) return def;
-    if (isLegacyPowPlaceholder(saved)) return def;
-
-    const src = (saved.criteria ?? saved.checks) as unknown;
-    if (!Array.isArray(src)) return def;
-
-    const checkedByLabel = new Map<string, boolean>();
-    for (const c of src) {
-      if (!c || typeof c !== 'object' || typeof (c as { label?: unknown }).label !== 'string') continue;
-      const cr = c as TP2026BijlageChecklistRow;
-      checkedByLabel.set(normChecklistLabel(cr.label), Boolean(cr.checked));
-    }
-
-    return {
-      trede: tredeNum,
-      criteria: def.criteria.map((cr) => ({
-        label: cr.label,
-        checked: checkedByLabel.get(normChecklistLabel(cr.label)) ?? false,
-      })),
-    };
-  });
-}
-
-export function normalizeBijlage2Model(raw: unknown): TP2026Bijlage2Model {
-  const base = createOfficialBijlage2Model();
-  if (!raw || typeof raw !== 'object') return base;
-
-  const m = raw as Record<string, unknown>;
-  return {
-    willen: mergeChecklistGroup(base.willen, m.willen),
-    weten: mergeChecklistGroup(base.weten, m.weten),
-    kunnen: mergeChecklistGroup(base.kunnen, m.kunnen),
-    doen: mergeChecklistGroup(base.doen, m.doen),
-    powTredes: normalizePowTredes(m.powTredes),
-  };
-}
-
-function normalizeBijlage3Decisions(raw: unknown): TP2026Bijlage3Decision[] {
-  const defaults = createOfficialBijlage3Decisions();
-  if (!Array.isArray(raw) || raw.length === 0) return defaults;
-
-  return defaults.map((def, idx) => {
-    const arr = raw as Record<string, unknown>[];
-    const byId = arr.find((x) => x && typeof x === 'object' && String((x as { id?: unknown }).id) === def.id);
-    const saved = (byId ?? arr[idx]) as Record<string, unknown> | undefined;
-    if (!saved || typeof saved !== 'object') {
-      return { ...def };
-    }
-    const r = saved.reached;
-    const reached = r === 'yes' || r === 'no' ? r : null;
-    return {
-      ...def,
-      reached,
-      doelJa: Boolean(saved.doelJa),
-      doelNee: Boolean(saved.doelNee),
-    };
-  });
-}
-
-function normalizeBijlage3Page2(raw: unknown): { doelJa: boolean; doelNee: boolean } {
-  if (!raw || typeof raw !== 'object') return { doelJa: false, doelNee: false };
-  const o = raw as Record<string, unknown>;
-  return { doelJa: Boolean(o.doelJa), doelNee: Boolean(o.doelNee) };
-}
 
 function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
   if (!Array.isArray(raw)) return [];
@@ -246,19 +116,6 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   }
   const planStart = next.tp_start_date || next.intake_date;
   next.bijlage1_phases = resolveBijlage1PhaseDates(bijlage1Phases, fromLegacy, planStart, next.tp_end_date);
-
-  if (!next.bijlage2_model || typeof next.bijlage2_model !== 'object') {
-    next.bijlage2_model = bijlage2Default;
-  } else {
-    next.bijlage2_model = normalizeBijlage2Model(next.bijlage2_model);
-  }
-
-  if (!Array.isArray(next.bijlage3_decisions) || next.bijlage3_decisions.length === 0) {
-    next.bijlage3_decisions = createOfficialBijlage3Decisions();
-  } else {
-    next.bijlage3_decisions = normalizeBijlage3Decisions(next.bijlage3_decisions);
-  }
-  next.bijlage3_page2 = normalizeBijlage3Page2(next.bijlage3_page2);
 
   if (!String(next.wettelijke_kaders || '').trim()) {
     next.wettelijke_kaders = WETTELIJKE_KADERS;

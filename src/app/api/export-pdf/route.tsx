@@ -8,7 +8,9 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { loadTPData } from "@/lib/tp/load";
 import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
+import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
+import { ensureVGRShape } from "@/lib/vgr/mapping";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 
 export const runtime = "nodejs";
@@ -85,8 +87,9 @@ export async function GET(req: NextRequest) {
   const filename = (search.get("filename") || "TP.pdf").replace(/[^\w.\-]/g, "_");
   const mode = search.get("mode") || "json";
   const tpInstanceId = search.get("tpInstanceId");
+  const vgrInstanceId = search.get("vgrInstanceId");
   const requestedLayout = search.get("layoutKey");
-  const layoutKey: TPLayoutKey = isTPLayoutKey(requestedLayout) ? requestedLayout : "tp_legacy";
+  const isVgrExport = requestedLayout === "vgr" || Boolean(vgrInstanceId);
 
   if (!employeeId) {
     return new Response(JSON.stringify({ error: "Missing employeeId" }), {
@@ -114,6 +117,156 @@ export async function GET(req: NextRequest) {
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+
+  if (isVgrExport) {
+    if (!vgrInstanceId) {
+      return new Response(JSON.stringify({ error: "vgrInstanceId is required for VGR export" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: vgrInstance, error: vgrInstanceErr } = await (supabase as any)
+      .from("vgr_instances")
+      .select("id, employee_id, layout_key, data_json")
+      .eq("id", vgrInstanceId)
+      .maybeSingle();
+
+    if (
+      vgrInstanceErr ||
+      !vgrInstance ||
+      vgrInstance.employee_id !== employeeId ||
+      !isVGRLayoutKey(vgrInstance.layout_key)
+    ) {
+      return new Response(JSON.stringify({ error: "Invalid vgrInstanceId for employee" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const resolvedVgrLayout = vgrInstance.layout_key as VGRLayoutKey;
+    const snapshotData = ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>);
+    const printUrl = `${base}/vgr/print?vgrInstanceId=${encodeURIComponent(vgrInstanceId)}`;
+    const pathKey = `documents/${employeeId}/vgr-final-${Date.now()}.pdf`;
+
+    let browser: any = null;
+
+    try {
+      browser = await launchBrowser();
+      const page = await browser.newPage();
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+
+      const cookieHeader = req.headers.get("cookie") || "";
+      if (cookieHeader) {
+        await page.setExtraHTTPHeaders({ cookie: cookieHeader });
+      }
+
+      await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 60_000 });
+      await page.emulateMediaType("print");
+
+      await page.waitForSelector(".vgr-print-root, #vgr-print-root, .tp-print-root", { timeout: 30_000 });
+      await page.waitForSelector('#vgr-print-root[data-ready="1"]', { timeout: 30_000 });
+
+      await waitForPrintAssets(page);
+
+      await page.addStyleTag({
+        content: `
+        @page { size: A4; margin: 0; }
+        html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-page { break-after: page; page-break-after: always; }
+        .print-page:last-child { break-after: auto; page-break-after: auto; }
+        .tp-print-root, .vgr-print-root { margin: 0 !important; }
+        .print\\:shadow-none { box-shadow: none !important; }
+        .print\\:border-0 { border: 0 !important; }
+      `,
+      });
+
+      const pdfBuffer = await page.pdf({
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      });
+
+      let vgrExportId: string | null = null;
+      const { data: exportRow, error: exportInsertErr } = await (supabase as any)
+        .from("vgr_exports")
+        .insert({
+          vgr_instance_id: vgrInstanceId,
+          layout_key: resolvedVgrLayout,
+          snapshot_json: snapshotData,
+          filename,
+          created_by: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (exportInsertErr) console.error("vgr_exports insert error:", exportInsertErr);
+      vgrExportId = exportRow?.id ?? null;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("documents")
+        .upload(pathKey, pdfBuffer, { contentType: "application/pdf", upsert: false });
+      if (uploadErr) console.error("Upload error:", uploadErr);
+
+      if (vgrExportId) {
+        const { error: exportUpdateErr } = await (supabase as any)
+          .from("vgr_exports")
+          .update({ storage_path: pathKey })
+          .eq("id", vgrExportId);
+        if (exportUpdateErr) console.error("vgr_exports update error:", exportUpdateErr);
+      }
+
+      const { error: insertErr } = await supabase.from("documents").insert({
+        employee_id: employeeId,
+        type: "vgr",
+        layout_key: resolvedVgrLayout,
+        vgr_instance_id: vgrInstanceId,
+        vgr_export_id: vgrExportId,
+        name: filename,
+        url: pathKey,
+        uploaded_at: new Date().toISOString(),
+      });
+      if (insertErr) console.error("Insert documents row failed:", insertErr);
+
+      const { data: signedData, error: signedErr } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(pathKey, 60 * 60, { download: filename });
+      const signedUrl = signedData?.signedUrl ?? null;
+      if (signedErr) console.error("Signed URL failed:", signedErr);
+
+      if (mode === "redirect" && signedUrl) {
+        return new Response(null, { status: 307, headers: { Location: signedUrl } });
+      }
+      if (mode === "json") {
+        return new Response(
+          JSON.stringify({ ok: true, path: pathKey, filename, signedUrl }),
+          { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }
+        );
+      }
+
+      return new Response(pdfBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch (err: any) {
+      console.error("export-pdf error:", err);
+      return new Response(
+        JSON.stringify({ error: "PDF generation failed", detail: String(err?.message || err) }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    } finally {
+      try {
+        const pages = (await browser?.pages?.()) || [];
+        await Promise.allSettled(pages.map((p: any) => p.close().catch(() => {})));
+        await browser?.close();
+      } catch {}
+    }
+  }
+
+  const layoutKey: TPLayoutKey = isTPLayoutKey(requestedLayout) ? requestedLayout : "tp_legacy";
 
   let resolvedLayout: TPLayoutKey = layoutKey;
   let snapshotData: Record<string, any> = {};

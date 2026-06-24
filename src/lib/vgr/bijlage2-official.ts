@@ -1,4 +1,4 @@
-import type { TP2026Bijlage2Model, TP2026BijlageChecklistRow } from '@/lib/tp2026/schema';
+import type { VGRBijlage2Model, VGRBijlageChecklistRow } from '@/lib/vgr/schema';
 
 /** Section title above the four-column checklist (official template). */
 export const BIJLAGE2_SECTION_BASIS = 'Basisinterventies ontwikkeling';
@@ -95,11 +95,11 @@ export const BIJLAGE2_FOOTNOTES = [
   '** Een activeringsplaats kan zijn vrijwilligerswerk of een simulatieplek.',
 ] as const;
 
-export function rowsFromLabels(labels: readonly string[]): TP2026BijlageChecklistRow[] {
+export function rowsFromLabels(labels: readonly string[]): VGRBijlageChecklistRow[] {
   return labels.map((label) => ({ label, checked: false }));
 }
 
-export function createOfficialBijlage2Model(): TP2026Bijlage2Model {
+export function createOfficialBijlage2Model(): VGRBijlage2Model {
   return {
     willen: rowsFromLabels(BIJLAGE2_WILLEN_LABELS),
     weten: rowsFromLabels(BIJLAGE2_WETEN_LABELS),

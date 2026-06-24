@@ -4,8 +4,6 @@ export const TP2026_SECTION_ORDER = [
   'gegevens',
   'basis',
   'bijlage1',
-  'bijlage2',
-  'bijlage3',
 ] as const;
 
 export type TP2026SectionId = (typeof TP2026_SECTION_ORDER)[number];
@@ -22,8 +20,6 @@ export function getDefaultTP2026PageCounts(): TP2026SectionPageCounts {
     gegevens: GEGEVENS_PAGE_COUNT,
     basis: 0,
     bijlage1: BIJLAGE1_PAGE_COUNT,
-    bijlage2: 0,
-    bijlage3: 0,
   };
 }
 

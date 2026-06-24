@@ -4,18 +4,22 @@ import { useParams } from 'next/navigation';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+type ExportLayoutKey = 'tp_legacy' | 'tp_2026' | 'vgr';
+
 export function ExportButton({
   employeeId,
   tpInstanceId: tpInstanceIdProp,
+  vgrInstanceId: vgrInstanceIdProp,
   layoutKey: layoutKeyProp,
   variant = 'default',
 }: {
   employeeId: string;
   tpInstanceId?: string;
-  layoutKey?: 'tp_legacy' | 'tp_2026';
+  vgrInstanceId?: string;
+  layoutKey?: ExportLayoutKey;
   variant?: 'default' | 'icon';
 }) {
-  const params = useParams() as { tpInstanceId?: string };
+  const params = useParams() as { tpInstanceId?: string; vgrInstanceId?: string };
   const [busy, setBusy] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -26,17 +30,19 @@ export function ExportButton({
 
     try {
       const tpInstanceId = tpInstanceIdProp || params.tpInstanceId || null;
+      const vgrInstanceId = vgrInstanceIdProp || params.vgrInstanceId || null;
       const layoutKey = layoutKeyProp || 'tp_legacy';
-      const filenamePrefix = layoutKey === 'tp_2026' ? 'TP-2026' : 'TP';
+      const filenamePrefix =
+        layoutKey === 'vgr' ? 'VGR' : layoutKey === 'tp_2026' ? 'TP-2026' : 'TP';
       const filename = `${filenamePrefix}-${employeeId}.pdf`;
 
-      // Ask the API for a signed URL that already includes Content-Disposition: attachment
       const query = new URLSearchParams({
         employeeId,
         filename,
         mode: 'json',
       });
       if (tpInstanceId) query.set('tpInstanceId', tpInstanceId);
+      if (vgrInstanceId) query.set('vgrInstanceId', vgrInstanceId);
       if (layoutKey) query.set('layoutKey', layoutKey);
       const res = await fetch(
         `/api/export-pdf?${query.toString()}`,
@@ -52,23 +58,20 @@ export function ExportButton({
 
       const signedUrl: string = data.signedUrl;
 
-      // 1) Try a hidden anchor with download attr (best UX; keeps page in place)
       try {
         const a = document.createElement('a');
         a.href = signedUrl;
-        a.download = filename; // hint for browsers that respect it
+        a.download = filename;
         a.rel = 'noopener';
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         a.remove();
       } catch {
-        // 2) Fallback: hidden iframe (works for cross-origin + Content-Disposition: attachment)
         const iframe = document.createElement('iframe');
         iframe.style.display = 'none';
         iframe.src = signedUrl;
         document.body.appendChild(iframe);
-        // clean up later
         setTimeout(() => iframe.remove(), 60_000);
       }
 
@@ -78,7 +81,6 @@ export function ExportButton({
       alert('Something went wrong while exporting the PDF.');
     } finally {
       setBusy(false);
-      // optionally clear the toast after a bit
       setTimeout(() => setSavedMsg(null), 5000);
     }
   }
