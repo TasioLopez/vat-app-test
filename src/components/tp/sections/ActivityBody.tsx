@@ -1,3 +1,5 @@
+import { ValentineZLogoBullet } from '@/components/tp2026/primitives';
+
 interface ActivityBodyProps {
   bodyMain: string;
   subText?: string | null;
@@ -12,13 +14,7 @@ export function ActivityBody({ bodyMain, subText, className = "" }: ActivityBody
       <p className={`text-[12px] leading-relaxed text-neutral-900 ${hasSubText ? 'mb-2' : ''}`}>{bodyMain}</p>
       {hasSubText && (
         <div className="flex items-start gap-2 mt-2">
-          <img
-            src="/val-logo.jpg"
-            alt=""
-            width={14}
-            height={14}
-            className="mt-1 flex-shrink-0"
-          />
+          <ValentineZLogoBullet className="mt-1 shrink-0" />
           <span className="text-[12px] leading-relaxed text-neutral-900">{subText!.trim()}</span>
         </div>
       )}

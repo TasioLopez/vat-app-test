@@ -187,7 +187,7 @@ function buildSpoor2Atoms(data: Record<string, unknown>): BasisAtom[] {
       title: TP_SPOOR2_TOELICHTING_TITLE,
       body: TP_SPOOR2_TOELICHTING_BODY,
       showMainBand: true,
-      showSubsectionTitle: true,
+      showSubsectionTitle: false,
     },
   ];
 

@@ -5,7 +5,6 @@ import { Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
 import {
   TP_SPOOR2_SUBSECTIONS,
   TP_SPOOR2_TOELICHTING_BODY,
-  TP_SPOOR2_TOELICHTING_TITLE,
 } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
 /** Full static "Onderdelen Spoor 2 begeleiding" section (basis document). */
@@ -15,8 +14,8 @@ export function BasisSpoor2Block({ className = '' }: { className?: string }) {
       <div className="mt-8">
         <Spoor2SubsectionUnit
           showMainBand
-          showSubsectionTitle
-          subsectionTitle={TP_SPOOR2_TOELICHTING_TITLE}
+          showSubsectionTitle={false}
+          subsectionTitle=""
           body={TP_SPOOR2_TOELICHTING_BODY}
         />
       </div>

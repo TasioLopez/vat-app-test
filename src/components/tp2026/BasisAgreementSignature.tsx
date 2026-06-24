@@ -6,7 +6,7 @@ import {
   TP_BASIS_AGREEMENT_POINTS,
 } from '@/lib/tp2026/basis-document-agreement';
 import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
-import { SectionBand } from '@/components/tp2026/primitives';
+import { SectionBand, ValentineZLogoBullet } from '@/components/tp2026/primitives';
 
 const paperText =
   'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
@@ -19,8 +19,7 @@ export function BasisAgreementBlock() {
         <div className="ml-1 space-y-1.5">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
             <div key={i} className="flex items-start gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-0.5 shrink-0" />
+              <ValentineZLogoBullet />
               <span>{t}</span>
             </div>
           ))}
@@ -45,7 +44,7 @@ function SignatureCell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded border-[0.5pt] border-[#c4b37b] p-2">
+    <div className="tp2026-field-table rounded p-2">
       <div className="mb-1 text-[13px] font-bold text-[#6d2a96]">{title}</div>
       <div className="space-y-1.5 text-[11px] leading-relaxed text-neutral-900">{children}</div>
     </div>

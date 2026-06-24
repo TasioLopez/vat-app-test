@@ -13,7 +13,7 @@ import type { VGRBijlage3Decision } from '@/lib/vgr/schema';
 import { BIJLAGE3_PAGE2, BIJLAGE3_STEP_7_ID } from '@/lib/vgr/bijlage3-official';
 import { TP2026_BODY_FLOW_START_SPACER_PX } from '@/lib/tp2026/document-layout';
 import { formatNLDate } from '@/lib/vgr/schema';
-import { TP2026_CELL_BG_WARM_CLASS } from '@/lib/tp2026/tp2026-colors';
+import { TP2026_CELL_BG_WARM_CLASS, TP2026_HTML_TABLE_CLASS } from '@/lib/tp2026/tp2026-colors';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useVGRPageNumber } from '@/context/VGRPageNumberContext';
 import { cn } from '@/lib/utils';
@@ -79,8 +79,7 @@ function renderBijlage3QuestionCell(step: VGRBijlage3Decision) {
   );
 }
 
-const BIJLAGE3_TABLE_SHELL_CLASS =
-  'w-full shrink-0 border-collapse border-[0.5pt] border-[#c4b37b] table-fixed text-[7pt] leading-[1.45] text-neutral-900';
+const BIJLAGE3_TABLE_SHELL_CLASS = `${TP2026_HTML_TABLE_CLASS} shrink-0 text-[7pt] leading-[1.45] text-neutral-900`;
 
 function Bijlage3TableColGroup() {
   return (
@@ -102,7 +101,7 @@ function Bijlage3TableThead() {
         {BIJLAGE3_PRINT_HEADERS.map((h, idx) => (
           <th
             key={`${h}-${idx}`}
-            className={`border-[0.5pt] border-[#c4b37b] ${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]`}
+            className={`${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[8pt] font-bold tracking-tight text-[#6d2a96]`}
           >
             {h}
           </th>
@@ -119,32 +118,32 @@ function Bijlage3StepTbody({ step }: { step: VGRBijlage3Decision }) {
   return (
     <tbody data-b3-step-id={step.id}>
       <tr>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top">
+        <td className="bg-white px-1.5 py-1 align-top">
           {renderBijlage3QuestionCell(step)}
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-center">
+        <td className="bg-white px-1 py-1 align-top text-center">
           <div className="font-bold text-[#d4694a]">NEE &gt;</div>
         </td>
-        <td className={`border-[0.5pt] border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
+        <td className={`px-1 py-1 align-top ${tredeCellClass(step.neeTredeNum)}`}>
           <div className="font-bold">{step.neeTredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{step.neeTredeBody}</div>
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="bg-white px-1 py-1 align-top whitespace-pre-line">
           {String(step.doelUren || '').trim() ? step.doelUren : '—'}
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="bg-white px-1 py-1 align-top">
           {step.werkboeken.map((w, wi) => (
             <div key={wi} className="break-words pb-0.5 last:pb-0">
               • {w}
             </div>
           ))}
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(step.doelJa, step.doelNee)}
         </td>
       </tr>
       <tr>
-        <td colSpan={6} className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-0.5 align-top">
+        <td colSpan={6} className="bg-white px-1.5 py-0.5 align-top">
           <div className="font-bold text-[#2d8f82]">JA &gt;</div>
         </td>
       </tr>
@@ -159,19 +158,19 @@ function Bijlage3Trede6Tbody({ page2 }: { page2: { doelJa?: boolean; doelNee?: b
   return (
     <tbody data-b3-trede6-body>
       <tr>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top">
+        <td className="bg-white px-1.5 py-1 align-top">
           <div className="whitespace-pre-line font-bold text-neutral-900">{BIJLAGE3_PAGE2.focusLine}</div>
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
-        <td className={`border-[0.5pt] border-[#c4b37b] px-1 py-1 align-top ${tredeCellClass}`}>
+        <td className="bg-white px-1 py-1 align-top text-center text-neutral-500">—</td>
+        <td className={`px-1 py-1 align-top ${tredeCellClass}`}>
           <div className="font-bold">{BIJLAGE3_PAGE2.tredeLabel}</div>
           <div className="mt-0.5 whitespace-pre-line font-normal text-neutral-900">{BIJLAGE3_PAGE2.tredeBody}</div>
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top whitespace-pre-line">
+        <td className="bg-white px-1 py-1 align-top whitespace-pre-line">
           {BIJLAGE3_PAGE2.doelUren}
         </td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top text-neutral-500">—</td>
-        <td className="border-[0.5pt] border-[#c4b37b] bg-white px-1 py-1 align-top">
+        <td className="bg-white px-1 py-1 align-top text-neutral-500">—</td>
+        <td className="bg-white px-1 py-1 align-top">
           {bijlage3DoelChecksPrint(page2.doelJa, page2.doelNee)}
         </td>
       </tr>
@@ -676,7 +675,7 @@ export function Bijlage3A4Pages({
               <tr>
                 <td
                   colSpan={6}
-                  className="h-0 max-h-0 border-[0.5pt] border-[#c4b37b] p-0 leading-none text-[0]"
+                  className="h-0 max-h-0 p-0 leading-none text-[0]"
                 >
                   &#8203;
                 </td>

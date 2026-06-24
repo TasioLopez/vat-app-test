@@ -29,8 +29,8 @@ import { formatNLDate } from '@/lib/tp2026/schema';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import {
-  TP2026_BORDER_THIN_CLASS,
   TP2026_CELL_BG_WARM_CLASS,
+  TP2026_HTML_TABLE_CLASS,
 } from '@/lib/tp2026/tp2026-colors';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
@@ -616,7 +616,6 @@ export function Bijlage1Editor({
 
 /** Left-column label cells (Doel / Periode / Activiteiten). */
 const BIJLAGE1_LABEL_BG = TP2026_CELL_BG_WARM_CLASS;
-const BIJLAGE_TABLE_BORDER = TP2026_BORDER_THIN_CLASS;
 
 export function Bijlage1A4Pages({
   data,
@@ -651,7 +650,7 @@ export function Bijlage1A4Pages({
         </div>
         <div className="shrink-0 space-y-1.5 text-[10pt] leading-snug text-neutral-900">
           {normalized.map((phase, idx) => (
-            <table key={idx} className={`w-full ${BIJLAGE_TABLE_BORDER} border-collapse table-fixed bg-white`}>
+            <table key={idx} className={`${TP2026_HTML_TABLE_CLASS} bg-white`}>
               <colgroup>
                 <col style={{ width: '22%' }} />
                 <col style={{ width: '68%' }} />
@@ -659,30 +658,30 @@ export function Bijlage1A4Pages({
               </colgroup>
               <tbody>
                 <tr>
-                  <td colSpan={2} className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
+                  <td colSpan={2} className="!bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
                     Planning fase {idx + 1}
                   </td>
-                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
+                  <td className="!bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
                     Status
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Doel
                   </td>
-                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
+                  <td className="!bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
                     {phase.title || '—'}
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Periode
                   </td>
-                  <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
+                  <td className="!bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
                     {renderPeriodeText(phase)}
                   </td>
                 </tr>
@@ -692,15 +691,15 @@ export function Bijlage1A4Pages({
                       {rowIdx === 0 ? (
                         <td
                           rowSpan={rows.length}
-                          className={`border-[0.5pt] border-[#c4b37b] px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                          className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                         >
                           Activiteiten
                         </td>
                       ) : null}
-                      <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 align-top text-neutral-900">
+                      <td className="!bg-white px-2 py-0.5 align-top text-neutral-900">
                         {activity.name}
                       </td>
-                      <td className="border-[0.5pt] border-[#c4b37b] !bg-white px-2 py-0.5 text-center align-top font-bold text-neutral-900">
+                      <td className="!bg-white px-2 py-0.5 text-center align-top font-bold text-neutral-900">
                         {activity.status}
                       </td>
                     </tr>

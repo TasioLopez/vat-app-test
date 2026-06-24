@@ -19,3 +19,6 @@ export const TP2026_BODY_MARGIN_X_PX = 96;
  */
 export const TP2026_BODY_FLOW_START_SPACER_PX =
   TP2026_LOGO.topPx + TP2026_LOGO.heightPx + 12 + 20;
+
+/** ValentineZ logo used as list bullet in TP 2026 body (was 14px). */
+export const TP2026_LOGO_BULLET_PX = 11;

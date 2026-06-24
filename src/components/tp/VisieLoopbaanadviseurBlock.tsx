@@ -6,7 +6,7 @@ import {
   TOELICHTING_DELIMITER,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
-import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
+import { BasisToelichtingHeading, ValentineZLogoBullet } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import {
@@ -47,15 +47,7 @@ function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
 
         return (
           <div key={idx} className="ml-4 flex items-start gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/val-logo.jpg"
-              alt=""
-              width={14}
-              height={14}
-              style={{ marginTop: '3px', flexShrink: 0 }}
-              loading="eager"
-            />
+            <ValentineZLogoBullet className="mt-px shrink-0" eagerLoading />
             <span>
               <span className="font-bold">{parsed.title}</span>
               {parsed.description ? (

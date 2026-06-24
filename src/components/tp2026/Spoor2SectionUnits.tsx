@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
-import { SalmonSectionBar } from '@/components/tp2026/primitives';
+import { SalmonSectionBar, ValentineZLogoBullet } from '@/components/tp2026/primitives';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
@@ -38,7 +38,7 @@ export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefine
 export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
   return (
     <div className="mt-2 flex items-start gap-2">
-      <img src="/val-logo.jpg" alt="" width={14} height={14} className="mt-1 flex-shrink-0" />
+      <ValentineZLogoBullet className="mt-1 shrink-0" />
       <span className="text-[12px] leading-relaxed text-neutral-900">{subText.trim()}</span>
     </div>
   );

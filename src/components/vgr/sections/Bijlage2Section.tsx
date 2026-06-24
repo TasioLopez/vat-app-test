@@ -10,7 +10,7 @@ import { PrintCheckbox } from '@/components/tp2026/PrintCheckbox';
 import type { VGRBijlage2Model, VGRBijlage2PowTrede } from '@/lib/vgr/schema';
 import { BIJLAGE2_FOOTNOTES, BIJLAGE2_SECTION_BASIS } from '@/lib/vgr/bijlage2-official';
 import { formatNLDate } from '@/lib/vgr/schema';
-import { TP2026_CELL_BG_WARM_CLASS } from '@/lib/tp2026/tp2026-colors';
+import { TP2026_CELL_BG_WARM_CLASS, TP2026_HTML_TABLE_CLASS } from '@/lib/tp2026/tp2026-colors';
 import { useEffect, useMemo, type ReactElement } from 'react';
 import { useVGRPageNumber } from '@/context/VGRPageNumberContext';
 import { ChevronRight } from 'lucide-react';
@@ -161,7 +161,7 @@ function Bijlage2BasisTable({ model }: { model: VGRBijlage2Model }) {
   const cols = [model.willen, model.weten, model.kunnen, model.doen] as const;
   const headers = ['WILLEN', 'WETEN', 'KUNNEN', 'DOEN'] as const;
   return (
-    <table className="w-full shrink-0 border-collapse border-[0.5pt] border-[#c4b37b] table-fixed">
+    <table className={`${TP2026_HTML_TABLE_CLASS} shrink-0`}>
       <colgroup>
         <col style={{ width: '25%' }} />
         <col style={{ width: '25%' }} />
@@ -173,7 +173,7 @@ function Bijlage2BasisTable({ model }: { model: VGRBijlage2Model }) {
           {headers.map((h) => (
             <th
               key={h}
-              className={`border-[0.5pt] border-[#c4b37b] ${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]`}
+              className={`${TP2026_CELL_BG_WARM_CLASS} px-1 py-0.5 text-center text-[10pt] font-bold uppercase tracking-tight text-[#6d2a96]`}
             >
               {h}
             </th>
@@ -185,7 +185,7 @@ function Bijlage2BasisTable({ model }: { model: VGRBijlage2Model }) {
           {cols.map((col, ci) => (
             <td
               key={ci}
-              className="border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
+              className="bg-white px-1.5 py-1 align-top text-[7pt] leading-[1.45] text-neutral-900"
             >
               {col.map((row, ri) => (
                 <div key={ri} className="flex break-words items-start gap-1 pb-1 last:pb-0">
@@ -212,11 +212,11 @@ function Bijlage2PowHeaderRow() {
 
 function Bijlage2PowRows({ tredes }: { tredes: VGRBijlage2PowTrede[] }) {
   return (
-    <table className="w-full border-collapse border-[0.5pt] border-[#c4b37b] text-[7pt] leading-[1.45]">
+    <table className={TP2026_HTML_TABLE_CLASS}>
       <tbody>
         {tredes.map((t) => (
           <tr key={t.trede}>
-            <td className="w-[78%] border-[0.5pt] border-[#c4b37b] bg-white px-1.5 py-1 align-top text-neutral-900">
+            <td className="w-[78%] bg-white px-1.5 py-1 align-top text-neutral-900">
               <div className="mb-1 font-bold text-[#6d2a96]">
                 Trede {t.trede} is succesvol afgerond wanneer:
               </div>
@@ -230,7 +230,7 @@ function Bijlage2PowRows({ tredes }: { tredes: VGRBijlage2PowTrede[] }) {
               </div>
             </td>
             <td
-              className={`w-[22%] border-[0.5pt] border-[#c4b37b] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
+              className={`w-[22%] px-1 py-1.5 align-middle text-center text-[8pt] font-bold leading-snug ${BIJLAGE2_TREDE_BADGE[t.trede] ?? 'bg-[#ebe1cf] text-[#6d2a96]'}`}
             >
               Trede {t.trede}
             </td>

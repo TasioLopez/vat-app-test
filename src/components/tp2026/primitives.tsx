@@ -2,8 +2,9 @@ import React from 'react';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
-import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
+import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO, TP2026_LOGO_BULLET_PX } from '@/lib/tp2026/document-layout';
 import {
+  TP2026_DATA_ROW_CLASS,
   TP2026_DATA_ROW_LABEL_CLASS,
   TP2026_DATA_ROW_VALUE_CLASS,
   TP2026_FIELD_TABLE_CLASS,
@@ -170,6 +171,29 @@ export function SectionBand({
   );
 }
 
+/** ValentineZ Z-logo list bullet (shared size for print/PDF). */
+export function ValentineZLogoBullet({
+  size = TP2026_LOGO_BULLET_PX,
+  className = 'mt-0.5 shrink-0',
+  eagerLoading = false,
+}: {
+  size?: number;
+  className?: string;
+  eagerLoading?: boolean;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/val-logo.jpg"
+      alt=""
+      width={size}
+      height={size}
+      className={className}
+      loading={eagerLoading ? 'eager' : undefined}
+    />
+  );
+}
+
 /** Bordered field table: full outer frame + horizontal rules between rows (template-style grid). */
 export function TP2026FieldTable({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <div className={`${TP2026_FIELD_TABLE_CLASS} ${className}`}>{children}</div>;
@@ -187,7 +211,7 @@ export function DataRow({
 }) {
   const size = compact ? 'text-[10px]' : 'text-[12px]';
   return (
-    <div className={`grid grid-cols-[35%_65%] ${size} leading-snug`}>
+    <div className={`${TP2026_DATA_ROW_CLASS} grid grid-cols-[35%_65%] ${size} leading-snug`}>
       <div className={TP2026_DATA_ROW_LABEL_CLASS}>
         {label}
       </div>
