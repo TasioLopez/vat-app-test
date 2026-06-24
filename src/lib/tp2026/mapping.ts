@@ -37,7 +37,7 @@ const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
       'Sollicitatievaardigheden vervolg (gesprek)',
       'Netwerken',
       'Webinars',
-      'Solliciteren en/of netwerken via Social Media',
+      'Solliciteren via Social Media',
       'Vacatures zoeken en beoordeling',
       'Wekelijks solliciteren',
       'Activering/ werkervaringsplaats',
@@ -60,6 +60,14 @@ const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   },
 ];
 
+const BIJLAGE1_ACTIVITY_LEGACY: Record<string, string> = {
+  'Solliciteren en/of netwerken via Social Media': 'Solliciteren via Social Media',
+};
+
+function canonicalBijlage1ActivityName(name: string): string {
+  return BIJLAGE1_ACTIVITY_LEGACY[name] ?? name;
+}
+
 function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -74,7 +82,7 @@ function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
         activities: activities
           .filter((activity) => activity && typeof activity === 'object' && typeof activity.name === 'string')
           .map((activity) => ({
-            name: String(activity.name || ''),
+            name: canonicalBijlage1ActivityName(String(activity.name || '')),
             status:
               activity.status === 'G' || activity.status === 'P' || activity.status === 'N' || activity.status === 'U'
                 ? activity.status

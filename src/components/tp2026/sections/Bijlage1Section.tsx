@@ -71,7 +71,7 @@ const ACTIVITY_LIBRARY = [
   'Voortgangsrapportage en evaluatie',
   'Sollicitatievaardigheden vervolg (gesprek)',
   'Netwerken',
-  'Solliciteren en/of netwerken via Social Media',
+  'Solliciteren via Social Media',
   'Vacatures zoeken en beoordeling',
   'Wekelijks solliciteren',
   'Activering/ werkervaringsplaats',
@@ -143,7 +143,7 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
           'Sollicitatievaardigheden vervolg (gesprek)',
           'Netwerken',
           'Webinars',
-          'Solliciteren en/of netwerken via Social Media',
+          'Solliciteren via Social Media',
           'Vacatures zoeken en beoordeling',
           'Wekelijks solliciteren',
           'Activering/ werkervaringsplaats',
@@ -189,7 +189,7 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
           'Sollicitatievaardigheden vervolg (gesprek)',
           'Netwerken',
           'Webinars',
-          'Solliciteren en/of netwerken via Social Media',
+          'Solliciteren via Social Media',
           'Vacatures zoeken en beoordeling',
           'Wekelijks solliciteren',
           'Activering/ werkervaringsplaats',
@@ -711,12 +711,12 @@ export function Bijlage1A4Pages({
             </table>
           ))}
         </div>
-        <div className="mt-1.5 shrink-0 pb-1 text-neutral-700">
-          <p className="text-[8pt] leading-tight italic">
+        <div className="mt-1.5 shrink-0 pb-1">
+          <p className="text-[8pt] leading-tight italic text-[#6d2a96]">
             * Het solliciteren geschiedt volgens planning, aanvang sollicitatiefase wordt vervroegd indien werknemer
             daar eerder klaar voor is.
           </p>
-          <p className="text-[10pt] leading-tight">
+          <p className="text-[9pt] leading-tight">
             <span className="font-bold text-[#6d2a96]">G</span> gedaan / succesvol uitgevoerd -{' '}
             <span className="font-bold text-[#6d2a96]">P</span> nog in planning -{' '}
             <span className="font-bold text-[#6d2a96]">N</span> niet gedaan / geen succes -{' '}
