@@ -68,9 +68,9 @@ export function BasisSignatureBlock({
 
   return (
     <div className="mb-2 mt-3">
-      <SectionBand title="Ondertekening" />
-      <div className="whitespace-pre-wrap p-2 text-[12px] leading-relaxed text-neutral-900">
-        <div className={row}>
+      <SectionBand title="Ondertekening" className="mb-0" />
+      <div className="whitespace-pre-wrap px-2 pb-2 text-[12px] leading-relaxed text-neutral-900">
+        <div className="grid grid-cols-2 gap-3">
           <SignatureCell title="Werknemer">
             <div>{employeeName}</div>
             <div className="min-h-2" aria-hidden />
