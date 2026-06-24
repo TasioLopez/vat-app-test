@@ -10,7 +10,7 @@ import {
   formatDriversLicense,
   formatTransportation,
   formatComputerSkills,
-  filterOtherEmployers
+  formatGegevensOtherEmployers,
 } from "@/lib/utils";
 import { formatPhoneForDisplay } from "@/lib/phone/format-dutch-display";
 import Image from "next/image";
@@ -254,7 +254,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
               label: "Aantal contracturen",
               value: tpData.contract_hours ? `${tpData.contract_hours} uur per week` : "—",
             },
-            { label: "Andere werkgever(s)", value: filterOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name) },
+            { label: "Andere werkgever(s)", value: formatGegevensOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name) },
           ]}
         />
       ),

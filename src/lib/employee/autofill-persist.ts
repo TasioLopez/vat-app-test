@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
-import { parseWorkExperience } from '@/lib/utils';
+import { isAbsentText, parseWorkExperience } from '@/lib/utils';
 import {
   applyEmployeeAutofillReviewMarks,
   type EmployeeDetailFieldKey,
@@ -85,6 +85,9 @@ export function processEmployeeAutofillRawDetails(
           ? [processed.drivers_license_type]
           : null;
     }
+  }
+  if (isAbsentText(processed.other_employers)) {
+    delete processed.other_employers;
   }
   return processed;
 }

@@ -20,7 +20,7 @@ Tekst:
 - work_experience: alleen functietitels, komma-gescheiden, geen datums/organisaties
 - education_level: HOOGSTE afgeronde opleiding uit tabel "Opleidingen? Afgerond?" (VMBO, MBO 3, HBO, …). NIET aspiratie uit sectie 16 tenzij enige opleiding.
 - education_name: naam bij hoogste afgeronde opleiding
-- other_employers: komma-gescheiden of null
+- other_employers: komma-gescheiden werkgeversnamen, of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
 
 Vervoer:
 - transport_type: array van aangevinkte opties: "Auto", "Fiets", "Bromfiets", "Motor", "OV", "Lopend"

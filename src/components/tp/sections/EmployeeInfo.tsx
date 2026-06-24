@@ -12,7 +12,7 @@ import {
   formatDriversLicense,
   formatTransportation,
   formatComputerSkills,
-  filterOtherEmployers
+  formatGegevensOtherEmployers,
 } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
@@ -650,10 +650,10 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr><td className={tdLabel}>Spreekvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_speaking || '—'}</td></tr>
                   <tr><td className={tdLabel}>Schrijfvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_writing || '—'}</td></tr>
                   <tr><td className={tdLabel}>Leesvaardigheid NL-taal</td><td className={tdValue}>{tpData.dutch_reading || '—'}</td></tr>
-                  <tr><td className={tdLabel}>Beschikt over een PC</td><td className={tdValue}>{tpData.has_computer ? 'Ja' : 'Nee'}</td></tr>
+                  <tr><td className={tdLabel}>Beschikt over een PC</td><td className={tdValue}>{tpData.has_computer ? 'Ja' : 'Geen'}</td></tr>
                   <tr><td className={tdLabel}>PC-vaardigheden</td><td className={tdValue}>{formatComputerSkills(tpData.computer_skills)}</td></tr>
                   <tr><td className={tdLabel}>Aantal contracturen</td><td className={tdValue}>{tpData.contract_hours} uur per week</td></tr>
-                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{filterOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name)}</td></tr>
+                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{formatGegevensOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name)}</td></tr>
                 </tbody>
               </table>
 

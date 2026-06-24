@@ -219,6 +219,16 @@ export function normalizeStringArrayField(value: unknown): string[] {
   return [];
 }
 
+/** Treats null/undefined, blanks, and AI sentinel strings as absent text. */
+export function isAbsentText(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value !== 'string') return false;
+  const s = value.trim();
+  if (!s) return true;
+  const lower = s.toLowerCase();
+  return lower === 'null' || lower === 'undefined' || lower === 'none' || lower === 'geen' || s === '—' || s === '-';
+}
+
 /**
  * Formats driver's license information
  * 
@@ -230,7 +240,7 @@ export function formatDriversLicense(
   hasLicense: boolean | null | undefined,
   licenseType?: string | string[] | null | undefined
 ): string {
-  if (!hasLicense) return "Nee";
+  if (!hasLicense) return 'Geen';
   
   // Handle array (new format)
   if (Array.isArray(licenseType) && licenseType.length > 0) {
@@ -271,7 +281,7 @@ export function formatTransportation(
 ): string {
   // Handle array (new format)
   if (Array.isArray(transportType)) {
-    if (transportType.length === 0) return "Nee";
+    if (transportType.length === 0) return 'Geen';
     return `Ja (${transportType.join(', ')})`;
   }
   
@@ -285,7 +295,7 @@ export function formatTransportation(
     return "Ja (Auto)";
   }
   
-  return "Nee";
+  return 'Geen';
 }
 
 /**
@@ -322,30 +332,28 @@ export function filterOtherEmployers(
   otherEmployersText: string | null | undefined,
   currentEmployerName: string | null | undefined
 ): string {
-  if (!otherEmployersText) return "—";
-  if (!currentEmployerName) return otherEmployersText;
+  if (isAbsentText(otherEmployersText)) return '—';
+  const text = String(otherEmployersText).trim();
+  if (!currentEmployerName) return text;
 
-  // Split by common delimiters
-  const employers = otherEmployersText
+  const employers = text
     .split(/[,;\n]+/)
-    .map(e => e.trim())
-    .filter(e => e.length > 0);
+    .map((e) => e.trim())
+    .filter((e) => e.length > 0);
 
-  // Filter out current employer (case-insensitive)
   const filtered = employers.filter(
-    employer => employer.toLowerCase() !== currentEmployerName.toLowerCase()
+    (employer) => employer.toLowerCase() !== currentEmployerName.toLowerCase()
   );
 
-  // Return filtered list or em dash if empty
-  return filtered.length > 0 ? filtered.join(', ') : "—";
+  return filtered.length > 0 ? filtered.join(', ') : '—';
 }
 
-/** TP2026 Gegevens preview: empty andere werkgevers → "geen" (not em dash). */
+/** TP2026 Gegevens: empty andere werkgevers → "Geen". */
 export function formatGegevensOtherEmployers(
   otherEmployersText: string | null | undefined,
   currentEmployerName: string | null | undefined
 ): string {
-  if (!otherEmployersText?.trim()) return 'geen';
+  if (isAbsentText(otherEmployersText)) return 'Geen';
   const filtered = filterOtherEmployers(otherEmployersText, currentEmployerName);
-  return filtered === '—' ? 'geen' : filtered;
+  return filtered === '—' ? 'Geen' : filtered;
 }

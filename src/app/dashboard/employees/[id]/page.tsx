@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { parseWorkExperience, cn, normalizePersonName } from '@/lib/utils';
+import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { Button } from '@/components/ui/button';
@@ -1876,7 +1876,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     <Textarea 
                         className={fieldClass('other_employers') + ' min-h-[100px]'} 
                         placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..." 
-                        value={employeeDetails?.other_employers || ''} 
+                        value={isAbsentText(employeeDetails?.other_employers) ? '' : (employeeDetails?.other_employers || '')} 
                         onChange={e => handleDetailChange('other_employers', e.target.value)} 
                     />
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">

@@ -1,4 +1,4 @@
-import { formatEmployeeName, normalizePersonName, normalizeStringArrayField } from '@/lib/utils';
+import { formatEmployeeName, isAbsentText, normalizePersonName, normalizeStringArrayField } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
 import type {
@@ -161,6 +161,10 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   }
   if (repairedEducation.education_name !== undefined) {
     next.education_name = repairedEducation.education_name;
+  }
+
+  if (isAbsentText(next.other_employers)) {
+    next.other_employers = '';
   }
 
   return next;

@@ -114,7 +114,7 @@ export function ensureArray<T>(value: unknown, fallback: T[]): T[] {
 
 export function boolToJaNee(value: unknown): string {
   if (value === true) return 'Ja';
-  if (value === false) return 'Nee';
+  if (value === false) return 'Geen';
   return '—';
 }
 

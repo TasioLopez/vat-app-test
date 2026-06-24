@@ -1,5 +1,5 @@
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
-import { normalizePersonName } from '@/lib/utils';
+import { isAbsentText, normalizePersonName } from '@/lib/utils';
 import {
   normalizeEducationLevel,
   repairEmployeeEducationFields,
@@ -181,6 +181,14 @@ export function mapAndValidateEmployeeDetails(
       if (isPresent(rawValue)) {
         mappedData[mappedKey] = String(rawValue).trim();
       }
+      continue;
+    }
+
+    if (mappedKey === 'other_employers') {
+      if (isAbsentText(rawValue)) continue;
+      const text = String(rawValue).trim();
+      if (!text) continue;
+      mappedData[mappedKey] = text;
       continue;
     }
 

@@ -1,13 +1,13 @@
 // src/lib/tp/load.ts
 import { createClient } from "@supabase/supabase-js";
-import { formatEmployeeName, normalizePersonName } from "@/lib/utils";
+import { formatEmployeeName, isAbsentText, normalizePersonName } from "@/lib/utils";
 import { normalizePhoneForStorage } from "@/lib/phone/format-dutch-display";
 import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
 
 export type TPData = Record<string, any>;
 
 const isFilled = (v: any) =>
-  v !== null && v !== undefined && !(typeof v === "string" && v.trim() === "");
+  v !== null && v !== undefined && !isAbsentText(v);
 
 function preferFilledMerge<T extends Record<string, any>>(...objs: T[]): T {
   const out = {} as T;

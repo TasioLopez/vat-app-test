@@ -1,5 +1,6 @@
 /** Employee profile fields on step 2 filled by `/api/autofill-employee-info-working`. */
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
+import { isAbsentText } from '@/lib/utils';
 
 export const GEGEVENS_EMPLOYEE_KEYS = [
   'gender',
@@ -53,7 +54,10 @@ export function isEmptyGegevensField(key: string, value: unknown): boolean {
   if (typeof value === 'boolean') return false;
   if (typeof value === 'number') return false;
   if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'string') return value.trim() === '';
+  if (typeof value === 'string') {
+    if (key === 'other_employers' && isAbsentText(value)) return true;
+    return value.trim() === '';
+  }
   return false;
 }
 
