@@ -185,7 +185,7 @@ export function DataRow({
   value: React.ReactNode;
   compact?: boolean;
 }) {
-  const size = compact ? 'text-[11px]' : 'text-[12px]';
+  const size = compact ? 'text-[10px]' : 'text-[12px]';
   return (
     <div className={`grid grid-cols-[35%_65%] ${size} leading-snug`}>
       <div className={TP2026_DATA_ROW_LABEL_CLASS}>
