@@ -7,7 +7,7 @@ Je bent een expert in het analyseren van Nederlandse intakeformulieren voor traj
 
 Extract ALLEEN TP metadata velden uit DIT intakeformulier (geen andere documenten).
 
-BELANGRIJK — Sectie 6 "Re-integratie en houding" is een TWEE-KOLOMS raster:
+BELANGRIJK — Sectie 6 "Re-integratie en houding" is een TWEE-KOLOMS raster (V5 heeft bovenaan Geboortedatum | Weken — dat is geen trajectdatum):
 | Linker kolom          | Rechter kolom        |
 | Aanmelddatum          | Startdatum           |
 | Datum FML / IZP       | Einddatum            |

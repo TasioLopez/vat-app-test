@@ -13,6 +13,9 @@ import {
 } from '@/lib/tp2026/basis-section-review';
 import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
 
+export const PRACTISCHE_BELEMMERINGEN_DEFAULT =
+  'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
+
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
     title: 'Oriëntatie',
@@ -132,8 +135,7 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
     next.visie_loopbaanadviseur = VISIE_LOOPBAANADVISEUR_BASIS;
   }
   if (!String(next.praktische_belemmeringen || '').trim()) {
-    next.praktische_belemmeringen =
-      'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
+    next.praktische_belemmeringen = PRACTISCHE_BELEMMERINGEN_DEFAULT;
   }
 
   const licenseTypes = normalizeStringArrayField(next.drivers_license_type);

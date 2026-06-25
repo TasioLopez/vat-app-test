@@ -2,7 +2,7 @@ import { INTAKE_EMPLOYEE_PROMPT } from './intake-employee';
 
 export const EXTRA_EMPLOYEE_PROMPT = `Je bent een expert in het analyseren van Nederlandse werknemersdocumenten.
 
-Als dit document een intakeformulier is (secties 1–16, "Hoe verplaatst werknemer zich", computervaardigheden), volg dan deze intake-regels:
+Als dit document een intakeformulier is (secties 1–17, "Hoe verplaatst werknemer zich", computervaardigheden), volg dan deze intake-regels:
 ${INTAKE_EMPLOYEE_PROMPT}
 
 Anders extract uit vrije tekst:

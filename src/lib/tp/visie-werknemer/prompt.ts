@@ -11,11 +11,10 @@ import {
 } from './constants';
 
 const INTAKE_VISIE_SECTIONS_HINT = `
-INTAKE SECTIES VOOR VISIE VAN WERKNEMER (Juni V3):
-- Groep: Visie van de werknemer
+INTAKE SECTIES VOOR VISIE VAN WERKNEMER (Juni V5):
+- Groep: Visie van de werknemer (label bij sectie 12 / werkverleden-blok)
 - Sectie 13 Werkverleden en verbondenheid
-- Sectie 14 Huidige situatie
-- Sectie 15 Houding t.o.v. spoor 2
+- Sectie 14 Houding t.o.v. spoor 2
 - Sectie 16 Toekomstbeeld en voorkeuren
 `.trim();
 

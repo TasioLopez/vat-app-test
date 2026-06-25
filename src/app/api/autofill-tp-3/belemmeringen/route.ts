@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getIntakeContextForTp } from "@/lib/document-analysis";
+import { PRACTISCHE_BELEMMERINGEN_DEFAULT } from "@/lib/tp2026/mapping";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,12 @@ function stripCitations(text: string): string {
     .trim();
 }
 
+const INTAKE_BELEMMERINGEN_FOCUS = `
+Extraheer UITSLUITEND de ingevulde tekst uit sectie 17 "Bijzonderheden", subveld "Praktische belemmeringen:" (Juni V5 intakeformulier).
+Neem NIET op: de algemene vraag "Zijn er bijzonderheden waar ik rekening mee moet houden", het blok "Algemene informatie", opleidingen, vervoer, rijbewijs, talen, of andere secties.
+Als het subveld ontbreekt (oud formulier zonder sectie 17) of leeg is: geef een lege string.
+`.trim();
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -29,20 +36,22 @@ export async function GET(req: NextRequest) {
       openai,
       supabase,
       employeeId,
-      `Extraheer uit het intakeformulier alle niet-medische praktische knelpunten relevant voor re-integratie (vervoer/rijbewijs, taalniveau, zorgtaken, werktijden/uren, hulpmiddelen, digitale vaardigheden, reistijd, energie/belastbaarheid in dagelijks leven). Geen diagnoses.`
+      INTAKE_BELEMMERINGEN_FOCUS
     );
 
     if (!INTAKE) return NextResponse.json({ error: "Geen intakeformulier gevonden" }, { status: 200 });
 
     const system = `
-Bouw de sectie "Praktische belemmeringen" als korte puntsgewijze opsomming (3–8 punten), AVG-proof.
-Neem ALLEEN niet-medische, praktische knelpunten uit de intake op (bijv. vervoer/rijbewijs, taalniveau, zorgtaken, werktijden/uren, hulpmiddelen, digitale vaardigheden, reistijd).
-Geen diagnoses, geen aannames. Lever via function-call: { praktische_belemmeringen: string }.
+Extraheer uitsluitend de tekst onder "Praktische belemmeringen:" in sectie 17 "Bijzonderheden" van het intakeformulier.
+Kopieer de tekst letterlijk over — geen herschrijven, samenvatten of nieuwe opsommingen tenzij die al in het formulier staan.
+Neem GEEN tekst op uit "Zijn er bijzonderheden waar ik rekening mee moet houden", "Algemene informatie", of andere secties.
+Als het veld ontbreekt (oudere intakeformulieren) of leeg is: geef een lege string.
+Lever via function-call: { praktische_belemmeringen: string }.
 `.trim();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
-      temperature: 0.1,
+      temperature: 0,
       messages: [
         { role: "system", content: system },
         { role: "user", content: INTAKE }
@@ -50,8 +59,8 @@ Geen diagnoses, geen aannames. Lever via function-call: { praktische_belemmering
       tools: [{
         type: "function",
         function: {
-          name: "build_belemmeringen",
-          description: "Opsomming praktische belemmeringen",
+          name: "extract_belemmeringen",
+          description: "Letterlijke tekst uit sectie 17 Praktische belemmeringen",
           parameters: {
             type: "object",
             properties: { praktische_belemmeringen: { type: "string" } },
@@ -59,12 +68,13 @@ Geen diagnoses, geen aannames. Lever via function-call: { praktische_belemmering
           }
         }
       }],
-      tool_choice: { type: "function", function: { name: "build_belemmeringen" } }
+      tool_choice: { type: "function", function: { name: "extract_belemmeringen" } }
     });
 
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     const parsed = JSON.parse(call?.function?.arguments || "{}");
-    const praktische_belemmeringen = stripCitations((parsed?.praktische_belemmeringen || "").trim());
+    const extracted = stripCitations((parsed?.praktische_belemmeringen || "").trim());
+    const praktische_belemmeringen = extracted || PRACTISCHE_BELEMMERINGEN_DEFAULT;
 
     await supabase.from("tp_meta").upsert(
       { employee_id: employeeId, praktische_belemmeringen } as any,

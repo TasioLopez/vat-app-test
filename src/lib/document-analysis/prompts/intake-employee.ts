@@ -14,13 +14,13 @@ VELDEN (employee_details) — gebruik exact deze JSON keys:
 Tekst:
 - current_job: functietitel (sectie 2)
 - contract_hours: number (uren per week, sectie 2)
-- date_of_birth: YYYY-MM-DD
+- date_of_birth: YYYY-MM-DD (sectie 6 "Geboortedatum:" in V5, of sectie 2 indien aanwezig)
 - gender: "Man" of "Vrouw" (sectie 2)
 - phone: telefoonnummer van de WERKNEMER uit sectie 2 "Telefoonnummer:" — NIET sectie 4 "Telefoonnummer contactpersoon"
 - work_experience: alleen functietitels, komma-gescheiden, geen datums/organisaties
-- education_level: HOOGSTE afgeronde opleiding uit tabel "Opleidingen? Afgerond?" (VMBO, MBO 3, HBO, …). NIET aspiratie uit sectie 16 tenzij enige opleiding.
+- education_level: HOOGSTE afgeronde opleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie (sectie 17 V5 of onderaan V4). NIET aspiratie uit sectie 16 tenzij enige opleiding.
 - education_name: naam bij hoogste afgeronde opleiding
-- other_employers: komma-gescheiden werkgeversnamen, of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
+- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:", of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
 
 Vervoer:
 - transport_type: array van aangevinkte opties: "Auto", "Fiets", "Bromfiets", "Motor", "OV", "Lopend"

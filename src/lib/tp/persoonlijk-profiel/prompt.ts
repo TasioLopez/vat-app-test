@@ -14,12 +14,12 @@ import {
 const INTAKE_PROFIEL_SECTIONS_HINT = `
 INTAKE SECTIES VOOR PERSOONLIJK PROFIEL:
 - Sectie 2 Persoonsgegevens: functietitel (geen werkgevernaam in output)
-- Blok "Algemene informatie" onderaan:
+- Blok "Algemene informatie" (sectie 17 in V5, of onderaan in V4):
   • Opleidingen/werkervaring tabellen
   • Vervoer / rijbewijzen
   • PC/laptop en computervaardigheden
   • Talen: Spreken/Schrijven/Lezen (G/R/O)
-Gebruik NIET: sociale/visie/medische secties, privé, spoor 2, motivatie.
+Gebruik NIET: sociale/visie/medische secties, privé, spoor 2, motivatie, praktische belemmeringen.
 `.trim();
 
 /**
