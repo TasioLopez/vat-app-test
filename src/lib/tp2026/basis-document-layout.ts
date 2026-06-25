@@ -19,8 +19,6 @@ export function formatBasisFootnoteDisplay(text: string): string {
   return t.startsWith('*') ? t : `*${t}`;
 }
 
-export const TP_BASIS_TOELICHTING_POW = 'Toelichting POW-meter™';
-
 export const TP_WK_INTRO_LINE =
   'Werknemer heeft uitleg en informatie gekregen over onderstaande punten:';
 
@@ -43,7 +41,6 @@ export function normalizeWkMarkdown(md: string): string {
   return body || WETTELIJKE_KADERS.trim();
 }
 
-export function getBasisToelichtingLabel(key: string): string | null {
-  if (key === 'plaats') return TP_BASIS_TOELICHTING_POW;
+export function getBasisToelichtingLabel(_key: string): string | null {
   return null;
 }

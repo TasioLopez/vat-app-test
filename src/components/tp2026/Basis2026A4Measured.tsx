@@ -25,6 +25,7 @@ import {
 import {
   TP2026_PROFIEL_PREVIEW_META,
   TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+  TP2026_POW_OVERVIEW_TITLE,
   type TP2026ProfielWerknemerFieldKey,
 } from '@/lib/tp2026/basis-profiel-field-order';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
@@ -272,7 +273,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
           id: 'pow-static',
           kind: 'text',
           key: 'pow-static',
-          title: 'Perspectief op werk',
+          title: TP2026_POW_OVERVIEW_TITLE,
           md: '',
           showSectionTitle: true,
           variant: 'powStatic',
@@ -283,7 +284,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
           key: 'pow-graphic',
           title: 'Grafische weergave POW-meter™',
           md: '',
-          showSectionTitle: true,
+          showSectionTitle: false,
           variant: 'powGraphic',
         },
         {
@@ -292,7 +293,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
           key: 'pow-inschaling',
           title: meta.title,
           md: String(data.pow_meter ?? '').trim(),
-          showSectionTitle: true,
+          showSectionTitle: false,
           variant: 'powInschaling',
         }
       );

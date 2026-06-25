@@ -2,6 +2,11 @@
  * Static Inhoudsopgave for TP 2026 stap 03 (basisdocument) page 1 — aligned with official template.
  */
 
+import {
+  TP2026_POW_OVERVIEW_TITLE,
+  TP2026_TOELICHTING_POW_TITLE,
+} from '@/lib/tp2026/basis-profiel-field-order';
+
 export const BASIS_INHOUDSOPGAVE_TITLE = 'Inhoudsopgave';
 
 /** Leading bullets (no coloured bar). */
@@ -29,11 +34,8 @@ export const BASIS_INHOUDSOPGAVE_SECTIONS: BasisInhoudsopgaveSection[] = [
       'Belastbaarheidsprofiel',
       'Praktische belemmeringen',
       'Advies passende arbeid',
-      'Perspectief op werk',
-      'POW-meter™',
-      'Grafische weergave POW-meter™',
-      'Inschaling POW-meter™',
-      'Visie op plaatsbaarheid',
+      TP2026_POW_OVERVIEW_TITLE,
+      TP2026_TOELICHTING_POW_TITLE,
       'Visie loopbaanadviseur',
       'Zoekprofiel',
     ],
@@ -46,6 +48,6 @@ export const BASIS_INHOUDSOPGAVE_SECTIONS: BasisInhoudsopgaveSection[] = [
   {
     barVariant: 'beige',
     title: 'Bijlagen',
-    items: ['Voortgang en planning', 'Nieuwe Leernavigator?', 'Stroomschema?', 'BOW?'],
+    items: ['Voortgang en planning'],
   },
 ];

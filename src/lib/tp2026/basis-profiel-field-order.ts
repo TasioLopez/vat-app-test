@@ -1,5 +1,8 @@
 /** Canonical order for TP 2026 step 3 "Profiel werknemer" sections (matches inhoudsopgave). */
 
+export const TP2026_POW_OVERVIEW_TITLE = 'Perspectief op werk - POW-meter™';
+export const TP2026_TOELICHTING_POW_TITLE = 'Toelichting POW-meter™';
+
 export const TP2026_PROFIEL_WERKNEMER_FIELD_ORDER = [
   'sociale_achtergrond',
   'visie_werknemer',
@@ -57,13 +60,13 @@ export const TP2026_PROFIEL_PREVIEW_META: Record<
   },
   pow_meter: {
     previewKey: 'pow',
-    title: 'Inschaling POW-meter™',
-    editorLabel: 'Inschaling POW-meter™',
+    title: TP2026_POW_OVERVIEW_TITLE,
+    editorLabel: TP2026_POW_OVERVIEW_TITLE,
   },
   visie_plaatsbaarheid: {
     previewKey: 'plaats',
-    title: 'Visie op plaatsbaarheid',
-    editorLabel: 'Visie op plaatsbaarheid',
+    title: TP2026_TOELICHTING_POW_TITLE,
+    editorLabel: TP2026_TOELICHTING_POW_TITLE,
   },
   visie_loopbaanadviseur: {
     previewKey: 'vlb',
