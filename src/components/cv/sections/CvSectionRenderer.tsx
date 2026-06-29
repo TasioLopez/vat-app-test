@@ -147,14 +147,14 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     const sizePx = getCvPhotoSizePx(cvData.personal.photoSizePx, isSidebar);
 
     return (
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-2 overflow-visible pb-2">
         <CvPhotoResizableFrame
           src={photoDisplayUrl}
           crop={cvData.personal.photoCrop}
           alt=""
           sizePx={sizePx}
           isSidebar={isSidebar}
-          resizable={!readOnly && showPhotoOption}
+          resizable={!readOnly}
           onSizeChange={(photoSizePx) => updatePersonal({ photoSizePx })}
           placeholder={
             <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">

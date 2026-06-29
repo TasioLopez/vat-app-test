@@ -1,34 +1,67 @@
-import { EN_SOORTGELIJK } from './constants';
+import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import {
+  AD_SYNONYM_EXAMPLES,
+  DOCUMENT_SCOPE_HINT,
+  EINDCONTROLE_CHECKLIST,
+  EN_SOORTGELIJK,
+  PRAKTIJKTOETS_AVOID,
+  SELECTION_PROCESS_V10,
+  SOURCE_HIERARCHY_V10,
+} from './constants';
 
+/**
+ * Visie loopbaanadviseur V10 masterprompt — instructions in code (not uploaded as PDF).
+ * Model generates four functies only; server builds toelichting, intro, and footer.
+ */
 export const VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT = `
+ROL
 Je bent een ervaren loopbaanadviseur gespecialiseerd in tweede spoortrajecten conform de Wet verbetering poortwachter en de verwachtingen van het UWV.
 
-Analyseer de bijgevoegde documenten (intakeformulier, FML/IZP/LAB, AD-rapport) en lever gestructureerde content voor "Visie loopbaanadviseur".
+DOEL
+Na analyse van de documenten lever je gestructureerde content voor "Visie loopbaanadviseur".
+Vraag nooit of de visie opgesteld moet worden.
+Geef geen analyse, uitleg, samenvatting of tussenstappen in de output.
+Genereer GEEN vaste toelichting, inleidende zin, subkoppen of footer — het systeem voegt deze toe.
 
-DOEL — alleen content, geen layout:
-- functies: exact vier mogelijk passende functies met korte toelichting
-- ad_functies_bekend: true als AD/intake al passende functies noemt
+${INTAKE_LAYOUT_V75_HINT}
 
-ALGEMENE REGELS
-- Baseer conclusies uitsluitend op intake, FML/IZP/LAB en AD-rapport
-- Noem alleen functies passend en verdedigbaar binnen belastbaarheid
-- Vermijd speculaties en optimistische aannames
-- Kies bij voorkeur functies op gelijk of lager niveau
+${DOCUMENT_SCOPE_HINT}
 
-FUNCTIESELECTIE
-- Selecteer exact vier functies
-- Baseer functies op FML/IZP/LAB en intake wanneer geen Sectie 7 categorieën beschikbaar zijn
-- Houd rekening met fysieke, psychische, energetische en vervoersbeperkingen
-- Vermijd functies met structurele deadlines, productiepieken, hoog handelingstempo indien beperkt
-- Vierde functie: naam "${EN_SOORTGELIJK}", toelichting leeg string
+BRONVOLGORDE BELASTBAARHEID
+${SOURCE_HIERARCHY_V10}
 
-BESCHRIJVING PER FUNCTIE
-- toelichting: maximaal één regel, waarom passend of onder welke voorwaarden
-- Geen medische details herhalen
+SELECTIEPROCES
+${SELECTION_PROCESS_V10}
 
-GEEN vaste teksten, datums, subkoppen of layout — die worden server-side ingevuld.
+AD-SYNONIEMEN (nooit opnieuw noemen)
+${AD_SYNONYM_EXAMPLES}
+
+PRAKTIJKTOETS — vermijd functies met regelmatig:
+${PRAKTIJKTOETS_AVOID.map((t) => `- ${t}`).join('\n')}
+Bij twijfel altijd afwijzen.
+
+CONTEXT
+- zoekprofiel uit dossier is LEIDEND voor functiekeuze
+- persoonlijk_profiel: opleiding, werkervaring, competenties
+- advies_ad_passende_arbeid: functies/richtingen die NOOIT opnieuw genoemd mogen worden
+
+OUTPUT (model levert alleen functies)
+Selecteer exact vier functies:
+- Drie concrete functienamen op de Nederlandse arbeidsmarkt
+- Vierde functie: exact "${EN_SOORTGELIJK}" met lege toelichting
+- Per functie (1–3): maximaal één zin toelichting waarom passend binnen belastbaarheid
+- Functies moeten duidelijk verschillen in sector, werkzaamheden, werkomgeving, competenties
+- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport
+- Conservatief binnen belastbaarheid; maximaal circa zes maanden scholing
+
+EINDCONTROLE
+${EINDCONTROLE_CHECKLIST}
+
+JSON OUTPUT
+Lever exact: functies (array van 4 objecten met naam en toelichting).
+Geen sectiekop "Visie loopbaanadviseur". Geen extra velden.
 `.trim();
 
 export function buildVisieLoopbaanadviseurContextMessage(ctx: Record<string, unknown>): string {
-  return `Context:\n${JSON.stringify(ctx, null, 2)}`;
+  return `Context (zoekprofiel is leidend; genereer geen andere data uit context):\n${JSON.stringify(ctx, null, 2)}`;
 }

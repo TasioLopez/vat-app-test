@@ -1,4 +1,5 @@
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
+import { normalizeIntakeConcept } from '@/lib/tp/intake-ad-presence';
 
 export type DoctorRole = 'Arts' | 'Anios' | 'BA' | 'VA';
 
@@ -109,6 +110,13 @@ export function normalizeTp2ExtractedData(
     const formatted = normalizeOccupationalDoctorName(out.occupational_doctor_name);
     if (formatted) out.occupational_doctor_name = formatted;
     else delete out.occupational_doctor_name;
+  }
+
+  const intakeConcept = normalizeIntakeConcept(out.intake_concept);
+  if (intakeConcept !== undefined) {
+    out.intake_concept = intakeConcept;
+  } else {
+    delete out.intake_concept;
   }
 
   delete out.doctor_role;

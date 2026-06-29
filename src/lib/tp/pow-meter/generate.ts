@@ -2,6 +2,7 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import { isNoAdIntake, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
 import { buildPowMeterFields, nlDate, type PowMeterFields } from './build-fields';
 import { DEFAULT_POW_METER_MODEL } from './constants';
 import { POW_METER_CONTENT_PROMPT, buildPowMeterContextMessage } from './prompt';
@@ -31,6 +32,8 @@ export type PowMeterBuildContext = {
   meta?: {
     prognose_bedrijfsarts?: string | null;
     fml_izp_lab_date_voluit?: string | null;
+    has_ad_report?: boolean | null;
+    intake_concept?: boolean | null;
   };
 };
 
@@ -55,8 +58,11 @@ export function getPowMeterDocCategory(type: string | null | undefined): DocCate
   return null;
 }
 
-export function filterPowMeterDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
-  return docs
+export function filterPowMeterDocs(
+  docs: EmployeeDoc[],
+  options?: { excludeAd?: boolean }
+): EmployeeDoc[] {
+  let filtered = docs
     .map((doc) => ({
       doc,
       category: getPowMeterDocCategory(doc.type),
@@ -64,6 +70,12 @@ export function filterPowMeterDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
     .filter((entry): entry is { doc: EmployeeDoc; category: DocCategory } => entry.category !== null)
     .sort((a, b) => CATEGORY_PRIORITY[a.category] - CATEGORY_PRIORITY[b.category])
     .map((entry) => entry.doc);
+
+  if (options?.excludeAd) {
+    filtered = filtered.filter((doc) => getPowMeterDocCategory(doc.type) !== 'ad');
+  }
+
+  return filtered;
 }
 
 function getPowMeterModel(): string {
@@ -79,12 +91,13 @@ function getReasoningEffort(): 'low' | 'medium' | 'high' | undefined {
 async function uploadPowMeterDocs(
   openai: OpenAI,
   supabase: SupabaseClient,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  options?: { excludeAd?: boolean }
 ): Promise<string[]> {
   const fileIds: string[] = [];
   let totalBytes = 0;
 
-  for (const doc of filterPowMeterDocs(docs)) {
+  for (const doc of filterPowMeterDocs(docs, options)) {
     if (!doc.url) continue;
     const path = extractStoragePath(doc.url);
     if (!path) continue;
@@ -129,7 +142,8 @@ export async function generatePowMeterContent(
   docs: EmployeeDoc[],
   ctx: PowMeterBuildContext = {}
 ): Promise<PowMeterContentResult> {
-  const fileIds = await uploadPowMeterDocs(openai, supabase, docs);
+  const excludeAd = isNoAdIntake(ctx.meta);
+  const fileIds = await uploadPowMeterDocs(openai, supabase, docs, { excludeAd });
 
   if (fileIds.length === 0) {
     throw new Error('No POW-meter files could be uploaded');
@@ -191,12 +205,15 @@ export async function generatePowMeter(
 
 export function buildPowMeterContextFromMeta(
   prognoseBedrijfsarts?: string | null,
-  fmlIzpLabDate?: string | null
+  fmlIzpLabDate?: string | null,
+  adPresence?: IntakeAdPresenceMeta | null
 ): PowMeterBuildContext {
   return {
     meta: {
       prognose_bedrijfsarts: prognoseBedrijfsarts || null,
       fml_izp_lab_date_voluit: nlDate(fmlIzpLabDate) || null,
+      has_ad_report: adPresence?.has_ad_report ?? null,
+      intake_concept: adPresence?.intake_concept ?? null,
     },
   };
 }

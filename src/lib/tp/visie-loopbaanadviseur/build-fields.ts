@@ -1,24 +1,21 @@
-import {
-  buildArtsPhrase,
-  isFemaleGender,
-  isMaleGender,
-  nlDate,
-} from '@/lib/tp/format-context';
-import {
-  AD_FUNCTIES_INTRO,
-  EN_SOORTGELIJK,
-  FML_FUNCTIES_INTRO_TEMPLATE,
-  FUNCTIE_FOOTER,
-  FUNCTIES_DELIMITER,
-  TOELICHTING_DELIMITER,
-  TOELICHTING_MAN,
-  TOELICHTING_ONBEKEND,
-  TOELICHTING_VROUW,
-} from './constants';
+import { isFemaleGender, isMaleGender } from '@/lib/tp/format-context';
 import {
   buildFunctiesFromIntakeCategories,
   type IntakeSectie7FunctieCategorie,
 } from '@/lib/tp/intake-sectie7';
+import {
+  AD_FUNCTIES_INTRO,
+  EN_SOORTGELIJK,
+  FUNCTIE_FOOTER,
+  FUNCTIES_DELIMITER,
+  NO_AD_BELASTBAARHEID_INTRO,
+  NO_AD_NO_BELASTBAARHEID_INTRO,
+  TOELICHTING_DELIMITER,
+  TOELICHTING_MAN,
+  TOELICHTING_ONBEKEND,
+  TOELICHTING_VROUW,
+  type DocumentScenario,
+} from './constants';
 import type { VisieLoopbaanadviseurContentResult } from './schema';
 
 export type VisieLoopbaanadviseurBuildContext = {
@@ -28,6 +25,10 @@ export type VisieLoopbaanadviseurBuildContext = {
     intake_date?: string | null;
     occupational_doctor_org?: string | null;
     advies_ad_passende_arbeid?: string | null;
+    zoekprofiel?: string | null;
+    persoonlijk_profiel?: string | null;
+    has_ad_report?: boolean | null;
+    intake_concept?: boolean | null;
   };
 };
 
@@ -51,25 +52,54 @@ function getToelichtingParagraph(gender?: string | null): string {
   return TOELICHTING_ONBEKEND;
 }
 
-function buildFunctiesIntro(
-  ctx: VisieLoopbaanadviseurBuildContext,
-  adFunctiesBekend: boolean
-): string {
-  if (adFunctiesBekend) return AD_FUNCTIES_INTRO;
+export function buildFunctiesIntro(scenario: DocumentScenario): string {
+  switch (scenario) {
+    case 'ad':
+      return AD_FUNCTIES_INTRO;
+    case 'belastbaarheid_only':
+      return NO_AD_BELASTBAARHEID_INTRO;
+    case 'intake_only':
+      return NO_AD_NO_BELASTBAARHEID_INTRO;
+  }
+}
 
-  const fmlDatum = nlDate(ctx.meta.fml_izp_lab_date) || '[datum FML]';
-  const intakeDatum = nlDate(ctx.meta.intake_date) || '[datum intake]';
-  const artsPhrase = buildArtsPhrase(ctx.meta.occupational_doctor_org);
+function countSentences(text: string): number {
+  if (!text.trim()) return 0;
+  return text.split(/(?<=[.!?])\s+/).filter(Boolean).length;
+}
 
-  return FML_FUNCTIES_INTRO_TEMPLATE.replace('{fmlDatum}', fmlDatum)
-    .replace('{artsPhrase}', artsPhrase)
-    .replace('{intakeDatum}', intakeDatum);
+function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
+  const functies = content.functies;
+  if (functies.length !== 4) {
+    console.warn(`⚠️ Visie loopbaanadviseur: verwacht 4 functies, gevonden ${functies.length}`);
+  }
+
+  const fourth = functies[3]?.naam?.trim().toLowerCase();
+  if (fourth && fourth !== EN_SOORTGELIJK.toLowerCase()) {
+    console.warn('⚠️ Visie loopbaanadviseur: vierde functie moet "En soortgelijk" zijn');
+  }
+
+  const names = functies.map((f) => f.naam.trim().toLowerCase()).filter(Boolean);
+  const unique = new Set(names);
+  if (unique.size !== names.length) {
+    console.warn('⚠️ Visie loopbaanadviseur: dubbele functienamen gevonden');
+  }
+
+  for (const f of functies.slice(0, 3)) {
+    if (countSentences(f.toelichting) > 1) {
+      console.warn(`⚠️ Visie loopbaanadviseur: toelichting >1 zin voor "${f.naam}"`);
+    }
+  }
 }
 
 function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): string {
   const functies = content.functies.slice(0, 4);
   while (functies.length < 4) {
     functies.push({ naam: EN_SOORTGELIJK, toelichting: '' });
+  }
+
+  if (functies[3]) {
+    functies[3] = { naam: EN_SOORTGELIJK, toelichting: '' };
   }
 
   return functies
@@ -84,11 +114,11 @@ function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): stri
     .join('\n');
 }
 
+/** @deprecated V10 uses AI-selected functies; kept for legacy/tests only. */
 export function buildVisieLoopbaanadviseurContentFromIntake(
   categories: IntakeSectie7FunctieCategorie[]
 ): VisieLoopbaanadviseurContentResult {
   return {
-    ad_functies_bekend: true,
     functies: buildFunctiesFromIntakeCategories(categories),
   };
 }
@@ -180,10 +210,13 @@ export function buildVisieLoopbaanadviseurBlock(parsed: ParsedVisieLoopbaanadvis
 
 export function buildVisieLoopbaanadviseurFields(
   ctx: VisieLoopbaanadviseurBuildContext,
-  content: VisieLoopbaanadviseurContentResult
+  content: VisieLoopbaanadviseurContentResult,
+  scenario: DocumentScenario
 ): VisieLoopbaanadviseurFields {
+  validateFuncties(content);
+
   const toelichting = getToelichtingParagraph(ctx.details.gender);
-  const functiesIntro = buildFunctiesIntro(ctx, content.ad_functies_bekend);
+  const functiesIntro = buildFunctiesIntro(scenario);
   const bullets = formatFunctieBullets(content);
 
   const assembled = [

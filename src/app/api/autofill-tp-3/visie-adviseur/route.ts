@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import {
+  filterVisieLoopbaanadviseurDocs,
   generateVisieLoopbaanadviseur,
   GENERATION_FALLBACK,
+  hasIntakeDoc,
 } from '@/lib/tp/visie-loopbaanadviseur';
 
 const supabase = createClient(
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
     const { data: meta } = await supabase
       .from('tp_meta')
       .select(
-        'fml_izp_lab_date, intake_date, occupational_doctor_org, advies_ad_passende_arbeid'
+        'fml_izp_lab_date, intake_date, occupational_doctor_org, advies_ad_passende_arbeid, zoekprofiel, persoonlijk_profiel, has_ad_report'
       )
       .eq('employee_id', employeeId)
       .single();
@@ -42,6 +44,21 @@ export async function GET(req: NextRequest) {
 
     if (!docs?.length) {
       return NextResponse.json({ error: 'Geen documenten gevonden', details: {} }, { status: 200 });
+    }
+
+    const relevantDocs = filterVisieLoopbaanadviseurDocs(docs);
+    if (!hasIntakeDoc(docs)) {
+      return NextResponse.json(
+        { error: 'Geen intakeformulier gevonden (verplicht voor visie loopbaanadviseur)', details: {} },
+        { status: 200 }
+      );
+    }
+
+    if (relevantDocs.length === 0) {
+      return NextResponse.json(
+        { error: 'Geen relevante documenten gevonden', details: {} },
+        { status: 200 }
+      );
     }
 
     const ctx = {

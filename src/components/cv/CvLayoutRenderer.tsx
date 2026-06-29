@@ -28,7 +28,7 @@ export default function CvLayoutRenderer() {
 
   if (!readOnly) {
     return (
-      <CVA4Canvas>
+      <CVA4Canvas className="overflow-visible">
         <div
           className={cn(theme.rootClass, 'w-full flex-col')}
           style={{ '--cv-accent': accent } as React.CSSProperties}

@@ -2,6 +2,10 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import {
+  EMPTY_INTAKE_SECTIE7_CONTENT,
+  isNoAdIntake,
+} from '@/lib/tp/intake-ad-presence';
 import { sanitizeIntakeSectie7Content } from './build-fields';
 import { DEFAULT_INTAKE_SECTIE7_MODEL, INTAKE_DOC_VARIANTS } from './constants';
 import {
@@ -27,6 +31,7 @@ export type IntakeSectie7Context = {
     ad_report_date?: string | null;
     occupational_doctor_name?: string | null;
     has_ad_report?: boolean | null;
+    intake_concept?: boolean | null;
   };
 };
 
@@ -89,6 +94,7 @@ function buildApiContext(ctx: IntakeSectie7Context): Record<string, unknown> {
       ad_report_date: ctx.meta?.ad_report_date,
       occupational_doctor_name: ctx.meta?.occupational_doctor_name,
       has_ad_report: ctx.meta?.has_ad_report,
+      intake_concept: ctx.meta?.intake_concept,
     },
   };
 }
@@ -99,6 +105,10 @@ export async function generateIntakeSectie7Content(
   docs: EmployeeDoc[],
   ctx: IntakeSectie7Context = {}
 ): Promise<IntakeSectie7Content> {
+  if (isNoAdIntake(ctx.meta)) {
+    return { ...EMPTY_INTAKE_SECTIE7_CONTENT };
+  }
+
   const fileIds = await uploadIntakeDocs(openai, supabase, docs);
 
   if (fileIds.length === 0) {

@@ -55,7 +55,7 @@ export default function CvPhotoResizableFrame({
   );
 
   return (
-    <div className="relative inline-flex">
+    <div className="group/photo relative inline-flex overflow-visible p-1">
       <CvPhotoFrame
         src={src}
         crop={crop}
@@ -71,10 +71,12 @@ export default function CvPhotoResizableFrame({
         <button
           type="button"
           aria-label="Fotoformaat aanpassen"
+          title="Sleep om grootte aan te passen"
           className={cn(
-            'cv-no-print absolute -bottom-1 -right-1 z-30 flex h-4 w-4 items-center justify-center',
-            'rounded-sm border border-gray-300 bg-white shadow-sm',
-            'cursor-se-resize touch-none hover:border-sky-400 hover:bg-sky-50'
+            'cv-no-print absolute bottom-0 right-0 z-50 flex h-6 w-6 items-center justify-center',
+            'rounded-md border-2 border-sky-500 bg-white shadow-md',
+            'cursor-se-resize touch-none opacity-100',
+            'hover:border-sky-600 hover:bg-sky-50'
           )}
           onPointerDown={onHandlePointerDown}
           onPointerMove={onHandlePointerMove}
@@ -83,7 +85,7 @@ export default function CvPhotoResizableFrame({
           onLostPointerCapture={endDrag}
         >
           <span
-            className="block h-2 w-2 border-b-2 border-r-2 border-gray-500"
+            className="block h-2.5 w-2.5 border-b-2 border-r-2 border-sky-600"
             aria-hidden
           />
         </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
 import Sidebar from '@/components/ui/Sidebar';
 import { ResponsiveLayout } from '@/components/layout/ResponsiveLayout';
@@ -15,6 +16,8 @@ export default function ClientLayout({
   role: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const isCvRoute = pathname?.startsWith('/dashboard/cv');
 
   return (
     <UnsavedChangesGuardProvider>
@@ -22,6 +25,7 @@ export default function ClientLayout({
         <Toaster richColors position="top-center" />
         <ResponsiveLayout
           collapsed={collapsed}
+          className={isCvRoute ? 'bg-gray-100' : undefined}
           sidebar={
             <Sidebar
               collapsed={collapsed}

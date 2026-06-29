@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from('tp_meta')
-      .select('prognose_bedrijfsarts, fml_izp_lab_date')
+      .select('prognose_bedrijfsarts, fml_izp_lab_date, has_ad_report')
       .eq('employee_id', employeeId)
       .single();
 
@@ -48,7 +48,8 @@ export async function GET(req: NextRequest) {
 
     const ctx = buildPowMeterContextFromMeta(
       meta?.prognose_bedrijfsarts,
-      meta?.fml_izp_lab_date
+      meta?.fml_izp_lab_date,
+      { has_ad_report: meta?.has_ad_report }
     );
 
     let pow_meter: string;

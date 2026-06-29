@@ -7,7 +7,7 @@ Je bent een expert in het analyseren van Nederlandse intakeformulieren voor traj
 
 Extract ALLEEN TP metadata velden uit DIT intakeformulier (geen andere documenten).
 
-BELANGRIJK — Sectie 6 "Re-integratie en houding" is een TWEE-KOLOMS raster (V5 heeft bovenaan Geboortedatum | Weken — dat is geen trajectdatum):
+BELANGRIJK — Sectie 6 "Re-integratie en houding" is een TWEE-KOLOMS raster (V6 heeft bovenaan Geboortedatum | Weken — dat is geen trajectdatum):
 | Linker kolom          | Rechter kolom        |
 | Aanmelddatum          | Startdatum           |
 | Datum FML / IZP       | Einddatum            |
@@ -33,6 +33,9 @@ PERSOONSVELDEN:
    - Alleen de ingevulde naam, geen "intern gebruik bij..." tenzij supervisie-zin aanwezig
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
+
+10. intake_concept — boolean: true als checkbox "Concept" onder "AD-rapport:" in sectie 6 is aangevinkt (Juni V6)
+   - Concept-intake = nog geen definitief AD-rapport; sectie 7 AD-quotes zijn dan niet van toepassing
 
 HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult

@@ -3,16 +3,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
-  generateIntakeSectie7Content,
-  hasIntakeFunctieCategories,
-  type EmployeeDoc,
-} from '@/lib/tp/intake-sectie7';
-import {
-  buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
+import { isNoAdIntake, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
+import { type DocumentScenario } from './constants';
 import { DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL } from './constants';
 import {
   VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
@@ -26,28 +22,83 @@ import {
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
 
-const DOC_PRIORITY: Record<string, number> = {
-  intakeformulier: 1,
-  'intake-formulier': 1,
-  intake: 1,
-  fml: 2,
-  izp: 2,
-  lab: 2,
-  ad_rapportage: 3,
-  ad_rapport: 3,
-  ad: 3,
+export type EmployeeDoc = {
+  type: string | null;
+  url: string | null;
+  uploaded_at?: string | null;
 };
 
-function docPriority(type: string | null | undefined): number {
+type DocCategory = 'belastbaarheid' | 'ad' | 'intake';
+
+const CATEGORY_PRIORITY: Record<DocCategory, number> = {
+  belastbaarheid: 1,
+  ad: 2,
+  intake: 3,
+};
+
+export function getVisieLoopbaanadviseurDocCategory(
+  type: string | null | undefined
+): DocCategory | null {
   const t = (type || '').toLowerCase();
-  for (const [key, priority] of Object.entries(DOC_PRIORITY)) {
-    if (t.includes(key)) return priority;
+  if (
+    t.includes('fml') ||
+    t.includes('izp') ||
+    t.includes('lab') ||
+    t.includes('functiemogelijkhedenlijst') ||
+    t.includes('inzetbaarheidsprofiel') ||
+    t.includes('lijst arbeidsmogelijkheden')
+  ) {
+    return 'belastbaarheid';
   }
-  return 5;
+  if (t.includes('ad_rapport') || t.includes('ad_rapportage') || t.includes('arbeidsdeskundig')) {
+    return 'ad';
+  }
+  if (t.includes('intakeformulier') || t.includes('intake-formulier') || t.includes('intake')) {
+    return 'intake';
+  }
+  return null;
 }
 
-function sortDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
-  return [...docs].sort((a, b) => docPriority(a.type) - docPriority(b.type));
+export function filterVisieLoopbaanadviseurDocs(
+  docs: EmployeeDoc[],
+  options?: { excludeAd?: boolean }
+): EmployeeDoc[] {
+  let filtered = docs
+    .map((doc) => ({
+      doc,
+      category: getVisieLoopbaanadviseurDocCategory(doc.type),
+    }))
+    .filter((entry): entry is { doc: EmployeeDoc; category: DocCategory } => entry.category !== null)
+    .sort((a, b) => CATEGORY_PRIORITY[a.category] - CATEGORY_PRIORITY[b.category])
+    .map((entry) => entry.doc);
+
+  if (options?.excludeAd) {
+    filtered = filtered.filter(
+      (doc) => getVisieLoopbaanadviseurDocCategory(doc.type) !== 'ad'
+    );
+  }
+
+  return filtered;
+}
+
+export function hasIntakeDoc(docs: EmployeeDoc[]): boolean {
+  return docs.some((d) => getVisieLoopbaanadviseurDocCategory(d.type) === 'intake');
+}
+
+export function detectDocumentScenario(
+  docs: EmployeeDoc[],
+  meta?: IntakeAdPresenceMeta | null
+): DocumentScenario {
+  const categories = new Set(
+    filterVisieLoopbaanadviseurDocs(docs)
+      .map((d) => getVisieLoopbaanadviseurDocCategory(d.type))
+      .filter((c): c is DocCategory => c != null)
+  );
+
+  const treatAsNoAd = isNoAdIntake(meta);
+  if (!treatAsNoAd && categories.has('ad')) return 'ad';
+  if (categories.has('belastbaarheid')) return 'belastbaarheid_only';
+  return 'intake_only';
 }
 
 function getVisieLoopbaanadviseurModel(): string {
@@ -63,15 +114,16 @@ function getReasoningEffort(): 'low' | 'medium' | 'high' | undefined {
   return undefined;
 }
 
-async function uploadPriorityDocs(
+async function uploadVisieLoopbaanadviseurDocs(
   openai: OpenAI,
   supabase: SupabaseClient,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  options?: { excludeAd?: boolean }
 ): Promise<string[]> {
   const fileIds: string[] = [];
   let totalBytes = 0;
 
-  for (const doc of sortDocs(docs)) {
+  for (const doc of filterVisieLoopbaanadviseurDocs(docs, options)) {
     if (!doc.url) continue;
     const path = extractStoragePath(doc.url);
     if (!path) continue;
@@ -81,7 +133,7 @@ async function uploadPriorityDocs(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     if (totalBytes + buffer.length > MAX_UPLOAD_BYTES) {
-      console.warn('⚠️ Visie loopbaanadviseur: skipping document (size limit)', path);
+      console.warn('⚠️ Visie loopbaanadviseur: skipping document (combined size limit)', path);
       continue;
     }
 
@@ -109,20 +161,31 @@ function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string,
       intake_date: ctx.meta.intake_date,
       occupational_doctor_org: ctx.meta.occupational_doctor_org,
       advies_ad_passende_arbeid: ctx.meta.advies_ad_passende_arbeid,
+      zoekprofiel: ctx.meta.zoekprofiel || null,
+      persoonlijk_profiel: ctx.meta.persoonlijk_profiel || null,
     },
   };
 }
 
-async function generateVisieLoopbaanadviseurContentFallback(
+export async function generateVisieLoopbaanadviseurContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
   docs: EmployeeDoc[]
 ): Promise<VisieLoopbaanadviseurContentResult> {
-  const fileIds = await uploadPriorityDocs(openai, supabase, docs);
+  if (!hasIntakeDoc(docs)) {
+    throw new Error('No intake document found for visie loopbaanadviseur');
+  }
+
+  if (!ctx.meta.zoekprofiel?.trim()) {
+    console.warn('⚠️ Visie loopbaanadviseur: zoekprofiel ontbreekt in context');
+  }
+
+  const excludeAd = isNoAdIntake(ctx.meta);
+  const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs, { excludeAd });
 
   if (fileIds.length === 0) {
-    throw new Error('No files could be uploaded');
+    throw new Error('No visie loopbaanadviseur files could be uploaded');
   }
 
   try {
@@ -165,38 +228,15 @@ async function generateVisieLoopbaanadviseurContentFallback(
   }
 }
 
-export async function generateVisieLoopbaanadviseurContent(
-  openai: OpenAI,
-  supabase: SupabaseClient,
-  ctx: VisieLoopbaanadviseurBuildContext,
-  docs: EmployeeDoc[]
-): Promise<VisieLoopbaanadviseurContentResult> {
-  try {
-    const intake = await generateIntakeSectie7Content(openai, supabase, docs, {
-      meta: {
-        ad_report_date: ctx.meta.fml_izp_lab_date,
-        has_ad_report: Boolean(ctx.meta.advies_ad_passende_arbeid),
-      },
-    });
-
-    if (hasIntakeFunctieCategories(intake)) {
-      return buildVisieLoopbaanadviseurContentFromIntake(intake.functie_categorien);
-    }
-  } catch (error) {
-    console.warn('⚠️ Visie loopbaanadviseur: intake Sectie 7 extraction failed, using fallback', error);
-  }
-
-  return generateVisieLoopbaanadviseurContentFallback(openai, supabase, ctx, docs);
-}
-
 export async function generateVisieLoopbaanadviseur(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
   docs: EmployeeDoc[]
 ): Promise<VisieLoopbaanadviseurFields> {
+  const scenario = detectDocumentScenario(docs, ctx.meta);
   const content = await generateVisieLoopbaanadviseurContent(openai, supabase, ctx, docs);
-  return buildVisieLoopbaanadviseurFields(ctx, content);
+  return buildVisieLoopbaanadviseurFields(ctx, content, scenario);
 }
 
-export type { VisieLoopbaanadviseurBuildContext, VisieLoopbaanadviseurFields, EmployeeDoc };
+export type { VisieLoopbaanadviseurBuildContext, VisieLoopbaanadviseurFields };
