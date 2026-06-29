@@ -228,7 +228,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-24 print:bg-white print:pb-0">
+    <div className="flex min-h-full flex-1 shrink-0 flex-col bg-gray-100 pb-24 print:bg-white print:pb-0">
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">

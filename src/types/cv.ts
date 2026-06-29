@@ -74,6 +74,8 @@ export type CvPersonal = {
   photoStoragePath?: string;
   /** Framing inside the photo frame (editor / print / PDF) */
   photoCrop?: CvPhotoCrop;
+  /** Square frame edge length in px (editor / print / PDF) */
+  photoSizePx?: number;
 };
 
 /** Display and export options persisted with the CV */

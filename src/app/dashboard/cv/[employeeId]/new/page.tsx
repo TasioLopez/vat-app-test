@@ -38,7 +38,7 @@ export default function NewCvPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex min-h-full flex-1 flex-col">
       <div className="border-b border-gray-200 bg-white px-4 py-3">
         <Button variant="ghost" size="sm" className="gap-1 text-gray-600" asChild>
           <Link href={`/dashboard/cv/${employeeId}`}>

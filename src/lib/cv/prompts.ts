@@ -87,7 +87,7 @@ ${langRule}
 Je antwoordt ALLEEN met geldige JSON volgens CvModel:
 ${CV_MODEL_SCHEMA}
 
-Behoud altijd personal.photoStoragePath, personal.photoCrop en options.includePhotoInCv uit de huidige CV tenzij expliciet leeg; verzin geen fotopaden.
+Behoud altijd personal.photoStoragePath, personal.photoCrop, personal.photoSizePx en options.includePhotoInCv uit de huidige CV tenzij expliciet leeg; verzin geen fotopaden.
 Gebruik NOOIT ruwe cijfercodes (1-5) voor computer/digital skills; schrijf beschrijvende tekst in digitalSkills.
 
 Kwaliteitseisen:

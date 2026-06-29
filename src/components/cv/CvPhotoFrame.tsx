@@ -9,6 +9,7 @@ type Props = {
   alt?: string;
   /** Clipping + sizing for the frame (e.g. rounded-full h-24 w-24) */
   frameClassName?: string;
+  frameStyle?: React.CSSProperties;
   placeholder?: React.ReactNode;
 };
 
@@ -30,10 +31,14 @@ export default function CvPhotoFrame({
   crop,
   alt = '',
   frameClassName,
+  frameStyle,
   placeholder = <span className="text-[10px] opacity-80">Foto</span>,
 }: Props) {
   return (
-    <div className={cn('relative shrink-0 overflow-hidden bg-black/10', frameClassName)}>
+    <div
+      className={cn('relative shrink-0 overflow-hidden bg-black/10', frameClassName)}
+      style={frameStyle}
+    >
       {src ? (
         crop ? (
           // eslint-disable-next-line @next/next/no-img-element -- signed URL / blob preview

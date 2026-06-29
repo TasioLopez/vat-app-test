@@ -28,6 +28,9 @@ function preserveCvPhotoFields(payload: CvModel, source: CvModel) {
   if (!payload.personal.photoCrop && source.personal.photoCrop) {
     payload.personal.photoCrop = source.personal.photoCrop;
   }
+  if (payload.personal.photoSizePx === undefined && source.personal.photoSizePx !== undefined) {
+    payload.personal.photoSizePx = source.personal.photoSizePx;
+  }
 }
 
 function stripCitations(text: string): string {

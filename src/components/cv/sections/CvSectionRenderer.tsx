@@ -16,7 +16,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useCV } from '@/context/CVContext';
-import CvPhotoFrame from '@/components/cv/CvPhotoFrame';
+import CvPhotoResizableFrame from '@/components/cv/CvPhotoResizableFrame';
+import { getCvPhotoSizePx } from '@/lib/cv/photo-size';
 import InlineEditableText from '@/components/cv/InlineEditableText';
 import InlineEditableList from '@/components/cv/InlineEditableList';
 import { getSectionTitle, uiLabel } from '@/lib/cv/section-labels';
@@ -143,16 +144,18 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   if (section.type === 'photo') {
     const showPhotoOption = cvData.options?.includePhotoInCv === true;
     if (!showPhotoOption && readOnly) return null;
+    const sizePx = getCvPhotoSizePx(cvData.personal.photoSizePx, isSidebar);
+
     return (
       <div className="flex flex-col items-center gap-2">
-        <CvPhotoFrame
+        <CvPhotoResizableFrame
           src={photoDisplayUrl}
           crop={cvData.personal.photoCrop}
           alt=""
-          frameClassName={cn(
-            'shrink-0 border-4 bg-white/20',
-            isSidebar ? 'h-24 w-24 rounded-full border-white/40' : 'h-20 w-20 rounded-lg border-gray-200'
-          )}
+          sizePx={sizePx}
+          isSidebar={isSidebar}
+          resizable={!readOnly && showPhotoOption}
+          onSizeChange={(photoSizePx) => updatePersonal({ photoSizePx })}
           placeholder={
             <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
               {getSectionTitle('photo', locale)}

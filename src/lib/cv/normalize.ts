@@ -1,4 +1,5 @@
 import { coerceCvModelDisplay } from '@/lib/cv/format-display';
+import { normalizePhotoSizePx } from '@/lib/cv/photo-size';
 import { getDefaultLayout } from '@/lib/cv/layout-presets';
 import type {
   CvDocumentPayload,
@@ -42,6 +43,7 @@ function normalizeCvModelRaw(o: Record<string, unknown>): CvModel {
         : hasPhotoPath;
 
   const photoCrop = normalizePhotoCrop(personalRaw?.photoCrop);
+  const photoSizePx = normalizePhotoSizePx(personalRaw?.photoSizePx);
 
   const base: CvModel = {
     personal: {
@@ -54,6 +56,7 @@ function normalizeCvModelRaw(o: Record<string, unknown>): CvModel {
       photoUrl: personal?.photoUrl,
       photoStoragePath: personal?.photoStoragePath,
       ...(photoCrop ? { photoCrop } : {}),
+      ...(photoSizePx !== undefined ? { photoSizePx } : {}),
     },
     profile: typeof o.profile === 'string' ? o.profile : '',
     experience: Array.isArray(o.experience) ? (o.experience as CvModel['experience']) : [],
