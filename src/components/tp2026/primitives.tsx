@@ -4,10 +4,10 @@ import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO, TP2026_LOGO_BULLET_PX } from '@/lib/tp2026/document-layout';
 import {
-  TP2026_DATA_ROW_CLASS,
   TP2026_DATA_ROW_LABEL_CLASS,
   TP2026_DATA_ROW_VALUE_CLASS,
-  TP2026_FIELD_TABLE_CLASS,
+  TP2026_FIELD_TABLE_COL_WIDTHS,
+  TP2026_HTML_TABLE_CLASS,
 } from '@/lib/tp2026/tp2026-colors';
 import { formatTP2026CoverVoorName } from '@/lib/utils';
 
@@ -214,9 +214,25 @@ export function ValentineZLogoBulletRow({
   );
 }
 
-/** Bordered field table: full outer frame + horizontal rules between rows (template-style grid). */
-export function TP2026FieldTable({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`${TP2026_FIELD_TABLE_CLASS} ${className}`}>{children}</div>;
+/** Bordered two-column field table (HTML table + collapsed cell borders for reliable PDF export). */
+export function TP2026FieldTable({
+  children,
+  className = '',
+  colWidths = TP2026_FIELD_TABLE_COL_WIDTHS,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  colWidths?: [string, string];
+}) {
+  return (
+    <table className={`${TP2026_HTML_TABLE_CLASS} bg-white ${className}`}>
+      <colgroup>
+        <col style={{ width: colWidths[0] }} />
+        <col style={{ width: colWidths[1] }} />
+      </colgroup>
+      <tbody>{children}</tbody>
+    </table>
+  );
 }
 
 /** Two-column form row for TP 2026 A4 (~35% / 65%, Word-style). */
@@ -224,18 +240,22 @@ export function DataRow({
   label,
   value,
   compact = false,
+  className = '',
+  labelClassName = '',
+  valueClassName = '',
 }: {
   label: string;
   value: React.ReactNode;
   compact?: boolean;
+  className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
 }) {
   const size = compact ? 'text-[10px]' : 'text-[12px]';
   return (
-    <div className={`${TP2026_DATA_ROW_CLASS} grid grid-cols-[35%_65%] ${size} leading-snug`}>
-      <div className={TP2026_DATA_ROW_LABEL_CLASS}>
-        {label}
-      </div>
-      <div className={TP2026_DATA_ROW_VALUE_CLASS}>{value}</div>
-    </div>
+    <tr className={`${size} leading-snug ${className}`}>
+      <td className={`${TP2026_DATA_ROW_LABEL_CLASS} ${labelClassName}`}>{label}</td>
+      <td className={`${TP2026_DATA_ROW_VALUE_CLASS} ${valueClassName}`}>{value}</td>
+    </tr>
   );
 }

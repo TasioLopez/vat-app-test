@@ -249,14 +249,8 @@ html, body {
 }
 
 /* TP 2026 — uniform gold table borders (#c4b37b, 100% opacity) for preview + PDF export */
-.tp2026-field-table {
+.tp2026-border-box {
   border: 0.5pt solid #c4b37b;
-}
-.tp2026-field-table > .tp2026-data-row:not(:last-child) {
-  border-bottom: 0.5pt solid #c4b37b;
-}
-.tp2026-data-row-label {
-  border-right: 0.5pt solid #c4b37b;
 }
 
 .tp2026-html-table {
@@ -268,16 +262,10 @@ html, body {
   border: 0.5pt solid #c4b37b;
 }
 
-/* Chromium PDF rasterizes 0.5pt div borders unreliably; use 1pt in print. */
+/* Chromium PDF rasterizes 0.5pt borders unreliably; use 1pt in print. */
 @media print {
-  .tp2026-field-table {
+  .tp2026-border-box {
     border: 1pt solid #c4b37b;
-  }
-  .tp2026-field-table > .tp2026-data-row:not(:last-child) {
-    border-bottom: 1pt solid #c4b37b;
-  }
-  .tp2026-data-row-label {
-    border-right: 1pt solid #c4b37b;
   }
   .tp2026-html-table {
     border: 1pt solid #c4b37b;

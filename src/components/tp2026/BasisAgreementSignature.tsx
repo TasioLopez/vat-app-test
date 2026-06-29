@@ -7,6 +7,7 @@ import {
 } from '@/lib/tp2026/basis-document-agreement';
 import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { SectionBand, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
+import { TP2026_BORDER_BOX_CLASS } from '@/lib/tp2026/tp2026-colors';
 
 const paperText =
   'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
@@ -43,7 +44,7 @@ function SignatureCell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="tp2026-field-table rounded p-2">
+    <div className={`${TP2026_BORDER_BOX_CLASS} rounded p-2`}>
       <div className="mb-1 text-[13px] font-bold text-[#6d2a96]">{title}</div>
       <div className="space-y-1.5 text-[11px] leading-relaxed text-neutral-900">{children}</div>
     </div>
