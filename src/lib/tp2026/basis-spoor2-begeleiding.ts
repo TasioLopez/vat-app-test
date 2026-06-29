@@ -85,7 +85,9 @@ Daarnaast kan een interesse- en competentietest worden ingezet wanneer de werkne
   {
     id: 'social-media',
     title: 'Social Media',
-    body: `Digitaal netwerken en solliciteren spelen over het algemeen een belangrijke rol bij het vinden van een nieuwe baan. Daarom vormt het gebruik van social media, met name LinkedIn, een onderdeel van de begeleiding. De werknemer maakt zelfstandig (of onder begeleiding) een LinkedIn-profiel en leert het eigen netwerk in kaart te brengen, te ontwikkelen en in te zetten bij het vinden van een baan.`,
+    body: `Binnen het 2e spoortraject kan social media worden ingezet om de zichtbaarheid van de werknemer op de arbeidsmarkt te vergroten en passende werkmogelijkheden te verkennen. Hierbij wordt bijvoorbeeld niet alleen LinkedIn ingezet, maar ook naar andere relevante sociale media, online vacatureplatforms en digitale netwerken die aansluiten bij de ervaring, mogelijkheden en zoekrichting van de werknemer.
+
+Waar nodig wordt ondersteuning geboden bij het actualiseren van online profielen, het zoeken naar vacatures en het benutten van netwerken. Dit is gericht op het vergroten van de arbeidsmarktkansen en het vinden van duurzame, passende arbeid buiten de eigen organisatie.`,
   },
   {
     id: 'webinars',

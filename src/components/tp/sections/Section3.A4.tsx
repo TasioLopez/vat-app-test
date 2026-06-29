@@ -8,7 +8,7 @@ import { loadTP, TPData } from "@/lib/tp/load";
 import { WETTELIJKE_KADERS, VISIE_LOOPBAANADVISEUR_BASIS } from "@/lib/tp/static";
 import { InleidingSubBlock } from "../InleidingSubBlock";
 import { BasisSpoor2Block } from '@/components/tp2026/BasisSpoor2Block';
-import { ValentineZLogoBullet } from '@/components/tp2026/primitives';
+import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import {
   TP_BASIS_AGREEMENT_INTRO,
   TP_BASIS_AGREEMENT_POINTS,
@@ -176,31 +176,24 @@ function renderTextWithLogoBullets(text: string, isPlaatsbaarheid: boolean = fal
                       const jobTitle = content.substring(0, colonIndex).trim();
                       const description = content.substring(colonIndex + 1).trim();
                       return (
-                          <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
-                              <ValentineZLogoBullet className="mt-px shrink-0" />
-                              <span>
-                                  <strong>{jobTitle}:</strong> {formatInlineText(description)}
-                              </span>
-                          </div>
+                          <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1">
+                              <strong>{jobTitle}:</strong> {formatInlineText(description)}
+                          </ValentineZLogoBulletRow>
                       );
                   } else {
                       // No colon - make entire content bold (e.g., "En soortgelijk")
                       return (
-                          <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
-                              <ValentineZLogoBullet className="mt-px shrink-0" />
-                              <span>
-                                  <strong>{formatInlineText(content)}</strong>
-                              </span>
-                          </div>
+                          <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1">
+                              <strong>{formatInlineText(content)}</strong>
+                          </ValentineZLogoBulletRow>
                       );
                   }
               }
               
               return (
-                <div key={idx} className="flex items-start gap-2 ml-4 mt-1">
-                  <ValentineZLogoBullet className="mt-px shrink-0" />
-                  <span>{formatInlineText(content)}</span>
-                </div>
+                <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1">
+                  {formatInlineText(content)}
+                </ValentineZLogoBulletRow>
               );
             } else {
               // Non-bullet line (intro text)
@@ -250,10 +243,9 @@ function AgreementBlock() {
       <div className={paperText}>
         <div className="ml-4 space-y-2">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <ValentineZLogoBullet className="mt-px shrink-0" />
-              <span>{t}</span>
-            </div>
+            <ValentineZLogoBulletRow key={i}>
+              {t}
+            </ValentineZLogoBulletRow>
           ))}
         </div>
       </div>

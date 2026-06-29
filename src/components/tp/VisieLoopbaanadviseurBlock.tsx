@@ -6,7 +6,7 @@ import {
   TOELICHTING_DELIMITER,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
-import { BasisToelichtingHeading, ValentineZLogoBullet } from '@/components/tp2026/primitives';
+import { BasisToelichtingHeading, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import {
@@ -46,18 +46,15 @@ function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
         if (!parsed) return null;
 
         return (
-          <div key={idx} className="ml-4 flex items-start gap-2">
-            <ValentineZLogoBullet className="mt-px shrink-0" eagerLoading />
-            <span>
-              <span className="font-bold">{parsed.title}</span>
-              {parsed.description ? (
-                <>
-                  {' – '}
-                  <span className="font-normal">{formatInlineText(parsed.description)}</span>
-                </>
-              ) : null}
-            </span>
-          </div>
+          <ValentineZLogoBulletRow key={idx} className="ml-4" eagerLoading>
+            <span className="font-bold">{parsed.title}</span>
+            {parsed.description ? (
+              <>
+                {' – '}
+                <span className="font-normal">{formatInlineText(parsed.description)}</span>
+              </>
+            ) : null}
+          </ValentineZLogoBulletRow>
         );
       })}
     </div>

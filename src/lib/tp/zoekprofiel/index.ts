@@ -1,7 +1,8 @@
 export {
   buildZoekprofielFields,
-  buildAlinea2,
-  hasNiveauSentence,
+  buildPara1Closing,
+  countWords,
+  hasV2OpeningSentence,
   nlDate,
   resolveBelastbaarheidsdatum,
   stripCitations,
@@ -10,9 +11,13 @@ export {
 } from './build-fields';
 export {
   DEFAULT_ZOEKPROFIEL_MODEL,
-  FML_ALINEA_2_TEMPLATE,
-  IZP_ALINEA_2_TEMPLATE,
-  NIVEAU_SENTENCES,
+  FORBIDDEN_TERMS,
+  MAX_WORDS_TOTAL,
+  MIN_WORDS_TOTAL,
+  OPENING_PREFIX,
+  PARA1_CLOSING_TEMPLATES,
+  STYLE_REFERENCE_V2,
+  type BelastbaarheidsdocumentType,
 } from './constants';
 export {
   generateZoekprofiel,
@@ -26,6 +31,7 @@ export {
 export { ZOEKPROFIEL_CONTENT_PROMPT } from './prompt';
 export {
   ZOEKPROFIEL_CONTENT_JSON_SCHEMA,
+  coerceBelastbaarheidsdocumentType,
   parseZoekprofielContentResult,
   type ZoekprofielContentResult,
 } from './schema';

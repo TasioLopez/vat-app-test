@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ValentineZLogoBullet } from '@/components/tp2026/primitives';
+import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { TP_BASIS_DISCLAIMER_CLASS, formatBasisFootnoteDisplay } from '@/lib/tp2026/basis-document-layout';
 
 /** Inline **bold**, *italic*, ***both***, and "quoted" segments (legacy TP preview semantics). */
@@ -99,29 +99,22 @@ export function renderTextWithLogoBullets(
                   const jobTitle = content.substring(0, colonIndex).trim();
                   const description = content.substring(colonIndex + 1).trim();
                   return (
-                    <div key={idx} className="ml-4 mt-1 flex items-start gap-2">
-                      <ValentineZLogoBullet className="mt-px shrink-0" eagerLoading={eagerLoading} />
-                      <span>
-                        <strong>{jobTitle}:</strong> {formatInlineText(description)}
-                      </span>
-                    </div>
+                    <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
+                      <strong>{jobTitle}:</strong> {formatInlineText(description)}
+                    </ValentineZLogoBulletRow>
                   );
                 }
                 return (
-                  <div key={idx} className="ml-4 mt-1 flex items-start gap-2">
-                    <ValentineZLogoBullet className="mt-px shrink-0" eagerLoading={eagerLoading} />
-                    <span>
-                      <strong>{formatInlineText(content)}</strong>
-                    </span>
-                  </div>
+                  <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
+                    <strong>{formatInlineText(content)}</strong>
+                  </ValentineZLogoBulletRow>
                 );
               }
 
               return (
-                <div key={idx} className="ml-4 mt-1 flex items-start gap-2">
-                  <ValentineZLogoBullet className="mt-px shrink-0" eagerLoading={eagerLoading} />
-                  <span>{formatInlineText(content)}</span>
-                </div>
+                <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
+                  {formatInlineText(content)}
+                </ValentineZLogoBulletRow>
               );
             }
 

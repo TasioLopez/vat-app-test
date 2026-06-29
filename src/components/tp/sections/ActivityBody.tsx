@@ -1,4 +1,4 @@
-import { ValentineZLogoBullet } from '@/components/tp2026/primitives';
+import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 
 interface ActivityBodyProps {
   bodyMain: string;
@@ -13,10 +13,9 @@ export function ActivityBody({ bodyMain, subText, className = "" }: ActivityBody
     <div className={className}>
       <p className={`text-[12px] leading-relaxed text-neutral-900 ${hasSubText ? 'mb-2' : ''}`}>{bodyMain}</p>
       {hasSubText && (
-        <div className="flex items-start gap-2 mt-2">
-          <ValentineZLogoBullet className="mt-1 shrink-0" />
+        <ValentineZLogoBulletRow className="mt-2">
           <span className="text-[12px] leading-relaxed text-neutral-900">{subText!.trim()}</span>
-        </div>
+        </ValentineZLogoBulletRow>
       )}
     </div>
   );

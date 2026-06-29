@@ -6,7 +6,7 @@ import {
   TP_BASIS_AGREEMENT_POINTS,
 } from '@/lib/tp2026/basis-document-agreement';
 import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
-import { SectionBand, ValentineZLogoBullet } from '@/components/tp2026/primitives';
+import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 
 const paperText =
   'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
@@ -18,10 +18,9 @@ export function BasisAgreementBlock() {
       <div className={paperText}>
         <div className="ml-1 space-y-1.5">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <ValentineZLogoBullet />
-              <span>{t}</span>
-            </div>
+            <ValentineZLogoBulletRow key={i}>
+              {t}
+            </ValentineZLogoBulletRow>
           ))}
         </div>
       </div>

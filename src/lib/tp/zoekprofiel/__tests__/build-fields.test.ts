@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildAlinea2,
+  buildPara1Closing,
   buildZoekprofielFields,
-  hasNiveauSentence,
+  hasV2OpeningSentence,
   nlDate,
   resolveBelastbaarheidsdatum,
   stripCitations,
@@ -16,45 +16,34 @@ const baseCtx: ZoekprofielBuildContext = {
   meta: { fml_izp_lab_date_voluit: '12 december 2025' },
 };
 
+const v2Opening =
+  'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-2 niveau.';
+
 const baseContent: ZoekprofielContentResult = {
-  alinea_1:
-    'Werknemer heeft werkervaring als administratief medewerker. Werknemer heeft mbo-4 afgerond. Werknemer is aangewezen op functies op maximaal mbo-niveau. Passende arbeid ligt in administratieve functies.',
-  alinea_3:
-    'Werknemer is aangewezen op werkzaamheden met een duidelijke structuur en beperkte werkdruk.',
-  alinea_4:
-    'Werknemer is aangewezen op werkzaamheden met beperkte til- en draagbelasting en afwisseling van houding.',
-  heeft_fysieke_beperkingen: true,
+  alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker en productiemedewerker in de logistiek en productie.`,
+  alinea_2:
+    'Werkzaamheden met een overzichtelijke structuur en voorspelbare werkomgeving zijn passend. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Regelmatige werktijden en geen nachtdiensten zijn passend.',
   belastbaarheidsdocument_type: 'fml',
   belastbaarheidsdocument_datum_voluit: '3 februari 2026',
 };
 
 describe('buildZoekprofielFields', () => {
-  it('joins four alinea paragraphs with double newlines including server alinea_2', () => {
+  it('joins two paragraphs with server closing appended to paragraph 1', () => {
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, baseContent);
     const parts = zoekprofiel.split('\n\n');
-    assert.equal(parts.length, 4);
-    assert.match(parts[0], /mbo-niveau/);
-    assert.match(parts[1], /Functionele Mogelijkheden Lijst opgesteld op 12 december 2025/);
-    assert.match(parts[2], /duidelijke structuur/);
-    assert.match(parts[3], /til- en draagbelasting/);
+    assert.equal(parts.length, 2);
+    assert.match(parts[0], /Op basis van de afgeronde opleiding\(en\)/);
+    assert.match(
+      parts[0],
+      /Functionele Mogelijkhedenlijst van 12 december 2025/
+    );
+    assert.match(parts[1], /overzichtelijke structuur/);
   });
 
-  it('returns three paragraphs when heeft_fysieke_beperkingen is false', () => {
+  it('returns empty string when alinea_1_kern is null', () => {
     const content: ZoekprofielContentResult = {
       ...baseContent,
-      heeft_fysieke_beperkingen: false,
-      alinea_4: null,
-    };
-
-    const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
-    assert.equal(zoekprofiel.split('\n\n').length, 3);
-    assert.ok(!zoekprofiel.includes('til- en draagbelasting'));
-  });
-
-  it('returns empty string when alinea_1 is null', () => {
-    const content: ZoekprofielContentResult = {
-      ...baseContent,
-      alinea_1: null,
+      alinea_1_kern: null,
     };
 
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
@@ -64,37 +53,55 @@ describe('buildZoekprofielFields', () => {
   it('strips accidental section heading from alinea text', () => {
     const content: ZoekprofielContentResult = {
       ...baseContent,
-      alinea_1:
-        'Zoekprofiel Werknemer heeft werkervaring als magazijnmedewerker. Werknemer is aangewezen op functies op maximaal vmbo-niveau.',
+      alinea_1_kern: `Zoekprofiel ${v2Opening} Werknemer heeft mbo-2 afgerond.`,
     };
 
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
     assert.ok(!zoekprofiel.startsWith('Zoekprofiel'));
-    assert.match(zoekprofiel, /magazijnmedewerker/);
+    assert.match(zoekprofiel, /mbo-2 afgerond/);
   });
 
   it('collapses internal newlines within a paragraph', () => {
     const content: ZoekprofielContentResult = {
       ...baseContent,
-      alinea_3: 'Werknemer is aangewezen op overzichtelijk werk.\n\nBeperkte werkdruk is passend.',
+      alinea_2:
+        'Werkzaamheden met overzichtelijk werk zijn passend.\n\nBeperkte werkdruk is passend.',
     };
 
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
-    const alinea3 = zoekprofiel.split('\n\n')[2];
-    assert.ok(!alinea3.includes('\n'));
+    const para2 = zoekprofiel.split('\n\n')[1];
+    assert.ok(!para2.includes('\n'));
+  });
+
+  it('strips pdf citation markers from paragraphs', () => {
+    const content: ZoekprofielContentResult = {
+      ...baseContent,
+      alinea_1_kern: `${v2Opening} Tekst [1:2/doc.pdf] meer tekst.`,
+    };
+
+    const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
+    assert.ok(!zoekprofiel.includes('[1:2/doc.pdf]'));
   });
 });
 
-describe('buildAlinea2', () => {
+describe('buildPara1Closing', () => {
   it('uses FML template with date', () => {
-    const text = buildAlinea2('fml', '20 januari 2025');
-    assert.match(text, /Functionele Mogelijkheden Lijst opgesteld op 20 januari 2025/);
+    const text = buildPara1Closing('fml', '20 januari 2025');
+    assert.match(text, /Functionele Mogelijkhedenlijst van 20 januari 2025/);
   });
 
   it('uses IZP template with date', () => {
-    const text = buildAlinea2('izp', '3 februari 2026');
-    assert.match(text, /Inzetbaarheidsprofiel opgesteld op 3 februari 2026/);
-    assert.ok(!text.includes('Functionele Mogelijkheden Lijst'));
+    const text = buildPara1Closing('izp', '3 februari 2026');
+    assert.match(text, /Inzetbaarheidsprofiel van 3 februari 2026/);
+    assert.ok(!text.includes('Functionele Mogelijkhedenlijst'));
+  });
+
+  it('uses LAB template with date', () => {
+    const text = buildPara1Closing('lab', '19 januari 2026');
+    assert.match(
+      text,
+      /Lijst arbeidsmogelijkheden en beperkingen van 19 januari 2026/
+    );
   });
 });
 
@@ -111,16 +118,21 @@ describe('resolveBelastbaarheidsdatum', () => {
   });
 });
 
-describe('hasNiveauSentence', () => {
-  it('returns true when niveau sentence is present', () => {
+describe('hasV2OpeningSentence', () => {
+  it('returns true when V2 opening sentence is present', () => {
     assert.equal(
-      hasNiveauSentence('Werknemer is aangewezen op functies op maximaal mbo-niveau.'),
+      hasV2OpeningSentence(
+        'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-2 niveau.'
+      ),
       true
     );
   });
 
-  it('returns false when niveau sentence is missing', () => {
-    assert.equal(hasNiveauSentence('Werknemer heeft administratieve ervaring.'), false);
+  it('returns false when V2 opening sentence is missing', () => {
+    assert.equal(
+      hasV2OpeningSentence('Werknemer heeft administratieve ervaring.'),
+      false
+    );
   });
 });
 
@@ -147,13 +159,22 @@ describe('parseZoekprofielContentResult', () => {
   it('coerces belastbaarheidsdocument_type to fml by default', async () => {
     const { parseZoekprofielContentResult } = await import('../schema');
     const result = parseZoekprofielContentResult({
-      alinea_1: 'test',
-      alinea_3: null,
-      alinea_4: null,
-      heeft_fysieke_beperkingen: false,
+      alinea_1_kern: 'test',
+      alinea_2: null,
       belastbaarheidsdocument_type: 'unknown',
       belastbaarheidsdocument_datum_voluit: null,
     });
     assert.equal(result.belastbaarheidsdocument_type, 'fml');
+  });
+
+  it('coerces belastbaarheidsdocument_type to lab', async () => {
+    const { parseZoekprofielContentResult } = await import('../schema');
+    const result = parseZoekprofielContentResult({
+      alinea_1_kern: 'test',
+      alinea_2: null,
+      belastbaarheidsdocument_type: 'lab',
+      belastbaarheidsdocument_datum_voluit: null,
+    });
+    assert.equal(result.belastbaarheidsdocument_type, 'lab');
   });
 });

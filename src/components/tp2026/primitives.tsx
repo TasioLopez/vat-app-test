@@ -174,7 +174,7 @@ export function SectionBand({
 /** ValentineZ Z-logo list bullet (shared size for print/PDF). */
 export function ValentineZLogoBullet({
   size = TP2026_LOGO_BULLET_PX,
-  className = 'mt-0.5 shrink-0',
+  className = 'shrink-0',
   eagerLoading = false,
 }: {
   size?: number;
@@ -191,6 +191,26 @@ export function ValentineZLogoBullet({
       className={className}
       loading={eagerLoading ? 'eager' : undefined}
     />
+  );
+}
+
+/** Flex row with Z-logo bullet vertically centered on the first text line. */
+export function ValentineZLogoBulletRow({
+  children,
+  className = '',
+  eagerLoading = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  eagerLoading?: boolean;
+}) {
+  return (
+    <div className={`flex gap-2 ${className}`}>
+      <span className="flex h-[1.625em] shrink-0 items-center" aria-hidden>
+        <ValentineZLogoBullet eagerLoading={eagerLoading} />
+      </span>
+      <span className="min-w-0 flex-1">{children}</span>
+    </div>
   );
 }
 

@@ -1,10 +1,10 @@
-/** Structured content: synthesized alinea 1/3/4 + metadata for server-built alinea 2. */
+import type { BelastbaarheidsdocumentType } from './constants';
+
+/** Structured content: V2 two-paragraph zoekprofiel + metadata for server-built closing. */
 export type ZoekprofielContentResult = {
-  alinea_1: string | null;
-  alinea_3: string | null;
-  alinea_4: string | null;
-  heeft_fysieke_beperkingen: boolean;
-  belastbaarheidsdocument_type: 'fml' | 'izp';
+  alinea_1_kern: string | null;
+  alinea_2: string | null;
+  belastbaarheidsdocument_type: BelastbaarheidsdocumentType;
   belastbaarheidsdocument_datum_voluit: string | null;
 };
 
@@ -19,35 +19,25 @@ function nullableStringProperty(description: string) {
 export const ZOEKPROFIEL_CONTENT_JSON_SCHEMA = {
   type: 'object',
   properties: {
-    alinea_1: nullableStringProperty(
-      'Paragraph 1: werkervaring, functienamen (no werkgevers), opleiding, werk-/denkniveau, zoekrichting; must include exactly one niveau sentence. Max 6 sentences.'
+    alinea_1_kern: nullableStringProperty(
+      'Paragraph 1 body WITHOUT closing sentence: must start with mandatory V2 opening ("Op basis van de afgeronde opleiding(en)..."); then highest education, optional explicit werk-/denkniveau, work experience (functions/sectors/environments only). No lists or headings.'
     ),
-    alinea_3: nullableStringProperty(
-      'Paragraph 3: mental and social load capacity from FML/IZP translated to arbeidskundige taal. Max 5 sentences. Null when none.'
+    alinea_2: nullableStringProperty(
+      'Paragraph 2: full positive arbeidskundige translation of all relevant limitations from most recent FML/IZP/LAB (personal, social, dynamic load, static postures, environment, working hours). No body parts. No lists.'
     ),
-    alinea_4: nullableStringProperty(
-      'Paragraph 4: physical limitations in arbeidskundige taal, no body parts. Null when none or heeft_fysieke_beperkingen is false.'
-    ),
-    heeft_fysieke_beperkingen: {
-      type: 'boolean',
-      description:
-        'True when FML/IZP contains arbeidsrelevante fysieke beperkingen that must appear in alinea_4.',
-    },
     belastbaarheidsdocument_type: {
       type: 'string',
-      enum: ['fml', 'izp'],
+      enum: ['fml', 'izp', 'lab'],
       description:
-        'Detect from uploaded belastbaarheidsdocument: fml for Functionele Mogelijkheden Lijst, izp for Inzetbaarheidsprofiel.',
+        'Type of most recent belastbaarheidsdocument: fml, izp, or lab.',
     },
     belastbaarheidsdocument_datum_voluit: nullableStringProperty(
-      'Full Dutch date from belastbaarheidsdocument (e.g. "12 december 2025"). Null if not found in document.'
+      'Full Dutch date from most recent belastbaarheidsdocument (e.g. "19 januari 2026"). Null if not found.'
     ),
   },
   required: [
-    'alinea_1',
-    'alinea_3',
-    'alinea_4',
-    'heeft_fysieke_beperkingen',
+    'alinea_1_kern',
+    'alinea_2',
     'belastbaarheidsdocument_type',
     'belastbaarheidsdocument_datum_voluit',
   ],
@@ -60,18 +50,20 @@ function coerceNullableString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function coerceBelastbaarheidsdocumentType(value: unknown): 'fml' | 'izp' {
+export function coerceBelastbaarheidsdocumentType(
+  value: unknown
+): BelastbaarheidsdocumentType {
   const t = String(value || '').toLowerCase();
-  return t === 'izp' ? 'izp' : 'fml';
+  if (t === 'izp') return 'izp';
+  if (t === 'lab') return 'lab';
+  return 'fml';
 }
 
 export function parseZoekprofielContentResult(raw: unknown): ZoekprofielContentResult {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   return {
-    alinea_1: coerceNullableString(o.alinea_1),
-    alinea_3: coerceNullableString(o.alinea_3),
-    alinea_4: coerceNullableString(o.alinea_4),
-    heeft_fysieke_beperkingen: Boolean(o.heeft_fysieke_beperkingen),
+    alinea_1_kern: coerceNullableString(o.alinea_1_kern),
+    alinea_2: coerceNullableString(o.alinea_2),
     belastbaarheidsdocument_type: coerceBelastbaarheidsdocumentType(
       o.belastbaarheidsdocument_type
     ),

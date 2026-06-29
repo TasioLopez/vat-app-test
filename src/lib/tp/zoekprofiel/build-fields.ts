@@ -1,8 +1,11 @@
 import {
-  FML_ALINEA_2_TEMPLATE,
-  IZP_ALINEA_2_TEMPLATE,
-  NIVEAU_SENTENCE_PATTERN,
+  FORBIDDEN_TERMS,
+  MAX_WORDS_TOTAL,
+  MIN_WORDS_TOTAL,
+  OPENING_PATTERN,
+  PARA1_CLOSING_TEMPLATES,
   SECTION_HEADING_PATTERN,
+  type BelastbaarheidsdocumentType,
 } from './constants';
 import type { ZoekprofielContentResult } from './schema';
 
@@ -40,8 +43,13 @@ function stripSectionHeading(text: string): string {
   return text.replace(SECTION_HEADING_PATTERN, '').trim();
 }
 
-export function hasNiveauSentence(text: string): boolean {
-  return NIVEAU_SENTENCE_PATTERN.test(text);
+export function countWords(text: string): number {
+  if (!text.trim()) return 0;
+  return text.trim().split(/\s+/).length;
+}
+
+export function hasV2OpeningSentence(text: string): boolean {
+  return OPENING_PATTERN.test(text.trim());
 }
 
 export function resolveBelastbaarheidsdatum(
@@ -54,47 +62,62 @@ export function resolveBelastbaarheidsdatum(
   );
 }
 
-export function buildAlinea2(
-  type: 'fml' | 'izp',
+export function buildPara1Closing(
+  type: BelastbaarheidsdocumentType,
   datumVoluit: string
 ): string {
-  const template = type === 'izp' ? IZP_ALINEA_2_TEMPLATE : FML_ALINEA_2_TEMPLATE;
+  const template = PARA1_CLOSING_TEMPLATES[type];
   if (!datumVoluit) {
-    console.warn('⚠️ Zoekprofiel: belastbaarheidsdocument datum ontbreekt voor alinea 2');
-    return template.replace(' op [datum]', '').replace('[datum]', '').trim();
+    console.warn('⚠️ Zoekprofiel: belastbaarheidsdocument datum ontbreekt voor alinea 1 closing');
+    return template.replace(' van [datum]', '').replace('[datum]', '').trim();
   }
   return template.replace('[datum]', datumVoluit);
+}
+
+function validateZoekprofielOutput(zoekprofiel: string, alinea1Kern: string): void {
+  const wordCount = countWords(zoekprofiel);
+  if (wordCount < MIN_WORDS_TOTAL || wordCount > MAX_WORDS_TOTAL) {
+    console.warn(
+      `⚠️ Zoekprofiel: woordenaantal ${wordCount} buiten bereik ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL}`
+    );
+  }
+
+  if (!hasV2OpeningSentence(alinea1Kern)) {
+    console.warn('⚠️ Zoekprofiel: alinea_1_kern missing mandatory V2 opening sentence');
+  }
+
+  const paragraphCount = zoekprofiel.split(/\n\n+/).filter((p) => p.trim()).length;
+  if (paragraphCount !== 2) {
+    console.warn(`⚠️ Zoekprofiel: verwacht 2 alinea's, gevonden ${paragraphCount}`);
+  }
+
+  const lower = zoekprofiel.toLowerCase();
+  for (const term of FORBIDDEN_TERMS) {
+    if (lower.includes(term)) {
+      console.warn(`⚠️ Zoekprofiel: verboden term gevonden: "${term}"`);
+    }
+  }
 }
 
 export function buildZoekprofielFields(
   ctx: ZoekprofielBuildContext,
   content: ZoekprofielContentResult
 ): ZoekprofielFields {
-  const paragraphs: string[] = [];
-
-  if (content.alinea_1) {
-    const alinea1 = stripSectionHeading(sanitizeParagraph(content.alinea_1));
-    if (!hasNiveauSentence(alinea1)) {
-      console.warn('⚠️ Zoekprofiel: alinea_1 missing mandatory niveau sentence');
-    }
-    paragraphs.push(alinea1);
-  }
-
-  const datum = resolveBelastbaarheidsdatum(ctx, content);
-  paragraphs.push(buildAlinea2(content.belastbaarheidsdocument_type, datum));
-
-  if (content.alinea_3) {
-    paragraphs.push(stripSectionHeading(sanitizeParagraph(content.alinea_3)));
-  }
-
-  if (content.heeft_fysieke_beperkingen && content.alinea_4) {
-    paragraphs.push(stripSectionHeading(sanitizeParagraph(content.alinea_4)));
-  }
-
-  const zoekprofiel = paragraphs.filter(Boolean).join('\n\n');
-  if (!content.alinea_1) {
+  if (!content.alinea_1_kern) {
     return { zoekprofiel: '' };
   }
+
+  const alinea1Kern = stripSectionHeading(sanitizeParagraph(content.alinea_1_kern));
+  const datum = resolveBelastbaarheidsdatum(ctx, content);
+  const closing = buildPara1Closing(content.belastbaarheidsdocument_type, datum);
+  const para1 = [alinea1Kern, closing].filter(Boolean).join(' ');
+
+  const para2 = content.alinea_2
+    ? stripSectionHeading(sanitizeParagraph(content.alinea_2))
+    : '';
+
+  const zoekprofiel = [para1, para2].filter(Boolean).join('\n\n');
+  validateZoekprofielOutput(zoekprofiel, alinea1Kern);
 
   return { zoekprofiel };
 }

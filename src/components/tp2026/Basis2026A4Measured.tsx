@@ -262,7 +262,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
     id: 'profiel-banner',
     kind: 'groupBanner',
     title: 'Profiel werknemer',
-    pageBreakBefore: true,
+    pageBreakBefore: false,
   });
   for (const fieldKey of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
     const meta = TP2026_PROFIEL_PREVIEW_META[fieldKey];
