@@ -24,3 +24,12 @@ export const TP2026_DATA_ROW_VALUE_CLASS =
 export const TP2026_HTML_TABLE_CLASS = 'tp2026-html-table w-full table-fixed';
 
 export const TP2026_HTML_TABLE_CELL_CLASS = 'tp2026-html-table-cell';
+
+/** Injected into Puppeteer PDF export — 1pt borders survive Chromium rasterization. */
+export const TP2026_PDF_PRINT_BORDER_CSS = `
+  .tp2026-field-table { border: 1pt solid ${TP2026_BORDER_GOLD} !important; }
+  .tp2026-field-table > .tp2026-data-row:not(:last-child) { border-bottom: 1pt solid ${TP2026_BORDER_GOLD} !important; }
+  .tp2026-data-row-label { border-right: 1pt solid ${TP2026_BORDER_GOLD} !important; }
+  .tp2026-html-table { border: 1pt solid ${TP2026_BORDER_GOLD} !important; }
+  .tp2026-html-table th, .tp2026-html-table td { border: 1pt solid ${TP2026_BORDER_GOLD} !important; }
+`;

@@ -12,6 +12,7 @@ import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
+import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -178,6 +179,7 @@ export async function GET(req: NextRequest) {
         .tp-print-root, .vgr-print-root { margin: 0 !important; }
         .print\\:shadow-none { box-shadow: none !important; }
         .print\\:border-0 { border: 0 !important; }
+        ${TP2026_PDF_PRINT_BORDER_CSS}
       `,
       });
 
@@ -341,6 +343,7 @@ export async function GET(req: NextRequest) {
         .tp-print-root { margin: 0 !important; }
         .print\\:shadow-none { box-shadow: none !important; }
         .print\\:border-0 { border: 0 !important; }
+        ${TP2026_PDF_PRINT_BORDER_CSS}
       `,
     });
 

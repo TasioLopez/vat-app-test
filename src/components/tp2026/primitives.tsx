@@ -31,7 +31,7 @@ export function A4Page({
 }) {
   return (
     <div
-      className={`bg-white w-[794px] h-[1123px] max-h-[1123px] min-h-[1123px] shrink-0 border border-zinc-300 shadow-sm print:shadow-none print:border-0 overflow-hidden ${className}`}
+      className={`bg-white w-[794px] h-[1123px] max-h-[1123px] min-h-[1123px] shrink-0 border border-zinc-300 shadow-sm print:shadow-none print:border-0 overflow-hidden print:overflow-visible ${className}`}
       style={{
         fontFamily: 'var(--font-montserrat), Montserrat, system-ui, sans-serif',
         height: A4_H,
