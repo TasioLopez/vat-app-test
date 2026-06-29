@@ -2,11 +2,7 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
-import {
-  buildPowMeterFields,
-  sanitizePowMeterContent,
-  type PowMeterFields,
-} from './build-fields';
+import { buildPowMeterFields, nlDate, type PowMeterFields } from './build-fields';
 import { DEFAULT_POW_METER_MODEL } from './constants';
 import { POW_METER_CONTENT_PROMPT, buildPowMeterContextMessage } from './prompt';
 import {
@@ -17,17 +13,57 @@ import {
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
 
-const INTAKE_DOC_VARIANTS = ['intakeformulier', 'intake-formulier', 'intake'];
-
-type EmployeeDoc = {
+export type EmployeeDoc = {
   type: string | null;
   url: string | null;
   uploaded_at?: string | null;
 };
 
-function isIntakeDoc(type: string | null | undefined): boolean {
+type DocCategory = 'belastbaarheid' | 'ad' | 'intake';
+
+const CATEGORY_PRIORITY: Record<DocCategory, number> = {
+  belastbaarheid: 1,
+  ad: 2,
+  intake: 3,
+};
+
+export type PowMeterBuildContext = {
+  meta?: {
+    prognose_bedrijfsarts?: string | null;
+    fml_izp_lab_date_voluit?: string | null;
+  };
+};
+
+export function getPowMeterDocCategory(type: string | null | undefined): DocCategory | null {
   const t = (type || '').toLowerCase();
-  return INTAKE_DOC_VARIANTS.some((v) => t.includes(v));
+  if (
+    t.includes('fml') ||
+    t.includes('izp') ||
+    t.includes('lab') ||
+    t.includes('functiemogelijkhedenlijst') ||
+    t.includes('inzetbaarheidsprofiel') ||
+    t.includes('lijst arbeidsmogelijkheden')
+  ) {
+    return 'belastbaarheid';
+  }
+  if (t.includes('ad_rapport') || t.includes('ad_rapportage') || t.includes('arbeidsdeskundig')) {
+    return 'ad';
+  }
+  if (t.includes('intakeformulier') || t.includes('intake-formulier') || t.includes('intake')) {
+    return 'intake';
+  }
+  return null;
+}
+
+export function filterPowMeterDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
+  return docs
+    .map((doc) => ({
+      doc,
+      category: getPowMeterDocCategory(doc.type),
+    }))
+    .filter((entry): entry is { doc: EmployeeDoc; category: DocCategory } => entry.category !== null)
+    .sort((a, b) => CATEGORY_PRIORITY[a.category] - CATEGORY_PRIORITY[b.category])
+    .map((entry) => entry.doc);
 }
 
 function getPowMeterModel(): string {
@@ -40,7 +76,7 @@ function getReasoningEffort(): 'low' | 'medium' | 'high' | undefined {
   return undefined;
 }
 
-async function uploadIntakeDocs(
+async function uploadPowMeterDocs(
   openai: OpenAI,
   supabase: SupabaseClient,
   docs: EmployeeDoc[]
@@ -48,9 +84,7 @@ async function uploadIntakeDocs(
   const fileIds: string[] = [];
   let totalBytes = 0;
 
-  const intakeDocs = docs.filter((d) => isIntakeDoc(d.type));
-
-  for (const doc of intakeDocs) {
+  for (const doc of filterPowMeterDocs(docs)) {
     if (!doc.url) continue;
     const path = extractStoragePath(doc.url);
     if (!path) continue;
@@ -60,7 +94,7 @@ async function uploadIntakeDocs(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     if (totalBytes + buffer.length > MAX_UPLOAD_BYTES) {
-      console.warn('⚠️ POW-meter: skipping document (size limit)', path);
+      console.warn('⚠️ POW-meter: skipping document (combined size limit)', path);
       continue;
     }
 
@@ -80,20 +114,33 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
   await Promise.all(fileIds.map((id) => openai.files.delete(id).catch(() => {})));
 }
 
+function buildApiContext(ctx: PowMeterBuildContext): Record<string, unknown> {
+  return {
+    meta: {
+      prognose_bedrijfsarts: ctx.meta?.prognose_bedrijfsarts || null,
+      fml_izp_lab_date_voluit: ctx.meta?.fml_izp_lab_date_voluit || null,
+    },
+  };
+}
+
 export async function generatePowMeterContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   docs: EmployeeDoc[],
-  ctx: Record<string, unknown> = {}
+  ctx: PowMeterBuildContext = {}
 ): Promise<PowMeterContentResult> {
-  const fileIds = await uploadIntakeDocs(openai, supabase, docs);
+  const fileIds = await uploadPowMeterDocs(openai, supabase, docs);
 
   if (fileIds.length === 0) {
-    throw new Error('No intake files could be uploaded');
+    throw new Error('No POW-meter files could be uploaded');
+  }
+
+  if (!ctx.meta?.prognose_bedrijfsarts?.trim() && !filterPowMeterDocs(docs).some((d) => getPowMeterDocCategory(d.type) === 'belastbaarheid')) {
+    console.warn('⚠️ POW-meter: geen prognose_bedrijfsarts of belastbaarheidsdocument in context');
   }
 
   try {
-    const contextMessage = buildPowMeterContextMessage(ctx);
+    const contextMessage = buildPowMeterContextMessage(buildApiContext(ctx));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
       ...fileIds.map(
@@ -126,8 +173,7 @@ export async function generatePowMeterContent(
     }
 
     const parsed = JSON.parse(outputText) as unknown;
-    const content = sanitizePowMeterContent(parsePowMeterContentResult(parsed));
-    return content;
+    return parsePowMeterContentResult(parsed);
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }
@@ -137,10 +183,22 @@ export async function generatePowMeter(
   openai: OpenAI,
   supabase: SupabaseClient,
   docs: EmployeeDoc[],
-  ctx: Record<string, unknown> = {}
+  ctx: PowMeterBuildContext = {}
 ): Promise<PowMeterFields> {
   const content = await generatePowMeterContent(openai, supabase, docs, ctx);
   return buildPowMeterFields(content);
+}
+
+export function buildPowMeterContextFromMeta(
+  prognoseBedrijfsarts?: string | null,
+  fmlIzpLabDate?: string | null
+): PowMeterBuildContext {
+  return {
+    meta: {
+      prognose_bedrijfsarts: prognoseBedrijfsarts || null,
+      fml_izp_lab_date_voluit: nlDate(fmlIzpLabDate) || null,
+    },
+  };
 }
 
 export type { PowMeterFields };

@@ -24,37 +24,84 @@ export const INSCHALING_ROW_LABELS = {
   verwachting: 'Verwachting over 3 maanden',
 } as const;
 
-export const TREDE_DEFINITIONS = `
-Trede 1: Geen benutbare mogelijkheden. Nauwelijks activiteiten buitenshuis. Minder dan 2 uur per week actief.
-Trede 2: Werknemer komt buitenshuis. Beperkte sociale participatie. Minder dan 4 uur per week actief.
-Trede 3: Werknemer neemt deel aan activiteiten buitenshuis. Activering, vrijwilligerswerk, arbeidsoriëntatie of Spoor 1 activiteiten. Minder dan 10 uur per week werkzaam of actief.
-Trede 4: Werknemer verricht werkzaamheden in aangepast werk, stage, werkervaringsplaats, activeringsplaats of structurele re-integratie. Tussen 10 en 20 uur per week werkzaam. Of minder dan 50% van de contracturen werkzaam.
-Trede 5: Werknemer verricht betaald werk bij eigen of andere werkgever. Meer dan 50% maar minder dan 70% van de contracturen werkzaam.
-Trede 6: Werknemer is duurzaam werkzaam bij eigen of andere werkgever. Minimaal 65% loonwaarde of volledig hersteld gemeld.
-`.trim();
+export type TredeNumber = 1 | 2 | 3 | 4 | 5 | 6;
 
-/** Target length for inschaling table cells (PDF reference style). */
-export const MAX_WORDS_WERKZAME_UREN = 25;
+/** V10 word limits (assembled output). */
+export const MAX_WORDS_WERKZAME_UREN = 50;
 
 export const MAX_SENTENCES_WERKZAME_UREN = 2;
 
-export const MAX_WORDS_VERWACHTING = 60;
+export const MAX_WORDS_VERWACHTING = 80;
 
-export const MAX_SENTENCES_VERWACHTING = 3;
+export const MAX_SENTENCES_VERWACHTING = 4;
 
-/** Style reference — length and tone only; do not copy content. */
-export const INSCHALING_STYLE_REFERENCE = `
-Huidige trede: Werknemer bevindt zich in trede 2 van de POW-meter™.
-Huidige werkzame uren: 0,5 uur per week.
-Verwachting over 3 maanden: Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats. Binnen deze setting kan werknemer de belastbaarheid en het aantal uren zorgvuldig opbouwen en toetsen.
-`.trim();
+export const MAX_WORDS_TOELICHTING = 120;
 
-/** Optional short clause for verwachting table row only (~15 words). */
-export const SPOOR2_TABLE_CLAUSE =
-  'Indien passend kan spoor 2 worden ingezet voor arbeidsoriëntatie en verkenning van passend werk.';
-
-/** Fuller Spoor 2 guidance for toelichting_pow only — never paste into table rows. */
-export const SPOOR2_TOELICHTING_HINT =
-  'Daarnaast kunnen binnen het tweede spoor arbeidsoriëntatie, netwerkactiviteiten, een werkervaringsplaats, stage of andere passende activiteiten worden ingezet om de mogelijkheden richting passend werk verder te verkennen. Wanneer hieruit een beter passende en haalbare werksetting naar voren komt, kan werknemer ook binnen deze context verder werken aan het opbouwen en toetsen van de belastbaarheid.';
+/** Server-built trede sentence — [n] replaced at assembly time. */
+export const HUIDIGE_TREDE_TEMPLATE =
+  'Werknemer bevindt zich in trede [n] van de POW-meter™.';
 
 export const VERWACHTING_OPENER = 'Werknemer bevindt zich vermoedelijk in trede';
+
+export const VERWACHTING_OPENER_SUFFIX = 'van de POW-meter™.';
+
+/** Server-built toelichting opener — [n] replaced; kern continues after "omdat". */
+export const TOELICHTING_OPENER_PREFIX =
+  'Werknemer bevindt zich tijdens de intake in trede [n] van de POW-meter™ omdat';
+
+/** Exact V10 Spoor 2 block for verwachting_kern when logically supported. */
+export const SPOOR2_VERWACHTING_BLOCK =
+  'Daarnaast kunnen binnen het tweede spoor arbeidsoriëntatie, netwerkactiviteiten, een werkervaringsplaats, stage of andere passende activiteiten worden ingezet om de mogelijkheden richting passend werk verder te verkennen. Wanneer hieruit een beter passende en haalbare werksetting naar voren komt, kan werknemer ook binnen deze context verder werken aan het opbouwen en toetsen van de belastbaarheid.';
+
+export const SOURCE_HIERARCHY_V10 = `
+1. Medische belastbaarheid (altijd leidend)
+Gebruik uitsluitend de meest recente informatie van de bedrijfsarts: benutbare mogelijkheden, FML, IZP, prognose, urenbeperking, beperkingen. Hiervan mag nooit worden afgeweken.
+
+2. Feitelijke informatie (meest recente document)
+Bij verschillende documentdata geldt voor feitelijke informatie de meest recente bron: huidige werkzaamheden, functie, werkuren, opbouwschema, Spoor 1-activiteiten, dagstructuur, activiteiten buitenshuis, sociale participatie, motivatie, opleiding, werkervaring, digitale vaardigheden, rijbewijs, vervoer, talen.
+Een recenter intakeformulier vervangt eerdere feitelijke informatie uit een arbeidsdeskundig rapport.
+
+3. Arbeidsdeskundige conclusies
+Het arbeidsdeskundig rapport blijft leidend voor: geschiktheid eigen werk, passend werk, herplaatsingsmogelijkheden, Spoor 1, Spoor 2, loonwaarde, WIA-risico.
+Alleen feitelijke informatie mag door een recenter document worden vervangen.
+`.trim();
+
+export const DECISION_TREE_V10 = `
+Vraag 1: Zijn er volgens de bedrijfsarts duurzaam benutbare mogelijkheden? Nee → Trede 1. Ja → verder.
+Vraag 2: Komt werknemer minimaal twee keer per week buitenshuis? Nee → Trede 1. Ja → verder.
+Vraag 3: Is sprake van regelmatige sociale participatie buitenshuis? Nee → Trede 2. Ja → verder.
+Vraag 4: Is werknemer gemotiveerd richting arbeid? Nee → Trede 3. Ja → verder.
+Vraag 5: Kan werknemer tijdens de intake ongeveer minimaal 12 uur per week belast worden? Nee → Trede 3. Ja → verder.
+Vraag 6: Verricht werknemer momenteel werkzaamheden? Nee → Trede 3. Ja → verder.
+Vraag 7: Is sprake van betaald werk?
+  Nee (vrijwilligerswerk, stage, werkervaringsplaats of activeringsplaats) → Trede 4.
+  Ja: beoordeel verhouding tot contracturen, duurzaamheid, passendheid.
+    Aangepast werk ≥ ~65% contracturen maar nog tijdelijke voorzieningen of Spoor 1/2-traject → Trede 5.
+    Duurzaam passend werk zonder tijdelijke voorzieningen, ≥ 65% loonwaarde of volledig hersteld → Trede 6.
+
+De trede wordt nooit uitsluitend bepaald door het aantal uren. Beoordeel altijd de combinatie van benutbare mogelijkheden, activiteiten buitenshuis, sociale participatie, motivatie, belastbaarheid, huidige werkzaamheden, betaald/onbetaald werk, verhouding tot contracturen, duurzaamheid, Spoor 1 en Spoor 2.
+`.trim();
+
+export const DOCUMENT_SCOPE_HINT = `
+DOCUMENTEN VOOR POW-meter™:
+- FML/IZP/LAB (belastbaarheid): benutbare mogelijkheden, beperkingen, urenbeperking, prognose
+- AD rapport (indien aanwezig): Spoor 1/2, passend werk, loonwaarde, herplaatsing
+- Intakeformulier (indien aanwezig): actuele werkzaamheden, uren, motivatie, participatie, dagstructuur
+Context: prognose bedrijfsarts uit dossier (indien aanwezig)
+Gebruik NIET: medische diagnoses als leidraad, privé-informatie, niet-genoemde feiten.
+`.trim();
+
+/** Style reference — length and tone only; do not copy content. */
+export const INSCHALING_STYLE_REFERENCE_V10 = `
+Huidige trede: Werknemer bevindt zich in trede 2 van de POW-meter™.
+Huidige werkzame uren: Werknemer werkt momenteel 0,5 uur per week. Zij verricht geen betaald werk.
+Verwachting over 3 maanden: Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats.
+`.trim();
+
+export const FORBIDDEN_WERKZAME_UREN_PHRASES = [
+  'er is sprake van',
+  'daarnaast lopen spoor 1 en spoor 2 parallel',
+  'in het kader van',
+] as const;
+
+export const FORBIDDEN_TERMS = ['diagnose', 'diagnoses', 'behandeladvies'] as const;

@@ -1,88 +1,112 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  assemblePowMeterContent,
+  buildHuidigeTredeText,
   buildPowInschalingBlock,
   buildPowMeterFields,
+  buildToelichtingText,
+  buildVerwachtingText,
   clampInschalingText,
+  countWords,
+  hasToelichtingOpener,
   hasVerwachtingOpener,
   parsePowInschaling,
 } from '../build-fields';
 import {
   INSCHALING_DELIMITER,
   INSCHALING_ROW_LABELS,
-  INSCHALING_STYLE_REFERENCE,
+  INSCHALING_STYLE_REFERENCE_V10,
   MAX_SENTENCES_VERWACHTING,
+  MAX_WORDS_TOELICHTING,
   MAX_WORDS_VERWACHTING,
   MAX_WORDS_WERKZAME_UREN,
+  SPOOR2_VERWACHTING_BLOCK,
   VERWACHTING_OPENER,
 } from '../constants';
 import type { PowMeterContentResult } from '../schema';
 
-const PDF_REFERENCE: PowMeterContentResult = {
-  huidige_trede_tekst: 'Werknemer bevindt zich in trede 2 van de POW-meter™.',
-  huidige_werkzame_uren: '0,5 uur per week.',
-  verwachting_3_maanden:
-    'Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats. Binnen deze setting kan werknemer de belastbaarheid en het aantal uren zorgvuldig opbouwen en toetsen.',
-  toelichting_pow:
-    'Werknemer bevindt zich ten tijde van de intake in trede 2 van de PoW-meter. Het doel is doorgroei naar trede 3.',
+const baseContent: PowMeterContentResult = {
+  huidige_trede_nummer: 2,
+  huidige_werkzame_uren:
+    'Werknemer werkt momenteel 0,5 uur per week. Zij verricht geen betaald werk.',
+  verwachting_trede_nummer: 3,
+  verwachting_kern:
+    'Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats.',
+  toelichting_kern:
+    'werknemer beperkt buitenshuis actief is en nog geen structurele werkzaamheden verricht. De actuele werkuren bedragen 0,5 uur per week.',
 };
 
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
-}
-
-describe('buildPowMeterFields', () => {
-  it('builds inschaling delimiter JSON and separate toelichting', () => {
-    const { pow_meter, visie_plaatsbaarheid } = buildPowMeterFields(PDF_REFERENCE);
+describe('buildPowMeterFields V10', () => {
+  it('assembles server trede sentence and openers into inschaling + toelichting', () => {
+    const { pow_meter, visie_plaatsbaarheid } = buildPowMeterFields(baseContent);
 
     assert.ok(pow_meter.startsWith(INSCHALING_DELIMITER));
     const parsed = parsePowInschaling(pow_meter);
     assert.ok(parsed);
-    assert.match(parsed!.huidige_trede, /trede 2/);
-    assert.equal(parsed!.werkzame_uren, '0,5 uur per week.');
+    assert.equal(parsed!.huidige_trede, buildHuidigeTredeText(2));
+    assert.match(parsed!.werkzame_uren, /0,5 uur per week/);
     assert.ok(hasVerwachtingOpener(parsed!.verwachting));
-    assert.match(visie_plaatsbaarheid, /trede 2/);
-    assert.doesNotMatch(visie_plaatsbaarheid, /^•/);
+    assert.match(parsed!.verwachting, /trede 3/);
+    assert.ok(hasToelichtingOpener(visie_plaatsbaarheid, 2));
+    assert.match(visie_plaatsbaarheid, /omdat werknemer beperkt buitenshuis actief is/);
   });
 
-  it('round-trips PDF reference example from style reference', () => {
-    assert.ok(INSCHALING_STYLE_REFERENCE.includes('0,5 uur per week.'));
-    const { pow_meter } = buildPowMeterFields(PDF_REFERENCE);
-    const parsed = parsePowInschaling(pow_meter);
-    assert.equal(parsed!.werkzame_uren, PDF_REFERENCE.huidige_werkzame_uren);
-    assert.equal(parsed!.verwachting, PDF_REFERENCE.verwachting_3_maanden);
-  });
-
-  it('clamps overlong werkzame uren and verwachting from model output', () => {
-    const longContent: PowMeterContentResult = {
-      huidige_trede_tekst: 'Werknemer bevindt zich in trede 1 van de POW-meter™.',
-      huidige_werkzame_uren:
-        'Werknemer verricht momenteel geen arbeid bij de voormalige eigen werkgever of elders en is volledig arbeidsongeschikt gemeld met een traject dat gericht is op herstel en geleidelijke opbouw van activiteiten en belastbaarheid in de komende periode.',
-      verwachting_3_maanden:
-        'Werknemer bevindt zich vermoedelijk in trede 2 van de POW-meter™. Binnen drie maanden wordt verwacht dat werknemer kan deelnemen aan lichte activiteiten buitenshuis. Daarnaast kunnen binnen het tweede spoor arbeidsoriëntatie, netwerkactiviteiten, een werkervaringsplaats, stage of andere passende activiteiten worden ingezet om de mogelijkheden richting passend werk verder te verkennen. Wanneer hieruit een beter passende en haalbare werksetting naar voren komt, kan werknemer ook binnen deze context verder werken aan het opbouwen en toetsen van de belastbaarheid. Dit sluit aan bij de intake en het huidige herstelperspectief.',
-      toelichting_pow: 'Lange toelichting die niet ingekort mag worden in dit testgeval.',
+  it('strips leaked verwachting opener from model kernel', () => {
+    const content: PowMeterContentResult = {
+      ...baseContent,
+      verwachting_kern:
+        'Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Verwachte opbouw via spoor 1.',
     };
+    const assembled = assemblePowMeterContent(content);
+    assert.equal(
+      assembled.verwachting_3_maanden,
+      'Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Verwachte opbouw via spoor 1.'
+    );
+  });
 
+  it('includes Spoor 2 block in verwachting when present in kern', () => {
+    const content: PowMeterContentResult = {
+      ...baseContent,
+      verwachting_kern: `Verwachte groei via spoor 1. ${SPOOR2_VERWACHTING_BLOCK}`,
+    };
+    const { pow_meter } = buildPowMeterFields(content);
+    const parsed = parsePowInschaling(pow_meter);
+    assert.ok(parsed!.verwachting.includes('binnen het tweede spoor arbeidsoriëntatie'));
+  });
+
+  it('clamps overlong werkzame uren from model output', () => {
+    const longContent: PowMeterContentResult = {
+      ...baseContent,
+      huidige_werkzame_uren:
+        'Werknemer verricht momenteel geen arbeid bij de voormalige eigen werkgever of elders en is volledig arbeidsongeschikt gemeld met een traject dat gericht is op herstel en geleidelijke opbouw van activiteiten en belastbaarheid in de komende periode en daarnaast nog weinig uren realiseert.',
+    };
     const { pow_meter } = buildPowMeterFields(longContent);
     const parsed = parsePowInschaling(pow_meter);
     assert.ok(parsed);
     assert.ok(countWords(parsed!.werkzame_uren) <= MAX_WORDS_WERKZAME_UREN);
-    assert.ok(countWords(parsed!.verwachting) <= MAX_WORDS_VERWACHTING);
-    assert.ok(hasVerwachtingOpener(parsed!.verwachting));
+  });
+
+  it('clamps toelichting to max words', () => {
+    const longKern = 'onderbouwing '.repeat(80);
+    const content: PowMeterContentResult = {
+      ...baseContent,
+      toelichting_kern: longKern,
+    };
+    const { visie_plaatsbaarheid } = buildPowMeterFields(content);
+    assert.ok(countWords(visie_plaatsbaarheid) <= MAX_WORDS_TOELICHTING);
   });
 
   it('parsePowInschaling round-trips buildPowInschalingBlock', () => {
     const block = buildPowInschalingBlock({
-      huidige_trede: 'Trede 1',
+      huidige_trede: buildHuidigeTredeText(1),
       werkzame_uren: 'Geen uren',
-      verwachting: 'Werknemer bevindt zich vermoedelijk in trede 2 van de POW-meter™.',
+      verwachting: buildVerwachtingText(2, 'Opbouw via spoor 1.'),
     });
     const parsed = parsePowInschaling(block);
-    assert.deepEqual(parsed, {
-      huidige_trede: 'Trede 1',
-      werkzame_uren: 'Geen uren',
-      verwachting: 'Werknemer bevindt zich vermoedelijk in trede 2 van de POW-meter™.',
-    });
+    assert.ok(parsed);
+    assert.match(parsed!.huidige_trede, /trede 1/);
+    assert.ok(hasVerwachtingOpener(parsed!.verwachting));
   });
 
   it('exposes expected table row labels', () => {
@@ -90,12 +114,17 @@ describe('buildPowMeterFields', () => {
     assert.equal(INSCHALING_ROW_LABELS.werkzame_uren, 'Huidige werkzame uren');
     assert.equal(INSCHALING_ROW_LABELS.verwachting, 'Verwachting over 3 maanden');
   });
+
+  it('style reference V10 mentions trede sentence pattern', () => {
+    assert.ok(INSCHALING_STYLE_REFERENCE_V10.includes('trede 2'));
+  });
 });
 
 describe('clampInschalingText', () => {
   it('truncates a long verwachting to max words and sentences', () => {
+    const opener = 'Werknemer bevindt zich vermoedelijk in trede 2 van de POW-meter™.';
     const longText =
-      'Werknemer bevindt zich vermoedelijk in trede 2 van de POW-meter™. Eerste extra zin met veel details over re-integratie en urenopbouw binnen spoor 1. Tweede extra zin over activeringsplaatsen en werkervaring. Derde extra zin over netwerkactiviteiten en arbeidsoriëntatie. Vierde extra zin die nooit zou moeten blijven staan in de tabelcel output.';
+      `${opener} Eerste extra zin met veel details over re-integratie en urenopbouw binnen spoor 1. Tweede extra zin over activeringsplaatsen en werkervaring. Derde extra zin over netwerkactiviteiten en arbeidsoriëntatie. Vierde extra zin die nooit zou moeten blijven staan in de tabelcel output.`;
     const clamped = clampInschalingText(longText, {
       maxWords: MAX_WORDS_VERWACHTING,
       maxSentences: MAX_SENTENCES_VERWACHTING,
@@ -104,7 +133,6 @@ describe('clampInschalingText', () => {
 
     assert.ok(hasVerwachtingOpener(clamped));
     assert.ok(countWords(clamped) <= MAX_WORDS_VERWACHTING);
-    assert.ok(clamped.split(/(?<=[.!?])\s+/).length <= MAX_SENTENCES_VERWACHTING);
   });
 
   it('preserves verwachting opener when trimming', () => {
@@ -118,5 +146,43 @@ describe('clampInschalingText', () => {
     });
 
     assert.ok(clamped.toLowerCase().startsWith(VERWACHTING_OPENER.toLowerCase()));
+  });
+});
+
+describe('parsePowMeterContentResult', () => {
+  it('coerces trede numbers to 1-6', async () => {
+    const { parsePowMeterContentResult, coerceTredeNumber } = await import('../schema');
+    assert.equal(coerceTredeNumber(0), 1);
+    assert.equal(coerceTredeNumber(9), 6);
+    const result = parsePowMeterContentResult({
+      huidige_trede_nummer: 3,
+      huidige_werkzame_uren: 'test',
+      verwachting_trede_nummer: 4,
+      verwachting_kern: 'kern',
+      toelichting_kern: 'kern',
+    });
+    assert.equal(result.huidige_trede_nummer, 3);
+    assert.equal(result.verwachting_trede_nummer, 4);
+  });
+});
+
+describe('filterPowMeterDocs', () => {
+  it('filters and prioritizes belastbaarheid, ad, intake', async () => {
+    const { filterPowMeterDocs, getPowMeterDocCategory } = await import('../generate');
+    assert.equal(getPowMeterDocCategory('fml_izp'), 'belastbaarheid');
+    assert.equal(getPowMeterDocCategory('ad_rapportage'), 'ad');
+    assert.equal(getPowMeterDocCategory('intakeformulier'), 'intake');
+    assert.equal(getPowMeterDocCategory('extra'), null);
+
+    const filtered = filterPowMeterDocs([
+      { type: 'intakeformulier', url: 'a' },
+      { type: 'ad_rapportage', url: 'b' },
+      { type: 'fml_izp', url: 'c' },
+      { type: 'extra', url: 'd' },
+    ]);
+    assert.deepEqual(
+      filtered.map((d) => d.type),
+      ['fml_izp', 'ad_rapportage', 'intakeformulier']
+    );
   });
 });

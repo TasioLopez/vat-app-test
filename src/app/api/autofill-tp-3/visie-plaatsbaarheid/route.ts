@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
-import { generatePowMeter, GENERATION_FALLBACK } from '@/lib/tp/pow-meter';
+import {
+  buildPowMeterContextFromMeta,
+  filterPowMeterDocs,
+  generatePowMeter,
+  GENERATION_FALLBACK,
+} from '@/lib/tp/pow-meter';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +14,7 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/** Delegates to POW-meter V2 — returns only visie_plaatsbaarheid (toelichting). */
+/** Delegates to POW-meter V10 — returns only visie_plaatsbaarheid (toelichting). */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -17,6 +22,12 @@ export async function GET(req: NextRequest) {
     if (!employeeId) {
       return NextResponse.json({ error: 'Missing employeeId' }, { status: 400 });
     }
+
+    const { data: meta } = await supabase
+      .from('tp_meta')
+      .select('prognose_bedrijfsarts, fml_izp_lab_date')
+      .eq('employee_id', employeeId)
+      .single();
 
     const { data: docs } = await supabase
       .from('documents')
@@ -28,10 +39,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Geen documenten gevonden', details: {} }, { status: 200 });
     }
 
+    const relevantDocs = filterPowMeterDocs(docs);
+    if (relevantDocs.length === 0) {
+      return NextResponse.json(
+        { error: 'Geen intake-, AD- of FML/IZP-document gevonden', details: {} },
+        { status: 200 }
+      );
+    }
+
+    const ctx = buildPowMeterContextFromMeta(
+      meta?.prognose_bedrijfsarts,
+      meta?.fml_izp_lab_date
+    );
+
     let visie_plaatsbaarheid: string;
 
     try {
-      const result = await generatePowMeter(openai, supabase, docs);
+      const result = await generatePowMeter(openai, supabase, docs, ctx);
       visie_plaatsbaarheid = result.visie_plaatsbaarheid;
       if (!visie_plaatsbaarheid.trim()) {
         return NextResponse.json(
