@@ -1,15 +1,17 @@
 'use client';
 
-import { useCV } from '@/context/CVContext';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 
-export default function CVGuestSyncGuard() {
-  const { isDirty, save } = useCV();
+type Props = {
+  isDirty: boolean;
+  onSave: () => Promise<void>;
+};
 
+export default function EmployeeUnsavedGuard({ isDirty, onSave }: Props) {
   return (
     <UnsavedChangesSyncGuard
       isDirty={isDirty}
-      onSave={() => save()}
+      onSave={onSave}
       autosave
     />
   );

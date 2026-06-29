@@ -23,6 +23,7 @@ import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidEditor } from '@/components/tp/AdviesPassendeArbeidEditor';
+import { resolveEffectiveAdPresence } from '@/lib/tp/intake-ad-presence';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
 import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadviseurEditor';
@@ -334,7 +335,16 @@ function BasisFieldEditorRow({
       ) : field.key === 'advies_ad_passende_arbeid' ? (
         <AdviesPassendeArbeidEditor
           raw={String(data[field.key] ?? '')}
-          hasAdReport={data.has_ad_report}
+          hasAdReport={
+            resolveEffectiveAdPresence(
+              {
+                has_ad_report: data.has_ad_report,
+                ad_report_date: data.ad_report_date,
+                intake_concept: data.intake_concept,
+              },
+              false
+            ).has_ad_report
+          }
           onChange={(md) => updateField(field.key, md)}
         />
       ) : field.key === 'visie_loopbaanadviseur' ? (

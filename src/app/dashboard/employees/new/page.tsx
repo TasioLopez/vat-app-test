@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import CreateFormLeaveGuard from '@/components/unsaved/CreateFormLeaveGuard';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
 import { cn, normalizePersonName } from '@/lib/utils';
@@ -31,6 +33,7 @@ export default function NewEmployeePage() {
     const [loading, setLoading] = useState(false);
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const router = useRouter();
+    const guardedRouter = useGuardedRouter();
 
     useEffect(() => {
         const fetchClients = async () => {
@@ -63,18 +66,11 @@ export default function NewEmployeePage() {
         setError('');
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-
-        // Verify authentication
+    const submitEmployee = useCallback(async () => {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (!user) {
-            setError('Not authenticated. Please log in again.');
-            setLoading(false);
-            return;
+            throw new Error('Not authenticated. Please log in again.');
         }
 
         const { data: newEmployees, error: employeeError } = await supabase
@@ -90,9 +86,7 @@ export default function NewEmployeePage() {
             .select();
 
         if (employeeError || !newEmployees || newEmployees.length === 0) {
-            setError(employeeError?.message || 'Failed to create employee');
-            setLoading(false);
-            return;
+            throw new Error(employeeError?.message || 'Failed to create employee');
         }
 
         const newEmployeeId = newEmployees[0].id;
@@ -102,16 +96,29 @@ export default function NewEmployeePage() {
         ]);
 
         if (detailsError) {
-            setError('Employee created, but failed to initialize employee details: ' + detailsError.message);
-            setLoading(false);
-            return;
+            throw new Error('Employee created, but failed to initialize employee details: ' + detailsError.message);
         }
 
-        router.push('/dashboard/employees');
+        guardedRouter.raw.push('/dashboard/employees');
+    }, [form, guardedRouter]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            await submitEmployee();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to create employee');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/30 p-6 animate-in fade-in duration-500">
+            <CreateFormLeaveGuard values={form} onSave={submitEmployee} />
             <div className="max-w-2xl mx-auto">
                 {/* Header Section */}
                 <div className="mb-8 animate-in slide-in-from-top-4 duration-700">

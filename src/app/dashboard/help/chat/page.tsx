@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useCallback, useRef, useState } from "react";
 import { FaArrowLeft, FaPaperPlane } from "react-icons/fa";
 import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 import { toast } from "sonner";
+import CreateFormLeaveGuard from "@/components/unsaved/CreateFormLeaveGuard";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -143,10 +145,11 @@ export default function HelpChatPage() {
 
   return (
     <div className="min-h-full flex flex-col bg-gradient-to-br from-gray-50 to-purple-50/30">
+      <CreateFormLeaveGuard values={{ input, ticketSubject: escalateOpen ? ticketSubject : '' }} onSave={async () => { if (input.trim()) await send(); }} />
       <div className="border-b border-purple-100 bg-white/90 px-6 py-4 flex flex-wrap items-center gap-4 justify-between">
-        <Link href="/dashboard/help" className="text-purple-700 font-medium inline-flex items-center gap-2">
+        <GuardedLink href="/dashboard/help" className="text-purple-700 font-medium inline-flex items-center gap-2">
           <FaArrowLeft /> Help
-        </Link>
+        </GuardedLink>
         <button
           type="button"
           onClick={openEscalate}

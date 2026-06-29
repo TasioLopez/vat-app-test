@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 import { ticketPriorityLabelNl, ticketStatusLabelNl } from "@/lib/help/ticket-labels";
 import type { Database } from "@/types/supabase";
+import CreateFormLeaveGuard from "@/components/unsaved/CreateFormLeaveGuard";
 
 export default function TicketDetailPage() {
   const params = useParams();
@@ -53,7 +54,7 @@ export default function TicketDetailPage() {
     void load();
   }, [load]);
 
-  const sendReply = async () => {
+  const sendReply = useCallback(async () => {
     if (!reply.trim()) return;
     const res = await fetch(`/api/help/tickets/${id}/messages`, {
       method: "POST",
@@ -62,14 +63,13 @@ export default function TicketDetailPage() {
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      toast.error(j.error || "Bericht versturen mislukt");
-      return;
+      throw new Error(j.error || "Bericht versturen mislukt");
     }
     setReply("");
     toast.success("Bericht verstuurd");
     await load();
     await refreshNotifications();
-  };
+  }, [id, load, refreshNotifications, reply]);
 
   if (!ticket) {
     return <div className="p-10 text-gray-500">Laden…</div>;
@@ -82,10 +82,11 @@ export default function TicketDetailPage() {
 
   return (
     <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+      <CreateFormLeaveGuard values={{ reply }} onSave={sendReply} />
       <div className="max-w-3xl mx-auto space-y-6">
-        <Link href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
+        <GuardedLink href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
           <FaArrowLeft /> Alle tickets
-        </Link>
+        </GuardedLink>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -134,7 +135,7 @@ export default function TicketDetailPage() {
           />
           <button
             type="button"
-            onClick={() => void sendReply()}
+            onClick={() => void sendReply().catch((err) => toast.error(err instanceof Error ? err.message : "Bericht versturen mislukt"))}
             className="self-end px-4 py-2 rounded-xl bg-purple-700 text-white font-medium"
           >
             Versturen

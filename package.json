@@ -23,6 +23,7 @@
     "test:persoonlijk-profiel": "tsx --test src/lib/tp/persoonlijk-profiel/__tests__/*.test.ts",
     "test:zoekprofiel": "tsx --test src/lib/tp/zoekprofiel/__tests__/*.test.ts",
     "test:phone": "tsx --test src/lib/phone/__tests__/*.test.ts",
+    "test:unsaved": "tsx --test src/hooks/__tests__/useDebouncedAutosave.test.ts",
     "help:generate-nl-md": "node scripts/generate-help-nl-md.mjs",
     "help:seed": "tsx scripts/seed-help-kb.ts",
     "help:reindex-all": "tsx scripts/reindex-help-kb-all.ts",

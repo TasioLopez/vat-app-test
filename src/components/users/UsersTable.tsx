@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import PhoneInput from 'react-phone-input-2';
@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { SELECT_CLASS } from "@/lib/select-class";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFormDirty } from '@/hooks/useFormDirty';
+import ModalUnsavedGuard, { useGuardedModalClose } from '@/components/unsaved/ModalUnsavedGuard';
 
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +39,17 @@ export default function UsersTable() {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editedUser, setEditedUser] = useState<Partial<User>>({});
+    const [userSnapshot, setUserSnapshot] = useState<Partial<User> | null>(null);
+
+    const isModalDirty = useFormDirty(editedUser, userSnapshot);
+
+    const closeEditModal = useCallback(() => {
+        setEditingId(null);
+        setUserSnapshot(null);
+        setEditedUser({});
+    }, []);
+
+    const guardedCloseEditModal = useGuardedModalClose(isModalDirty, closeEditModal);
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -50,51 +63,55 @@ export default function UsersTable() {
     const handleEdit = (user: User) => {
         setEditingId(user.id);
         setEditedUser(user);
+        setUserSnapshot({ ...user });
     };
 
-    const closeEditModal = () => {
-        setEditingId(null);
-    };
+    const saveUserForGuard = useCallback(async () => {
+        if (!editingId) return;
 
-    const handleSave = async (id: string) => {
         if (!editedUser.first_name || !editedUser.last_name) {
-            alert('First name and last name are required.');
-            return;
+            throw new Error('Voornaam en achternaam zijn verplicht.');
         }
 
         if (!editedUser.role || !['admin', 'user'].includes(editedUser.role)) {
-            alert('Please select a valid role (admin or user).');
-            return;
+            throw new Error('Selecteer een geldige rol.');
         }
 
-        if (editedUser.phone) {
-            const parsed = parsePhoneNumberFromString(editedUser.phone);
+        const payload = { ...editedUser };
+        if (payload.phone) {
+            const parsed = parsePhoneNumberFromString(payload.phone);
             if (!parsed?.isValid()) {
-                alert('Please enter a valid international phone number.');
-                return;
+                throw new Error('Voer een geldig telefoonnummer in.');
             }
-            editedUser.phone = parsed.number;
+            payload.phone = parsed.number;
         }
 
-        if (!editedUser.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedUser.email)) {
-            alert('Please enter a valid email address.');
-            return;
+        if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+            throw new Error('Voer een geldig e-mailadres in.');
         }
 
         const { error: userUpdateError } = await supabase
             .from("users")
-            .update(editedUser)
-            .eq("id", id);
+            .update(payload)
+            .eq("id", editingId);
 
         if (userUpdateError) {
-            alert('Error updating user: ' + userUpdateError.message);
-            return;
+            throw new Error(userUpdateError.message);
         }
 
         setUsers((prev) =>
-            prev.map((u) => (u.id === id ? { ...u, ...editedUser } as User : u))
+            prev.map((u) => (u.id === editingId ? { ...u, ...payload } as User : u))
         );
-        closeEditModal();
+        setUserSnapshot({ ...payload });
+    }, [editedUser, editingId]);
+
+    const handleSave = async (id: string) => {
+        try {
+            await saveUserForGuard();
+            closeEditModal();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Opslaan mislukt');
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -117,6 +134,12 @@ export default function UsersTable() {
 
         return (
             <div className="fixed inset-0 backdrop-blur-sm bg-background/80 z-50 flex items-center justify-center p-4">
+                <ModalUnsavedGuard
+                    open={editingId === uid}
+                    isDirty={isModalDirty}
+                    onSave={saveUserForGuard}
+                    onClose={closeEditModal}
+                />
                 <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-md max-h-[90vh] flex flex-col">
                     <h2 className="text-2xl font-semibold mb-4 text-card-foreground shrink-0">Gebruiker bewerken</h2>
 
@@ -190,7 +213,7 @@ export default function UsersTable() {
                     </div>
 
                     <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border shrink-0">
-                        <Button variant="outline" onClick={closeEditModal}>Annuleren</Button>
+                        <Button variant="outline" onClick={guardedCloseEditModal}>Annuleren</Button>
                         <Button onClick={() => handleSave(uid)}>Opslaan</Button>
                     </div>
                 </div>

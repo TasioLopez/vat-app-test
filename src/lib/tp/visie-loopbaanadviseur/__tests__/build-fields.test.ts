@@ -75,14 +75,23 @@ describe('detectDocumentScenario', () => {
     assert.equal(detectDocumentScenario(docs), 'intake_only');
   });
 
-  it('downgrades to belastbaarheid_only when concept intake despite AD doc', () => {
+  it('keeps ad scenario when AD doc is present despite concept flag or stale has_ad_report', () => {
     const docs = [
       { type: 'intakeformulier', url: 'a' },
       { type: 'fml_izp', url: 'b' },
       { type: 'ad_rapportage', url: 'c' },
     ];
-    assert.equal(detectDocumentScenario(docs, { has_ad_report: false }), 'belastbaarheid_only');
+    assert.equal(detectDocumentScenario(docs, { has_ad_report: false }), 'ad');
+    assert.equal(detectDocumentScenario(docs, { intake_concept: true }), 'ad');
+  });
+
+  it('downgrades to belastbaarheid_only when concept intake without AD doc or date', () => {
+    const docs = [
+      { type: 'intakeformulier', url: 'a' },
+      { type: 'fml_izp', url: 'b' },
+    ];
     assert.equal(detectDocumentScenario(docs, { intake_concept: true }), 'belastbaarheid_only');
+    assert.equal(detectDocumentScenario(docs, { has_ad_report: false }), 'belastbaarheid_only');
   });
 
   it('excludes AD docs from filter when excludeAd is set', () => {

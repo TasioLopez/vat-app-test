@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "sonner";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import CreateFormLeaveGuard from "@/components/unsaved/CreateFormLeaveGuard";
+import { useFormDirty } from "@/hooks/useFormDirty";
 import {
   TICKET_PRIORITY_VALUES,
   TICKET_STATUS_VALUES,
@@ -26,6 +28,9 @@ export default function AdminTicketDetailPage() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+  const [notesSnapshot, setNotesSnapshot] = useState("");
+
+  const notesDirty = useFormDirty(internalNotes, notesSnapshot);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/help/tickets/${id}`);
@@ -36,6 +41,7 @@ export default function AdminTicketDetailPage() {
       setStatus((j.ticket.status as string) || "open");
       setPriority((j.ticket.priority as string) || "normal");
       setInternalNotes((j.ticket.internal_notes as string) || "");
+      setNotesSnapshot((j.ticket.internal_notes as string) || "");
       await fetch(`/api/help/tickets/${id}/mark-read`, { method: "POST" });
       await refreshNotifications();
     } else {
@@ -70,22 +76,46 @@ export default function AdminTicketDetailPage() {
     }
   };
 
-  const sendMsg = async () => {
-    if (!reply.trim()) return;
-    const res = await fetch(`/api/help/tickets/${id}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: reply.trim(), isInternal: internalReply }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      toast.error(j.error || "Bericht versturen mislukt");
-      return;
+  const saveDraft = useCallback(async () => {
+    if (notesDirty) {
+      const res = await fetch(`/api/help/admin/tickets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          priority,
+          internalNotes: internalNotes || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        throw new Error(j.error || "Bijwerken mislukt");
+      }
+      setNotesSnapshot(internalNotes);
     }
-    setReply("");
-    toast.success("Bericht toegevoegd");
+    if (reply.trim()) {
+      const res = await fetch(`/api/help/tickets/${id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: reply.trim(), isInternal: internalReply }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Bericht versturen mislukt");
+      }
+      setReply("");
+    }
     await load();
     await refreshNotifications();
+  }, [id, internalNotes, internalReply, load, notesDirty, priority, refreshNotifications, reply, status]);
+
+  const sendMsg = async () => {
+    try {
+      await saveDraft();
+      toast.success("Opgeslagen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
+    }
   };
 
   if (!ticket) return <div className="p-8">Laden…</div>;
@@ -97,9 +127,10 @@ export default function AdminTicketDetailPage() {
 
   return (
     <div className="p-8 max-w-3xl space-y-6">
-      <Link href="/dashboard/help/admin/tickets" className="text-purple-700 inline-flex items-center gap-2">
+      <CreateFormLeaveGuard values={{ reply, internalNotes: notesDirty ? internalNotes : '' }} onSave={saveDraft} />
+      <GuardedLink href="/dashboard/help/admin/tickets" className="text-purple-700 inline-flex items-center gap-2">
         <FaArrowLeft /> Alle tickets
-      </Link>
+      </GuardedLink>
       <h1 className="text-2xl font-bold">{String(ticket.subject)}</h1>
       <div className="grid sm:grid-cols-2 gap-3 bg-white border border-purple-100 rounded-xl p-4">
         <label className="text-sm">

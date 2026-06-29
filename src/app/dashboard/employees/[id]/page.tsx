@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import EmployeeUnsavedGuard from '@/components/employee/EmployeeUnsavedGuard';
 import { createBrowserClient } from '@/lib/supabase/client';
 import {
     Map,
@@ -231,7 +232,7 @@ function arePayloadsEqual<T>(left: T | null, right: T | null): boolean {
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: employeeId } = use(params);
-    const router = useRouter();
+    const guardedRouter = useGuardedRouter();
     const { showSuccess, showError, showInfo } = useToastHelpers();
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -619,14 +620,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     const hasUnsavedChanges = isEmployeeDirty || isDetailsDirty;
 
-    const saveUnified = async () => {
+    const saveUnified = useCallback(async (options?: { silent?: boolean }) => {
         if (!employee) return;
 
         const shouldSaveEmployee = isEmployeeDirty && currentEmployeePayload;
         const shouldSaveDetails = isDetailsDirty && currentDetailsPayload;
 
         if (!shouldSaveEmployee && !shouldSaveDetails) {
-            showSuccess('Geen wijzigingen om op te slaan.');
+            if (!options?.silent) {
+                showSuccess('Geen wijzigingen om op te slaan.');
+            }
             return;
         }
 
@@ -673,38 +676,49 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 await trackAccess('employee', employeeId, true);
             }
 
-            if ((employeeResult?.error || detailsResult?.error) && !employeeSaved && !detailsSaved) {
-                const errorMessage = employeeResult?.error?.message || detailsResult?.error?.message || 'Er is een fout opgetreden bij het opslaan.';
-                showError('Fout bij opslaan', errorMessage);
-                return;
+            const employeeFailed = shouldSaveEmployee && !employeeSaved;
+            const detailsFailed = shouldSaveDetails && !detailsSaved;
+
+            if (employeeFailed || detailsFailed) {
+                const errorMessage =
+                    employeeResult?.error?.message ||
+                    detailsResult?.error?.message ||
+                    'Er is een fout opgetreden bij het opslaan.';
+                throw new Error(errorMessage);
             }
 
-            if (employeeSaved && detailsSaved) {
-                showSuccess('Werknemer en profiel opgeslagen!');
-                return;
-            }
-
-            if (employeeSaved) {
-                showSuccess('Werknemer informatie opgeslagen!');
-                if (detailsResult?.error) {
-                    showError('Profiel niet opgeslagen', detailsResult.error.message || 'Er is een fout opgetreden bij het opslaan van het profiel.');
-                }
-                return;
-            }
-
-            if (detailsSaved) {
-                showSuccess('Profiel opgeslagen!');
-                if (employeeResult?.error) {
-                    showError('Werknemer informatie niet opgeslagen', employeeResult.error.message || 'Er is een fout opgetreden bij het opslaan van de werknemer informatie.');
+            if (!options?.silent) {
+                if (employeeSaved && detailsSaved) {
+                    showSuccess('Werknemer en profiel opgeslagen!');
+                } else if (employeeSaved) {
+                    showSuccess('Werknemer informatie opgeslagen!');
+                } else if (detailsSaved) {
+                    showSuccess('Profiel opgeslagen!');
                 }
             }
         } catch (err) {
             console.error('Error saving unified data:', err);
-            showError('Fout bij opslaan', 'Er is een onverwachte fout opgetreden bij het opslaan.');
+            if (!options?.silent) {
+                showError(
+                    'Fout bij opslaan',
+                    err instanceof Error ? err.message : 'Er is een onverwachte fout opgetreden bij het opslaan.'
+                );
+            }
+            throw err;
         } finally {
             setUpdating(false);
         }
-    };
+    }, [
+        employee,
+        isEmployeeDirty,
+        isDetailsDirty,
+        currentEmployeePayload,
+        currentDetailsPayload,
+        employeeId,
+        supabase,
+        showSuccess,
+        showError,
+    ]);
 
     const cancelAiAutofill = useCallback(() => {
         aiCancelRef.current = true;
@@ -993,7 +1007,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
             setTpVariantModalOpen(false);
             setDocsModalOpen(false);
-            router.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
+            guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
             showError('Fout', 'Kon TP bouwer niet openen.');
@@ -1006,7 +1020,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         setVgrOpening(true);
         try {
             setDocsModalOpen(false);
-            router.push(`/dashboard/vgr/${employeeId}`);
+            guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
             showError('Fout', 'Kon VGR bouwer niet openen.');
@@ -1017,6 +1031,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     return (
         <div className="p-4 space-y-6">
+            <EmployeeUnsavedGuard
+                isDirty={hasUnsavedChanges}
+                onSave={() => saveUnified({ silent: true })}
+            />
             <h1 className="text-xl font-bold">Werknemer Details</h1>
 
             {employee && (
@@ -1259,7 +1277,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             type="button"
                                             onClick={() => {
                                                 setDocsModalOpen(false);
-                                                router.push(`/dashboard/cv/${employeeId}`);
+                                                guardedRouter.push(`/dashboard/cv/${employeeId}`);
                                             }}
                                             className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
                                         >
@@ -1798,7 +1816,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             <Button
-                onClick={saveUnified}
+                onClick={() => void saveUnified()}
                 disabled={updating}
                 variant="default"
                 aria-label="Opslaan werknemer en profiel"

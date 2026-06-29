@@ -5,6 +5,7 @@ import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
   EMPTY_INTAKE_SECTIE7_CONTENT,
   isNoAdIntake,
+  docsIncludeAdReport,
 } from '@/lib/tp/intake-ad-presence';
 import { sanitizeIntakeSectie7Content } from './build-fields';
 import { DEFAULT_INTAKE_SECTIE7_MODEL, INTAKE_DOC_VARIANTS } from './constants';
@@ -105,7 +106,7 @@ export async function generateIntakeSectie7Content(
   docs: EmployeeDoc[],
   ctx: IntakeSectie7Context = {}
 ): Promise<IntakeSectie7Content> {
-  if (isNoAdIntake(ctx.meta)) {
+  if (isNoAdIntake(ctx.meta, { hasAdDocument: docsIncludeAdReport(docs) })) {
     return { ...EMPTY_INTAKE_SECTIE7_CONTENT };
   }
 

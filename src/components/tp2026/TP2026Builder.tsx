@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -52,7 +53,7 @@ type Props = {
 };
 
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
-  const router = useRouter();
+  const guardedRouter = useGuardedRouter();
   const { tpData, setTPData, updateField, saveAll, isDirty, markDirty, markSaved } = useTPInstance();
   const { showSuccess, showError, showInfo } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
@@ -420,14 +421,18 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     });
   }, [tpData.tp_start_date, tpData.tp_end_date, tpData.intake_date, tpData.bijlage_fases, setTPData]);
 
+  const persistForGuard = useCallback(async () => {
+    const { ok, error } = await persistDraftFromData(tpData);
+    if (!ok) throw new Error(error || 'Opslaan mislukt');
+  }, [persistDraftFromData, tpData]);
+
   const persist = async () => {
     setSaving(true);
     try {
-      const { ok, error } = await persistDraftFromData(tpData);
-      if (!ok) throw new Error(error || 'Opslaan mislukt');
+      await persistForGuard();
     } catch (error) {
       console.error('Failed to save TP 2026 instance', error);
-      alert(error instanceof Error ? error.message : 'Opslaan mislukt');
+      showError('Fout', error instanceof Error ? error.message : 'Opslaan mislukt');
     } finally {
       setSaving(false);
     }
@@ -490,11 +495,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       setCurrentStep((s) => s - 1);
       return;
     }
-    router.push(`/dashboard/employees/${employeeId}`);
+    guardedRouter.push(`/dashboard/employees/${employeeId}`);
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
+      <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
       <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">

@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { normalizePersonName } from '@/lib/utils';
+import { useFormDirty } from '@/hooks/useFormDirty';
+import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
+
+type ProfileSnapshot = {
+  firstName: string;
+  lastName: string;
+};
 
 export default function ProfileInformation() {
     const supabase = createBrowserClient(
@@ -16,9 +23,13 @@ export default function ProfileInformation() {
     const [email, setEmail] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [savedSnapshot, setSavedSnapshot] = useState<ProfileSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    const currentSnapshot: ProfileSnapshot = { firstName, lastName };
+    const isDirty = useFormDirty(currentSnapshot, savedSnapshot ?? { firstName: '', lastName: '' }) && savedSnapshot !== null;
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -37,8 +48,11 @@ export default function ProfileInformation() {
                         .single();
 
                     if (userData) {
-                        setFirstName(normalizePersonName(userData.first_name) ?? '');
-                        setLastName(normalizePersonName(userData.last_name) ?? '');
+                        const fn = normalizePersonName(userData.first_name) ?? '';
+                        const ln = normalizePersonName(userData.last_name) ?? '';
+                        setFirstName(fn);
+                        setLastName(ln);
+                        setSavedSnapshot({ firstName: fn, lastName: ln });
                     }
                 }
             } catch (error) {
@@ -52,34 +66,43 @@ export default function ProfileInformation() {
         fetchUser();
     }, [supabase]);
 
+    const saveProfile = useCallback(async (options?: { silent?: boolean }) => {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+            throw new Error('Gebruiker niet gevonden.');
+        }
+
+        const { error: updateError } = await supabase
+            .from("users")
+            .update({
+                first_name: normalizePersonName(firstName),
+                last_name: normalizePersonName(lastName),
+            })
+            .eq("id", user.id);
+
+        if (updateError) {
+            throw updateError;
+        }
+
+        const next = {
+            firstName: normalizePersonName(firstName) ?? '',
+            lastName: normalizePersonName(lastName) ?? '',
+        };
+        setSavedSnapshot(next);
+        if (!options?.silent) {
+            setMessage({ type: 'success', text: 'Profiel succesvol opgeslagen!' });
+        }
+    }, [firstName, lastName, supabase]);
+
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
         setMessage(null);
 
         try {
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) {
-                setMessage({ type: 'error', text: 'Gebruiker niet gevonden.' });
-                return;
-            }
-
-            // Update profile info
-            const { error: updateError } = await supabase
-                .from("users")
-                .update({
-                    first_name: normalizePersonName(firstName),
-                    last_name: normalizePersonName(lastName),
-                })
-                .eq("id", user.id);
-
-            if (updateError) {
-                throw updateError;
-            }
-
-            setMessage({ type: 'success', text: 'Profiel succesvol opgeslagen!' });
+            await saveProfile();
         } catch (error) {
             console.error("Error saving profile:", error);
             setMessage({ type: 'error', text: 'Er is een fout opgetreden bij het opslaan van het profiel.' });
@@ -98,6 +121,11 @@ export default function ProfileInformation() {
 
     return (
         <div className="space-y-6">
+            <UnsavedChangesSyncGuard
+                isDirty={isDirty}
+                onSave={() => saveProfile({ silent: true })}
+                autosave
+            />
             <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">Profiel Informatie</h2>
                 <p className="text-gray-600">Beheer uw persoonlijke gegevens</p>
@@ -154,10 +182,10 @@ export default function ProfileInformation() {
                     <div className="pt-4">
                         <Button 
                             type="submit" 
-                            disabled={saving}
+                            disabled={saving || !isDirty}
                             size="lg"
                         >
-                            {saving ? 'Opslaan...' : 'Profiel opslaan'}
+                            {saving ? 'Opslaan...' : isDirty ? 'Profiel opslaan' : 'Profiel opgeslagen'}
                         </Button>
                     </div>
                 </form>

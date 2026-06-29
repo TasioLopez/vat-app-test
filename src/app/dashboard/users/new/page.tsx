@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CreateFormLeaveGuard from '@/components/unsaved/CreateFormLeaveGuard';
 
 export default function AddUserPage() {
   const [email, setEmail] = useState("");
@@ -15,11 +16,16 @@ export default function AddUserPage() {
     });
 
     const data = await res.json();
-    setMessage(data.message || data.error || "");
+    if (!res.ok) {
+      throw new Error(data.error || data.message || "Uitnodigen mislukt");
+    }
+    setMessage(data.message || "Uitnodiging verzonden");
+    setEmail("");
   };
 
   return (
     <div className="p-6 space-y-6">
+      <CreateFormLeaveGuard values={{ email }} onSave={handleInvite} />
       <div>
         <h1 className="text-3xl font-bold text-foreground mb-2">Gebruiker uitnodigen</h1>
         <p className="text-muted-foreground">Nodig een nieuwe gebruiker uit via e-mail</p>
@@ -34,7 +40,7 @@ export default function AddUserPage() {
             placeholder="email@example.com"
           />
         </div>
-        <Button onClick={handleInvite}>
+        <Button onClick={() => void handleInvite().catch((err) => setMessage(err instanceof Error ? err.message : "Uitnodigen mislukt"))}>
           Uitnodiging verzenden
         </Button>
       </div>

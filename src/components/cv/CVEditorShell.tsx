@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import GuardedLink from '@/components/ui/GuardedLink';
 import {
   ArrowLeft,
   Printer,
@@ -175,11 +176,13 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
 
   const statusText = saving
     ? 'Opslaan…'
-    : isDirty
-      ? 'Niet opgeslagen'
-      : lastSavedAt
-        ? 'Opgeslagen'
-        : '';
+    : saveError
+      ? 'Opslaan mislukt'
+      : isDirty
+        ? 'Niet opgeslagen'
+        : lastSavedAt
+          ? 'Opgeslagen'
+          : '';
 
   const onPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,13 +236,13 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-gray-600" asChild>
-              <Link
+              <GuardedLink
                 href={`/dashboard/employees/${employeeId}`}
                 aria-label="Terug naar werknemer"
                 title="Terug naar werknemer"
               >
                 <ArrowLeft className="h-4 w-4" />
-              </Link>
+              </GuardedLink>
             </Button>
             <div className="hidden h-6 w-px shrink-0 bg-gray-200 sm:block" aria-hidden />
             <Input

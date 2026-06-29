@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -22,7 +23,7 @@ type Props = {
 };
 
 function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vgrInstanceId: string }) {
-  const router = useRouter();
+  const guardedRouter = useGuardedRouter();
   const { vgrData, updateField, saveAll, isDirty, markSaved } = useVGRInstance();
   const { showSuccess, showError } = useToastHelpers();
   const supabase = useMemo(
@@ -55,19 +56,22 @@ function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vg
     [employeeId, markSaved, saveAll, supabase, vgrInstanceId]
   );
 
+  const persistForGuard = useCallback(async () => {
+    const result = await persistDraftFromData(vgrData);
+    if (!result.ok) throw new Error(result.error || 'Opslaan mislukt');
+  }, [persistDraftFromData, vgrData]);
+
   const persist = useCallback(async () => {
     setSaving(true);
     try {
-      const result = await persistDraftFromData(vgrData);
-      if (result.ok) {
-        showSuccess('Opgeslagen', 'VGR concept is opgeslagen.');
-      } else {
-        showError('Fout', result.error || 'Opslaan mislukt.');
-      }
+      await persistForGuard();
+      showSuccess('Opgeslagen', 'VGR concept is opgeslagen.');
+    } catch (err) {
+      showError('Fout', err instanceof Error ? err.message : 'Opslaan mislukt.');
     } finally {
       setSaving(false);
     }
-  }, [persistDraftFromData, showError, showSuccess, vgrData]);
+  }, [persistForGuard, showError, showSuccess]);
 
   const sections = [
     {
@@ -110,11 +114,12 @@ function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vg
       setCurrentStep((s) => s - 1);
       return;
     }
-    router.push(`/dashboard/employees/${employeeId}`);
+    guardedRouter.push(`/dashboard/employees/${employeeId}`);
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
       <div className="shrink-0 border-b border-border bg-white px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">

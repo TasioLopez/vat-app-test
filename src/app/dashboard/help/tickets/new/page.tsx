@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "sonner";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import CreateFormLeaveGuard from "@/components/unsaved/CreateFormLeaveGuard";
+import { useGuardedRouter } from "@/hooks/useGuardedRouter";
 
 type TicketCategory = {
   id: string;
@@ -15,6 +17,7 @@ type TicketCategory = {
 
 export default function NewTicketPage() {
   const router = useRouter();
+  const guardedRouter = useGuardedRouter();
   const { refresh: refreshNotifications } = useHelpNotifications();
   const [categories, setCategories] = useState<TicketCategory[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -51,34 +54,39 @@ export default function NewTicketPage() {
     })();
   }, []);
 
+  const submitTicket = useCallback(async () => {
+    if (!categoryId || !subject.trim() || !description.trim()) {
+      throw new Error("Vul alle velden in.");
+    }
+    const res = await fetch("/api/help/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoryId,
+        subject: subject.trim(),
+        description: description.trim(),
+      }),
+    });
+    const j = await res.json();
+    if (!res.ok) {
+      throw new Error(j.error || "Ticket aanmaken mislukt.");
+    }
+    toast.success("Ticket aangemaakt");
+    await refreshNotifications();
+    guardedRouter.raw.push(`/dashboard/help/tickets/${j.id}`);
+  }, [categoryId, description, guardedRouter, refreshNotifications, subject]);
+
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!categoryId || !subject.trim() || !description.trim() || submitting) return;
+    if (submitting) return;
     setSubmitting(true);
     setError("");
     try {
-      const res = await fetch("/api/help/tickets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoryId,
-          subject: subject.trim(),
-          description: description.trim(),
-        }),
-      });
-      const j = await res.json();
-      if (!res.ok) {
-        const msg = j.error || "Ticket aanmaken mislukt.";
-        setError(msg);
-        toast.error(msg);
-        return;
-      }
-      toast.success("Ticket aangemaakt");
-      await refreshNotifications();
-      router.push(`/dashboard/help/tickets/${j.id}`);
-    } catch {
-      setError("Netwerkfout bij ticket aanmaken.");
-      toast.error("Netwerkfout bij ticket aanmaken.");
+      await submitTicket();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Netwerkfout bij ticket aanmaken.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -86,10 +94,11 @@ export default function NewTicketPage() {
 
   return (
     <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+      <CreateFormLeaveGuard values={{ categoryId, subject, description }} onSave={submitTicket} />
       <div className="max-w-3xl mx-auto space-y-6">
-        <Link href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
+        <GuardedLink href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
           <FaArrowLeft /> Mijn tickets
-        </Link>
+        </GuardedLink>
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Nieuw ticket</h1>

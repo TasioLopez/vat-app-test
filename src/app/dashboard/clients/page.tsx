@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useFormDirty } from '@/hooks/useFormDirty';
+import ModalUnsavedGuard, { useGuardedModalClose } from '@/components/unsaved/ModalUnsavedGuard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Trash2, Pencil, Search, ChevronUp, ChevronDown, Building2, Tag, Mail, Phone, MapPin, User, Users, Briefcase } from 'lucide-react';
@@ -50,6 +52,33 @@ export default function ClientsPage() {
   const [newReferent, setNewReferent] = useState<Partial<ReferentRow> | null>(null);
   const [editingReferentId, setEditingReferentId] = useState<string | null>(null);
   const [editingReferentDraft, setEditingReferentDraft] = useState<Partial<ReferentRow>>({});
+  const [clientSnapshot, setClientSnapshot] = useState<Client | null>(null);
+
+  const clientEditPayload = selectedClient
+    ? {
+        name: selectedClient.name,
+        industry: selectedClient.industry,
+        contact_email: selectedClient.contact_email,
+        phone: selectedClient.phone,
+        plaats: selectedClient.plaats,
+      }
+    : null;
+  const clientSnapshotPayload = clientSnapshot
+    ? {
+        name: clientSnapshot.name,
+        industry: clientSnapshot.industry,
+        contact_email: clientSnapshot.contact_email,
+        phone: clientSnapshot.phone,
+        plaats: clientSnapshot.plaats,
+      }
+    : null;
+  const isClientModalDirty = useFormDirty(clientEditPayload, clientSnapshotPayload);
+
+  const closeClientModal = useCallback(() => {
+    setSelectedClient(null);
+    setClientSnapshot(null);
+  }, []);
+  const guardedCloseClientModal = useGuardedModalClose(isClientModalDirty, closeClientModal);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -135,6 +164,7 @@ export default function ClientsPage() {
 
   const handleEdit = async (client: Client) => {
     setSelectedClient(client);
+    setClientSnapshot({ ...client });
     setNewReferent(null);
     setEditingReferentId(null);
     await fetchEmployees(client.id);
@@ -158,7 +188,7 @@ export default function ClientsPage() {
     }
   };
 
-  const handleSave = async () => {
+  const saveClientForGuard = useCallback(async () => {
     if (!selectedClient) return;
     const { error } = await supabase
       .from('clients')
@@ -171,10 +201,19 @@ export default function ClientsPage() {
       })
       .eq('id', selectedClient.id);
 
-    if (!error) {
-      await trackAccess('client', selectedClient.id, true);
-      await fetchClients();
-      setSelectedClient(null);
+    if (error) throw new Error(error.message);
+
+    await trackAccess('client', selectedClient.id, true);
+    await fetchClients();
+    setClientSnapshot({ ...selectedClient });
+  }, [selectedClient]);
+
+  const handleSave = async () => {
+    try {
+      await saveClientForGuard();
+      closeClientModal();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -355,6 +394,12 @@ export default function ClientsPage() {
       {/* Edit Modal */}
       {selectedClient && (
         <div className="fixed inset-0 backdrop-blur-md bg-black/50 flex justify-center items-center z-50 p-4">
+          <ModalUnsavedGuard
+            open={Boolean(selectedClient)}
+            isDirty={isClientModalDirty}
+            onSave={saveClientForGuard}
+            onClose={closeClientModal}
+          />
           <div className="bg-white border-2 border-purple-200/50 p-8 rounded-xl shadow-2xl shadow-purple-500/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">Werkgever bewerken</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -535,7 +580,7 @@ export default function ClientsPage() {
             </div>
 
             <div className="mt-8 flex justify-end gap-4 pt-6 border-t border-purple-200/50">
-              <Button variant="outline" onClick={() => setSelectedClient(null)} size="lg">
+              <Button variant="outline" onClick={guardedCloseClientModal} size="lg">
                 Annuleren
               </Button>
               <Button onClick={handleSave} size="lg">

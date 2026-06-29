@@ -15,6 +15,7 @@ interface UnsavedChangesDialogProps {
   onSave: () => Promise<void>;
   onDiscard: () => void;
   saving?: boolean;
+  saveError?: boolean;
 }
 
 export default function UnsavedChangesDialog({
@@ -23,6 +24,7 @@ export default function UnsavedChangesDialog({
   onSave,
   onDiscard,
   saving = false,
+  saveError = false,
 }: UnsavedChangesDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,6 +35,9 @@ export default function UnsavedChangesDialog({
         <p className="text-sm text-muted-foreground">
           Er zijn niet-opgeslagen wijzigingen. Wil je ze opslaan of doorgaan zonder op te slaan?
         </p>
+        {saveError ? (
+          <p className="text-sm text-destructive">Laatste opslag mislukt. Probeer opnieuw op te slaan.</p>
+        ) : null}
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"

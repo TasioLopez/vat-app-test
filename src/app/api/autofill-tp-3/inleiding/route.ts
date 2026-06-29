@@ -3,6 +3,10 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { resolveReferentForEmployee } from "@/lib/referents";
 import { generateInleiding } from "@/lib/tp/inleiding";
+import {
+  docsIncludeAdReport,
+  resolveEffectiveAdPresence,
+} from "@/lib/tp/intake-ad-presence";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,10 +61,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
 
+    const adPresence = resolveEffectiveAdPresence(meta ?? {}, docsIncludeAdReport(docs));
+
     const ctx = {
       employee: employee ?? {},
       details: details ?? {},
-      meta: meta ?? {},
+      meta: { ...(meta ?? {}), ...adPresence },
       client: client ?? {},
       referent,
     };
@@ -78,7 +84,7 @@ export async function GET(req: NextRequest) {
       inleiding_sub = "";
     }
 
-    const hasAD = meta?.has_ad_report ?? false;
+    const hasAD = adPresence.has_ad_report === true;
 
     await supabase.from("tp_meta").upsert(
       {

@@ -2,18 +2,21 @@
 
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "sonner";
 import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
 import { HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
+import CreateFormLeaveGuard from "@/components/unsaved/CreateFormLeaveGuard";
+import { useGuardedRouter } from "@/hooks/useGuardedRouter";
 
 type Cat = { id: string; title: string; slug: string };
 
 export default function NewArticlePage() {
   const router = useRouter();
+  const guardedRouter = useGuardedRouter();
 
   const [categories, setCategories] = useState<Cat[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -58,7 +61,7 @@ export default function NewArticlePage() {
     return sj.path as string;
   }, []);
 
-  const save = async () => {
+  const save = useCallback(async () => {
     const res = await fetch("/api/help/admin/articles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -74,18 +77,28 @@ export default function NewArticlePage() {
       }),
     });
     const j = await res.json();
-    if (res.ok) {
-      router.push(`/dashboard/help/admin/articles/${j.id}/edit`);
-    } else {
-      toast.error(j.error || "Opslaan mislukt");
+    if (!res.ok) {
+      throw new Error(j.error || "Opslaan mislukt");
+    }
+    guardedRouter.raw.push(`/dashboard/help/admin/articles/${j.id}/edit`);
+  }, [body, categoryId, excerpt, guardedRouter, slug, title, translationGroupId]);
+
+  const handleSaveClick = async () => {
+    try {
+      await save();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 
+  const formValues = { categoryId, title, slug, body, excerpt, translationGroupId };
+
   return (
     <div className="p-8 max-w-4xl space-y-6">
-      <Link href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
+      <CreateFormLeaveGuard values={formValues} onSave={save} />
+      <GuardedLink href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
         <FaArrowLeft /> Artikelen
-      </Link>
+      </GuardedLink>
       <h1 className="text-2xl font-bold">Nieuw artikel</h1>
       <div className="grid gap-3">
         <label className="text-sm font-medium">Koppeling bestaande vertaling (optioneel, UUID)</label>
@@ -132,7 +145,7 @@ export default function NewArticlePage() {
           placeholder="Typ of plak tekst; gebruik de werkbalk voor koppen, lijsten en afbeeldingen."
         />
       </div>
-      <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
+      <button type="button" onClick={handleSaveClick} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
         Opslaan &amp; indexeren
       </button>
     </div>

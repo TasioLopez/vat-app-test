@@ -1,6 +1,7 @@
 'use client';
 
 import { CVProvider } from '@/context/CVContext';
+import { UnsavedChangesGuardProvider } from '@/context/UnsavedChangesGuardContext';
 import CVGuestSyncGuard from '@/components/cv/share/CVGuestSyncGuard';
 import CVGuestEditorShell from '@/components/cv/share/CVGuestEditorShell';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
@@ -34,20 +35,22 @@ export default function CVGuestPageClient({
   );
 
   return (
-    <CVProvider
-      employeeId={doc.employee_id}
-      cvId={doc.id}
-      initialTitle={doc.title}
-      initialTemplateKey={coerceCvTemplateKey(doc.template_key)}
-      initialAccentColor={doc.accent_color || DEFAULT_ACCENT_COLOR}
-      initialPayload={payload}
-      initialUpdatedAt={doc.updated_at}
-      initialPhotoSignedUrl={initialPhotoSignedUrl}
-      editorMode="guest"
-      shareToken={shareToken}
-    >
-      <CVGuestSyncGuard />
-      <CVGuestEditorShell shareToken={shareToken} employeeLabel={employeeLabel} />
-    </CVProvider>
+    <UnsavedChangesGuardProvider>
+      <CVProvider
+        employeeId={doc.employee_id}
+        cvId={doc.id}
+        initialTitle={doc.title}
+        initialTemplateKey={coerceCvTemplateKey(doc.template_key)}
+        initialAccentColor={doc.accent_color || DEFAULT_ACCENT_COLOR}
+        initialPayload={payload}
+        initialUpdatedAt={doc.updated_at}
+        initialPhotoSignedUrl={initialPhotoSignedUrl}
+        editorMode="guest"
+        shareToken={shareToken}
+      >
+        <CVGuestSyncGuard />
+        <CVGuestEditorShell shareToken={shareToken} employeeLabel={employeeLabel} />
+      </CVProvider>
+    </UnsavedChangesGuardProvider>
   );
 }

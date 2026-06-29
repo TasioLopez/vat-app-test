@@ -7,7 +7,7 @@ import {
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
-import { isNoAdIntake, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
+import { isNoAdIntake, docsIncludeAdReport, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
 import { type DocumentScenario } from './constants';
 import { DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL } from './constants';
 import {
@@ -95,7 +95,7 @@ export function detectDocumentScenario(
       .filter((c): c is DocCategory => c != null)
   );
 
-  const treatAsNoAd = isNoAdIntake(meta);
+  const treatAsNoAd = isNoAdIntake(meta, { hasAdDocument: docsIncludeAdReport(docs) });
   if (!treatAsNoAd && categories.has('ad')) return 'ad';
   if (categories.has('belastbaarheid')) return 'belastbaarheid_only';
   return 'intake_only';
@@ -181,7 +181,7 @@ export async function generateVisieLoopbaanadviseurContent(
     console.warn('⚠️ Visie loopbaanadviseur: zoekprofiel ontbreekt in context');
   }
 
-  const excludeAd = isNoAdIntake(ctx.meta);
+  const excludeAd = isNoAdIntake(ctx.meta, { hasAdDocument: docsIncludeAdReport(docs) });
   const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs, { excludeAd });
 
   if (fileIds.length === 0) {

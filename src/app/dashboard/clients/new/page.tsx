@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useGuardedRouter } from '@/hooks/useGuardedRouter';
+import CreateFormLeaveGuard from '@/components/unsaved/CreateFormLeaveGuard';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
@@ -23,6 +25,7 @@ import {
 
 export default function AddClientPage() {
     const router = useRouter();
+    const guardedRouter = useGuardedRouter();
 
     const industryOptions = [
         'Gezondheidszorg', 'Onderwijs', 'Financiën', 'Technologie', 'Detailhandel',
@@ -54,11 +57,7 @@ export default function AddClientPage() {
         setError('');
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-
+    const submitClient = useCallback(async () => {
         const { data: newClient, error: clientError } = await supabase
             .from('clients')
             .insert({
@@ -72,9 +71,7 @@ export default function AddClientPage() {
             .single();
 
         if (clientError) {
-            setError(clientError.message);
-            setLoading(false);
-            return;
+            throw new Error(clientError.message);
         }
 
         if (newClient?.id && (form.referent_first_name?.trim() || form.referent_last_name?.trim())) {
@@ -90,12 +87,25 @@ export default function AddClientPage() {
             });
         }
 
-        router.push('/dashboard/clients');
-        setLoading(false);
+        guardedRouter.raw.push('/dashboard/clients');
+    }, [form, guardedRouter]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        try {
+            await submitClient();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Opslaan mislukt');
+            setLoading(false);
+        }
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/30 p-6 animate-in fade-in duration-500">
+            <CreateFormLeaveGuard values={form} onSave={submitClient} />
             <div className="max-w-5xl mx-auto">
                 {/* Header Section */}
                 <div className="mb-8 animate-in slide-in-from-top-4 duration-700">

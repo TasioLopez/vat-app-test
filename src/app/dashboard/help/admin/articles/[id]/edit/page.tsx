@@ -1,18 +1,32 @@
 "use client";
 
-import Link from "next/link";
+import GuardedLink from "@/components/ui/GuardedLink";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "sonner";
 import { KbArticleBodyEditor } from "@/components/help/KbArticleBodyEditor";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useFormDirty } from "@/hooks/useFormDirty";
+import UnsavedChangesSyncGuard from "@/components/unsaved/UnsavedChangesSyncGuard";
+import { useGuardedRouter } from "@/hooks/useGuardedRouter";
 
 type Cat = { id: string; title: string };
+
+type ArticleSnapshot = {
+  locale: string;
+  categoryId: string;
+  title: string;
+  slug: string;
+  body: string;
+  excerpt: string;
+  published: boolean;
+};
 
 export default function EditArticlePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const guardedRouter = useGuardedRouter();
   const [categories, setCategories] = useState<Cat[]>([]);
   const [locale, setLocale] = useState("nl");
   const [categoryId, setCategoryId] = useState("");
@@ -24,6 +38,18 @@ export default function EditArticlePage() {
   const [articleLoaded, setArticleLoaded] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState<ArticleSnapshot | null>(null);
+
+  const currentSnapshot: ArticleSnapshot = {
+    locale,
+    categoryId,
+    title,
+    slug,
+    body,
+    excerpt,
+    published,
+  };
+  const isDirty = useFormDirty(currentSnapshot, savedSnapshot);
 
   const load = useCallback(async () => {
     setArticleLoaded(false);
@@ -46,6 +72,15 @@ export default function EditArticlePage() {
     setExcerpt(a.excerpt || "");
     setPublished(a.published);
     setCategories(cj.categories || []);
+    setSavedSnapshot({
+      locale: a.locale,
+      categoryId: a.category_id,
+      title: a.title,
+      slug: a.slug,
+      body: a.body,
+      excerpt: a.excerpt || "",
+      published: a.published,
+    });
     setArticleLoaded(true);
   }, [id]);
 
@@ -76,7 +111,7 @@ export default function EditArticlePage() {
     return sj.path as string;
   }, []);
 
-  const save = async () => {
+  const saveArticle = useCallback(async (options?: { silent?: boolean }) => {
     const res = await fetch(`/api/help/admin/articles/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -92,9 +127,19 @@ export default function EditArticlePage() {
     });
     const j = await res.json();
     if (!res.ok) {
-      toast.error(j.error || "Opslaan mislukt");
-    } else {
+      throw new Error(j.error || "Opslaan mislukt");
+    }
+    setSavedSnapshot(currentSnapshot);
+    if (!options?.silent) {
       toast.success("Opgeslagen en opnieuw geïndexeerd.");
+    }
+  }, [id, locale, categoryId, title, slug, body, excerpt, published, currentSnapshot]);
+
+  const save = async () => {
+    try {
+      await saveArticle();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 
@@ -104,7 +149,7 @@ export default function EditArticlePage() {
       const res = await fetch(`/api/help/admin/articles/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Artikel verwijderd");
-        router.push("/dashboard/help/admin/articles");
+        guardedRouter.push("/dashboard/help/admin/articles");
       } else {
         toast.error("Verwijderen mislukt");
       }
@@ -116,9 +161,14 @@ export default function EditArticlePage() {
 
   return (
     <div className="p-8 max-w-4xl space-y-6">
-      <Link href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
+      <UnsavedChangesSyncGuard
+        isDirty={isDirty && articleLoaded}
+        onSave={() => saveArticle({ silent: true })}
+        autosave
+      />
+      <GuardedLink href="/dashboard/help/admin/articles" className="text-purple-700 inline-flex items-center gap-2">
         <FaArrowLeft /> Artikelen
-      </Link>
+      </GuardedLink>
       <h1 className="text-2xl font-bold">Artikel bewerken</h1>
       <div className="grid gap-3">
         <label className="flex items-center gap-2 text-sm">

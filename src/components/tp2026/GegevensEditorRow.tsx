@@ -8,9 +8,16 @@ import {
   type GegevensFieldSpan,
 } from '@/lib/tp2026/gegevens-editor-layout';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
+import { hasFilledAdReportDate } from '@/lib/tp/intake-ad-presence';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
-  if (key === 'ad_report_date' && data.has_ad_report === false) return true;
+  if (
+    key === 'ad_report_date' &&
+    data.has_ad_report === false &&
+    !hasFilledAdReportDate(data.ad_report_date)
+  ) {
+    return true;
+  }
   if (key === 'drivers_license_type' && data.drivers_license !== true) return true;
   if (key === 'computer_skills' && data.has_computer === false) return true;
   return false;

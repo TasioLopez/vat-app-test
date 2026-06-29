@@ -7,6 +7,10 @@ import {
   generatePowMeter,
   GENERATION_FALLBACK,
 } from '@/lib/tp/pow-meter';
+import {
+  docsIncludeAdReport,
+  resolveEffectiveAdPresence,
+} from '@/lib/tp/intake-ad-presence';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from('tp_meta')
-      .select('prognose_bedrijfsarts, fml_izp_lab_date, has_ad_report')
+      .select('prognose_bedrijfsarts, fml_izp_lab_date, has_ad_report, ad_report_date, intake_concept')
       .eq('employee_id', employeeId)
       .single();
 
@@ -46,10 +50,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const adPresence = resolveEffectiveAdPresence(meta ?? {}, docsIncludeAdReport(docs));
     const ctx = buildPowMeterContextFromMeta(
       meta?.prognose_bedrijfsarts,
       meta?.fml_izp_lab_date,
-      { has_ad_report: meta?.has_ad_report }
+      adPresence
     );
 
     let pow_meter: string;

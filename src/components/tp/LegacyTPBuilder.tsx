@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import CoverPage from '@/components/tp/sections/CoverPage';
 import EmployeeInfo from '@/components/tp/sections/EmployeeInfo';
 import Section3 from '@/components/tp/sections/Section3';
 import Bijlage from '@/components/tp/sections/Bijlage';
 import FinalReview from '@/components/tp/sections/FinalReview';
 import { TPProvider, useTP } from '@/context/TPContext';
-import { useUnsavedChangesGuard } from '@/context/UnsavedChangesGuardContext';
+import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { Button } from '@/components/ui/button';
 
 const SECTIONS = [
@@ -20,31 +20,14 @@ const SECTIONS = [
 
 function TPSyncGuard() {
   const { isDirty, saveAll } = useTP();
-  const { setDirty, setOnSaveBeforeLeave } = useUnsavedChangesGuard();
 
-  useEffect(() => {
-    setDirty(isDirty);
-  }, [isDirty, setDirty]);
-
-  useEffect(() => {
-    setOnSaveBeforeLeave(saveAll);
-    return () => {
-      setOnSaveBeforeLeave(null);
-      setDirty(false);
-    };
-  }, [saveAll, setOnSaveBeforeLeave, setDirty]);
-
-  useEffect(() => {
-    if (!isDirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
-
-  return null;
+  return (
+    <UnsavedChangesSyncGuard
+      isDirty={isDirty}
+      onSave={() => saveAll()}
+      autosave
+    />
+  );
 }
 
 export default function LegacyTPBuilder({ employeeId }: { employeeId: string }) {

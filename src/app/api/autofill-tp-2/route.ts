@@ -13,7 +13,11 @@ import {
   FML_TP2_DATE_USER_MESSAGE,
 } from '@/lib/document-analysis';
 import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
-import { resolveTp2HasAdReport } from '@/lib/tp/intake-ad-presence';
+import {
+  docsIncludeAdReport,
+  isAdDocumentType,
+  resolveTp2HasAdReport,
+} from '@/lib/tp/intake-ad-presence';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,11 +45,6 @@ async function downloadDocumentBuffer(
 
 function isFilled(v: unknown): boolean {
   return v != null && v !== '' && (typeof v !== 'string' || v.trim() !== '');
-}
-
-function isAdDocumentType(type: string | null | undefined): boolean {
-  const t = (type || '').toLowerCase();
-  return t.includes('ad');
 }
 
 function isFmlDocumentType(type: string | null | undefined): boolean {
@@ -200,8 +199,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const hasADDoc = docs.some((doc) => isAdDocumentType(doc.type));
-    resolveTp2HasAdReport(extractedData, hasADDoc);
+    resolveTp2HasAdReport(extractedData, docsIncludeAdReport(docs));
 
     console.log('✅ Final extracted TP2 data:', extractedData);
 

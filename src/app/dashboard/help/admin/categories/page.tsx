@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToastHelpers } from "@/components/ui/Toast";
+import { useFormDirty } from "@/hooks/useFormDirty";
+import ModalUnsavedGuard, { useGuardedModalClose } from "@/components/unsaved/ModalUnsavedGuard";
 import { validateCategoryReorder } from "@/lib/help/category-reorder";
 import {
   appendCategoryToParent,
@@ -195,6 +197,29 @@ export default function AdminCategoriesPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editParentId, setEditParentId] = useState<string>("");
   const [editToolKey, setEditToolKey] = useState("");
+  const [editSnapshot, setEditSnapshot] = useState<{
+    slug: string;
+    title: string;
+    description: string;
+    parentId: string;
+    toolKey: string;
+  } | null>(null);
+
+  const editPayload = {
+    slug: editSlug,
+    title: editTitle,
+    description: editDescription,
+    parentId: editParentId,
+    toolKey: editToolKey,
+  };
+  const isEditDirty = useFormDirty(editPayload, editSnapshot);
+
+  const closeEditModal = useCallback(() => {
+    setEditOpen(false);
+    setEditing(null);
+    setEditSnapshot(null);
+  }, []);
+  const guardedCloseEditModal = useGuardedModalClose(isEditDirty, closeEditModal);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -313,10 +338,17 @@ export default function AdminCategoriesPage() {
     setEditDescription(c.description || "");
     setEditParentId(c.parent_id || "");
     setEditToolKey(c.tool_key || "");
+    setEditSnapshot({
+      slug: c.slug,
+      title: c.title,
+      description: c.description || "",
+      parentId: c.parent_id || "",
+      toolKey: c.tool_key || "",
+    });
     setEditOpen(true);
   };
 
-  const saveEdit = async () => {
+  const saveEditForGuard = useCallback(async () => {
     if (!editing) return;
     const res = await fetch(`/api/help/admin/categories/${editing.id}`, {
       method: "PATCH",
@@ -330,13 +362,20 @@ export default function AdminCategoriesPage() {
       }),
     });
     const j = await res.json();
-    if (res.ok) {
+    if (!res.ok) {
+      throw new Error(j.error || "Opslaan mislukt");
+    }
+    setEditSnapshot(editPayload);
+    await load();
+  }, [editDescription, editParentId, editPayload, editSlug, editTitle, editToolKey, editing, load]);
+
+  const saveEdit = async () => {
+    try {
+      await saveEditForGuard();
       showSuccess("Opgeslagen");
-      setEditOpen(false);
-      setEditing(null);
-      await load();
-    } else {
-      showError("Opslaan mislukt", j.error || "");
+      closeEditModal();
+    } catch (err) {
+      showError("Opslaan mislukt", err instanceof Error ? err.message : "");
     }
   };
 
@@ -460,7 +499,13 @@ export default function AdminCategoriesPage() {
         </DndContext>
       </div>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={(o) => !o && guardedCloseEditModal()}>
+        <ModalUnsavedGuard
+          open={editOpen}
+          isDirty={isEditDirty}
+          onSave={saveEditForGuard}
+          onClose={closeEditModal}
+        />
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Categorie bewerken</DialogTitle>
@@ -521,7 +566,7 @@ export default function AdminCategoriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEditOpen(false)}>
+            <Button type="button" variant="outline" className="cursor-pointer" onClick={guardedCloseEditModal}>
               Annuleren
             </Button>
             <Button type="button" className="cursor-pointer" onClick={saveEdit}>
