@@ -6,7 +6,7 @@ import {
   TP_BASIS_AGREEMENT_POINTS,
 } from '@/lib/tp2026/basis-document-agreement';
 import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
-import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
+import { SectionBand, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 
 const paperText =
   'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
