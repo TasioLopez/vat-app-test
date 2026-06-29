@@ -605,7 +605,7 @@ function mergeSectionAtomsOnPage(atoms: BasisAtom[]): BasisAtom[] {
 
 function getBasisAtomMarginClass(atom: BasisAtom, prev: BasisAtom | undefined): string {
   if (atom.kind === 'groupBanner') {
-    return prev ? 'mt-3' : '';
+    return prev ? 'mt-8' : '';
   }
   return getAtomMarginClass(atom, prev);
 }
