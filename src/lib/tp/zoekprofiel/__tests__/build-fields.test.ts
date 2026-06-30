@@ -82,6 +82,21 @@ describe('buildZoekprofielFields', () => {
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
     assert.ok(!zoekprofiel.includes('[1:2/doc.pdf]'));
   });
+
+  it('omits FML/IZP/LAB closing when no belastbaarheidsdocument is available', () => {
+    const ctx: ZoekprofielBuildContext = {
+      ...baseCtx,
+      meta: { ...baseCtx.meta, has_belastbaarheids_doc: false },
+    };
+    const content: ZoekprofielContentResult = {
+      ...baseContent,
+      alinea_2: null,
+    };
+
+    const { zoekprofiel } = buildZoekprofielFields(ctx, content);
+    assert.ok(!zoekprofiel.includes('Functionele Mogelijkhedenlijst'));
+    assert.match(zoekprofiel, /Op basis van de afgeronde opleiding\(en\)/);
+  });
 });
 
 describe('buildPara1Closing', () => {

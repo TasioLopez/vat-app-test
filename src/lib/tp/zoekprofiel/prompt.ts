@@ -9,11 +9,13 @@ import {
 
 const DOCUMENT_SCOPE_HINT = `
 DOCUMENTEN VOOR ZOEKPROFIEL:
-- FML, Inzetbaarheidsprofiel of LAB (verplicht): alle arbeidsrelevante beperkingen en voorwaarden
+- FML, Inzetbaarheidsprofiel of LAB (indien aanwezig): alle arbeidsrelevante beperkingen en voorwaarden voor alinea 2
 - AD rapport (indien aanwezig): opleiding, werkervaring, werk- en denkniveau
 - Intakeformulier (indien aanwezig): opleiding, diploma's, werkervaring, functietitels
   • Sectie 2 Persoonsgegevens + blok "Algemene informatie"
 Bij meerdere documenten van hetzelfde type: gebruik het meest recente document.
+Als geen FML/IZP/LAB is bijgevoegd (context has_belastbaarheids_doc = false): genereer alinea 1 uit AD/intake;
+laat alinea_2 leeg (null) tenzij AD expliciete arbeidsrelevante voorwaarden noemt — geen aannames.
 Gebruik NIET: medische diagnoses, privé-informatie, niet-genoemde vaardigheden.
 `.trim();
 

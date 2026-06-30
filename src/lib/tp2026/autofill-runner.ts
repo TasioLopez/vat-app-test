@@ -212,11 +212,7 @@ async function runTp3FieldStep(
       return { data: currentData, error: json.error || `HTTP ${res.status}` };
     }
 
-    let next: Record<string, unknown> = { ...currentData };
-    if (json?.details && typeof json.details === 'object') {
-      next = mergeAutofillIntoTP2026(next, json.details);
-    }
-    return { data: ensureTP2026Shape(next) };
+    return resolveTp3AutofillJson(json, currentData);
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {
@@ -224,6 +220,37 @@ async function runTp3FieldStep(
       error: e instanceof Error ? e.message : `Autofill mislukt voor ${fieldKey}`,
     };
   }
+}
+
+function hasMeaningfulAutofillDetails(details: Record<string, unknown>): boolean {
+  return Object.values(details).some(
+    (value) => typeof value === 'string' && value.trim().length > 0
+  );
+}
+
+/** Maps a TP3 autofill API JSON body to a step result (handles HTTP 200 + error responses). */
+export function resolveTp3AutofillJson(
+  json: { error?: string; details?: Record<string, unknown> },
+  currentData: Record<string, unknown>
+): AutofillStepRunResult {
+  const details =
+    json?.details && typeof json.details === 'object' ? json.details : undefined;
+  const hasDetails = details ? hasMeaningfulAutofillDetails(details) : false;
+
+  if (json.error && !hasDetails) {
+    return { data: currentData, error: json.error };
+  }
+
+  let next: Record<string, unknown> = { ...currentData };
+  if (details) {
+    next = mergeAutofillIntoTP2026(next, details);
+  }
+
+  const result: AutofillStepRunResult = { data: ensureTP2026Shape(next) };
+  if (json.error) {
+    result.error = json.error;
+  }
+  return result;
 }
 
 export type RunAutofillStepsResult = {

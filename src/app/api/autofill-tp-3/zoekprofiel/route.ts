@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import {
   buildZoekprofielContextFromMeta,
+  filterZoekprofielDocs,
   generateZoekprofiel,
   isBelastbaarheidsDoc,
 } from "@/lib/tp/zoekprofiel";
@@ -40,20 +41,30 @@ export async function GET(req: NextRequest) {
       .order("uploaded_at", { ascending: false });
 
     const allDocs = docs || [];
-    const belastbaarheidsDocs = allDocs.filter((d) => isBelastbaarheidsDoc(d.type));
-    if (belastbaarheidsDocs.length === 0) {
+    const relevantDocs = filterZoekprofielDocs(allDocs);
+    if (relevantDocs.length === 0) {
       return NextResponse.json(
-        { error: "Geen FML/IZP document gevonden", details: {} },
+        { error: "Geen intake-, AD- of FML/IZP-document gevonden", details: {} },
         { status: 200 }
       );
     }
 
+    const hasBelastbaarheidsDoc = allDocs.some((d) => isBelastbaarheidsDoc(d.type));
     const ctx = {
-      ...buildZoekprofielContextFromMeta(meta?.fml_izp_lab_date),
+      ...buildZoekprofielContextFromMeta(meta?.fml_izp_lab_date, {
+        hasBelastbaarheidsDoc,
+      }),
       employee: employee ?? {},
     };
 
     let zoekprofiel: string;
+    const warnings: string[] = [];
+
+    if (!hasBelastbaarheidsDoc) {
+      warnings.push(
+        "Zoekprofiel gegenereerd zonder FML/IZP/LAB — beperkingen-sectie kan onvolledig zijn."
+      );
+    }
 
     try {
       const result = await generateZoekprofiel(openai, supabase, ctx, allDocs);
@@ -83,6 +94,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       details: { zoekprofiel },
       autofilled_fields: ["zoekprofiel"],
+      ...(warnings.length ? { warnings } : {}),
     });
   } catch (err: any) {
     console.error("❌ zoekprofiel route error:", err);

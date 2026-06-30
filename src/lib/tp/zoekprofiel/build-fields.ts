@@ -11,7 +11,11 @@ import type { ZoekprofielContentResult } from './schema';
 
 export type ZoekprofielBuildContext = {
   employee: { first_name?: string | null; last_name?: string | null };
-  meta: { fml_izp_lab_date_voluit?: string | null };
+  meta: {
+    fml_izp_lab_date_voluit?: string | null;
+    /** When false, skip FML/IZP/LAB closing (AD/intake-only generation). Defaults to true. */
+    has_belastbaarheids_doc?: boolean;
+  };
 };
 
 export type ZoekprofielFields = {
@@ -108,8 +112,11 @@ export function buildZoekprofielFields(
   }
 
   const alinea1Kern = stripSectionHeading(sanitizeParagraph(content.alinea_1_kern));
-  const datum = resolveBelastbaarheidsdatum(ctx, content);
-  const closing = buildPara1Closing(content.belastbaarheidsdocument_type, datum);
+  const includeBelastbaarheidsClosing = ctx.meta.has_belastbaarheids_doc !== false;
+  const datum = includeBelastbaarheidsClosing ? resolveBelastbaarheidsdatum(ctx, content) : '';
+  const closing = includeBelastbaarheidsClosing
+    ? buildPara1Closing(content.belastbaarheidsdocument_type, datum)
+    : '';
   const para1 = [alinea1Kern, closing].filter(Boolean).join(' ');
 
   const para2 = content.alinea_2

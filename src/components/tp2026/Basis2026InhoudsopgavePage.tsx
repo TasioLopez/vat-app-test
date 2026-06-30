@@ -22,7 +22,7 @@ const BAR_BG: Record<BasisInhoudsopgaveBarVariant, string> = {
   beige: 'bg-[#c4a574]',
 };
 
-const tocItemClass = 'text-[12px] leading-snug text-[#6d2a96]';
+const tocItemClass = 'text-[12px] leading-relaxed text-[#6d2a96]';
 
 function TocSectionBar({
   variant,
@@ -54,8 +54,8 @@ export function Basis2026InhoudsopgavePage({
         <h1 className="text-[16px] font-bold leading-tight text-[#6d2a96]">{BASIS_INHOUDSOPGAVE_TITLE}</h1>
         <div className="mt-3 space-y-1">
           {BASIS_INHOUDSOPGAVE_INTRO_ITEMS.map((item) => (
-            <ValentineZLogoBulletRow key={item}>
-              <span className={tocItemClass}>{item}</span>
+            <ValentineZLogoBulletRow key={item} className={tocItemClass}>
+              {item}
             </ValentineZLogoBulletRow>
           ))}
         </div>
@@ -65,8 +65,8 @@ export function Basis2026InhoudsopgavePage({
             <TocSectionBar variant={section.barVariant} title={section.title} />
             <div className="mt-2 space-y-1">
               {section.items.map((item) => (
-                <ValentineZLogoBulletRow key={item}>
-                  <span className={tocItemClass}>{item}</span>
+                <ValentineZLogoBulletRow key={item} className={tocItemClass}>
+                  {item}
                 </ValentineZLogoBulletRow>
               ))}
             </div>

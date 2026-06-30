@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isAutofillAbortError,
+  resolveTp3AutofillJson,
   runAutofillSteps,
   type AutofillRunStep,
 } from '../autofill-runner';
@@ -16,6 +17,30 @@ describe('isAutofillAbortError', () => {
     assert.equal(isAutofillAbortError(new DOMException('aborted', 'AbortError')), true);
     assert.equal(isAutofillAbortError(Object.assign(new Error('aborted'), { name: 'AbortError' })), true);
     assert.equal(isAutofillAbortError(new Error('other')), false);
+  });
+});
+
+describe('resolveTp3AutofillJson', () => {
+  it('returns error without merging when API responds 200 with empty details', () => {
+    const current = { zoekprofiel: 'bestaand' };
+    const result = resolveTp3AutofillJson(
+      { error: 'Geen FML/IZP document gevonden', details: {} },
+      current
+    );
+
+    assert.equal(result.error, 'Geen FML/IZP document gevonden');
+    assert.equal(result.data.zoekprofiel, 'bestaand');
+  });
+
+  it('merges details and keeps error for partial responses', () => {
+    const current = { zoekprofiel: '' };
+    const result = resolveTp3AutofillJson(
+      { error: 'Waarschuwing', details: { zoekprofiel: 'Nieuw profiel' } },
+      current
+    );
+
+    assert.equal(result.error, 'Waarschuwing');
+    assert.equal(result.data.zoekprofiel, 'Nieuw profiel');
   });
 });
 

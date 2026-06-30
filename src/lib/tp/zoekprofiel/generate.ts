@@ -120,6 +120,7 @@ function buildApiContext(ctx: ZoekprofielBuildContext): Record<string, unknown> 
   return {
     meta: {
       fml_izp_lab_date_voluit: ctx.meta.fml_izp_lab_date_voluit || null,
+      has_belastbaarheids_doc: ctx.meta.has_belastbaarheids_doc !== false,
     },
   };
 }
@@ -186,11 +187,15 @@ export async function generateZoekprofiel(
   return buildZoekprofielFields(ctx, content);
 }
 
-export function buildZoekprofielContextFromMeta(fmlIzpLabDate?: string | null): ZoekprofielBuildContext {
+export function buildZoekprofielContextFromMeta(
+  fmlIzpLabDate?: string | null,
+  options?: { hasBelastbaarheidsDoc?: boolean }
+): ZoekprofielBuildContext {
   return {
     employee: {},
     meta: {
       fml_izp_lab_date_voluit: nlDate(fmlIzpLabDate) || null,
+      has_belastbaarheids_doc: options?.hasBelastbaarheidsDoc ?? true,
     },
   };
 }
