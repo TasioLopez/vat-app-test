@@ -44,8 +44,9 @@ ad_quote
 - Null wanneer geen AD-rapport in documenten of context.has_ad_report is false.
 
 extra_aanmelder
-- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam, organisatie.
-- Anders null.
+- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw), organisatie en gender ("Man" of "Vrouw") indien bekend.
+- gender null wanneer geslacht niet vast te stellen is.
+- Anders null voor het hele object.
 `.trim();
 
 export function buildInleidingContextMessage(context: Record<string, unknown>): string {

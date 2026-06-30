@@ -120,10 +120,74 @@ describe('buildInleidingFields', () => {
         functie: 'Casemanager',
         naam: 'P. de Vries',
         organisatie: 'UWV',
+        gender: null,
       },
     };
     const { inleiding } = buildInleidingFields(baseCtx, content);
-    assert.match(inleiding, /P\. de Vries, Casemanager bij UWV In opdracht van/);
+    assert.match(inleiding, /door P\. de Vries, Casemanager bij UWV In opdracht van: meneer J\. Jansen/);
+  });
+
+  it('does not apply referent gender title to extra aanmelder', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      referent: {
+        ...baseCtx.referent!,
+        first_name: 'Ellen',
+        last_name: 'Bosma',
+        referent_function: 'Casemanager',
+        gender: 'Vrouw',
+      },
+    };
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'Casemanager',
+        naam: 'Hans Nooijen',
+        organisatie: 'Gom Schoonhouden B.V.',
+        gender: null,
+      },
+    };
+    const { inleiding } = buildInleidingFields(ctx, content);
+    assert.match(inleiding, /door Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
+    assert.doesNotMatch(inleiding, /door mevrouw Hans Nooijen/);
+    assert.match(inleiding, /In opdracht van: mevrouw E\. Bosma, Casemanager Cordaan/);
+  });
+
+  it('uses extra aanmelder gender when provided', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      referent: {
+        ...baseCtx.referent!,
+        gender: 'Vrouw',
+      },
+    };
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'Casemanager',
+        naam: 'Hans Nooijen',
+        organisatie: 'Gom Schoonhouden B.V.',
+        gender: 'Man' as const,
+      },
+    };
+    const { inleiding } = buildInleidingFields(ctx, content);
+    assert.match(inleiding, /door meneer Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
+    assert.match(inleiding, /In opdracht van: mevrouw J\. Jansen/);
+  });
+
+  it('strips honorific prefix accidentally included in extra aanmelder naam', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'Casemanager',
+        naam: 'mevrouw Hans Nooijen',
+        organisatie: 'Gom Schoonhouden B.V.',
+        gender: 'Man' as const,
+      },
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /door meneer Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
+    assert.doesNotMatch(inleiding, /meneer mevrouw/);
   });
 
   it('handles numeric contract_hours from database', () => {

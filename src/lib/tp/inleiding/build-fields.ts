@@ -54,7 +54,12 @@ export function nlDate(iso?: string | null): string {
 
 function isMale(gender?: string | null): boolean {
   const g = (gender || '').toLowerCase();
-  return g === 'male' || g === 'man' || g === 'm';
+  return g === 'male' || g === 'man' || g === 'm' || g === 'mannelijk';
+}
+
+function isFemale(gender?: string | null): boolean {
+  const g = (gender || '').toLowerCase();
+  return g === 'female' || g === 'vrouw' || g === 'f' || g === 'vrouwelijk';
 }
 
 function pronPoss(gender?: string | null): string {
@@ -69,8 +74,21 @@ function heerMevrouw(gender?: string | null): string {
   return isMale(gender) ? 'de heer' : 'mevrouw';
 }
 
-function refTitle(gender?: string | null): string {
-  return isMale(gender) ? 'meneer' : 'mevrouw';
+function refTitle(gender?: string | null): string | null {
+  if (isMale(gender)) return 'meneer';
+  if (isFemale(gender)) return 'mevrouw';
+  return null;
+}
+
+const HONORIFIC_PREFIX = /^(?:de\s+heer|mevrouw|meneer|dhr\.?|mevr\.?)\s+/i;
+
+function stripHonorificPrefix(name: string): string {
+  return name.replace(HONORIFIC_PREFIX, '').trim();
+}
+
+function withOptionalTitle(title: string | null, name: string): string {
+  const cleaned = stripHonorificPrefix(name);
+  return title ? `${title} ${cleaned}` : cleaned;
 }
 
 function getInitials(firstName?: string | null): string {
@@ -130,14 +148,19 @@ function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentRe
   const refInitials = getInitials(ref?.first_name);
   const refLastName = coerceText(ref?.last_name, '[naam aanmelder]');
   const refFunction = coerceText(ref?.referent_function, 'contactpersoon');
-  const refGenderTitle = refTitle(ref?.gender);
+  const referentTitle = refTitle(ref?.gender);
 
   const suffix =
     ' aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter.';
 
   if (content.extra_aanmelder) {
     const extra = content.extra_aanmelder;
-    return `Werknemer is door ${refGenderTitle} ${extra.naam}, ${extra.functie} bij ${extra.organisatie} In opdracht van: ${refGenderTitle} ${refInitials} ${refLastName}, ${refFunction} ${companyName}${suffix}`;
+    const extraNaam = withOptionalTitle(refTitle(extra.gender), extra.naam);
+    const referentNaam = withOptionalTitle(
+      referentTitle,
+      `${refInitials} ${refLastName}`.trim()
+    );
+    return `Werknemer is door ${extraNaam}, ${extra.functie} bij ${extra.organisatie} In opdracht van: ${referentNaam}, ${refFunction} ${companyName}${suffix}`;
   }
 
   const refName = ref

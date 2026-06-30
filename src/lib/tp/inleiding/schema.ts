@@ -6,6 +6,7 @@ export type ExtraAanmelder = {
   functie: string;
   naam: string;
   organisatie: string;
+  gender: 'Man' | 'Vrouw' | null;
 };
 
 /** Structured content returned by the model (no layout/formatting). */
@@ -62,10 +63,15 @@ export const INLEIDING_CONTENT_JSON_SCHEMA = {
       type: ['object', 'null'],
       properties: {
         functie: { type: 'string' },
-        naam: { type: 'string' },
+        naam: { type: 'string', description: 'Naam zonder meneer/mevrouw.' },
         organisatie: { type: 'string' },
+        gender: {
+          type: ['string', 'null'],
+          enum: ['Man', 'Vrouw', null],
+          description: 'Geslacht van de extra aanmelder indien bekend; anders null.',
+        },
       },
-      required: ['functie', 'naam', 'organisatie'],
+      required: ['functie', 'naam', 'organisatie', 'gender'],
       additionalProperties: false,
       description:
         'Extra referrer from intake section 4 if present; otherwise null.',
@@ -96,10 +102,12 @@ export function parseInleidingContentResult(raw: unknown): InleidingContentResul
   if (o.extra_aanmelder && typeof o.extra_aanmelder === 'object') {
     const e = o.extra_aanmelder as Record<string, unknown>;
     if (e.functie && e.naam && e.organisatie) {
+      const gender = e.gender === 'Man' || e.gender === 'Vrouw' ? e.gender : null;
       extra = {
         functie: String(e.functie).trim(),
         naam: String(e.naam).trim(),
         organisatie: String(e.organisatie).trim(),
+        gender,
       };
     }
   }
