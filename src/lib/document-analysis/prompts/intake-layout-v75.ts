@@ -21,6 +21,9 @@ INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/
 - Sectie 17 Bijzonderheden:
   • "Zijn er bijzonderheden waar ik rekening mee moet houden tijdens de begeleiding:" — algemene vrije tekst
   • "Praktische belemmeringen:" — vrije tekst voor TP-sectie Praktische belemmeringen
-  • "Algemene informatie:" — opleidingen, vervoer, rijbewijzen, computervaardigheden, talen (was apart blok in V4)
+  • "Algemene informatie:" — tabellen:
+    • "Opleidingen? Afgerond?" — opleidingsniveau per regel met Ja/Nee (afgerond)
+    • "Werkervaring? Van-tot?" — functie/werkgever per regel, periode in tweede kolom
+    • plus vervoer, rijbewijzen, computervaardigheden, talen (was apart blok in V4)
 - Oud layout (V3/V4): zelfde secties met vergelijkbare labels; "Algemene informatie" kan onderaan staan i.p.v. onder sectie 17
 `.trim();

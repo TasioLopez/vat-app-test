@@ -20,7 +20,10 @@ import {
 } from '@/lib/document-analysis';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
-import { resolveEducationLevelFromIntake } from '@/lib/tp2026/gegevens-field-options';
+import {
+  resolveIntakeEducationFields,
+  resolveWorkExperienceFromIntake,
+} from '@/lib/tp2026/intake-algemene-info';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,7 +32,7 @@ const supabase = createClient(
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-const AD_FIRST_FIELDS = ['work_experience', 'drivers_license', 'drivers_license_type'];
+const AD_FIRST_FIELDS = ['drivers_license', 'drivers_license_type'];
 
 function isFilled(v: unknown): boolean {
   return v != null && v !== '' && (typeof v !== 'string' || v.trim() !== '');
@@ -70,7 +73,7 @@ async function processDocumentWithAssistant(
     assistantName: string;
     instructions: string;
     userMessage: string;
-    postProcessEducation?: boolean;
+    postProcessAlgemeneInfo?: boolean;
   }
 ): Promise<{ mapped: Record<string, unknown>; referent: Record<string, unknown>; rawText: string }> {
   console.log(`📋 Processing ${options.logLabel}: ${doc.type}`);
@@ -97,11 +100,28 @@ async function processDocumentWithAssistant(
     const referent = extractReferentFromRaw(parsed);
     const mapped = mapAndValidateEmployeeDetails(parsed);
 
-    if (options.postProcessEducation && rawText) {
-      const resolved = resolveEducationLevelFromIntake(mapped.education_level, rawText);
-      if (resolved) {
-        console.log(`✅ Resolved education level: ${resolved}`);
-        mapped.education_level = resolved;
+    if (options.postProcessAlgemeneInfo && rawText) {
+      const education = resolveIntakeEducationFields(
+        {
+          education_level: mapped.education_level,
+          education_name: mapped.education_name,
+        },
+        rawText
+      );
+      if (education.education_level) {
+        console.log(`✅ Resolved education level: ${education.education_level}`);
+        mapped.education_level = education.education_level;
+      }
+      if (education.education_name) {
+        mapped.education_name = education.education_name;
+      } else if (mapped.education_name && education.education_level) {
+        delete mapped.education_name;
+      }
+
+      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, rawText);
+      if (workExperience) {
+        console.log(`✅ Resolved work experience: ${workExperience}`);
+        mapped.work_experience = workExperience;
       }
     }
 
@@ -120,7 +140,7 @@ async function processIntakeForm(doc: DocRow) {
     assistantName: 'Intake Form Analyzer',
     instructions: INTAKE_EMPLOYEE_PROMPT,
     userMessage: INTAKE_EMPLOYEE_USER_MESSAGE,
-    postProcessEducation: true,
+    postProcessAlgemeneInfo: true,
   });
 }
 
@@ -189,6 +209,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     const adResult = await processADReport(adDoc);
     Object.keys(adResult.mapped).forEach((key) => {
       const adValue = adResult.mapped[key];
+      if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
+        return;
+      }
       if (AD_FIRST_FIELDS.includes(key)) {
         if (isFilled(adValue)) results[key] = adValue;
       } else if (!isFilled(results[key])) {

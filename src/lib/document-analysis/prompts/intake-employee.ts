@@ -17,9 +17,9 @@ Tekst:
 - date_of_birth: YYYY-MM-DD (sectie 6 "Geboortedatum:" in V5, of sectie 2 indien aanwezig)
 - gender: "Man" of "Vrouw" (sectie 2)
 - phone: telefoonnummer van de WERKNEMER uit sectie 2 "Telefoonnummer:" — NIET sectie 4 "Telefoonnummer contactpersoon"
-- work_experience: alleen functietitels, komma-gescheiden, geen datums/organisaties
-- education_level: hoofd-basisopleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie (sectie 17 V5 of onderaan V4) — de EERSTE regel in die tabel met "Afgerond" aangevinkt. Geldige niveaus: Praktijkonderwijs, VMBO, Huishoudschool, LTS, HAVO, VWO, MBO 1-4, MTS, HBO, WO. Kies NIET automatisch het hoogste niveau als er een algemene basisopleiding (VMBO, Huishoudschool, HAVO, VWO) op een eerdere regel staat en een korte beroepscursus/MBO-specialisatie op een latere regel. NIET aspiratie uit sectie 16 tenzij enige afgeronde opleiding.
-- education_name: richting/naam bij die gekozen basisopleiding; korte cursussen op latere regels alleen hier opnemen als ze niet de hoofdopleiding zijn
+- work_experience: ALLE functietitels uit tabel "Werkervaring? Van-tot?" in blok Algemene informatie (sectie 17 V5 of onderaan V4) — komma-gescheiden, geen datums/organisaties/jaren. Sla pure werkgevernamen over zonder functietitel (bijv. alleen bedrijfsnaam). Neem alle ingevulde regels mee (bijv. Teamleider PostNL/PTT, Thuiszorg, Keukenassistent, Winkelmedewerker). NIET sectie 2 functietitel — die hoort bij current_job.
+- education_level: hoofd-basisopleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie — de EERSTE regel met "Afgerond" aangevinkt. Geldige niveaus: Praktijkonderwijs, VMBO, Huishoudschool, LTS, LHNO, HAVO, VWO, MBO 1-4, MTS, HBO, WO. Certificaten (VCA, VCA-VOL, BHV, EHBO, etc.) zijn NOOIT education_level. Kies NIET automatisch het hoogste niveau als er basisopleiding op een eerdere regel staat en cursus/specialisatie op latere regel. NIET aspiratie uit sectie 16 tenzij enige afgeronde opleiding.
+- education_name: richting/naam bij die gekozen basisopleiding; certificaten (VCA, etc.) NOOIT in education_name als er schooling op regel 1 staat
 - other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:", of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
 
 Vervoer:

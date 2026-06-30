@@ -5,6 +5,7 @@ export const EDUCATION_LEVEL_OPTIONS = [
   'VMBO',
   'Huishoudschool',
   'LTS',
+  'LHNO',
   'HAVO',
   'VWO',
   'MBO 1',
@@ -24,6 +25,7 @@ export const EDUCATION_LEVEL_RANK: Record<EducationLevelOption, number> = {
   VMBO: 2,
   Huishoudschool: 2,
   LTS: 3,
+  LHNO: 3,
   HAVO: 4,
   VWO: 5,
   'MBO 1': 6,
@@ -65,8 +67,19 @@ export function normalizeEducationLevel(raw: unknown): string | undefined {
   if (lower === 'middelbare technische school') return 'MTS';
   if (lower === 'lagere technische school') return 'LTS';
   if (lower === 'huishoudschool') return 'Huishoudschool';
+  if (lower === 'lhno') return 'LHNO';
 
   return undefined;
+}
+
+/** Safety/vocational certificates — not schooling levels or specializations. */
+export function isEducationCertification(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const upper = trimmed.toUpperCase();
+  if (/^V{1,2}CA(?:\s*[-–—]?\s*VOL)?(?:\s*\(\d{4}\))?$/.test(upper)) return true;
+  if (/^(BHV|EHBO|HEFTRUCK|REACH\s*TRUCK|Heftruckcertificaat)\b/i.test(trimmed)) return true;
+  return false;
 }
 
 function educationTextSearchPatterns(): { pattern: RegExp; canonical: string }[] {
@@ -306,9 +319,22 @@ export function repairEmployeeEducationFields(
     level != null && String(level).trim() ? String(level) : undefined,
     name != null && String(name).trim() ? String(name) : undefined
   );
+
+  let educationName = split.name;
+  if (educationName && isEducationCertification(educationName)) {
+    educationName = undefined;
+  }
+  if (
+    educationName &&
+    split.level &&
+    educationName.toLowerCase() === split.level.toLowerCase()
+  ) {
+    educationName = undefined;
+  }
+
   return {
     education_level: split.level,
-    education_name: split.name,
+    education_name: educationName,
   };
 }
 
