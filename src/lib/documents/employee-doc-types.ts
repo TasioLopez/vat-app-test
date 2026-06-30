@@ -14,7 +14,7 @@ export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   ad_rapportage: 'AD Rapport',
   fml_izp: 'FML/IZP',
   cv: 'CV',
-  spreek_reportage: 'Spreek reportage',
+  spreek_reportage: 'Spreekuurrapportage',
   extra: 'Overig',
 };
 
@@ -29,7 +29,14 @@ export function isReservedEmployeeDocType(type: string | null | undefined): bool
 
 export function isSpreekReportageDocType(type: string | null | undefined): boolean {
   const normalized = (type || '').toLowerCase().trim();
-  return normalized === 'spreek_reportage' || normalized.includes('spreek_reportage');
+  return (
+    normalized === 'spreek_reportage' ||
+    normalized.includes('spreek_reportage') ||
+    normalized === 'spreekuurrapportage' ||
+    normalized.includes('spreekuurrapportage') ||
+    normalized === 'spreekuur_rapportage' ||
+    normalized.includes('spreekuur_rapportage')
+  );
 }
 
 export function isCvEmployeeDocType(type: string | null | undefined): boolean {

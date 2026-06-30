@@ -1,7 +1,13 @@
+export type SpreekuurMeta = {
+  datum: string | null;
+  arts_org: string | null;
+};
+
 export type BelastbaarheidsprofielContentResult = {
   rubrieken: string[];
   prognose_citaat: string | null;
   reintegratieadvies_citaat: string | null;
+  spreekuur_meta: SpreekuurMeta | null;
 };
 
 function nullableStringProperty(description: string) {
@@ -17,14 +23,14 @@ export const BELASTBAARHEID_CONTENT_JSON_SCHEMA = {
     rubrieken: {
       type: 'array',
       description:
-        'FML rubrieken met daadwerkelijke beperkingen (exacte categorienamen uit FML/AD)',
+        'FML rubrieken met daadwerkelijke beperkingen (exacte categorienamen uit FML/AD). Fallback wanneer geen Spreekuurrapportage.',
       items: { type: 'string' },
     },
     prognose_citaat: nullableStringProperty(
-      'Exact letterlijk citaat van de prognose uit FML/AD/medisch spreekuur. Null if not found.'
+      'Exact letterlijk citaat van de prognose uit FML/AD/medisch spreekuur. Fallback wanneer geen Spreekuurrapportage. Null if not found.'
     ),
     reintegratieadvies_citaat: nullableStringProperty(
-      'Exact letterlijk citaat van het re-integratieadvies. Null if not found.'
+      'Exact letterlijk citaat van het re-integratieadvies uit AD-rapport. NOOIT uit Spreekuurrapportage. Null if not found.'
     ),
   },
   required: ['rubrieken', 'prognose_citaat', 'reintegratieadvies_citaat'],
@@ -45,12 +51,14 @@ function coerceRubrieken(value: unknown): string[] {
 }
 
 export function parseBelastbaarheidsprofielContentResult(
-  raw: unknown
+  raw: unknown,
+  spreekuurMeta: SpreekuurMeta | null = null
 ): BelastbaarheidsprofielContentResult {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   return {
     rubrieken: coerceRubrieken(o.rubrieken),
     prognose_citaat: coerceNullableString(o.prognose_citaat),
     reintegratieadvies_citaat: coerceNullableString(o.reintegratieadvies_citaat),
+    spreekuur_meta: spreekuurMeta,
   };
 }

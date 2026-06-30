@@ -1,5 +1,6 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
@@ -9,6 +10,7 @@ import {
   type BelastbaarheidsprofielFields,
 } from './build-fields';
 import { DEFAULT_BELASTBAARHEID_MODEL } from './constants';
+import { mergeBelastbaarheidsprofielContent } from './merge-content';
 import {
   BELASTBAARHEID_CONTENT_PROMPT,
   buildBelastbaarheidsprofielContextMessage,
@@ -18,6 +20,8 @@ import {
   parseBelastbaarheidsprofielContentResult,
   type BelastbaarheidsprofielContentResult,
 } from './schema';
+import { extractSpreekuurContent } from './spreekuur-extract';
+import type { SpreekuurContentResult } from './spreekuur-schema';
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
 
@@ -41,6 +45,7 @@ type EmployeeDoc = {
 
 function docPriority(type: string | null | undefined): number {
   const t = (type || '').toLowerCase();
+  if (isSpreekReportageDocType(t)) return 99;
   for (const [key, priority] of Object.entries(DOC_PRIORITY)) {
     if (t.includes(key)) return priority;
   }
@@ -49,6 +54,16 @@ function docPriority(type: string | null | undefined): number {
 
 function sortDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
   return [...docs].sort((a, b) => docPriority(a.type) - docPriority(b.type));
+}
+
+function pickNewestSpreekuurDoc(docs: EmployeeDoc[]): EmployeeDoc | null {
+  const spreekuurDocs = docs.filter((d) => isSpreekReportageDocType(d.type) && d.url);
+  if (spreekuurDocs.length === 0) return null;
+  return [...spreekuurDocs].sort((a, b) => {
+    const aTime = a.uploaded_at ? new Date(a.uploaded_at).getTime() : 0;
+    const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
+    return bTime - aTime;
+  })[0];
 }
 
 function getBelastbaarheidsprofielModel(): string {
@@ -71,6 +86,7 @@ async function uploadPriorityDocs(
 
   for (const doc of sortDocs(docs)) {
     if (!doc.url) continue;
+    if (isSpreekReportageDocType(doc.type)) continue;
     const path = extractStoragePath(doc.url);
     if (!path) continue;
 
@@ -101,6 +117,7 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
 
 function buildApiContext(ctx: BelastbaarheidsprofielBuildContext): Record<string, unknown> {
   return {
+    has_spreekuurrapportage: Boolean(ctx.has_spreekuurrapportage),
     meta: {
       fml_izp_lab_date: ctx.meta.fml_izp_lab_date,
       occupational_doctor_org: ctx.meta.occupational_doctor_org,
@@ -114,7 +131,8 @@ export async function generateBelastbaarheidsprofielContent(
   ctx: BelastbaarheidsprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<BelastbaarheidsprofielContentResult> {
-  const fileIds = await uploadPriorityDocs(openai, supabase, docs);
+  const mainDocs = docs.filter((d) => !isSpreekReportageDocType(d.type));
+  const fileIds = await uploadPriorityDocs(openai, supabase, mainDocs);
 
   if (fileIds.length === 0) {
     throw new Error('No files could be uploaded');
@@ -173,8 +191,47 @@ export async function generateBelastbaarheidsprofiel(
   ctx: BelastbaarheidsprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<BelastbaarheidsprofielFields> {
-  const content = await generateBelastbaarheidsprofielContent(openai, supabase, ctx, docs);
-  return buildBelastbaarheidsprofielFields(ctx, content);
+  const spreekuurDoc = pickNewestSpreekuurDoc(docs);
+  const hasSpreekuurDoc = Boolean(spreekuurDoc);
+
+  const buildCtx: BelastbaarheidsprofielBuildContext = {
+    ...ctx,
+    has_spreekuurrapportage: hasSpreekuurDoc,
+  };
+
+  let spreekuurResult: SpreekuurContentResult | null = null;
+  if (spreekuurDoc) {
+    spreekuurResult = await extractSpreekuurContent(openai, supabase, spreekuurDoc);
+  }
+
+  let mainContent: BelastbaarheidsprofielContentResult;
+  try {
+    mainContent = await generateBelastbaarheidsprofielContent(
+      openai,
+      supabase,
+      buildCtx,
+      docs
+    );
+  } catch (error) {
+    if (!hasSpreekuurDoc) throw error;
+    console.warn(
+      '⚠️ Belastbaarheidsprofiel: geen FML/AD documenten — alleen Spreekuurrapportage beschikbaar'
+    );
+    mainContent = {
+      rubrieken: [],
+      prognose_citaat: null,
+      reintegratieadvies_citaat: null,
+      spreekuur_meta: null,
+    };
+  }
+
+  const mergedContent = mergeBelastbaarheidsprofielContent(
+    mainContent,
+    spreekuurResult,
+    hasSpreekuurDoc
+  );
+
+  return buildBelastbaarheidsprofielFields(buildCtx, mergedContent);
 }
 
 export type { BelastbaarheidsprofielBuildContext, BelastbaarheidsprofielFields };

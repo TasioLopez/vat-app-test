@@ -8,6 +8,7 @@ import {
 import type { BelastbaarheidsprofielContentResult } from './schema';
 
 export type BelastbaarheidsprofielBuildContext = {
+  has_spreekuurrapportage?: boolean;
   meta: {
     fml_izp_lab_date?: string | null;
     occupational_doctor_org?: string | null;
@@ -41,16 +42,32 @@ function fillTemplate(
   return template.replace('{datum}', vars.datum).replace('{artsPhrase}', vars.artsPhrase);
 }
 
+function resolveIntroVars(
+  ctx: BelastbaarheidsprofielBuildContext,
+  content: BelastbaarheidsprofielContentResult
+): { datum: string; artsPhrase: string } {
+  const spreekuurMeta = content.spreekuur_meta;
+  if (spreekuurMeta?.datum || spreekuurMeta?.arts_org) {
+    return {
+      datum: nlDate(spreekuurMeta.datum) || '[datum spreekuur]',
+      artsPhrase: buildArtsPhrase(spreekuurMeta.arts_org),
+    };
+  }
+
+  return {
+    datum: nlDate(ctx.meta.fml_izp_lab_date) || '[datum FML]',
+    artsPhrase: buildArtsPhrase(ctx.meta.occupational_doctor_org),
+  };
+}
+
 export function buildBelastbaarheidsprofielFields(
   ctx: BelastbaarheidsprofielBuildContext,
   content: BelastbaarheidsprofielContentResult
 ): BelastbaarheidsprofielFields {
-  const fmlDate = nlDate(ctx.meta.fml_izp_lab_date) || '[datum FML]';
-  const artsPhrase = buildArtsPhrase(ctx.meta.occupational_doctor_org);
-  const vars = { datum: fmlDate, artsPhrase };
+  const introVars = resolveIntroVars(ctx, content);
 
-  const fmlIntro = fillTemplate(FML_INTRO_TEMPLATE, vars);
-  const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, vars);
+  const fmlIntro = fillTemplate(FML_INTRO_TEMPLATE, introVars);
+  const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, introVars);
   const rubriekenLines = normalizeRubrieken(content.rubrieken)
     .map((r) => `• ${r}`)
     .join('\n');

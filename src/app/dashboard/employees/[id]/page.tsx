@@ -1156,7 +1156,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                                         <span className="font-semibold text-gray-900">Bronnen beheren</span>
                                         <span className="text-xs font-normal text-gray-600">
-                                            Uploads per type: intake, AD, FML/IZP, CV, spreek reportage, overig
+                                            Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, overig
                                         </span>
                                         <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                                             <CheckCircle2 className="h-3.5 w-3.5" />

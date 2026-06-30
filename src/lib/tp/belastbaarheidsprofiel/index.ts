@@ -15,11 +15,23 @@ export {
   generateBelastbaarheidsprofielContent,
 } from './generate';
 export {
+  mergeBelastbaarheidsprofielContent,
+  buildSpreekuurMeta,
+} from './merge-content';
+export {
   BELASTBAARHEID_CONTENT_JSON_SCHEMA,
   parseBelastbaarheidsprofielContentResult,
   type BelastbaarheidsprofielContentResult,
+  type SpreekuurMeta,
 } from './schema';
 export {
   BELASTBAARHEID_CONTENT_PROMPT,
   buildBelastbaarheidsprofielContextMessage,
 } from './prompt';
+export {
+  SPREEKUUR_CONTENT_JSON_SCHEMA,
+  parseSpreekuurContentResult,
+  hasSpreekuurContent,
+  type SpreekuurContentResult,
+} from './spreekuur-schema';
+export { extractSpreekuurContent } from './spreekuur-extract';
