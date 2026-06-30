@@ -4,9 +4,7 @@ import React from 'react';
 import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
 import { buildAdAdviesBlock, parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
-
-const TEXTAREA_CLASS =
-  'w-full min-h-[72px] rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+import { ConfirmToEditBlock, TEXTAREA_CLASS } from '@/components/tp/ConfirmToEditBlock';
 
 export function AdviesPassendeArbeidEditor({
   raw,
@@ -54,16 +52,19 @@ export function AdviesPassendeArbeidEditor({
           rows={2}
         />
       </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium text-[#64b6a6]">Advies (citaat)</label>
-        <textarea
-          className={TEXTAREA_CLASS}
-          value={citaat}
-          onChange={(e) => updateCitaat(e.target.value)}
-          rows={6}
-          placeholder="Letterlijk advies uit het AD-rapport…"
-        />
-      </div>
+      <ConfirmToEditBlock
+        label="Advies (citaat)"
+        value={citaat}
+        onChange={updateCitaat}
+        renderPreview={(quote) => (
+          <AdviesPassendeArbeidBlock
+            text={buildAdAdviesBlock('', quote)}
+            className="text-sm leading-relaxed"
+          />
+        )}
+        placeholder="Letterlijk advies uit het AD-rapport…"
+        rows={6}
+      />
       {previewRaw.trim() ? (
         <div>
           <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>

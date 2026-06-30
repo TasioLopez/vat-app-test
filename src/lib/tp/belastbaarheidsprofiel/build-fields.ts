@@ -87,3 +87,34 @@ export function buildBelastbaarheidsprofielFields(
 
   return { prognose_bedrijfsarts: parts.filter(Boolean).join('\n\n') };
 }
+
+export type ParsedBelastbaarheidsprofiel = {
+  limitationsBlock: string;
+  prognoseQuote: string;
+};
+
+export function parseBelastbaarheidsprofiel(raw: string): ParsedBelastbaarheidsprofiel {
+  const text = String(raw || '').trim();
+  if (!text) return { limitationsBlock: '', prognoseQuote: '' };
+
+  if (text.includes(PROGNOSE_DELIMITER)) {
+    const [limitationsBlock, prognoseQuote] = text.split(PROGNOSE_DELIMITER);
+    return {
+      limitationsBlock: limitationsBlock.trim(),
+      prognoseQuote: (prognoseQuote ?? '').trim(),
+    };
+  }
+
+  return { limitationsBlock: text, prognoseQuote: '' };
+}
+
+export function buildBelastbaarheidsprofielBlock(
+  limitationsBlock: string,
+  prognoseQuote: string
+): string {
+  const limitationsTrim = limitationsBlock.trim();
+  const quoteTrim = prognoseQuote.trim();
+  if (!quoteTrim) return limitationsTrim;
+  if (!limitationsTrim) return `${PROGNOSE_DELIMITER}\n${quoteTrim}`;
+  return `${limitationsTrim}\n\n${PROGNOSE_DELIMITER}\n${quoteTrim}`;
+}

@@ -5,6 +5,7 @@ import {
 } from '@/lib/tp/ad-report-wording';
 import {
   AD_INTRO_SUFFIX,
+  AD_INTRO_SUFFIX_LEGACY,
   INLEIDING_GEEN_AD,
   MEDISCHE_BEGELEIDING_ZINNEN,
   MEDISCHE_SITUATIE_OPENING,
@@ -205,7 +206,58 @@ export function buildAdSubBlock(
   concept = false
 ): string {
   const intro = `${buildInleidingAdIntroPrefix(concept)} opgesteld door ${adName} op ${adDate} ${AD_INTRO_SUFFIX}`;
-  return `${intro}\n\n${quote.trim()}`;
+  return buildInleidingSubBlock(intro, quote);
+}
+
+const AD_DELIMITERS = [AD_INTRO_SUFFIX, AD_INTRO_SUFFIX_LEGACY].sort((a, b) => b.length - a.length);
+
+const INLEIDING_SUB_NB_PATTERN = 'nog geen AD-rapport';
+
+function findAdDelimiterIndex(text: string): { index: number; delimiter: string } | null {
+  for (const delimiter of AD_DELIMITERS) {
+    const idx = text.indexOf(delimiter);
+    if (idx !== -1) return { index: idx, delimiter };
+  }
+  return null;
+}
+
+export function stripInleidingSubQuoteWrapping(quote: string): string {
+  let q = quote.replace(/\*+/g, '').trim();
+  if (q.startsWith('"') && q.endsWith('"')) {
+    q = q.slice(1, -1).trim();
+  }
+  return q;
+}
+
+export type ParsedInleidingSub = {
+  intro: string;
+  quote: string;
+};
+
+export function parseInleidingSub(raw: string): ParsedInleidingSub {
+  const text = String(raw || '').trim();
+  if (!text) return { intro: '', quote: '' };
+
+  if (text.includes('N.B.:') && text.includes(INLEIDING_SUB_NB_PATTERN)) {
+    return { intro: text, quote: '' };
+  }
+
+  const match = findAdDelimiterIndex(text);
+  if (match) {
+    const intro = text.slice(0, match.index + match.delimiter.length).replace(/\*+/g, '').trim();
+    const quote = stripInleidingSubQuoteWrapping(text.slice(match.index + match.delimiter.length));
+    return { intro, quote };
+  }
+
+  return { intro: text, quote: '' };
+}
+
+export function buildInleidingSubBlock(intro: string, quote: string): string {
+  const introTrim = intro.trim();
+  const quoteTrim = quote.trim();
+  if (!quoteTrim) return introTrim;
+  if (!introTrim) return quoteTrim;
+  return `${introTrim}\n\n${quoteTrim}`;
 }
 
 export function buildInleidingFields(

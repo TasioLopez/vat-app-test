@@ -1,32 +1,13 @@
-"use client";
+'use client';
 
-import React from "react";
-import { patchInleidingAdIntroForConcept } from "@/lib/tp/ad-report-wording";
-import { AD_INTRO_SUFFIX } from "@/lib/tp/inleiding/constants";
+import React from 'react';
+import { patchInleidingAdIntroForConcept } from '@/lib/tp/ad-report-wording';
+import {
+  parseInleidingSub,
+  stripInleidingSubQuoteWrapping,
+} from '@/lib/tp/inleiding/build-fields';
 
-/** Longest match first so the V2 AD intro is preferred over the legacy delimiter. */
-const AD_DELIMITERS = [
-  AD_INTRO_SUFFIX,
-  "staat het volgende:",
-].sort((a, b) => b.length - a.length);
-
-const NB_PATTERN = "nog geen AD-rapport";
-
-function findAdDelimiterIndex(text: string): { index: number; delimiter: string } | null {
-  for (const delimiter of AD_DELIMITERS) {
-    const idx = text.indexOf(delimiter);
-    if (idx !== -1) return { index: idx, delimiter };
-  }
-  return null;
-}
-
-function stripQuoteWrapping(quote: string): string {
-  let q = quote.replace(/\*+/g, "").trim();
-  if (q.startsWith('"') && q.endsWith('"')) {
-    q = q.slice(1, -1).trim();
-  }
-  return q;
-}
+const NB_PATTERN = 'nog geen AD-rapport';
 
 /**
  * Renders inleiding_sub using delimiter-based parsing.
@@ -35,7 +16,7 @@ function stripQuoteWrapping(quote: string): string {
  */
 export function InleidingSubBlock({
   text,
-  className = "",
+  className = '',
   adReportConcept = false,
 }: {
   text: string;
@@ -44,31 +25,48 @@ export function InleidingSubBlock({
 }) {
   if (!text) return null;
 
-  if (text.includes("N.B.:") && text.includes(NB_PATTERN)) {
+  if (text.includes('N.B.:') && text.includes(NB_PATTERN)) {
     return <p className={className}>{text}</p>;
   }
 
-  const match = findAdDelimiterIndex(text);
-  if (match) {
-    const intro = patchInleidingAdIntroForConcept(
-      text
-        .slice(0, match.index + match.delimiter.length)
-        .replace(/\*+/g, "")
-        .trim(),
-      adReportConcept
-    );
-    const quote = stripQuoteWrapping(text.slice(match.index + match.delimiter.length));
+  const { intro, quote } = parseInleidingSub(text);
+  const patchedIntro = patchInleidingAdIntroForConcept(intro, adReportConcept);
+
+  if (quote) {
     return (
       <div className={className}>
-        <strong>{intro}</strong>
-        {quote && (
-          <p className="mt-4">
-            <em>&ldquo;{quote}&rdquo;</em>
-          </p>
-        )}
+        <strong>{patchedIntro}</strong>
+        <p className="mt-4">
+          <em>&ldquo;{quote}&rdquo;</em>
+        </p>
+      </div>
+    );
+  }
+
+  if (patchedIntro !== text.trim()) {
+    return (
+      <div className={className}>
+        <strong>{patchedIntro}</strong>
       </div>
     );
   }
 
   return <p className={className}>{text}</p>;
+}
+
+/** Renders only the quoted portion of inleiding_sub (for ConfirmToEditBlock preview). */
+export function InleidingSubQuotePreview({
+  quote,
+  className = '',
+}: {
+  quote: string;
+  className?: string;
+}) {
+  const cleaned = stripInleidingSubQuoteWrapping(quote);
+  if (!cleaned) return null;
+  return (
+    <p className={className}>
+      <em>&ldquo;{cleaned}&rdquo;</em>
+    </p>
+  );
 }

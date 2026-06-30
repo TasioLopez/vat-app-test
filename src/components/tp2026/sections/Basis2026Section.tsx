@@ -21,10 +21,11 @@ import {
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
-import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
+import { InleidingSubEditor } from '@/components/tp/InleidingSubEditor';
 import { AdviesPassendeArbeidEditor } from '@/components/tp/AdviesPassendeArbeidEditor';
 import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
+import { BelastbaarheidsprofielEditor } from '@/components/tp/BelastbaarheidsprofielEditor';
 import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
 import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadviseurEditor';
 import { BasisValidationProgress } from '@/components/tp2026/BasisValidationProgress';
@@ -343,6 +344,11 @@ function BasisFieldEditorRow({
           raw={String(data[field.key] ?? '')}
           onChange={(md) => updateField(field.key, md)}
         />
+      ) : field.key === 'prognose_bedrijfsarts' ? (
+        <BelastbaarheidsprofielEditor
+          raw={String(data[field.key] ?? '')}
+          onChange={(md) => updateField(field.key, md)}
+        />
       ) : (
         <Basis2026MarkdownFieldEditor
           markdown={String(data[field.key] ?? '')}
@@ -351,16 +357,11 @@ function BasisFieldEditorRow({
         />
       )}
       {inleidingSub ? (
-        <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
-          <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
-            <InleidingSubBlock
-              text={inleidingSub}
-              adReportConcept={isAdReportConcept(data)}
-              className="text-sm leading-relaxed text-neutral-900"
-            />
-          </div>
-        </div>
+        <InleidingSubEditor
+          raw={inleidingSub}
+          adReportConcept={isAdReportConcept(data)}
+          onChange={(v) => updateField('inleiding_sub', v)}
+        />
       ) : null}
       {field.key === 'prognose_bedrijfsarts' && String(data[field.key] ?? '').trim() ? (
         <div className="mt-3">

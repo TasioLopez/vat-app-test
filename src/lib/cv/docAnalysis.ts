@@ -16,6 +16,10 @@ import {
   type CvFacts,
 } from '@/lib/cv/facts';
 import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
+import {
+  cvDocExtractionSystemPrompt,
+  cvDocExtractionUserPrompt,
+} from '@/lib/cv/prompts';
 
 type DocRow = {
   id: string;

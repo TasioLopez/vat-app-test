@@ -1,6 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildBelastbaarheidsprofielFields } from '../build-fields';
+import {
+  buildBelastbaarheidsprofielBlock,
+  buildBelastbaarheidsprofielFields,
+  parseBelastbaarheidsprofiel,
+} from '../build-fields';
 import { PROGNOSE_DELIMITER } from '../constants';
 import { mergeBelastbaarheidsprofielContent } from '../merge-content';
 import type { BelastbaarheidsprofielContentResult } from '../schema';
@@ -110,6 +114,30 @@ describe('buildBelastbaarheidsprofielFields', () => {
     const prognosePart = prognose_bedrijfsarts.split(PROGNOSE_DELIMITER)[1] ?? '';
     assert.ok(prognosePart.includes('Spreekuur prognose.'));
     assert.ok(prognosePart.includes('AD re-integratieadvies blijft staan.'));
+  });
+});
+
+describe('parseBelastbaarheidsprofiel / buildBelastbaarheidsprofielBlock', () => {
+  it('splits and reassembles around PROGNOSE delimiter', () => {
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, baseContent);
+    const parsed = parseBelastbaarheidsprofiel(prognose_bedrijfsarts);
+
+    assert.ok(parsed.limitationsBlock.includes('Functionele Mogelijkheden Lijst'));
+    assert.ok(parsed.prognoseQuote.includes('positief'));
+    assert.ok(parsed.prognoseQuote.includes('aangepast werk'));
+    assert.equal(
+      buildBelastbaarheidsprofielBlock(parsed.limitationsBlock, parsed.prognoseQuote),
+      prognose_bedrijfsarts
+    );
+  });
+
+  it('returns whole text as limitations when delimiter absent', () => {
+    const raw = 'Alleen beperkingen zonder prognose.';
+    assert.deepEqual(parseBelastbaarheidsprofiel(raw), {
+      limitationsBlock: raw,
+      prognoseQuote: '',
+    });
+    assert.equal(buildBelastbaarheidsprofielBlock(raw, ''), raw);
   });
 });
 

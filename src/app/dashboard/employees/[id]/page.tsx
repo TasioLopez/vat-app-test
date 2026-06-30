@@ -9,6 +9,7 @@ import {
     Compass,
     Sparkles,
     Save,
+    ArrowLeft,
     Briefcase,
     GraduationCap,
     Car,
@@ -1035,7 +1036,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 isDirty={hasUnsavedChanges}
                 onSave={() => saveUnified({ silent: true })}
             />
-            <h1 className="text-xl font-bold">Werknemer Details</h1>
+            <div>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mb-2 gap-1 text-gray-600"
+                    onClick={() => guardedRouter.push('/dashboard/employees')}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Terug naar werknemers
+                </Button>
+                <h1 className="text-xl font-bold">Werknemer Details</h1>
+            </div>
 
             {employee && (
                 <div className="flex flex-col lg:flex-row gap-4">
