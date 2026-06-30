@@ -747,6 +747,7 @@ export type Database = {
       }
       tp_meta: {
         Row: {
+          ad_report_concept: boolean | null
           ad_report_date: string | null
           advies_ad_passende_arbeid: string | null
           advisor_initials: string | null
@@ -788,6 +789,7 @@ export type Database = {
           zoekprofiel: string | null
         }
         Insert: {
+          ad_report_concept?: boolean | null
           ad_report_date?: string | null
           advies_ad_passende_arbeid?: string | null
           advisor_initials?: string | null
@@ -829,6 +831,7 @@ export type Database = {
           zoekprofiel?: string | null
         }
         Update: {
+          ad_report_concept?: boolean | null
           ad_report_date?: string | null
           advies_ad_passende_arbeid?: string | null
           advisor_initials?: string | null

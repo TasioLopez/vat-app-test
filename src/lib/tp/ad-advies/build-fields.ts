@@ -1,10 +1,15 @@
 import { nlDate } from '@/lib/tp/format-context';
+import {
+  buildAdAdviesIntroPrefix,
+  isAdReportConcept,
+} from '@/lib/tp/ad-report-wording';
 import { ADVIES_DELIMITER, ADVIES_INTRO_SUFFIX } from './constants';
 import type { AdAdviesContentResult } from './schema';
 
 export type AdAdviesBuildContext = {
   meta: {
     ad_report_date?: string | null;
+    ad_report_concept?: boolean | null;
     has_ad_report?: boolean | null;
     occupational_doctor_name?: string | null;
   };
@@ -42,9 +47,10 @@ function resolveDatum(content: AdAdviesContentResult, ctx: AdAdviesBuildContext)
 
 export function buildAdAdviesIntro(
   auteur: string,
-  datum: string
+  datum: string,
+  concept = false
 ): string {
-  return `In het arbeidsdeskundigrapport, opgesteld door ${auteur}, op ${datum} ${ADVIES_INTRO_SUFFIX}`;
+  return `${buildAdAdviesIntroPrefix(concept)} opgesteld door ${auteur}, op ${datum} ${ADVIES_INTRO_SUFFIX}`;
 }
 
 export function buildAdAdviesFields(
@@ -53,7 +59,7 @@ export function buildAdAdviesFields(
 ): AdAdviesFields {
   const auteur = resolveAuteur(content, ctx);
   const datum = resolveDatum(content, ctx);
-  const intro = buildAdAdviesIntro(auteur, datum);
+  const intro = buildAdAdviesIntro(auteur, datum, isAdReportConcept(ctx.meta));
   const citaat = content.advies_citaat ? stripCitations(content.advies_citaat) : '';
 
   const parts = [intro];

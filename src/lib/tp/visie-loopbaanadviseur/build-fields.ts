@@ -28,7 +28,6 @@ export type VisieLoopbaanadviseurBuildContext = {
     zoekprofiel?: string | null;
     persoonlijk_profiel?: string | null;
     has_ad_report?: boolean | null;
-    intake_concept?: boolean | null;
   };
 };
 

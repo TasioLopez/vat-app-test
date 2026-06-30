@@ -16,6 +16,7 @@ import {
 } from '@/components/tp2026/primitives';
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
+import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   formatComputerSkills,
   formatDriversLicense,
@@ -151,7 +152,10 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
             <DataRow label="Datum opmaak trajectplan" value={formatNLDate(data.tp_creation_date)} />
             <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={<PrintJaNeeChecks value={data.has_ad_report} className="text-[12px]" />} />
-            <DataRow label="Datum AD rapportage" value={formatNLDate(data.ad_report_date)} />
+            <DataRow
+              label={adReportDateLabel(isAdReportConcept(data))}
+              value={formatNLDate(data.ad_report_date)}
+            />
             <DataRow label="Arbeidsdeskundige" value={data.occupational_doctor_name || '—'} />
             <DataRow label="Bedrijfsarts" value={data.occupational_doctor_org || '—'} />
             <DataRow label="Datum FML/IZP/LAB" value={formatNLDate(data.fml_izp_lab_date)} />

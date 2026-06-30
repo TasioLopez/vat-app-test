@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
+import { patchAdviesIntroForConcept } from '@/lib/tp/ad-report-wording';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 
 const TEAL_BOLD_CLASS = 'text-[12px] font-bold leading-tight text-[#64b6a6]';
@@ -12,9 +13,11 @@ const TEAL_BOLD_CLASS = 'text-[12px] font-bold leading-tight text-[#64b6a6]';
 export function AdviesPassendeArbeidBlock({
   text,
   className = '',
+  adReportConcept = false,
 }: {
   text: string;
   className?: string;
+  adReportConcept?: boolean;
 }) {
   if (!text?.trim()) return null;
 
@@ -35,7 +38,7 @@ export function AdviesPassendeArbeidBlock({
   }
 
   const [introBlock, quoteBlock] = text.split(ADVIES_DELIMITER);
-  const intro = introBlock.trim();
+  const intro = patchAdviesIntroForConcept(introBlock.trim(), adReportConcept);
   const quote = quoteBlock.trim();
 
   return (

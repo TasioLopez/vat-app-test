@@ -2,7 +2,6 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
-import { isNoAdIntake, docsIncludeAdReport, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
 import { buildPowMeterFields, nlDate, type PowMeterFields } from './build-fields';
 import { DEFAULT_POW_METER_MODEL } from './constants';
 import { POW_METER_CONTENT_PROMPT, buildPowMeterContextMessage } from './prompt';
@@ -32,9 +31,6 @@ export type PowMeterBuildContext = {
   meta?: {
     prognose_bedrijfsarts?: string | null;
     fml_izp_lab_date_voluit?: string | null;
-    has_ad_report?: boolean | null;
-    intake_concept?: boolean | null;
-    ad_report_date?: string | null;
   };
 };
 
@@ -143,8 +139,7 @@ export async function generatePowMeterContent(
   docs: EmployeeDoc[],
   ctx: PowMeterBuildContext = {}
 ): Promise<PowMeterContentResult> {
-  const excludeAd = isNoAdIntake(ctx.meta, { hasAdDocument: docsIncludeAdReport(docs) });
-  const fileIds = await uploadPowMeterDocs(openai, supabase, docs, { excludeAd });
+  const fileIds = await uploadPowMeterDocs(openai, supabase, docs);
 
   if (fileIds.length === 0) {
     throw new Error('No POW-meter files could be uploaded');
@@ -206,16 +201,12 @@ export async function generatePowMeter(
 
 export function buildPowMeterContextFromMeta(
   prognoseBedrijfsarts?: string | null,
-  fmlIzpLabDate?: string | null,
-  adPresence?: IntakeAdPresenceMeta | null
+  fmlIzpLabDate?: string | null
 ): PowMeterBuildContext {
   return {
     meta: {
       prognose_bedrijfsarts: prognoseBedrijfsarts || null,
       fml_izp_lab_date_voluit: nlDate(fmlIzpLabDate) || null,
-      has_ad_report: adPresence?.has_ad_report ?? null,
-      intake_concept: adPresence?.intake_concept ?? null,
-      ad_report_date: adPresence?.ad_report_date ?? null,
     },
   };
 }

@@ -1,5 +1,9 @@
 import type { ReferentRow } from '@/lib/referents';
 import {
+  buildInleidingAdIntroPrefix,
+  isAdReportConcept,
+} from '@/lib/tp/ad-report-wording';
+import {
   AD_INTRO_SUFFIX,
   INLEIDING_GEEN_AD,
   MEDISCHE_BEGELEIDING_ZINNEN,
@@ -22,6 +26,7 @@ export type InleidingBuildContext = {
     first_sick_day?: string | null;
     has_ad_report?: boolean | null;
     ad_report_date?: string | null;
+    ad_report_concept?: boolean | null;
     occupational_doctor_name?: string | null;
     advies_ad_passende_arbeid?: string | null;
   };
@@ -173,9 +178,10 @@ function buildReintegratieEnDoel(ctx: InleidingBuildContext, content: InleidingC
 export function buildAdSubBlock(
   adName: string,
   adDate: string,
-  quote: string
+  quote: string,
+  concept = false
 ): string {
-  const intro = `In het arbeidsdeskundig rapport opgesteld door ${adName} op ${adDate} ${AD_INTRO_SUFFIX}`;
+  const intro = `${buildInleidingAdIntroPrefix(concept)} opgesteld door ${adName} op ${adDate} ${AD_INTRO_SUFFIX}`;
   return `${intro}\n\n${quote.trim()}`;
 }
 
@@ -206,7 +212,12 @@ export function buildInleidingFields(
     if (quote) {
       const adName = coerceText(ctx.meta.occupational_doctor_name, '[naam arbeidsdeskundige]');
       const adDate = nlDate(ctx.meta.ad_report_date) || '[datum]';
-      inleiding_sub = buildAdSubBlock(adName, adDate, quote);
+      inleiding_sub = buildAdSubBlock(
+        adName,
+        adDate,
+        quote,
+        isAdReportConcept(ctx.meta)
+      );
     }
   }
 

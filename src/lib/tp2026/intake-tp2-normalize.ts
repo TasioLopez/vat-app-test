@@ -1,5 +1,5 @@
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
-import { normalizeIntakeConcept } from '@/lib/tp/intake-ad-presence';
+import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
 
 export type DoctorRole = 'Arts' | 'Anios' | 'BA' | 'VA';
 
@@ -112,12 +112,15 @@ export function normalizeTp2ExtractedData(
     else delete out.occupational_doctor_name;
   }
 
-  const intakeConcept = normalizeIntakeConcept(out.intake_concept);
-  if (intakeConcept !== undefined) {
-    out.intake_concept = intakeConcept;
+  const adReportConcept = normalizeAdReportConcept(
+    out.ad_report_concept ?? out.intake_concept
+  );
+  if (adReportConcept !== undefined) {
+    out.ad_report_concept = adReportConcept;
   } else {
-    delete out.intake_concept;
+    delete out.ad_report_concept;
   }
+  delete out.intake_concept;
 
   delete out.doctor_role;
   return out;

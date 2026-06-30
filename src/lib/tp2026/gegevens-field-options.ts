@@ -3,6 +3,7 @@
 export const EDUCATION_LEVEL_OPTIONS = [
   'Praktijkonderwijs',
   'VMBO',
+  'Huishoudschool',
   'LTS',
   'HAVO',
   'VWO',
@@ -16,6 +17,23 @@ export const EDUCATION_LEVEL_OPTIONS = [
 ] as const;
 
 export type EducationLevelOption = (typeof EDUCATION_LEVEL_OPTIONS)[number];
+
+/** Relative rank for comparing education levels (Huishoudschool = VMBO tier). */
+export const EDUCATION_LEVEL_RANK: Record<EducationLevelOption, number> = {
+  Praktijkonderwijs: 1,
+  VMBO: 2,
+  Huishoudschool: 2,
+  LTS: 3,
+  HAVO: 4,
+  VWO: 5,
+  'MBO 1': 6,
+  'MBO 2': 7,
+  MTS: 8,
+  'MBO 3': 9,
+  'MBO 4': 10,
+  HBO: 11,
+  WO: 12,
+};
 
 function compactEducationToken(value: string): string {
   return value.toLowerCase().replace(/[\s\-–—]+/g, '');
@@ -46,8 +64,142 @@ export function normalizeEducationLevel(raw: unknown): string | undefined {
 
   if (lower === 'middelbare technische school') return 'MTS';
   if (lower === 'lagere technische school') return 'LTS';
+  if (lower === 'huishoudschool') return 'Huishoudschool';
 
   return undefined;
+}
+
+function educationTextSearchPatterns(): { pattern: RegExp; canonical: string }[] {
+  const patterns: { pattern: RegExp; canonical: string }[] = [
+    { pattern: /\bMIDDELBARE\s+TECHNISCHE\s+SCHOOL\b/i, canonical: 'MTS' },
+    { pattern: /\bLAGERE\s+TECHNISCHE\s+SCHOOL\b/i, canonical: 'LTS' },
+  ];
+
+  for (const option of EDUCATION_LEVEL_OPTIONS) {
+    const escaped = option.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    patterns.push({
+      pattern: new RegExp(`\\b${escaped}\\b`, 'i'),
+      canonical: option,
+    });
+  }
+
+  for (let i = 4; i >= 1; i--) {
+    patterns.push({
+      pattern: new RegExp(`\\bMBO[\\s\\-–—]?${i}\\b`, 'i'),
+      canonical: `MBO ${i}`,
+    });
+  }
+
+  return patterns;
+}
+
+/** Find education levels in document order (first occurrence wins for duplicates). */
+export function extractEducationLevelsInTextOrder(text: string): string[] {
+  if (!text) return [];
+
+  const found: { index: number; canonical: string }[] = [];
+
+  for (const { pattern, canonical } of educationTextSearchPatterns()) {
+    const regex = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(text)) !== null) {
+      found.push({ index: match.index, canonical });
+    }
+  }
+
+  found.sort((a, b) => a.index - b.index);
+
+  const levels: string[] = [];
+  for (const { canonical } of found) {
+    if (!levels.includes(canonical)) levels.push(canonical);
+  }
+  return levels;
+}
+
+/** Slice text around the intake education table block. */
+export function sliceEducationSection(text: string): string {
+  if (!text) return text;
+
+  const markers = [/opleidingen\s*\??\s*afgerond\s*\??/i, /algemene\s+informatie/i];
+  let start = -1;
+  for (const marker of markers) {
+    const match = text.match(marker);
+    if (match?.index !== undefined && (start === -1 || match.index < start)) {
+      start = match.index;
+    }
+  }
+
+  if (start === -1) return text;
+
+  const sliceFromStart = text.slice(start);
+  const endMarkers = [/praktische\s+belemmeringen/i, /\bsectie\s+\d+\b/i];
+  let end = Math.min(start + 2500, text.length);
+
+  for (const marker of endMarkers) {
+    const match = sliceFromStart.match(marker);
+    if (match?.index !== undefined && match.index > 10) {
+      end = Math.min(start + match.index, end);
+      break;
+    }
+  }
+
+  return text.slice(start, end);
+}
+
+/** Pick highest-ranked level from a list (used as fallback when document order is unclear). */
+export function getHighestEducationLevel(levels: string[]): string | null {
+  if (!levels?.length) return null;
+
+  let highestLevel: string | null = null;
+  let highestRank = 0;
+
+  for (const level of levels) {
+    if (!level) continue;
+    const normalized = normalizeEducationLevel(level) ?? level.trim();
+    const rank = EDUCATION_LEVEL_RANK[normalized as EducationLevelOption];
+
+    if (rank !== undefined) {
+      if (rank > highestRank) {
+        highestRank = rank;
+        highestLevel = normalized;
+      }
+      continue;
+    }
+
+    for (const [key, r] of Object.entries(EDUCATION_LEVEL_RANK)) {
+      if (
+        normalized.toUpperCase().includes(key.toUpperCase()) ||
+        key.toUpperCase().includes(normalized.toUpperCase())
+      ) {
+        if (r > highestRank) {
+          highestRank = r;
+          highestLevel = key;
+        }
+        break;
+      }
+    }
+  }
+
+  return highestLevel;
+}
+
+/**
+ * Resolve education_level after intake autofill: trust valid LLM output;
+ * otherwise prefer first level in the education section (top table row).
+ */
+export function resolveEducationLevelFromIntake(
+  mappedLevel: unknown,
+  rawText: string
+): string | undefined {
+  const llmLevel = normalizeEducationLevel(mappedLevel);
+  if (llmLevel) return llmLevel;
+
+  if (!rawText) return undefined;
+
+  const section = sliceEducationSection(rawText);
+  const ordered = extractEducationLevelsInTextOrder(section);
+  const primary = ordered[0] ? normalizeEducationLevel(ordered[0]) : undefined;
+  return primary ?? getHighestEducationLevel(ordered) ?? undefined;
 }
 
 function levelPrefixPatterns(): { pattern: RegExp; canonical: string }[] {

@@ -65,6 +65,11 @@ describe('mapAndValidateEmployeeDetails', () => {
     assert.equal(result.education_level, 'MBO 2');
   });
 
+  it('passes through Huishoudschool', () => {
+    const result = mapAndValidateEmployeeDetails({ education_level: 'Huishoudschool' });
+    assert.equal(result.education_level, 'Huishoudschool');
+  });
+
   it('extracts education level from education_name when level missing', () => {
     const result = mapAndValidateEmployeeDetails({
       education_name: 'MBO-2 Facilitaire Dienstverlening',

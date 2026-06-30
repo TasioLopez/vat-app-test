@@ -34,10 +34,10 @@ PERSOONSVELDEN:
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
 
-10. intake_concept — boolean: ALLEEN true wanneer het vakje ☐ Concept onder "AD-rapport:" in sectie 6 duidelijk is AANGEVINKT (Juni V6)
+10. ad_report_concept — boolean: ALLEEN true wanneer het vakje ☐ Concept onder "AD-rapport:" in sectie 6 duidelijk is AANGEVINKT (Juni V6)
    - Niet true wanneer alleen het woord "Concept" op het formulier staat zonder aangevinkt vakje
-   - Niet true wanneer sectie 6 een ingevulde "Datum AD-rapport" heeft of sectie 7 AD-inhoud bevat
-   - Concept-intake = nog geen definitief AD-rapport; sectie 7 AD-quotes zijn dan niet van toepassing
+   - Kan true zijn tegelijk met ingevulde "Datum AD-rapport" en sectie 7 AD-inhoud
+   - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage)
 
 HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult

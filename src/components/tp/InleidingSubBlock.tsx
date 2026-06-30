@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { patchInleidingAdIntroForConcept } from "@/lib/tp/ad-report-wording";
 import { AD_INTRO_SUFFIX } from "@/lib/tp/inleiding/constants";
 
 /** Longest match first so the V2 AD intro is preferred over the legacy delimiter. */
@@ -32,7 +33,15 @@ function stripQuoteWrapping(quote: string): string {
  * Intro (up to and including the AD delimiter phrase) = bold.
  * Quote (rest) = italic with quotation marks.
  */
-export function InleidingSubBlock({ text, className = "" }: { text: string; className?: string }) {
+export function InleidingSubBlock({
+  text,
+  className = "",
+  adReportConcept = false,
+}: {
+  text: string;
+  className?: string;
+  adReportConcept?: boolean;
+}) {
   if (!text) return null;
 
   if (text.includes("N.B.:") && text.includes(NB_PATTERN)) {
@@ -41,10 +50,13 @@ export function InleidingSubBlock({ text, className = "" }: { text: string; clas
 
   const match = findAdDelimiterIndex(text);
   if (match) {
-    const intro = text
-      .slice(0, match.index + match.delimiter.length)
-      .replace(/\*+/g, "")
-      .trim();
+    const intro = patchInleidingAdIntroForConcept(
+      text
+        .slice(0, match.index + match.delimiter.length)
+        .replace(/\*+/g, "")
+        .trim(),
+      adReportConcept
+    );
     const quote = stripQuoteWrapping(text.slice(match.index + match.delimiter.length));
     return (
       <div className={className}>

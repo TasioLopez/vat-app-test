@@ -20,7 +20,7 @@ import {
 } from '@/lib/document-analysis';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
-import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
+import { resolveEducationLevelFromIntake } from '@/lib/tp2026/gegevens-field-options';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,91 +63,6 @@ async function downloadDocumentBuffer(
   return { buffer, path };
 }
 
-function extractAllEducationLevels(text: string): string[] {
-  if (!text) return [];
-
-  const levels: string[] = [];
-  const levelPatterns = [
-    'MIDDELBARE TECHNISCHE SCHOOL',
-    'LAGERE TECHNISCHE SCHOOL',
-    'PRAKTIJKONDERWIJS',
-    'MBO 4',
-    'MBO 3',
-    'MBO 2',
-    'MBO 1',
-    'MTS',
-    'LTS',
-    'HBO',
-    'WO',
-    'VWO',
-    'HAVO',
-    'VMBO',
-  ];
-
-  for (const pattern of levelPatterns) {
-    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-    if (regex.test(text)) {
-      let normalized = pattern;
-      if (pattern === 'MIDDELBARE TECHNISCHE SCHOOL') normalized = 'MTS';
-      if (pattern === 'LAGERE TECHNISCHE SCHOOL') normalized = 'LTS';
-      if (!levels.includes(normalized)) levels.push(normalized);
-    }
-  }
-
-  return levels;
-}
-
-function getHighestEducationLevel(levels: string[]): string | null {
-  if (!levels?.length) return null;
-
-  const educationHierarchy: Record<string, number> = {
-    Praktijkonderwijs: 1,
-    VMBO: 2,
-    LTS: 3,
-    HAVO: 4,
-    VWO: 5,
-    'MBO 1': 6,
-    'MBO 2': 7,
-    MTS: 8,
-    'MBO 3': 9,
-    'MBO 4': 10,
-    HBO: 11,
-    WO: 12,
-  };
-
-  let highestLevel: string | null = null;
-  let highestRank = 0;
-
-  for (const level of levels) {
-    if (!level) continue;
-    const normalized = level.trim();
-
-    if (educationHierarchy[normalized] !== undefined) {
-      const rank = educationHierarchy[normalized];
-      if (rank > highestRank) {
-        highestRank = rank;
-        highestLevel = normalized;
-      }
-      continue;
-    }
-
-    for (const [key, rank] of Object.entries(educationHierarchy)) {
-      if (
-        normalized.toUpperCase().includes(key.toUpperCase()) ||
-        key.toUpperCase().includes(normalized.toUpperCase())
-      ) {
-        if (rank > highestRank) {
-          highestRank = rank;
-          highestLevel = key;
-        }
-        break;
-      }
-    }
-  }
-
-  return highestLevel;
-}
-
 async function processDocumentWithAssistant(
   doc: DocRow,
   options: {
@@ -183,16 +98,10 @@ async function processDocumentWithAssistant(
     const mapped = mapAndValidateEmployeeDetails(parsed);
 
     if (options.postProcessEducation && rawText) {
-      const educationLevels = extractAllEducationLevels(rawText);
-      if (educationLevels.length > 0) {
-        const highestLevel = getHighestEducationLevel(educationLevels);
-        if (highestLevel) {
-          const normalized = normalizeEducationLevel(highestLevel) ?? highestLevel;
-          console.log(
-            `✅ Selected highest education level: ${normalized} from found levels: ${educationLevels.join(', ')}`
-          );
-          mapped.education_level = normalized;
-        }
+      const resolved = resolveEducationLevelFromIntake(mapped.education_level, rawText);
+      if (resolved) {
+        console.log(`✅ Resolved education level: ${resolved}`);
+        mapped.education_level = resolved;
       }
     }
 

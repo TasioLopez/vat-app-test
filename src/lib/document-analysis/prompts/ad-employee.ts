@@ -9,7 +9,7 @@ VELDEN TE EXTRACTEN (employee_details):
 - date_of_birth: YYYY-MM-DD
 - gender: "Man" of "Vrouw"
 - work_experience: ALLEEN functietitels, komma-gescheiden, geen datums/jaren/organisaties
-- education_level: HOOGSTE niveau (Praktijkonderwijs, VMBO, LTS, HAVO, VWO, MBO 1-4, MTS, HBO, WO). MTS > LTS.
+- education_level: HOOGSTE niveau (Praktijkonderwijs, VMBO, Huishoudschool, LTS, HAVO, VWO, MBO 1-4, MTS, HBO, WO). MTS > LTS.
 - education_name: opleiding/cursus naam
 - drivers_license: true/false alleen als expliciet; weglaten indien niet vermeld
 - drivers_license_type: array zoals ["B", "CE"]; weglaten indien niet vermeld

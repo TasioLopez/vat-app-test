@@ -23,7 +23,7 @@ import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidEditor } from '@/components/tp/AdviesPassendeArbeidEditor';
-import { resolveEffectiveAdPresence } from '@/lib/tp/intake-ad-presence';
+import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
 import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadviseurEditor';
@@ -335,16 +335,7 @@ function BasisFieldEditorRow({
       ) : field.key === 'advies_ad_passende_arbeid' ? (
         <AdviesPassendeArbeidEditor
           raw={String(data[field.key] ?? '')}
-          hasAdReport={
-            resolveEffectiveAdPresence(
-              {
-                has_ad_report: data.has_ad_report,
-                ad_report_date: data.ad_report_date,
-                intake_concept: data.intake_concept,
-              },
-              false
-            ).has_ad_report
-          }
+          hasAdReport={data.has_ad_report}
           onChange={(md) => updateField(field.key, md)}
         />
       ) : field.key === 'visie_loopbaanadviseur' ? (
@@ -363,7 +354,11 @@ function BasisFieldEditorRow({
         <div className="mt-3">
           <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
           <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
-            <InleidingSubBlock text={inleidingSub} className="text-sm leading-relaxed text-neutral-900" />
+            <InleidingSubBlock
+              text={inleidingSub}
+              adReportConcept={isAdReportConcept(data)}
+              className="text-sm leading-relaxed text-neutral-900"
+            />
           </div>
         </div>
       ) : null}

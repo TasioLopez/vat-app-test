@@ -58,6 +58,27 @@ describe('buildAdAdviesFields', () => {
       intro,
       'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
+
+    const conceptIntro = buildAdAdviesIntro('Bea Delhaes', '2 februari 2026', true);
+    assert.equal(
+      conceptIntro,
+      'In het concept arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:'
+    );
+  });
+
+  it('uses concept intro when ad_report_concept is true', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'S. Dijkstra',
+      ad_datum_iso: '2026-05-21',
+      advies_citaat: CALVIN_ADVIES,
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(
+      { meta: { ...ctx.meta, ad_report_concept: true } },
+      content
+    );
+
+    assert.match(advies_ad_passende_arbeid, /In het concept arbeidsdeskundigrapport,/);
   });
 
   it('parseAdAdvies and buildAdAdviesBlock round-trip', () => {

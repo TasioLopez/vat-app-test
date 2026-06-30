@@ -7,10 +7,6 @@ import {
   GENERATION_FALLBACK,
   parseAdAdvies,
 } from '@/lib/tp/ad-advies';
-import {
-  docsIncludeAdReport,
-  resolveEffectiveAdPresence,
-} from '@/lib/tp/intake-ad-presence';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +24,7 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from('tp_meta')
-      .select('has_ad_report, ad_report_date, occupational_doctor_name, intake_concept')
+      .select('has_ad_report, ad_report_date, ad_report_concept, occupational_doctor_name')
       .eq('employee_id', employeeId)
       .single();
 
@@ -45,8 +41,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const adPresence = resolveEffectiveAdPresence(meta ?? {}, docsIncludeAdReport(docs));
-    const ctx = { meta: { ...(meta ?? {}), ...adPresence } };
+    const ctx = { meta: meta ?? {} };
     let advies_ad_passende_arbeid: string;
 
     try {
@@ -56,12 +51,12 @@ export async function GET(req: NextRequest) {
 
       if (!citaat.trim()) {
         advies_ad_passende_arbeid =
-          adPresence.has_ad_report === false ? ADVIES_NB_NO_REPORT : '';
+          meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : '';
       }
     } catch (error) {
       console.error('❌ AD advies generation failed:', error);
       advies_ad_passende_arbeid =
-        adPresence.has_ad_report === false ? ADVIES_NB_NO_REPORT : GENERATION_FALLBACK;
+        meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : GENERATION_FALLBACK;
     }
 
     if (!advies_ad_passende_arbeid.trim()) {
@@ -72,17 +67,13 @@ export async function GET(req: NextRequest) {
     }
 
     await supabase.from('tp_meta').upsert(
-      {
-        employee_id: employeeId,
-        advies_ad_passende_arbeid,
-        has_ad_report: adPresence.has_ad_report,
-      } as any,
+      { employee_id: employeeId, advies_ad_passende_arbeid } as any,
       { onConflict: 'employee_id' }
     );
 
     return NextResponse.json({
-      details: { advies_ad_passende_arbeid, has_ad_report: adPresence.has_ad_report },
-      autofilled_fields: ['advies_ad_passende_arbeid', 'has_ad_report'],
+      details: { advies_ad_passende_arbeid },
+      autofilled_fields: ['advies_ad_passende_arbeid'],
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

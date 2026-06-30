@@ -34,6 +34,7 @@ import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026Inhouds
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
+import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
@@ -416,6 +417,7 @@ function InleidingAtomPreview({
   atom: Extract<BasisAtom, { kind: 'inleiding' }>;
 }) {
   const sub = String(data.inleiding_sub || '').trim();
+  const adReportConcept = isAdReportConcept(data);
 
   return (
     <div>
@@ -431,7 +433,11 @@ function InleidingAtomPreview({
         ) : null}
         {atom.showToelichting && sub ? (
           <div className="mt-4">
-            <InleidingSubBlock text={sub} className="text-[12px] leading-relaxed text-neutral-900" />
+            <InleidingSubBlock
+              text={sub}
+              adReportConcept={adReportConcept}
+              className="text-[12px] leading-relaxed text-neutral-900"
+            />
           </div>
         ) : null}
       </div>
@@ -443,10 +449,12 @@ function TextBlockBody({
   variant,
   markdown,
   fieldKey,
+  adReportConcept = false,
 }: {
   variant: BasisTextVariant;
   markdown: string;
   fieldKey: string;
+  adReportConcept?: boolean;
 }) {
   const trimmed = String(markdown || '').trim();
 
@@ -473,7 +481,7 @@ function TextBlockBody({
   }
 
   if (variant === 'adAdvies') {
-    return <AdviesPassendeArbeidBlock text={trimmed} />;
+    return <AdviesPassendeArbeidBlock text={trimmed} adReportConcept={adReportConcept} />;
   }
 
   if (variant === 'powInschaling') {
@@ -516,8 +524,10 @@ function TextBlockBody({
 
 function TextAtomPreview({
   atom,
+  adReportConcept = false,
 }: {
   atom: Extract<BasisAtom, { kind: 'text' }>;
+  adReportConcept?: boolean;
 }) {
   const toelichtingLabel = getBasisToelichtingLabel(atom.key);
   const bodyClass =
@@ -528,7 +538,12 @@ function TextAtomPreview({
       {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
       <div className={bodyClass}>
         {toelichtingLabel ? <BasisToelichtingHeading label={toelichtingLabel} /> : null}
-        <TextBlockBody variant={atom.variant} markdown={atom.md} fieldKey={atom.key} />
+        <TextBlockBody
+          variant={atom.variant}
+          markdown={atom.md}
+          fieldKey={atom.key}
+          adReportConcept={adReportConcept}
+        />
       </div>
     </div>
   );
@@ -611,11 +626,12 @@ function getBasisAtomMarginClass(atom: BasisAtom, prev: BasisAtom | undefined): 
 }
 
 function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.ReactNode {
+  const adReportConcept = isAdReportConcept(data);
   switch (atom.kind) {
     case 'inleiding':
       return <InleidingAtomPreview data={data} atom={atom} />;
     case 'text':
-      return <TextAtomPreview atom={atom} />;
+      return <TextAtomPreview atom={atom} adReportConcept={adReportConcept} />;
     case 'spoor2':
       return <Spoor2AtomPreview atom={atom} />;
     case 'groupBanner':

@@ -3,10 +3,6 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { resolveReferentForEmployee } from "@/lib/referents";
 import { generateInleiding } from "@/lib/tp/inleiding";
-import {
-  docsIncludeAdReport,
-  resolveEffectiveAdPresence,
-} from "@/lib/tp/intake-ad-presence";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,12 +57,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
 
-    const adPresence = resolveEffectiveAdPresence(meta ?? {}, docsIncludeAdReport(docs));
-
     const ctx = {
       employee: employee ?? {},
       details: details ?? {},
-      meta: { ...(meta ?? {}), ...adPresence },
+      meta: meta ?? {},
       client: client ?? {},
       referent,
     };
@@ -84,21 +78,18 @@ export async function GET(req: NextRequest) {
       inleiding_sub = "";
     }
 
-    const hasAD = adPresence.has_ad_report === true;
-
     await supabase.from("tp_meta").upsert(
       {
         employee_id: employeeId,
         inleiding,
         inleiding_sub,
-        has_ad_report: hasAD,
       } as any,
       { onConflict: "employee_id" }
     );
 
     return NextResponse.json({
-      details: { inleiding, inleiding_sub, has_ad_report: hasAD },
-      autofilled_fields: ["inleiding", "inleiding_sub", "has_ad_report"],
+      details: { inleiding, inleiding_sub },
+      autofilled_fields: ["inleiding", "inleiding_sub"],
     });
   } catch (err: any) {
     console.error("❌ Autofill inleiding error:", err);

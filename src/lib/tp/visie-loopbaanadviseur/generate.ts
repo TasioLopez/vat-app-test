@@ -7,7 +7,6 @@ import {
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
-import { isNoAdIntake, docsIncludeAdReport, type IntakeAdPresenceMeta } from '@/lib/tp/intake-ad-presence';
 import { type DocumentScenario } from './constants';
 import { DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL } from './constants';
 import {
@@ -85,18 +84,14 @@ export function hasIntakeDoc(docs: EmployeeDoc[]): boolean {
   return docs.some((d) => getVisieLoopbaanadviseurDocCategory(d.type) === 'intake');
 }
 
-export function detectDocumentScenario(
-  docs: EmployeeDoc[],
-  meta?: IntakeAdPresenceMeta | null
-): DocumentScenario {
+export function detectDocumentScenario(docs: EmployeeDoc[]): DocumentScenario {
   const categories = new Set(
     filterVisieLoopbaanadviseurDocs(docs)
       .map((d) => getVisieLoopbaanadviseurDocCategory(d.type))
       .filter((c): c is DocCategory => c != null)
   );
 
-  const treatAsNoAd = isNoAdIntake(meta, { hasAdDocument: docsIncludeAdReport(docs) });
-  if (!treatAsNoAd && categories.has('ad')) return 'ad';
+  if (categories.has('ad')) return 'ad';
   if (categories.has('belastbaarheid')) return 'belastbaarheid_only';
   return 'intake_only';
 }
@@ -181,8 +176,7 @@ export async function generateVisieLoopbaanadviseurContent(
     console.warn('⚠️ Visie loopbaanadviseur: zoekprofiel ontbreekt in context');
   }
 
-  const excludeAd = isNoAdIntake(ctx.meta, { hasAdDocument: docsIncludeAdReport(docs) });
-  const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs, { excludeAd });
+  const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs);
 
   if (fileIds.length === 0) {
     throw new Error('No visie loopbaanadviseur files could be uploaded');
@@ -234,7 +228,7 @@ export async function generateVisieLoopbaanadviseur(
   ctx: VisieLoopbaanadviseurBuildContext,
   docs: EmployeeDoc[]
 ): Promise<VisieLoopbaanadviseurFields> {
-  const scenario = detectDocumentScenario(docs, ctx.meta);
+  const scenario = detectDocumentScenario(docs);
   const content = await generateVisieLoopbaanadviseurContent(openai, supabase, ctx, docs);
   return buildVisieLoopbaanadviseurFields(ctx, content, scenario);
 }

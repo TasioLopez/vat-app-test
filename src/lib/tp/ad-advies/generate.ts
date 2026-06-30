@@ -37,6 +37,7 @@ export async function generateAdAdviesContent(
       ad_report_date: ctx.meta.ad_report_date,
       occupational_doctor_name: ctx.meta.occupational_doctor_name,
       has_ad_report: ctx.meta.has_ad_report,
+      ad_report_concept: ctx.meta.ad_report_concept,
     },
   };
   const intake = await generateIntakeSectie7Content(openai, supabase, docs, sectie7Ctx);

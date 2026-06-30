@@ -18,8 +18,8 @@ Tekst:
 - gender: "Man" of "Vrouw" (sectie 2)
 - phone: telefoonnummer van de WERKNEMER uit sectie 2 "Telefoonnummer:" — NIET sectie 4 "Telefoonnummer contactpersoon"
 - work_experience: alleen functietitels, komma-gescheiden, geen datums/organisaties
-- education_level: HOOGSTE afgeronde opleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie (sectie 17 V5 of onderaan V4). NIET aspiratie uit sectie 16 tenzij enige opleiding.
-- education_name: naam bij hoogste afgeronde opleiding
+- education_level: hoofd-basisopleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie (sectie 17 V5 of onderaan V4) — de EERSTE regel in die tabel met "Afgerond" aangevinkt. Geldige niveaus: Praktijkonderwijs, VMBO, Huishoudschool, LTS, HAVO, VWO, MBO 1-4, MTS, HBO, WO. Kies NIET automatisch het hoogste niveau als er een algemene basisopleiding (VMBO, Huishoudschool, HAVO, VWO) op een eerdere regel staat en een korte beroepscursus/MBO-specialisatie op een latere regel. NIET aspiratie uit sectie 16 tenzij enige afgeronde opleiding.
+- education_name: richting/naam bij die gekozen basisopleiding; korte cursussen op latere regels alleen hier opnemen als ze niet de hoofdopleiding zijn
 - other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:", of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
 
 Vervoer:
