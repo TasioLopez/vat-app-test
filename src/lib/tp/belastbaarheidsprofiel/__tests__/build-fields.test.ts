@@ -49,7 +49,11 @@ describe('buildBelastbaarheidsprofielFields', () => {
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
     assert.match(
       prognose_bedrijfsarts,
-      /opgesteld door Arts L\. Bollen werkend onder supervisie van arts T\. de Haas/
+      /opgesteld door Arts L\. Bollen werkend onder supervisie van arts T\. de Haas, beperkingen/
+    );
+    assert.match(
+      prognose_bedrijfsarts,
+      /door Arts L\. Bollen werkend onder supervisie van arts T\. de Haas, staat onderstaande/
     );
   });
 

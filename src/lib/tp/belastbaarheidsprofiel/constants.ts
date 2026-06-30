@@ -13,7 +13,7 @@ export const STANDARD_RUBRIEKEN = [
 export const DEFAULT_BELASTBAARHEID_MODEL = 'gpt-5.1-2025-11-13';
 
 export const FML_INTRO_TEMPLATE =
-  'Werknemer heeft, in overeenstemming met de Functionele Mogelijkheden Lijst (FML) van {datum}, opgesteld door {artsPhrase} beperkingen in de volgende rubrieken:';
+  'Werknemer heeft, in overeenstemming met de Functionele Mogelijkheden Lijst (FML) van {datum}, opgesteld door {artsPhrase}, beperkingen in de volgende rubrieken:';
 
 export const MEDISCH_SPREEKUUR_INTRO_TEMPLATE =
   'Conform het de terugkoppeling van het medisch spreekuur, opgesteld op {datum} door {artsPhrase}, staat onderstaande vermeld.';
