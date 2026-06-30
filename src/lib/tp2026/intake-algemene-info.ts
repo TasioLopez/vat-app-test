@@ -1,5 +1,6 @@
 /** Intake "Algemene informatie" table extraction (opleidingen + werkervaring). */
 import { parseWorkExperience } from '@/lib/utils';
+import { stripAssistantArtifacts } from '@/lib/document-analysis/stripAssistantArtifacts';
 import {
   extractEducationLevelsInTextOrder,
   isEducationCertification,
@@ -20,7 +21,7 @@ const WORK_EXPERIENCE_END_MARKERS = [
   /praktische\s+belemmeringen/i,
 ];
 
-const DATE_ONLY_PATTERN = /^(?:\d{4}\s*[-–—]\s*(?:\d{4}|heden)|\d+[,.]?\d*\s*jaar|heden)$/i;
+const DATE_ONLY_PATTERN = /^(?:\d{4}\s*[-–—]\s*(?:\d{4}|heden)|\d+[,.]?\d*\s*jaar|heden|ongeveer\s+\d+\s*jaar(?:\s+gedaan)?)$/i;
 
 const JOB_TITLE_KEYWORDS =
   /\b(medewerker|teamleider|assistent|thuiszorg|verzorgende|magazijn|productie|logistiek|administratief|kassier|winkel|keuken|schoonmaak|operator|monteur|chauffeur|begeleider)\b/i;
@@ -44,6 +45,24 @@ function looksLikeJobTitle(text: string): boolean {
   if (/\b(PostNL|PTT)\b/i.test(text)) return true;
   const lower = text.toLowerCase();
   return ROLE_FRAGMENTS.some((fragment) => lower.includes(fragment));
+}
+
+function normalizeTitleText(text: string): string {
+  return stripAssistantArtifacts(text)
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/[.。]+$/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+/** Reject LLM output that still looks like extraction metadata, not a job title list. */
+export function isPlausibleWorkExperience(raw: string): boolean {
+  const trimmed = raw?.trim();
+  if (!trimmed || trimmed.length < 3) return false;
+  if (/【|†source|\*\*/.test(trimmed)) return false;
+  if (/(?:^|[\s,;])(?:current_job|work_experience)\s*:/i.test(trimmed)) return false;
+  if (/^[\s\-•*]+/.test(trimmed)) return false;
+  return true;
 }
 
 function sanitizeEducationName(
@@ -74,12 +93,12 @@ function extractPrimaryEducationLabelFromSection(section: string): string | unde
 
 export function resolveIntakeEducationFields(
   mapped: { education_level?: unknown; education_name?: unknown },
-  rawText: string
+  documentText: string
 ): { education_level?: string; education_name?: string } {
-  let level = resolveEducationLevelFromIntake(mapped.education_level, rawText);
+  let level = resolveEducationLevelFromIntake(mapped.education_level, documentText);
 
-  if (!level && rawText) {
-    const section = sliceEducationSection(rawText);
+  if (!level && documentText) {
+    const section = sliceEducationSection(documentText);
     level = extractPrimaryEducationLabelFromSection(section);
   }
 
@@ -146,19 +165,24 @@ function splitWorkExperienceLines(section: string): string[] {
     .filter(Boolean);
 }
 
-function extractTitleFromTableLine(line: string): string | undefined {
-  const withoutDates = line
+function stripDatesFromLine(line: string): string {
+  return line
     .replace(/\b\d{4}\s*[-–—]\s*(?:\d{4}|heden)\b/gi, '')
-    .replace(/\b\d+[,.]?\d*\s*jaar\b/gi, '')
+    .replace(/\b\d+[,.]?\d*\s*jaar(?:\s+gedaan)?\b/gi, '')
+    .replace(/\bongeveer\s+\d+\s*jaar(?:\s+gedaan)?\b/gi, '')
     .trim();
+}
 
+function extractTitleFromTableLine(line: string): string | undefined {
+  const withoutDates = stripDatesFromLine(line);
   const parts = withoutDates.split(/\t+| {2,}|\s*\|\s*/).map((p) => p.trim()).filter(Boolean);
-  const candidates = parts.length > 1 ? [parts[0]] : [withoutDates];
+  const candidates = parts.length > 1 ? parts : [withoutDates];
 
   for (const candidate of candidates) {
     const cleaned = candidate.replace(/^[\d.)]+\s*/, '').trim();
     if (!cleaned || cleaned.length < 3) continue;
     if (DATE_ONLY_PATTERN.test(cleaned)) continue;
+    if (/^(?:ja|nee|x)$/i.test(cleaned)) continue;
     if (!looksLikeJobTitle(cleaned)) continue;
     return cleaned;
   }
@@ -169,8 +193,8 @@ const WORK_EXPERIENCE_FIELD_LABEL =
   /^\s*[-*•]?\s*(?:\*\*)?(?:current_job|work_experience)(?:\*\*)?\s*:\s*/i;
 
 function titleOverlapsCurrentJob(title: string, currentJob: string): boolean {
-  const t = title.toLowerCase().trim();
-  const c = currentJob.toLowerCase().trim();
+  const t = normalizeTitleText(title);
+  const c = normalizeTitleText(currentJob);
   if (!t || !c) return false;
   if (t === c) return true;
   if (c.includes(t) || t.includes(c)) return true;
@@ -179,11 +203,13 @@ function titleOverlapsCurrentJob(title: string, currentJob: string): boolean {
 }
 
 function sanitizeWorkExperiencePart(part: string, currentJob?: string): string {
-  let cleaned = part
+  let cleaned = stripAssistantArtifacts(part)
     .replace(WORK_EXPERIENCE_FIELD_LABEL, '')
     .replace(/^\s*[-*•]\s+/, '')
     .replace(/\*\*/g, '')
     .replace(/^(?:current_job|work_experience)\s*:\s*/i, '')
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/[.。]+$/g, '')
     .trim();
 
   if (!cleaned) return '';
@@ -213,58 +239,57 @@ export function sanitizeWorkExperienceString(raw: string, currentJob?: string): 
   return unique.join(', ');
 }
 
-function countWorkTitles(value: string): number {
-  return value
-    .split(/[,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean).length;
-}
-
-function extractWorkTitlesFromSection(section: string): string[] {
+function extractWorkTitlesFromSection(section: string, currentJob?: string): string[] {
   const titles: string[] = [];
   for (const line of splitWorkExperienceLines(section)) {
     if (/^werkervaring/i.test(line)) continue;
     if (/^van[\s-]*tot\s*$/i.test(line)) continue;
+    if (/^opleidingen/i.test(line)) continue;
 
     const title = extractTitleFromTableLine(line);
-    if (title && !titles.some((t) => t.toLowerCase() === title.toLowerCase())) {
+    if (!title) continue;
+    if (currentJob && titleOverlapsCurrentJob(title, currentJob)) continue;
+    if (!titles.some((t) => t.toLowerCase() === title.toLowerCase())) {
       titles.push(title);
     }
   }
   return titles;
 }
 
+function resolveMappedWorkExperience(
+  mappedWorkExperience: unknown,
+  currentJob?: string
+): string {
+  const rawMapped =
+    mappedWorkExperience != null && String(mappedWorkExperience).trim()
+      ? parseWorkExperience(stripAssistantArtifacts(String(mappedWorkExperience).trim()))
+      : '';
+
+  if (!rawMapped || !isPlausibleWorkExperience(rawMapped)) return '';
+
+  const sanitized = sanitizeWorkExperienceString(rawMapped, currentJob);
+  return sanitized && isPlausibleWorkExperience(sanitized) ? sanitized : '';
+}
+
 export function resolveWorkExperienceFromIntake(
   mappedWorkExperience: unknown,
-  rawText: string,
+  documentText: string,
   options?: { currentJob?: unknown }
 ): string | undefined {
   const currentJob =
     options?.currentJob != null && String(options.currentJob).trim()
-      ? String(options.currentJob).trim()
+      ? stripAssistantArtifacts(String(options.currentJob).trim())
       : undefined;
 
-  const rawMapped =
-    mappedWorkExperience != null && String(mappedWorkExperience).trim()
-      ? parseWorkExperience(String(mappedWorkExperience).trim())
-      : '';
+  const mapped = resolveMappedWorkExperience(mappedWorkExperience, currentJob);
 
-  const mapped = rawMapped
-    ? sanitizeWorkExperienceString(rawMapped, currentJob)
-    : '';
-
-  if (mapped && countWorkTitles(mapped) >= 2) {
-    return mapped;
+  if (documentText?.trim()) {
+    const section = sliceWorkExperienceSection(documentText);
+    const extracted = extractWorkTitlesFromSection(section, currentJob);
+    if (extracted.length > 0) {
+      return extracted.join(', ');
+    }
   }
 
-  if (!rawText) return mapped || undefined;
-
-  const section = sliceWorkExperienceSection(rawText);
-  const extracted = extractWorkTitlesFromSection(section);
-  if (extracted.length === 0) return mapped || undefined;
-
-  const joined = extracted.join(', ');
-  if (!mapped) return joined;
-  if (countWorkTitles(mapped) >= countWorkTitles(joined)) return mapped;
-  return joined;
+  return mapped || undefined;
 }

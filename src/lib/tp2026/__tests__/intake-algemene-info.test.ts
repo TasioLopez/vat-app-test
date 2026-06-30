@@ -6,6 +6,7 @@ import {
 } from '@/lib/tp2026/gegevens-field-options';
 import {
   isEducationCertification,
+  isPlausibleWorkExperience,
   resolveIntakeEducationFields,
   resolveWorkExperienceFromIntake,
   sanitizeWorkExperienceString,
@@ -26,6 +27,18 @@ Winkelmedewerker
 
 Rijbewijzen
 B Personenauto
+`;
+
+const BEP_VAN_BURK_ALGEMENE_INFO = `
+Algemene informatie:
+Opleidingen? Afgerond?
+Huishoudschool Ja
+
+Werkervaring? Van-tot?
+Bakkerij Bouman 2000-heden
+Zorgmedewerker gehandicaptenzorg (ADL taken en ze ergens brengen) Ongeveer 5 jaar gedaan
+
+Rijbewijzen
 `;
 
 describe('isEducationCertification', () => {
@@ -76,6 +89,16 @@ describe('resolveIntakeEducationFields', () => {
   });
 });
 
+describe('isPlausibleWorkExperience', () => {
+  it('rejects citation markers and field labels', () => {
+    assert.equal(
+      isPlausibleWorkExperience('- **current_job**: "Operator productie II"【4:0†source】。'),
+      false
+    );
+    assert.equal(isPlausibleWorkExperience('Teamleider PostNL/PTT, Thuiszorg'), true);
+  });
+});
+
 describe('sanitizeWorkExperienceString', () => {
   it('strips markdown current_job label', () => {
     assert.equal(
@@ -90,6 +113,16 @@ describe('sanitizeWorkExperienceString', () => {
       ''
     );
   });
+
+  it('strips citations and quotes before overlap check', () => {
+    assert.equal(
+      sanitizeWorkExperienceString(
+        '"Operator productie II"【4:0†source】',
+        'Operator productie II - ambachtelijke bakkerij'
+      ),
+      ''
+    );
+  });
 });
 
 describe('resolveWorkExperienceFromIntake', () => {
@@ -97,6 +130,15 @@ describe('resolveWorkExperienceFromIntake', () => {
     const result = resolveWorkExperienceFromIntake(
       '- **current_job**: Operator productie II',
       'Algemene informatie:\nWerkervaring? Van-tot?\n',
+      { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
+    );
+    assert.equal(result, undefined);
+  });
+
+  it('rejects LLM citation garbage even when table is empty', () => {
+    const result = resolveWorkExperienceFromIntake(
+      '- **current_job**: "Operator productie II"【4:0†source】.',
+      '',
       { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
     );
     assert.equal(result, undefined);
@@ -115,10 +157,36 @@ describe('resolveWorkExperienceFromIntake', () => {
     assert.doesNotMatch(result!, /Gom Schoonhouden/i);
   });
 
-  it('trusts LLM when two or more comma-separated titles provided', () => {
-    const llm =
-      'Teamleider PostNL/PTT, Thuiszorg, Keukenassistent, Winkelmedewerker';
-    const result = resolveWorkExperienceFromIntake(llm, SAMPLE_ALGEMENE_INFO);
+  it('prefers document table over inconsistent LLM output', () => {
+    const result = resolveWorkExperienceFromIntake(
+      'Bakkerij Bouman',
+      BEP_VAN_BURK_ALGEMENE_INFO,
+      { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
+    );
+    assert.ok(result);
+    assert.match(result!, /Zorgmedewerker gehandicaptenzorg/i);
+    assert.doesNotMatch(result!, /Bakkerij Bouman/i);
+    assert.doesNotMatch(result!, /Operator productie II/i);
+  });
+
+  it('returns stable table result regardless of LLM garbage', () => {
+    const good = resolveWorkExperienceFromIntake(
+      'Bakkerij Bouman',
+      BEP_VAN_BURK_ALGEMENE_INFO,
+      { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
+    );
+    const garbage = resolveWorkExperienceFromIntake(
+      '- **current_job**: "Operator productie II"【4:0†source】.',
+      BEP_VAN_BURK_ALGEMENE_INFO,
+      { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
+    );
+    assert.equal(good, garbage);
+    assert.match(good!, /Zorgmedewerker gehandicaptenzorg/i);
+  });
+
+  it('uses plausible LLM value only when table has no job titles', () => {
+    const llm = 'Teamleider PostNL/PTT, Thuiszorg, Keukenassistent, Winkelmedewerker';
+    const result = resolveWorkExperienceFromIntake(llm, 'Algemene informatie:\nWerkervaring? Van-tot?\n');
     assert.equal(result, llm);
   });
 });

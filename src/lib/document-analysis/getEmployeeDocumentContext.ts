@@ -2,16 +2,9 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { runAssistantExtraction } from './runAssistantExtraction';
 import { extractStoragePath } from './storage';
+import { stripAssistantArtifacts } from './stripAssistantArtifacts';
 
 const MAX_CONTEXT_CHARS = 22_000;
-
-function stripAnnotationArtifacts(text: string): string {
-  return text
-    .replace(/【[^】]+】/g, '')
-    .replace(/\[\d+:\d+[^\]]*\]/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
 
 /**
  * Find newest employee document matching any type substring and return file_search context.
@@ -54,7 +47,7 @@ export async function getEmployeeDocumentContext(
       userMessage,
     });
 
-    const cleaned = stripAnnotationArtifacts(rawText);
+    const cleaned = stripAssistantArtifacts(rawText);
     if (cleaned.length >= 50) {
       return cleaned.length > MAX_CONTEXT_CHARS ? `${cleaned.slice(0, MAX_CONTEXT_CHARS)}…` : cleaned;
     }

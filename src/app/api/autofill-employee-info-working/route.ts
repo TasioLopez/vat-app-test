@@ -18,6 +18,8 @@ import {
   EXTRA_EMPLOYEE_PROMPT,
   EXTRA_EMPLOYEE_USER_MESSAGE,
 } from '@/lib/document-analysis';
+import { bufferToPlainText, detectDocumentKind } from '@/lib/document-analysis/documentPlainText';
+import { stripAssistantArtifacts, stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 import {
@@ -94,19 +96,25 @@ async function processDocumentWithAssistant(
       userMessage: options.userMessage,
     });
 
+    const cleanedParsed = stripAssistantArtifactsFromRecord(parsed);
+    const documentKind = detectDocumentKind(path, fallbackName);
+    const documentText = stripAssistantArtifacts(await bufferToPlainText(buffer, documentKind));
+
     const { mimeType } = getOpenAIFileParams(doc.name || path);
     console.log(`✅ Uploaded ${options.logLabel} (${mimeType})`);
 
-    const referent = extractReferentFromRaw(parsed);
-    const mapped = mapAndValidateEmployeeDetails(parsed);
+    const referent = extractReferentFromRaw(cleanedParsed);
+    const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
 
-    if (options.postProcessAlgemeneInfo && rawText) {
+    if (options.postProcessAlgemeneInfo) {
+      const textSource = documentText.trim() || stripAssistantArtifacts(rawText);
+
       const education = resolveIntakeEducationFields(
         {
           education_level: mapped.education_level,
           education_name: mapped.education_name,
         },
-        rawText
+        textSource
       );
       if (education.education_level) {
         console.log(`✅ Resolved education level: ${education.education_level}`);
@@ -118,7 +126,7 @@ async function processDocumentWithAssistant(
         delete mapped.education_name;
       }
 
-      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, rawText, {
+      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, textSource, {
         currentJob: mapped.current_job,
       });
       if (workExperience) {

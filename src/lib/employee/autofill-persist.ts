@@ -192,13 +192,6 @@ export async function applyEmployeeAutofillDetails(
     };
   }
 
-  if (processed.gender && typeof processed.gender === 'string') {
-    await supabase
-      .from('employees')
-      .update({ gender: processed.gender })
-      .eq('id', employeeId);
-  }
-
   return {
     updatedDetails: normalizeEmployeeDetailsPayload(updatedDetails, employeeId),
     autofilledFields,
