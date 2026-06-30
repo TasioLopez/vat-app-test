@@ -165,6 +165,54 @@ function extractTitleFromTableLine(line: string): string | undefined {
   return undefined;
 }
 
+const WORK_EXPERIENCE_FIELD_LABEL =
+  /^\s*[-*•]?\s*(?:\*\*)?(?:current_job|work_experience)(?:\*\*)?\s*:\s*/i;
+
+function titleOverlapsCurrentJob(title: string, currentJob: string): boolean {
+  const t = title.toLowerCase().trim();
+  const c = currentJob.toLowerCase().trim();
+  if (!t || !c) return false;
+  if (t === c) return true;
+  if (c.includes(t) || t.includes(c)) return true;
+  const prefix = t.split(/\s+/).slice(0, 4).join(' ');
+  return prefix.length >= 8 && c.includes(prefix);
+}
+
+function sanitizeWorkExperiencePart(part: string, currentJob?: string): string {
+  let cleaned = part
+    .replace(WORK_EXPERIENCE_FIELD_LABEL, '')
+    .replace(/^\s*[-*•]\s+/, '')
+    .replace(/\*\*/g, '')
+    .replace(/^(?:current_job|work_experience)\s*:\s*/i, '')
+    .trim();
+
+  if (!cleaned) return '';
+  if (/^(?:current_job|work_experience)$/i.test(cleaned)) return '';
+  if (currentJob && titleOverlapsCurrentJob(cleaned, currentJob)) return '';
+  return cleaned;
+}
+
+/** Strip markdown field labels and current_job echoes from autofill work_experience. */
+export function sanitizeWorkExperienceString(raw: string, currentJob?: string): string {
+  if (!raw?.trim()) return '';
+
+  const parts = raw
+    .split(/[,;\n]+/)
+    .map((p) => sanitizeWorkExperiencePart(p.trim(), currentJob))
+    .filter(Boolean);
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const part of parts) {
+    const key = part.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(part);
+  }
+
+  return unique.join(', ');
+}
+
 function countWorkTitles(value: string): number {
   return value
     .split(/[,;]+/)
@@ -188,12 +236,22 @@ function extractWorkTitlesFromSection(section: string): string[] {
 
 export function resolveWorkExperienceFromIntake(
   mappedWorkExperience: unknown,
-  rawText: string
+  rawText: string,
+  options?: { currentJob?: unknown }
 ): string | undefined {
-  const mapped =
+  const currentJob =
+    options?.currentJob != null && String(options.currentJob).trim()
+      ? String(options.currentJob).trim()
+      : undefined;
+
+  const rawMapped =
     mappedWorkExperience != null && String(mappedWorkExperience).trim()
       ? parseWorkExperience(String(mappedWorkExperience).trim())
       : '';
+
+  const mapped = rawMapped
+    ? sanitizeWorkExperienceString(rawMapped, currentJob)
+    : '';
 
   if (mapped && countWorkTitles(mapped) >= 2) {
     return mapped;

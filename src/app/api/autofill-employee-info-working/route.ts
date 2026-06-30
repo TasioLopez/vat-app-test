@@ -118,10 +118,14 @@ async function processDocumentWithAssistant(
         delete mapped.education_name;
       }
 
-      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, rawText);
+      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, rawText, {
+        currentJob: mapped.current_job,
+      });
       if (workExperience) {
         console.log(`✅ Resolved work experience: ${workExperience}`);
         mapped.work_experience = workExperience;
+      } else {
+        delete mapped.work_experience;
       }
     }
 

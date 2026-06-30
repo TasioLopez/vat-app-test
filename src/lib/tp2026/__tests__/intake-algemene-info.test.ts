@@ -8,6 +8,7 @@ import {
   isEducationCertification,
   resolveIntakeEducationFields,
   resolveWorkExperienceFromIntake,
+  sanitizeWorkExperienceString,
 } from '@/lib/tp2026/intake-algemene-info';
 
 const SAMPLE_ALGEMENE_INFO = `
@@ -75,7 +76,32 @@ describe('resolveIntakeEducationFields', () => {
   });
 });
 
+describe('sanitizeWorkExperienceString', () => {
+  it('strips markdown current_job label', () => {
+    assert.equal(
+      sanitizeWorkExperienceString('- **current_job**: Operator productie II'),
+      'Operator productie II'
+    );
+  });
+
+  it('drops title that duplicates current_job', () => {
+    assert.equal(
+      sanitizeWorkExperienceString('Operator productie II', 'Operator productie II - ambachtelijke bakkerij'),
+      ''
+    );
+  });
+});
+
 describe('resolveWorkExperienceFromIntake', () => {
+  it('clears markdown current_job echo when table is empty', () => {
+    const result = resolveWorkExperienceFromIntake(
+      '- **current_job**: Operator productie II',
+      'Algemene informatie:\nWerkervaring? Van-tot?\n',
+      { currentJob: 'Operator productie II - ambachtelijke bakkerij' }
+    );
+    assert.equal(result, undefined);
+  });
+
   it('extracts multiple job titles and skips employer-only row', () => {
     const result = resolveWorkExperienceFromIntake(
       'medewerker algemeen schoonmaakonderhoud',
