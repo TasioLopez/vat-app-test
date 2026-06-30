@@ -25,6 +25,30 @@ export function getSectionTitle(
   return SECTION_TITLES[type]?.[locale] ?? type;
 }
 
+/** True when title matches the built-in label for any supported locale. */
+export function isDefaultSectionTitle(
+  type: CvSectionType,
+  locale: CvLocale,
+  title: string
+): boolean {
+  const trimmed = title.trim();
+  if (!trimmed) return true;
+  const defaultForLocale = SECTION_TITLES[type]?.[locale] ?? '';
+  if (trimmed === defaultForLocale) return true;
+  const otherLocale: CvLocale = locale === 'nl' ? 'en' : 'nl';
+  return trimmed === (SECTION_TITLES[type]?.[otherLocale] ?? '');
+}
+
+export function resolveSectionTitleOverride(
+  type: CvSectionType,
+  locale: CvLocale,
+  title: string
+): string | undefined {
+  const trimmed = title.trim();
+  if (!trimmed || isDefaultSectionTitle(type, locale, trimmed)) return undefined;
+  return trimmed;
+}
+
 export const UI_LABELS: Record<CvLocale, Record<string, string>> = {
   nl: {
     add: 'Toevoegen',
@@ -50,6 +74,7 @@ export const UI_LABELS: Record<CvLocale, Record<string, string>> = {
     duplicateSection: 'Deze sectie bestaat al in het CV.',
     show: 'Tonen',
     dragToReorder: 'Sleep om te verplaatsen',
+    resetSectionTitle: 'Standaard titel',
     dragColumnToSwap: 'Sleep kolom om zijde te wisselen',
     columnSidebar: 'Zijbalk',
     columnMain: 'Hoofdkolom',
@@ -98,6 +123,7 @@ export const UI_LABELS: Record<CvLocale, Record<string, string>> = {
     duplicateSection: 'This section already exists in the CV.',
     show: 'Show',
     dragToReorder: 'Drag to reorder',
+    resetSectionTitle: 'Reset title',
     dragColumnToSwap: 'Drag column to swap sides',
     columnSidebar: 'Sidebar',
     columnMain: 'Main column',

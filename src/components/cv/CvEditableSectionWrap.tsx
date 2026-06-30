@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import { useCV } from '@/context/CVContext';
 import CvSectionRenderer from '@/components/cv/sections/CvSectionRenderer';
 import {
@@ -99,6 +99,17 @@ export default function CvEditableSectionWrap({
             <span className="max-w-[5rem] truncate text-[10px] font-medium text-gray-600">
               {title}
             </span>
+          ) : null}
+          {section.title ? (
+            <button
+              type="button"
+              onClick={() => updateLayoutSection(section.id, { title: undefined })}
+              className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              title={labels('resetSectionTitle')}
+              aria-label={labels('resetSectionTitle')}
+            >
+              <RotateCcw className="h-3 w-3" />
+            </button>
           ) : null}
           <button
             type="button"

@@ -1,6 +1,6 @@
 import type { CvModel } from '@/types/cv';
 
-export type CvDocKind = 'intake' | 'ad' | 'vgr' | 'other';
+export type CvDocKind = 'cv' | 'intake' | 'ad' | 'vgr' | 'other';
 
 export type CvFactExperience = {
   role: string;
@@ -59,7 +59,7 @@ export function emptyCvFacts(): CvFacts {
     evidence: {
       docsProcessed: 0,
       docsWithText: 0,
-      byKind: { intake: 0, ad: 0, vgr: 0, other: 0 },
+      byKind: { cv: 0, intake: 0, ad: 0, vgr: 0, other: 0 },
     },
   };
 }

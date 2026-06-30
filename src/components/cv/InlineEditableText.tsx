@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type KeyboardEvent } from 'react';
+import { useState, useEffect, type CSSProperties, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -11,6 +11,7 @@ type Props = {
   placeholder?: string;
   as?: 'h1' | 'h2' | 'h3' | 'p' | 'span';
   readOnly?: boolean;
+  style?: CSSProperties;
 };
 
 export default function InlineEditableText({
@@ -21,6 +22,7 @@ export default function InlineEditableText({
   placeholder = '…',
   as: Tag = 'span',
   readOnly = false,
+  style,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -70,6 +72,7 @@ export default function InlineEditableText({
           onKeyDown={onKeyDown}
           rows={4}
           className={inputClass}
+          style={style}
           placeholder={placeholder}
         />
       );
@@ -83,6 +86,7 @@ export default function InlineEditableText({
         onBlur={commit}
         onKeyDown={onKeyDown}
         className={inputClass}
+        style={style}
         placeholder={placeholder}
       />
     );
@@ -95,7 +99,11 @@ export default function InlineEditableText({
   );
 
   if (readOnly) {
-    return <Tag className={displayClass}>{value || placeholder}</Tag>;
+    return (
+      <Tag className={displayClass} style={style}>
+        {value || placeholder}
+      </Tag>
+    );
   }
 
   return (
@@ -109,6 +117,7 @@ export default function InlineEditableText({
       }}
       tabIndex={0}
       className={displayClass}
+      style={style}
     >
       {value || placeholder}
     </Tag>

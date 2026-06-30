@@ -22,6 +22,7 @@ type Item = { id: string; text: string };
 
 type Props = {
   title: string;
+  onTitleChange?: (title: string) => void;
   items: Item[];
   onChange: (id: string, text: string) => void;
   onAdd: () => void;
@@ -111,6 +112,7 @@ function SortableListRow({
 
 export default function InlineEditableList({
   title,
+  onTitleChange,
   items,
   onChange,
   onAdd,
@@ -146,16 +148,31 @@ export default function InlineEditableList({
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between gap-2">
-        <h3
-          className={cn(
-            'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
-            variant === 'sidebar'
-              ? 'border-white/30 text-white'
-              : 'border-transparent text-[var(--cv-accent)]'
-          )}
-        >
-          {title}
-        </h3>
+        {onTitleChange ? (
+          <InlineEditableText
+            value={title}
+            onChange={onTitleChange}
+            as="h3"
+            readOnly={readOnly}
+            className={cn(
+              'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
+              variant === 'sidebar'
+                ? 'border-white/30 text-white'
+                : 'border-transparent text-[var(--cv-accent)]'
+            )}
+          />
+        ) : (
+          <h3
+            className={cn(
+              'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
+              variant === 'sidebar'
+                ? 'border-white/30 text-white'
+                : 'border-transparent text-[var(--cv-accent)]'
+            )}
+          >
+            {title}
+          </h3>
+        )}
         {!readOnly && (
           <button
             type="button"

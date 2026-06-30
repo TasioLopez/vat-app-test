@@ -20,9 +20,9 @@ import CvPhotoResizableFrame from '@/components/cv/CvPhotoResizableFrame';
 import { getCvPhotoSizePx } from '@/lib/cv/photo-size';
 import InlineEditableText from '@/components/cv/InlineEditableText';
 import InlineEditableList from '@/components/cv/InlineEditableList';
-import { getSectionTitle, uiLabel } from '@/lib/cv/section-labels';
+import { getSectionTitle, resolveSectionTitleOverride, uiLabel } from '@/lib/cv/section-labels';
 import { getCvTheme } from '@/lib/cv/theme-config';
-import type { CvLayoutSection } from '@/types/cv';
+import type { CvLayoutSection, CvLocale } from '@/types/cv';
 import { cn } from '@/lib/utils';
 
 type Variant = 'default' | 'sidebar';
@@ -32,6 +32,42 @@ type Props = {
   variant?: Variant;
   accent: string;
 };
+
+function EditableSectionTitle({
+  section,
+  locale,
+  title,
+  className,
+  style,
+  as = 'h2',
+  readOnly,
+}: {
+  section: CvLayoutSection;
+  locale: CvLocale;
+  title: string;
+  className?: string;
+  style?: React.CSSProperties;
+  as?: 'h2' | 'h3';
+  readOnly: boolean;
+}) {
+  const { updateLayoutSection } = useCV();
+  if (!title) return null;
+
+  return (
+    <InlineEditableText
+      value={title}
+      onChange={(value) =>
+        updateLayoutSection(section.id, {
+          title: resolveSectionTitleOverride(section.type, locale, value),
+        })
+      }
+      as={as}
+      className={className}
+      style={style}
+      readOnly={readOnly}
+    />
+  );
+}
 
 function SortableExperienceItem({
   id,
@@ -99,6 +135,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     updateInterest,
     removeInterest,
     reorderInterests,
+    updateLayoutSection,
   } = useCV();
 
   const locale = activeLocale;
@@ -110,6 +147,16 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     ? 'border-b pb-1 text-xs font-semibold uppercase tracking-wide border-white/30 text-white'
     : 'mb-2 text-sm font-semibold uppercase tracking-wide';
   const titleStyle = isSidebar ? undefined : ({ color: accent } as React.CSSProperties);
+  const sectionTitleProps = {
+    section,
+    locale,
+    title,
+    readOnly,
+  };
+  const handleListTitleChange = (value: string) =>
+    updateLayoutSection(section.id, {
+      title: resolveSectionTitleOverride(section.type, locale, value),
+    });
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -172,14 +219,14 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     const contactTitleClass = isSidebar ? theme.sidebarTitleClass : cn(titleClass, 'mb-2');
     return (
       <section>
-        {title && (
-          <h3
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
             className={cn(contactTitleClass, isSidebar && 'text-white')}
             style={isSidebar ? undefined : titleStyle}
-          >
-            {title}
-          </h3>
-        )}
+            as="h3"
+          />
+        ) : null}
         <ul className={cn('mt-1 space-y-2', isSidebar && 'm-0 list-none p-0 text-white/95')}>
           <li className="flex items-start gap-2">
             <Phone className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', iconClass)} />
@@ -222,11 +269,13 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
         {section.subsection && (
           <p className="mb-1 text-xs font-medium text-gray-500">{section.subsection}</p>
         )}
-        {title && (
-          <h2 className={titleClass} style={titleStyle}>
-            {title}
-          </h2>
-        )}
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
+            className={titleClass}
+            style={titleStyle}
+          />
+        ) : null}
         <InlineEditableText
           value={cvData.profile}
           onChange={setProfile}
@@ -243,11 +292,13 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     if (!cvData.digitalSkills?.trim() && readOnly) return null;
     return (
       <section>
-        {title && (
-          <h2 className={cn(titleClass, isSidebar && 'text-white border-white/30')} style={titleStyle}>
-            {title}
-          </h2>
-        )}
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
+            className={cn(titleClass, isSidebar && 'text-white border-white/30')}
+            style={titleStyle}
+          />
+        ) : null}
         <InlineEditableText
           value={cvData.digitalSkills ?? ''}
           onChange={setDigitalSkills}
@@ -263,6 +314,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     return (
       <InlineEditableList
         title={title}
+        onTitleChange={readOnly ? undefined : handleListTitleChange}
         items={cvData.skills}
         onChange={(id, text) => updateSkill(id, text)}
         onAdd={addSkill}
@@ -281,16 +333,18 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <h3
-            className={cn(
-              'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
-              isSidebar
-                ? 'border-white/30 text-white'
-                : 'border-transparent text-[var(--cv-accent)]'
-            )}
-          >
-            {title}
-          </h3>
+          {title ? (
+            <EditableSectionTitle
+              {...sectionTitleProps}
+              className={cn(
+                'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
+                isSidebar
+                  ? 'border-white/30 text-white'
+                  : 'border-transparent text-[var(--cv-accent)]'
+              )}
+              as="h3"
+            />
+          ) : null}
           {!readOnly && (
             <button
               type="button"
@@ -338,6 +392,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     return (
       <InlineEditableList
         title={title}
+        onTitleChange={readOnly ? undefined : handleListTitleChange}
         items={cvData.interests}
         onChange={(id, text) => updateInterest(id, text)}
         onAdd={addInterest}
@@ -356,11 +411,13 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     return (
       <section>
         <div className="mb-2 flex items-center justify-between">
-          {title && (
-            <h2 className={titleClass} style={titleStyle}>
-              {title}
-            </h2>
-          )}
+          {title ? (
+            <EditableSectionTitle
+              {...sectionTitleProps}
+              className={titleClass}
+              style={titleStyle}
+            />
+          ) : null}
           {!readOnly && (
             <button
               type="button"
@@ -442,11 +499,13 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
     return (
       <section>
         <div className="mb-2 flex items-center justify-between">
-          {title && (
-            <h2 className={titleClass} style={titleStyle}>
-              {title}
-            </h2>
-          )}
+          {title ? (
+            <EditableSectionTitle
+              {...sectionTitleProps}
+              className={titleClass}
+              style={titleStyle}
+            />
+          ) : null}
           {!readOnly && (
             <button
               type="button"
@@ -518,11 +577,13 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   if (section.type === 'extra') {
     return (
       <section>
-        {title && (
-          <h2 className={titleClass} style={titleStyle}>
-            {title}
-          </h2>
-        )}
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
+            className={titleClass}
+            style={titleStyle}
+          />
+        ) : null}
         <InlineEditableText
           value={cvData.extra}
           onChange={setExtra}

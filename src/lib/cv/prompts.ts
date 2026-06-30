@@ -3,6 +3,8 @@ import type { CvDocKind, CvFacts } from '@/lib/cv/facts';
 
 export function cvDocExtractionSystemPrompt(kind: CvDocKind): string {
   const focusByKind: Record<CvDocKind, string> = {
+    cv:
+      'Focus op werkervaring, opleiding, vaardigheden, talen, certificaten en profieltekst uit het bestaande CV.',
     intake:
       'Focus op persoonlijke basisgegevens, praktische inzetbaarheid (rijbewijs/vervoer/uren), vaardigheden, talen en opleidingen.',
     ad:

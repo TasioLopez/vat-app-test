@@ -15,7 +15,7 @@ import {
   type CvDocKind,
   type CvFacts,
 } from '@/lib/cv/facts';
-import { cvDocExtractionSystemPrompt, cvDocExtractionUserPrompt } from '@/lib/cv/prompts';
+import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 
 type DocRow = {
   id: string;
@@ -46,11 +46,14 @@ function detectExt(path: string, docName: string | null | undefined): 'pdf' | 'd
 
 function classifyDocKind(type: string | null | undefined): CvDocKind {
   const t = (type || '').toLowerCase();
+  if (t === 'cv' || t.includes('curriculum')) return 'cv';
   if (t.includes('intake')) return 'intake';
   if (t.includes('ad') || t.includes('arbeidsdeskundig')) return 'ad';
   if (t.includes('vgr') || t.includes('voortgang')) return 'vgr';
   return 'other';
 }
+
+export { classifyDocKind };
 
 async function bufferToPlainText(buffer: Buffer, kind: 'pdf' | 'docx' | 'doc' | 'other'): Promise<string> {
   if (kind === 'docx' || kind === 'doc') {
@@ -144,15 +147,15 @@ function mergeFactsByPriority(
     return undefined;
   };
 
-  out.personal.title = pickScalar(['ad', 'vgr', 'intake', 'other'], (f) => f.personal.title);
-  out.personal.phone = pickScalar(['intake', 'other', 'ad', 'vgr'], (f) => f.personal.phone);
-  out.personal.email = pickScalar(['intake', 'other', 'ad', 'vgr'], (f) => f.personal.email);
-  out.personal.location = pickScalar(['intake', 'vgr', 'other', 'ad'], (f) => f.personal.location);
-  out.personal.dateOfBirth = pickScalar(['intake', 'ad', 'vgr', 'other'], (f) => f.personal.dateOfBirth);
+  out.personal.title = pickScalar(['cv', 'ad', 'vgr', 'intake', 'other'], (f) => f.personal.title);
+  out.personal.phone = pickScalar(['intake', 'cv', 'other', 'ad', 'vgr'], (f) => f.personal.phone);
+  out.personal.email = pickScalar(['intake', 'cv', 'other', 'ad', 'vgr'], (f) => f.personal.email);
+  out.personal.location = pickScalar(['cv', 'intake', 'vgr', 'other', 'ad'], (f) => f.personal.location);
+  out.personal.dateOfBirth = pickScalar(['intake', 'cv', 'ad', 'vgr', 'other'], (f) => f.personal.dateOfBirth);
 
   const byKind = (k: CvDocKind) => chunks.find((c) => c.kind === k)?.facts;
-  const orderedKinds: CvDocKind[] = ['ad', 'vgr', 'intake', 'other'];
-  const orderedForEdu: CvDocKind[] = ['intake', 'vgr', 'ad', 'other'];
+  const orderedKinds: CvDocKind[] = ['cv', 'ad', 'vgr', 'intake', 'other'];
+  const orderedForEdu: CvDocKind[] = ['cv', 'intake', 'vgr', 'ad', 'other'];
 
   out.profileHints = dedupeStrings(
     orderedKinds.flatMap((k) => byKind(k)?.profileHints ?? [])
@@ -175,7 +178,7 @@ function mergeFactsByPriority(
   ).slice(0, 10);
 
   out.interestsHints = dedupeStrings(
-    (['vgr', 'intake', 'other', 'ad'] as CvDocKind[]).flatMap((k) => byKind(k)?.interestsHints ?? [])
+    (['cv', 'vgr', 'intake', 'other', 'ad'] as CvDocKind[]).flatMap((k) => byKind(k)?.interestsHints ?? [])
   ).slice(0, 16);
 
   out.extraHints = dedupeStrings(
@@ -185,6 +188,7 @@ function mergeFactsByPriority(
   const mobilityByKind = (k: CvDocKind) => byKind(k)?.mobility;
   const contractHours =
     mobilityByKind('intake')?.contractHours ||
+    mobilityByKind('cv')?.contractHours ||
     mobilityByKind('ad')?.contractHours ||
     mobilityByKind('vgr')?.contractHours ||
     mobilityByKind('other')?.contractHours;
@@ -192,20 +196,23 @@ function mergeFactsByPriority(
 
   out.mobility.driversLicense =
     mobilityByKind('intake')?.driversLicense ??
+    mobilityByKind('cv')?.driversLicense ??
     mobilityByKind('ad')?.driversLicense ??
     mobilityByKind('vgr')?.driversLicense ??
     mobilityByKind('other')?.driversLicense;
 
   out.mobility.licenseTypes = dedupeStrings(
-    (['intake', 'ad', 'vgr', 'other'] as CvDocKind[]).flatMap((k) => mobilityByKind(k)?.licenseTypes ?? [])
+    (['intake', 'cv', 'ad', 'vgr', 'other'] as CvDocKind[]).flatMap((k) => mobilityByKind(k)?.licenseTypes ?? [])
   );
 
   out.mobility.transport = dedupeStrings(
-    (['intake', 'ad', 'vgr', 'other'] as CvDocKind[]).flatMap((k) => mobilityByKind(k)?.transport ?? [])
+    (['intake', 'cv', 'ad', 'vgr', 'other'] as CvDocKind[]).flatMap((k) => mobilityByKind(k)?.transport ?? [])
   );
 
   return out;
 }
+
+export { mergeFactsByPriority };
 
 export async function analyzeCvFactsForEmployee(
   supabase: SupabaseClient,
@@ -227,6 +234,8 @@ export async function analyzeCvFactsForEmployee(
   const extractedByDoc: Array<{ kind: CvDocKind; facts: Omit<CvFacts, 'evidence'> }> = [];
 
   for (const doc of rows) {
+    if (isSpreekReportageDocType(doc.type)) continue;
+
     const kind = classifyDocKind(doc.type);
     base.evidence.docsProcessed += 1;
     base.evidence.byKind[kind] += 1;

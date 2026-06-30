@@ -26,6 +26,10 @@ import {
   resolveIntakeEducationFields,
   resolveWorkExperienceFromIntake,
 } from '@/lib/tp2026/intake-algemene-info';
+import {
+  isCvEmployeeDocType,
+  isSpreekReportageDocType,
+} from '@/lib/documents/employee-doc-types';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -269,7 +273,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
       !type.includes('arbeidsdeskundig') &&
       type !== 'fml' &&
       type !== 'izp' &&
-      type !== 'lab'
+      type !== 'lab' &&
+      !isCvEmployeeDocType(type) &&
+      !isSpreekReportageDocType(type)
     );
   });
 

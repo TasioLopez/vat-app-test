@@ -62,6 +62,11 @@ import {
 } from '@/lib/tp2026/gegevens-field-options';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
+import {
+    EMPLOYEE_DOC_TYPES,
+    EMPLOYEE_DOC_LABELS,
+    type EmployeeDocType,
+} from '@/lib/documents/employee-doc-types';
 
 type Employee = {
     id: string;
@@ -127,13 +132,8 @@ type Document = {
     url: string;
 };
 
-const DOC_TYPES = ['intakeformulier', 'ad_rapportage', 'fml_izp', 'extra'];
-const DOC_LABELS: Record<string, string> = {
-    intakeformulier: 'Intakeformulier',
-    ad_rapportage: 'AD Rapport',
-    fml_izp: 'FML/IZP',
-    extra: 'Overig'
-};
+const DOC_TYPES = [...EMPLOYEE_DOC_TYPES] as EmployeeDocType[];
+const DOC_LABELS = EMPLOYEE_DOC_LABELS;
 
 const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'gender',
@@ -1156,7 +1156,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                                         <span className="font-semibold text-gray-900">Bronnen beheren</span>
                                         <span className="text-xs font-normal text-gray-600">
-                                            Uploads per type: intake, AD, FML/IZP, overig
+                                            Uploads per type: intake, AD, FML/IZP, CV, spreek reportage, overig
                                         </span>
                                         <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                                             <CheckCircle2 className="h-3.5 w-3.5" />
