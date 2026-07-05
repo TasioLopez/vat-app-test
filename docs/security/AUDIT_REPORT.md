@@ -11,9 +11,9 @@
 | Severity | Count |
 |----------|-------|
 | Critical | 22 |
-| High | 18 |
-| Medium | 22 |
-| Low | 12 |
+| High | 12 |
+| Medium | 23 |
+| Low | 8 |
 | Info (positive) | 8 |
 
 **Top risks:** Multiple API routes use the Supabase **service role without any authentication**, allowing unauthenticated read/write/delete of employee documents, storage objects, TP/medical autofill data, and Mijn Stem user content. The `documents` API and `storage/sign-url` are the most immediately exploitable. There is **no global `middleware.ts`** and **no security headers** in `next.config.ts`. Database-level gaps include missing RLS on `public.documents` and `public.users`.
@@ -55,10 +55,12 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 
 | Classification | Count | Examples |
 |----------------|-------|----------|
-| Authenticated | 20 | `help/*`, `cv-photo/*`, `autofill-cv`, `signup/finalize` |
+| Authenticated | ~20 | `help/*`, `cv-photo/*`, `autofill-cv`, `signup/finalize` |
 | Admin-only | 11 | `help/admin/*`, `invite-user` |
 | Public-by-design | 8 | `cv-share/[token]/*`, `health-check`, `complete-signup` (410) |
-| **Unauthenticated (broken)** | **33** | `documents/*`, `storage/sign-url`, all `autofill-tp-*`, all `mijn-stem/*`, `export-pdf`, `export-cv-pdf`, `check-schema` |
+| **Unauthenticated (broken)** | **~33** | `documents/*`, `storage/sign-url`, all `autofill-tp-*`, all `mijn-stem/*`, `export-pdf`, `export-cv-pdf`, `check-schema` |
+
+*Route counts are directional; ~33 routes have explicit session checks including guest-token CV-share routes.*
 
 ---
 
@@ -72,7 +74,7 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 | Critical | `src/app/api/documents/metadata/route.ts:6` | Unauthenticated POST inserts document metadata via service role |
 | Critical | `src/app/api/storage/sign-url/route.ts:21` | Unauthenticated POST mints 1-hour signed URLs for any path in `documents` bucket |
 | Critical | `src/app/api/export-pdf/route.tsx:114` | Reads session but never returns 401; exports full TP/VGR PDF for any `employeeId` via service role |
-| Critical | `src/app/tp/print/page.tsx:32` | No auth gate; loads full TP data via service role; accepts arbitrary `?u=` user id |
+| Critical | `src/app/tp/print/page.tsx:32` | Session read but not enforced; loads full TP data via service role for any caller; accepts arbitrary `?u=` user id |
 | Critical | `src/app/api/autofill-tp-2/route.ts:127` | Unauthenticated GET autofill + OpenAI + DB writes for any `employeeId` (same on all 14 `autofill-tp-3/*` routes) |
 | Critical | `src/app/api/autofill-employee-info-working/route.ts:304` | Unauthenticated GET employee autofill via service role |
 | Critical | `src/app/api/mijn-stem/upload/route.ts:8` | Unauthenticated POST with client-supplied `userId`; upload + DB insert via service role (IDOR) |
@@ -99,12 +101,11 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 | High | `add_employees_rls_policies.sql:20` | `is_admin()` reads `users.role`; without RLS on `users`, role self-elevation grants admin |
 | High | `src/app/api/autofill-tp-2/route.ts:204` | `console.log` dumps full extracted TP2 data (PII) to server logs |
 | High | `src/app/api/autofill-employee-info-working/route.ts:137` | `console.log` dumps work experience PII to server logs |
-| High | `src/app/api/mijn-stem/upload/route.ts:8` | No auth; client-supplied `userId` with service role (duplicate IDOR emphasis) |
 | High | `package.json` (npm audit) | 67 dependency vulnerabilities (7 critical, 25 high); includes Next.js, nodemailer, fast-xml-parser |
 | Medium | `next.config.ts:1` | No security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy) |
 | Medium | (no file) | No root `middleware.ts` — no centralized API auth or rate limiting |
 | Medium | `src/lib/cv-share/rate-limit.ts:5` | In-memory rate limiter ineffective across serverless instances |
-| Medium | `src/app/dashboard/help/page.tsx:168` | `dangerouslySetInnerHTML` on KB search headlines — stored XSS if article body contains HTML |
+| Medium | `src/app/dashboard/help/page.tsx:168` | `dangerouslySetInnerHTML` on KB search headlines from `ts_headline()` on `kb_articles.body` — HTML/script in admin-authored body can execute in search snippets |
 | Medium | `src/components/tp/RichTextEditor.tsx:254` | `innerHTML` assignment without HTML escaping; autofill/paste can inject scripts |
 | Medium | `src/app/api/cv-share/[token]/verify/route.ts:40` | Email verification is knowledge-only (no OTP); token + email sufficient for write session |
 | Medium | `src/app/api/cv-share/[token]/export-pdf/route.tsx:62` | No rate limiting on expensive headless Chrome PDF export |
@@ -114,7 +115,12 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 | Medium | `supabase/migrations/20260619120000_open_access_model.sql:1` | Open-access migration incomplete — `employees_*` policies still assignment-scoped while child tables are open |
 | Medium | `supabase/migrations/` (no file) | `tp_meta`, `tp_docs`, `user_clients` have no RLS in migrations |
 | Medium | `src/app/api/export-pdf/route.tsx:130` | VGR branch validates instance id only; no caller authorization |
-| Medium | `src/app/api/autofill-cv/route.ts:20` | Auth required but no employee/CV access check beyond session |
+| Medium | `src/app/api/autofill-cv/route.ts:93` | Auth required; CV loaded via session client (RLS applies) but open-access model allows any authenticated advisor to access any CV — tenant isolation gap |
+| Medium | `src/app/debug-user/page.tsx:57` | Any authenticated user can self-whitelist via `users` upsert (`status: confirmed`); bypasses invite-only login gate when `users` RLS is absent |
+| Medium | `src/app/api/export-pdf/route.tsx:85` | Unauthenticated callers can trigger headless Chrome + service-role data load; no rate limiting (resource abuse / cost amplification) |
+| Medium | `src/app/api/export-cv-pdf/route.tsx:67` | Unauthenticated callers launch Puppeteer even though `/cv/print` requires auth; no rate limiting |
+| Medium | `src/app/vgr/print/page.tsx:1` | No explicit session enforcement; relies on RLS only (defense-in-depth gap vs `cv/print` pattern) |
+| Medium | `src/app/tp2026/print/page.tsx:1` | No explicit session enforcement; relies on RLS only (defense-in-depth gap vs `cv/print` pattern) |
 | Medium | `src/app/api/cv-share/[token]/document/route.ts:107` | Guest PATCH stores raw `payload_json` without server-side validation |
 | Medium | `src/app/api/cv-share/[token]/photo/upload/route.ts:40` | MIME type trust is client-supplied only; no magic-byte validation |
 | Medium | `src/app/api/mijn-stem/init/route.ts:85` | Error responses return full DDL `sqlScript` to client |
@@ -123,7 +129,6 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 | Low | `src/lib/cv-share/session.ts:77` | Session cookie scoped to `Path=/` (not share-specific) |
 | Low | `src/lib/cv-share/base-url.ts:3` | Trusts `x-forwarded-proto`/`x-forwarded-host` for share URLs |
 | Low | `src/app/api/cv-share/[token]/export-pdf/route.tsx:151` | 500 responses include `detail: err.message` |
-| Low | `src/app/debug-user/page.tsx:61` | Client can upsert into `users` — risk depends on DB RLS (none in migrations) |
 | Low | `src/lib/tp/load.ts:115` | Logs full consultant user row including email/phone |
 | Low | `src/app/api/export-cv-pdf/route.tsx:67` | Indirect protection via `/cv/print` auth; API itself lacks explicit 401 |
 | Low | `supabase/migrations/create_mijn_stem_table.sql:27` | RLS policy lacks explicit `TO authenticated` |
@@ -167,7 +172,7 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 ### P0 — Block before production exposure
 1. Add authentication + authorization to all service-role routes: `documents/*`, `storage/sign-url`, `autofill-tp-*`, `mijn-stem/*`, `export-pdf`, `export-cv-pdf`
 2. Add auth gate to `tp/print/page.tsx` before `loadTPData`
-3. Remove or protect debug/setup endpoints (`check-schema`, `health-check`, `mijn-stem/test|init|setup|create-bucket`)
+3. Remove or protect debug/setup endpoints (`check-schema`, `health-check`, `mijn-stem/test|init|setup|create-bucket`, `/debug-user`)
 4. Verify/remove `exec_sql` RPC in Supabase production
 
 ### P1 — Next sprint
@@ -198,6 +203,12 @@ Dashboard pages enforce auth at the layout level, but **API routes are independe
 2. Automated: `npm audit`, secret scan, route auth inventory, XSS grep
 3. Four parallel domain reviews: API auth, Supabase RLS, CV share, XSS/uploads/AI
 4. Infrastructure checklist (code review + manual VERIFY items)
-5. Validation pass via second security-review subagent on audit branch diff
+5. Validation pass via second security-review subagent on audit branch diff (corrections applied per validation feedback)
 
 **No code fixes were applied during this audit.** Remediation is a separate follow-up PR series; each fix PR should re-run `/review-security`.
+
+---
+
+## Validation pass result
+
+Second security-review subagent reviewed audit deliverables vs live codebase. **Substance validated** (critical findings confirmed). **Corrections applied:** severity count fix, duplicate row removal, wording updates for `tp/print`/help XSS/`autofill-cv`, and three additional medium findings (`debug-user`, export Puppeteer abuse, print route defense-in-depth). Remaining **VERIFY** items require Supabase/Vercel dashboard completion per [`INFRA_CHECKLIST.md`](INFRA_CHECKLIST.md).

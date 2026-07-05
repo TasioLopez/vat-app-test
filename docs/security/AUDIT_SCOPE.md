@@ -120,6 +120,16 @@
 - `supabase/migrations/create_mijn_stem_table.sql`
 - (and 19 additional migration files in `supabase/migrations/`)
 
+## Print pages (PDF export chain)
+- `src/app/tp/print/page.tsx`
+- `src/app/tp2026/print/page.tsx`
+- `src/app/vgr/print/page.tsx`
+- `src/app/cv/print/page.tsx`
+- `src/app/cv/share/print/page.tsx`
+
+## Debug / dev pages
+- `src/app/debug-user/page.tsx` — client-side `users` upsert (whitelist bypass risk)
+
 ## Other scope
 - `src/app/dashboard/layout.tsx` — server-side auth gate for dashboard
 - `next.config.ts` — security headers

@@ -49,6 +49,7 @@ This checklist must be completed in the Supabase and Vercel dashboards. Items ma
 | 2 | Error responses do not leak stack traces | **FAIL (code review)** | [`check-schema/route.ts`](../src/app/api/check-schema/route.ts:61) returns `stack` on 500. |
 | 3 | Health check does not expose env configuration | **FAIL (code review)** | [`health-check/route.ts`](../src/app/api/health-check/route.ts) returns booleans for each secret's presence. |
 | 4 | npm dependencies audited | **ACTION NEEDED** | `npm audit` reports 67 vulnerabilities (7 critical, 25 high). Run `npm audit fix`; evaluate `next@15.5.20` and `nodemailer@9.0.3` upgrades. |
+| 5 | `/debug-user` page removed or gated in production | **FAIL (code review)** | [`debug-user/page.tsx`](../src/app/debug-user/page.tsx) allows any auth user to upsert into `users` with `status: confirmed`. |
 
 ---
 
