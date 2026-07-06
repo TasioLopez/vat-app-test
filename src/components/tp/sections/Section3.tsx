@@ -149,7 +149,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    userId: user.id,
                     originalText: originalText,
                     sectionType: fieldName
                 }),

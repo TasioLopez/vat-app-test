@@ -1,63 +1,54 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
+import { NextRequest, NextResponse } from 'next/server';
+import { isAuthError, requireAuth, verifyDocumentPathAccess } from '@/lib/auth/api-auth';
+import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 
-export async function POST(req: Request) {
-  const { id, url } = await req.json();
+export async function POST(req: NextRequest) {
+  try {
+    const { id, url } = await req.json();
 
-  console.log('🗑️ Received DELETE request for:', { id, url, typeofId: typeof id });
+    if (!id || !url) {
+      return NextResponse.json(
+        { success: false, error: 'Missing id or url' },
+        { status: 400 }
+      );
+    }
 
-  if (!id || !url) {
-    return NextResponse.json(
-      { success: false, error: 'Missing id or url' },
-      { status: 400 }
-    );
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
+
+    const { data: existingDoc, error: checkError } = await authResult.supabase
+      .from('documents')
+      .select('id, employee_id, url')
+      .eq('id', id.toString())
+      .maybeSingle();
+
+    if (checkError || !existingDoc) {
+      return NextResponse.json({ success: false, error: 'Document not found' }, { status: 404 });
+    }
+
+    const pathAllowed = await verifyDocumentPathAccess(authResult.supabase, String(url));
+    if (!pathAllowed || existingDoc.url !== url) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { error: storageError } = await supabaseAdmin.storage.from('documents').remove([url]);
+    if (storageError) {
+      return NextResponse.json({ success: false, error: storageError.message }, { status: 500 });
+    }
+
+    const { data: dbData, error: dbError } = await authResult.supabase
+      .from('documents')
+      .delete()
+      .eq('id', id.toString())
+      .select();
+
+    if (dbError) {
+      return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, deleted: dbData });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
-
-  // ✅ Use Supabase Service Role Key here
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // 👈 MUST use this secret key for delete
-  );
-
-  // Step 0: Confirm row exists (for debug purposes)
-  const { data: existingDoc, error: checkError } = await supabase
-    .from('documents')
-    .select('id')
-    .eq('id', id.toString())
-    .single();
-
-  console.log('🔍 Document existence check:', { existingDoc, checkError });
-
-  // Step 1: Delete from Supabase Storage
-  const { data: storageData, error: storageError } = await supabase.storage
-    .from('documents')
-    .remove([url]);
-
-  console.log('📦 Storage deletion:', { storageData, storageError });
-
-  if (storageError) {
-    return NextResponse.json(
-      { success: false, error: storageError.message },
-      { status: 500 }
-    );
-  }
-
-  // Step 2: Delete from Supabase documents table
-  const { data: dbData, error: dbError } = await supabase
-    .from('documents')
-    .delete()
-    .eq('id', id.toString())
-    .select(); // optional: returns deleted row(s)
-
-  console.log('🧾 DB deletion:', { dbData, dbError });
-
-  if (dbError) {
-    return NextResponse.json(
-      { success: false, error: dbError.message },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({ success: true, deleted: dbData });
 }

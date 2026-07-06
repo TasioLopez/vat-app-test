@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaBook, FaComments, FaSearch, FaTicketAlt } from "react-icons/fa";
 import { articleHref, HELP_DEFAULT_LOCALE } from "@/lib/help/constants";
 import { cn } from "@/lib/utils";
+import { formatSearchHeadline } from "@/lib/help/format-headline";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
 
 type Category = {
@@ -165,7 +166,7 @@ export default function HelpHubPage() {
                     {r.headline ? (
                       <p
                         className="text-sm text-gray-600 mt-1 line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: r.headline }}
+                        dangerouslySetInnerHTML={{ __html: formatSearchHeadline(r.headline) }}
                       />
                     ) : null}
                   </Link>

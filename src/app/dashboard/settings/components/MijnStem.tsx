@@ -47,7 +47,7 @@ export default function MijnStem() {
 
     const fetchDocuments = async (userId: string) => {
         try {
-            const response = await fetch(`/api/mijn-stem/upload?userId=${userId}`);
+            const response = await fetch('/api/mijn-stem/upload');
             const data = await response.json();
             
             if (data.success) {
@@ -60,7 +60,7 @@ export default function MijnStem() {
 
     const fetchMasterStyle = async (userId: string) => {
         try {
-            const response = await fetch(`/api/mijn-stem/style?userId=${userId}`);
+            const response = await fetch('/api/mijn-stem/style');
             const data = await response.json();
             
             if (data.success && data.hasStyle) {
@@ -92,7 +92,6 @@ export default function MijnStem() {
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('userId', userId);
 
                     // Set upload progress
                     setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
@@ -224,7 +223,7 @@ export default function MijnStem() {
         }
 
         try {
-            const response = await fetch(`/api/mijn-stem/delete?documentId=${documentId}&userId=${userId}`, {
+            const response = await fetch(`/api/mijn-stem/delete?documentId=${documentId}`, {
                 method: 'DELETE',
             });
 

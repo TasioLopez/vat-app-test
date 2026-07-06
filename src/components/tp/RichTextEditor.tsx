@@ -172,8 +172,16 @@ export default function RichTextEditor({
 
   const markdownToHtml = (markdown: string): string => {
     if (!markdown) return '';
-    
-    return markdown
+
+    const escapeHtml = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    return escapeHtml(markdown)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
@@ -292,6 +300,12 @@ export default function RichTextEditor({
     }, 0);
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden">
       {/* Toolbar */}
@@ -337,6 +351,7 @@ export default function RichTextEditor({
           ref={editorRef}
           contentEditable
           onInput={handleContentChange}
+          onPaste={handlePaste}
           onKeyDown={handleKeyDown}
           className="w-full p-4 text-sm leading-relaxed focus:outline-none"
           style={{ 

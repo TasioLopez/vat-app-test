@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { getIntakeContextForTp } from "@/lib/document-analysis";
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { PRACTISCHE_BELEMMERINGEN_DEFAULT } from "@/lib/tp2026/mapping";
 
 const supabase = createClient(
@@ -28,9 +29,9 @@ Als het subveld ontbreekt (oud formulier zonder sectie 17) of leeg is: geef een 
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get("employeeId");
-    if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
     const INTAKE = await getIntakeContextForTp(
       openai,

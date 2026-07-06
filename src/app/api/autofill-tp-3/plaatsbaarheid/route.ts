@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -30,19 +31,19 @@ function stripCitations(text: string): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get("employeeId");
-    if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
     const { data: meta } = await supabase
       .from("tp_meta")
       .select("zoekprofiel, praktische_belemmeringen, prognose_bedrijfsarts, persoonlijk_profiel")
       .eq("employee_id", employeeId)
-      .single();
+      .maybeSingle();
 
-    const zoekprofiel = meta?.zoekprofiel || "";
+    const zoekprofiel = meta?.zoekprofiel?.trim() || "";
     if (!zoekprofiel) {
-      return NextResponse.json({ error: "Geen zoekprofiel beschikbaar; genereer eerst het zoekprofiel." }, { status: 200 });
+      return NextResponse.json({ error: "Geen zoekprofiel gevonden — vul eerst zoekprofiel in" }, { status: 200 });
     }
 
     const system = `

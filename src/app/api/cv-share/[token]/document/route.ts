@@ -88,6 +88,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   const { share } = access;
 
+  const { data: existingDoc } = await supabaseAdmin
+    .from('cv_documents')
+    .select('template_key')
+    .eq('id', share.cv_document_id)
+    .eq('employee_id', share.employee_id)
+    .maybeSingle();
+
   let body: {
     title?: string;
     template_key?: string;
@@ -104,7 +111,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   if (typeof body.title === 'string') patch.title = body.title;
   if (typeof body.template_key === 'string') patch.template_key = body.template_key;
   if (typeof body.accent_color === 'string') patch.accent_color = body.accent_color;
-  if (body.payload_json !== undefined) patch.payload_json = body.payload_json;
+  if (body.payload_json !== undefined) {
+    const templateKey = coerceCvTemplateKey(
+      typeof body.template_key === 'string'
+        ? body.template_key
+        : existingDoc?.template_key
+    );
+    patch.payload_json = normalizeCvPayload(body.payload_json, templateKey);
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });

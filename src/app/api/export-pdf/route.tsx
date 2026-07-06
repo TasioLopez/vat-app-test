@@ -13,6 +13,8 @@ import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
+import { verifyEmployeeAccess } from "@/lib/auth/api-auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/auth/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -113,6 +115,26 @@ export async function GET(req: NextRequest) {
   );
   const { data: { user } } = await ssr.auth.getUser();
 
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const employeeAllowed = await verifyEmployeeAccess(ssr, employeeId);
+  if (!employeeAllowed) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const rate = await checkRateLimit(`export-pdf:${user.id}`, 3600, 20);
+  if (!rate.ok) {
+    return rateLimitResponse(rate.retryAfterSec);
+  }
+
   const base = getBaseUrl(req);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -127,7 +149,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const { data: vgrInstance, error: vgrInstanceErr } = await (supabase as any)
+    const { data: vgrInstance, error: vgrInstanceErr } = await (ssr as any)
       .from("vgr_instances")
       .select("id, employee_id, layout_key, data_json")
       .eq("id", vgrInstanceId)
@@ -274,7 +296,7 @@ export async function GET(req: NextRequest) {
   let snapshotData: Record<string, any> = {};
 
   if (tpInstanceId) {
-    const { data: instance, error: instanceErr } = await (supabase as any)
+    const { data: instance, error: instanceErr } = await (ssr as any)
       .from("tp_instances")
       .select("id, employee_id, layout_key, data_json")
       .eq("id", tpInstanceId)
@@ -296,7 +318,8 @@ export async function GET(req: NextRequest) {
 
   if (resolvedLayout === "tp_legacy") {
     snapshotData = await loadTPData(employeeId, {
-      preferredConsultantUserId: user?.id,
+      preferredConsultantUserId: user.id,
+      supabase: ssr,
     });
   }
 
@@ -309,8 +332,7 @@ export async function GET(req: NextRequest) {
 
   const printUrl = resolvedLayout === "tp_2026"
     ? `${base}/tp2026/print?tpInstanceId=${encodeURIComponent(tpInstanceId || "")}`
-    : `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1` +
-      (user?.id ? `&u=${encodeURIComponent(user.id)}` : "");
+    : `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1`;
 
   let browser: any = null;
 

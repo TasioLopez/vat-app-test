@@ -1,53 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createBrowserClient } from '@supabase/ssr';
+import { isAuthError, requireAuth } from '@/lib/auth/api-auth';
+import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+];
+
+const MAX_SIZE = 10 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
-    if (!file || !userId) {
-      return NextResponse.json({ error: 'Missing file or userId' }, { status: 400 });
+    const formData = await req.formData();
+    const file = formData.get('file');
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: 'Missing file' }, { status: 400 });
     }
 
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > MAX_SIZE) {
       return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Generate filename following existing pattern: {userId}/{type}-{safeName}
+    const userId = authResult.user.id;
     const timestamp = Date.now();
     const safeName = file.name.replace(/\s+/g, '-');
     const fileName = `${userId}/mijn-stem-${timestamp}-${safeName}`;
 
-    // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('documents')
       .upload(fileName, file);
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      return NextResponse.json({ 
-        error: 'Storage bucket not found. Please create it first by visiting: /api/mijn-stem/create-bucket'
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Storage upload failed' }, { status: 500 });
     }
 
-    // Save file metadata to database
-    const { data: insertData, error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await authResult.supabase
       .from('mijn_stem_documents')
       .insert({
         user_id: userId,
@@ -55,72 +52,45 @@ export async function POST(req: NextRequest) {
         storage_path: uploadData.path,
         file_size: file.size,
         file_type: file.type,
-        status: 'uploaded'
+        status: 'uploaded',
       })
       .select()
       .single();
 
     if (insertError) {
-      console.error('Database error:', insertError);
-      // Clean up uploaded file if database insert fails
-      await supabase.storage.from('documents').remove([uploadData.path]);
-      
-      const errorStr = JSON.stringify(insertError);
-      if (errorStr.includes('does not exist') || errorStr.includes('relation')) {
-        return NextResponse.json({ 
-          error: 'Database table not found. Please run the SQL script in setup_mijn_stem_now.sql in your Supabase SQL Editor.'
-        }, { status: 500 });
-      }
-      
-      return NextResponse.json({ 
-        error: 'Failed to save file metadata: ' + errorStr
-      }, { status: 500 });
+      await supabaseAdmin.storage.from('documents').remove([uploadData.path]);
+      return NextResponse.json({ error: 'Failed to save file metadata' }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       document: insertData,
-      message: 'File uploaded successfully'
+      message: 'File uploaded successfully',
     });
-
-  } catch (error: any) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error: ' + (error.message || error.toString()),
-      details: error.toString()
-    }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data: documents, error } = await supabase
+    const { data: documents, error } = await authResult.supabase
       .from('mijn_stem_documents')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', authResult.user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Database error:', error);
       return NextResponse.json({ error: 'Failed to fetch documents' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
-      documents: documents || []
-    });
-
-  } catch (error: any) {
-    console.error('Fetch error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: true, documents: documents || [] });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

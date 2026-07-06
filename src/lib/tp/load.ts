@@ -1,5 +1,5 @@
 // src/lib/tp/load.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { formatEmployeeName, isAbsentText, normalizePersonName } from "@/lib/utils";
 import { normalizePhoneForStorage } from "@/lib/phone/format-dutch-display";
 import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
@@ -20,17 +20,18 @@ function preferFilledMerge<T extends Record<string, any>>(...objs: T[]): T {
   return out;
 }
 
-// 👇 NEW: allow passing the “author” user id
-export async function loadTP(
-  employeeId: string,
-  opts?: { preferredConsultantUserId?: string }
-): Promise<TPData> {
-  const supabase = createClient(
+function createServiceClient(): SupabaseClient {
+  return createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
 
-  console.log('🔍 Loading TP data for employee:', employeeId);
+export async function loadTP(
+  employeeId: string,
+  opts?: { preferredConsultantUserId?: string; supabase?: SupabaseClient }
+): Promise<TPData> {
+  const supabase = opts?.supabase ?? createServiceClient();
 
   // 1) Base rows
   const [employeeResult, detailsResult, metaResult] = await Promise.all([
@@ -112,7 +113,9 @@ export async function loadTP(
       .eq("id", opts.preferredConsultantUserId)
       .maybeSingle();
 
-    console.log("👤 Preferred consultant (current user):", me, meErr);
+    if (meErr) {
+      console.warn('Could not load preferred consultant user');
+    }
 
     if (me) {
       const meFull = [me.first_name, me.last_name].filter(Boolean).join(" ").trim();
@@ -125,18 +128,6 @@ export async function loadTP(
       if (!isFilled(data.consultant_phone) && phone) data.consultant_phone = phone;
     }
   }
-
-  console.log('🎯 Final merged data:', {
-    employee_name: data.employee_name,
-    employer_name: data.employer_name,
-    client_name: data.client_name,
-    client_referent_name: data.client_referent_name,
-    client_referent_phone: data.client_referent_phone,
-    client_referent_email: data.client_referent_email,
-    consultant_name: data.consultant_name,
-    consultant_phone: data.consultant_phone,
-    consultant_email: data.consultant_email,
-  });
 
   for (const key of ['phone', 'consultant_phone', 'client_referent_phone'] as const) {
     if (typeof data[key] === 'string' && data[key].trim()) {

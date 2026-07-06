@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { notFound } from 'next/navigation';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 import TP2026PrintableClient from '@/components/tp2026/TP2026PrintableClient';
 
 export const dynamic = 'force-dynamic';
@@ -9,20 +9,14 @@ type SearchParams = { tpInstanceId?: string };
 export default async function Page(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams;
   const tpInstanceId = searchParams.tpInstanceId;
-  if (!tpInstanceId) throw new Error('tpInstanceId is required');
+  if (!tpInstanceId) notFound();
 
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key) => cookieStore.get(key)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) notFound();
 
   const { data: instance, error } = await (supabase as any)
     .from('tp_instances')
@@ -31,7 +25,7 @@ export default async function Page(props: { searchParams: Promise<SearchParams> 
     .eq('layout_key', 'tp_2026')
     .single();
 
-  if (error || !instance) throw new Error('TP 2026 instance not found');
+  if (error || !instance) notFound();
 
   return <TP2026PrintableClient data={(instance.data_json || {}) as Record<string, any>} />;
 }

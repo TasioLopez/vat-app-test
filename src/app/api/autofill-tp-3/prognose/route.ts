@@ -4,6 +4,8 @@ import { handleAPIError, createSuccessResponse, validateRequiredFields, validate
 import { OpenAIService } from "@/lib/openai-service";
 import { SupabaseService } from "@/lib/supabase-service";
 import { getEmployeeDocumentContext } from "@/lib/document-analysis";
+import { requireEmployeeAutofillAccess } from "@/lib/auth/autofill-access";
+import { NextResponse } from "next/server";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -29,12 +31,12 @@ function stripCitations(text: string): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get("employeeId");
-    
-    // Validate input
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
+
     validateRequiredFields({ employeeId }, ['employeeId']);
-    validateUUID(employeeId!, 'Employee ID');
+    validateUUID(employeeId, 'Employee ID');
 
     const supabaseService = SupabaseService.getInstance();
     const openaiService = OpenAIService.getInstance();
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest) {
     let sourceText = await getEmployeeDocumentContext(
       openai,
       supabase,
-      employeeId!,
+      employeeId,
       fmlMatchers,
       prognoseFocus
     );
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
       sourceText = await getEmployeeDocumentContext(
         openai,
         supabase,
-        employeeId!,
+        employeeId,
         adMatchers,
         prognoseFocus
       );

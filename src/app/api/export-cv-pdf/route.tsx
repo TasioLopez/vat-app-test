@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { verifyCvDocumentAccess } from '@/lib/cv/verifyCvAccess';
+import { checkRateLimit, rateLimitResponse } from '@/lib/auth/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -95,10 +97,29 @@ export async function GET(req: NextRequest) {
     data: { user },
   } = await ssr.auth.getUser();
 
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const cvAllowed = await verifyCvDocumentAccess(ssr, employeeId, cvId);
+  if (!cvAllowed) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const rate = await checkRateLimit(`export-cv-pdf:${user.id}`, 3600, 20);
+  if (!rate.ok) {
+    return rateLimitResponse(rate.retryAfterSec);
+  }
+
   const base = getBaseUrl(req);
   const printUrl =
-    `${base}/cv/print?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&pdf=1&locale=${locale}` +
-    (user?.id ? `&u=${encodeURIComponent(user.id)}` : '');
+    `${base}/cv/print?employeeId=${encodeURIComponent(employeeId)}&cvId=${encodeURIComponent(cvId)}&pdf=1&locale=${locale}`;
 
   let browser: any = null;
 

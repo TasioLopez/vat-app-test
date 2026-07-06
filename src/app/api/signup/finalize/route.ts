@@ -38,8 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: existingErr.message }, { status: 500 });
     }
 
-    const metadataRole = user.user_metadata?.role === "admin" ? "admin" : "user";
-    const role = existingRow?.role ?? metadataRole;
+    const role = existingRow?.role ?? 'user';
 
     if (existingRow?.id === user.id) {
       const { error: updateErr } = await service
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
       }
 
       if ((existingByEmailRows ?? []).length > 0) {
-        const roleByEmail = existingByEmailRows?.[0]?.role ?? role;
+        const roleByEmail = existingByEmailRows?.[0]?.role ?? 'user';
         const { error: updateByEmailErr } = await service
           .from("users")
           .update({

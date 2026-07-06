@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   ADVIES_NB_NO_REPORT,
   generateAdAdvies,
@@ -16,11 +17,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get('employeeId');
-    if (!employeeId) {
-      return NextResponse.json({ error: 'Missing employeeId' }, { status: 400 });
-    }
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
     const { data: meta } = await supabase
       .from('tp_meta')

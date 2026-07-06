@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const { token } = await context.params;
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
 
-  const rate = checkVerifyRateLimit(ip);
+  const rate = await checkVerifyRateLimit(ip);
   if (!rate.ok) {
     return NextResponse.json(
       { error: 'Te veel pogingen. Probeer het later opnieuw.' },
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'E-mailadres komt niet overeen' }, { status: 403 });
   }
 
-  resetVerifyRateLimit(ip);
+  await resetVerifyRateLimit(ip);
 
   const sessionToken = createShareSessionToken(
     {

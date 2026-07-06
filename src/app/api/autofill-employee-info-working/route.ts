@@ -30,6 +30,7 @@ import {
   isCvEmployeeDocType,
   isSpreekReportageDocType,
 } from '@/lib/documents/employee-doc-types';
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -134,7 +135,7 @@ async function processDocumentWithAssistant(
         currentJob: mapped.current_job,
       });
       if (workExperience) {
-        console.log(`✅ Resolved work experience: ${workExperience}`);
+        console.log('✅ Resolved work experience from intake document');
         mapped.work_experience = workExperience;
       } else {
         delete mapped.work_experience;
@@ -303,18 +304,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get('employeeId');
-
-    if (!employeeId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing employeeId',
-        data: { details: {} },
-      }, { status: 400 });
-    }
-
-    console.log('🔍 Processing employee:', employeeId);
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
     const { data: docs, error: docsError } = await supabase
       .from('documents')
@@ -372,8 +364,6 @@ export async function GET(req: NextRequest) {
 
     if (refFirst || refLast) {
       console.log('📇 Referent extracted:', {
-        first: refFirst,
-        last: refLast,
         has_function: Boolean(referent.referent_function),
         has_phone: Boolean(referent.referent_phone),
         has_email: Boolean(referent.referent_email),

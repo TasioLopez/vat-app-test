@@ -7,6 +7,7 @@ import { validateGuestAccess } from '@/lib/cv-share/access';
 import { CV_SHARE_SESSION_COOKIE } from '@/lib/cv-share/session';
 import { getBaseUrl } from '@/lib/cv-share/base-url';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
+import { checkRateLimit, rateLimitResponse } from '@/lib/auth/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -69,6 +70,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+  const rate = await checkRateLimit(`cv-share-export:${access.share.id}:${ip}`, 3600, 10);
+  if (!rate.ok) {
+    return rateLimitResponse(rate.retryAfterSec);
   }
 
   const search = req.nextUrl.searchParams;

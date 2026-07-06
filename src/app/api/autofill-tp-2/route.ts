@@ -18,6 +18,7 @@ import {
   isAdDocumentType,
   resolveTp2HasAdReport,
 } from '@/lib/tp/intake-ad-presence';
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -125,19 +126,12 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
 }
 
 export async function GET(req: NextRequest) {
-  console.log('🚀 Starting autofill-tp-2 request');
-
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get('employeeId');
-    const testMode = searchParams.get('test') === 'true';
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
-    if (!employeeId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing employeeId', data: { details: {} } },
-        { status: 400 }
-      );
-    }
+    const testMode = req.nextUrl.searchParams.get('test') === 'true';
 
     if (testMode) {
       return NextResponse.json({
@@ -200,8 +194,6 @@ export async function GET(req: NextRequest) {
     }
 
     resolveTp2HasAdReport(extractedData, docsIncludeAdReport(docs));
-
-    console.log('✅ Final extracted TP2 data:', extractedData);
 
     return NextResponse.json({
       success: true,

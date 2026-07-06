@@ -1,42 +1,38 @@
 // src/app/tp/print/page.tsx
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import { loadTPData } from "@/lib/tp/load";
-import TPPrintableClient from "@/components/tp/TPPrintableClient";
+import { notFound } from 'next/navigation';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { loadTPData } from '@/lib/tp/load';
+import TPPrintableClient from '@/components/tp/TPPrintableClient';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-// Next.js 15 searchParams type
-type SearchParams = { employeeId?: string; u?: string };
+type SearchParams = { employeeId?: string };
 
 export default async function Page(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams;
   const employeeId = searchParams.employeeId;
-  
-  if (!employeeId) throw new Error("Employee ID is required");
 
-  // SSR Supabase session (Next 15+: cookies() can be awaited)
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key) => cookieStore.get(key)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
+  if (!employeeId) notFound();
 
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fallback to ?u=<userId> if SSR auth/user is unavailable
-  const preferredConsultantUserId = user?.id ?? searchParams.u ?? undefined;
+  if (!user) notFound();
 
-  const data = await loadTPData(employeeId, { preferredConsultantUserId });
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('id')
+    .eq('id', employeeId)
+    .maybeSingle();
+
+  if (!employee) notFound();
+
+  const data = await loadTPData(employeeId, {
+    preferredConsultantUserId: user.id,
+    supabase,
+  });
 
   return <TPPrintableClient employeeId={employeeId} data={data} />;
 }

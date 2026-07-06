@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/types/supabase";
+import { requireAuth, isAuthError } from "@/lib/auth/api-auth";
 
 function normalizeKey(raw: string): string {
   let s = decodeURIComponent((raw || "").trim());
@@ -15,25 +13,13 @@ function normalizeKey(raw: string): string {
   return s;
 }
 
-export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const ssr = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-  );
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
 
-  const {
-    data: { user },
-  } = await ssr.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body = await req.json().catch(() => ({}));
-  const key = normalizeKey((body?.path ?? "").toString());
-  if (!key) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+async function isKbMediaPathAllowed(objectPath: string): Promise<boolean> {
+  if (!objectPath || objectPath.includes('..') || /[%_]/.test(objectPath)) {
+    return false;
   }
 
   const admin = createClient(
@@ -42,8 +28,37 @@ export async function POST(req: NextRequest) {
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 
-  const fullKey = key.startsWith("kb-media/") ? key : `kb-media/${key}`;
-  const objectPath = fullKey.replace(/^kb-media\//i, "");
+  const escaped = escapeLikePattern(objectPath);
+  const { count, error } = await admin
+    .from("kb_articles")
+    .select("id", { count: "exact", head: true })
+    .ilike("body", `%${escaped}%`);
+
+  return !error && (count ?? 0) > 0;
+}
+
+export async function POST(req: NextRequest) {
+  const authResult = await requireAuth();
+  if (isAuthError(authResult)) return authResult;
+
+  const body = await req.json().catch(() => ({}));
+  const key = normalizeKey((body?.path ?? "").toString());
+  if (!key || key.includes("..")) {
+    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+  }
+
+  const objectPath = key.replace(/^kb-media\//i, "");
+
+  const allowed = await isKbMediaPathAllowed(objectPath);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
 
   const { data, error } = await admin.storage.from("kb-media").createSignedUrl(objectPath, 3600);
 

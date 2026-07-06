@@ -77,13 +77,13 @@ describe('cv-share session', () => {
 });
 
 describe('verify rate limit', () => {
-  test('allows attempts under limit', () => {
+  test('allows attempts under limit', async () => {
     const ip = `test-ip-${Date.now()}`;
-    resetVerifyRateLimit(ip);
+    await resetVerifyRateLimit(ip);
     for (let i = 0; i < 5; i++) {
-      assert.equal(checkVerifyRateLimit(ip).ok, true);
+      assert.equal((await checkVerifyRateLimit(ip)).ok, true);
     }
-    assert.equal(checkVerifyRateLimit(ip).ok, false);
-    resetVerifyRateLimit(ip);
+    assert.equal((await checkVerifyRateLimit(ip)).ok, false);
+    await resetVerifyRateLimit(ip);
   });
 });

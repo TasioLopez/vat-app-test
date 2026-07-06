@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { notFound } from 'next/navigation';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 import VGRPrintableClient from '@/components/vgr/VGRPrintableClient';
 
 export const dynamic = 'force-dynamic';
@@ -9,20 +9,14 @@ type SearchParams = { vgrInstanceId?: string };
 export default async function Page(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams;
   const vgrInstanceId = searchParams.vgrInstanceId;
-  if (!vgrInstanceId) throw new Error('vgrInstanceId is required');
+  if (!vgrInstanceId) notFound();
 
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key) => cookieStore.get(key)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) notFound();
 
   const { data: instance, error } = await (supabase as any)
     .from('vgr_instances')
@@ -31,7 +25,7 @@ export default async function Page(props: { searchParams: Promise<SearchParams> 
     .eq('layout_key', 'vgr')
     .single();
 
-  if (error || !instance) throw new Error('VGR instance not found');
+  if (error || !instance) notFound();
 
   return <VGRPrintableClient data={(instance.data_json || {}) as Record<string, any>} />;
 }

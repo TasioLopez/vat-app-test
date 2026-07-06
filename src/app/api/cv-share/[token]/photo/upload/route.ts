@@ -8,6 +8,7 @@ import {
   isAllowedCvPhotoMime,
   isValidCvPhotoStoragePath,
 } from '@/lib/cv/photoPath';
+import { verifyImageMagicBytes } from '@/lib/cv/verifyImageMime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,6 +45,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const buf = Buffer.from(await file.arrayBuffer());
   if (buf.length > CV_PHOTO_MAX_BYTES) {
     return NextResponse.json({ error: 'Bestand te groot (max. 5 MB)' }, { status: 400 });
+  }
+
+  if (!(await verifyImageMagicBytes(buf, file.type))) {
+    return NextResponse.json({ error: 'Bestandstype komt niet overeen met inhoud' }, { status: 400 });
   }
 
   const ext =

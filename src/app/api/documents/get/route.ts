@@ -1,6 +1,5 @@
-// app/api/documents/get/route.ts
-import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 import { NextRequest, NextResponse } from 'next/server';
+import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +9,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing employee_id' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const authResult = await requireEmployeeAccess(employee_id);
+    if (isAuthError(authResult)) return authResult;
+
+    const { data, error } = await authResult.supabase
       .from('documents')
       .select('*')
       .eq('employee_id', employee_id);
@@ -20,7 +22,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ documents: data });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

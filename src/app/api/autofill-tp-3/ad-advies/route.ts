@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { getEmployeeDocumentContext } from "@/lib/document-analysis";
 
 const supabase = createClient(
@@ -21,9 +22,9 @@ function stripCitations(text: string): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get("employeeId");
-    if (!employeeId) return NextResponse.json({ error: "Missing employeeId" }, { status: 400 });
+    const access = await requireEmployeeAutofillAccess(req);
+    if (access instanceof NextResponse) return access;
+    const { employeeId } = access;
 
     const AD = await getEmployeeDocumentContext(
       openai,
