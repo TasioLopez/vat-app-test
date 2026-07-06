@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OpenAIService } from '@/lib/openai-service';
 import { isAuthError, requireAuth } from '@/lib/auth/api-auth';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
+import type { Json } from '@/types/supabase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,9 +90,9 @@ ${text.slice(0, 15000)}
       model: 'gpt-4o',
     });
 
-    let writingStyle: Record<string, unknown>;
+    let writingStyle: Json;
     try {
-      writingStyle = JSON.parse(response);
+      writingStyle = JSON.parse(response) as Json;
     } catch {
       writingStyle = {
         tone: 'Zakelijk',
