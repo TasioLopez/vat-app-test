@@ -3,10 +3,13 @@
 import React from 'react';
 import { INSCHALING_ROW_LABELS } from '@/lib/tp/pow-meter/constants';
 import {
-  buildPowInschalingBlock,
+  buildPowMeterStorage,
   parsePowInschaling,
+  parsePowToelichting,
+  updatePowMeterToelichting,
   type PowInschalingData,
 } from '@/lib/tp/pow-meter/build-fields';
+import { TP2026_TOELICHTING_POW_TITLE } from '@/lib/tp2026/basis-profiel-field-order';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 
@@ -25,10 +28,15 @@ export function PowInschalingEditor({
   onChange: (next: string) => void;
 }) {
   const parsed = parsePowInschaling(raw) ?? emptyInschaling();
+  const toelichting = parsePowToelichting(raw);
 
   const updateField = (key: keyof PowInschalingData, value: string) => {
     const next: PowInschalingData = { ...parsed, [key]: value };
-    onChange(buildPowInschalingBlock(next));
+    onChange(buildPowMeterStorage(next, toelichting));
+  };
+
+  const updateToelichting = (value: string) => {
+    onChange(updatePowMeterToelichting(raw, value));
   };
 
   return (
@@ -76,11 +84,21 @@ export function PowInschalingEditor({
         </div>
       </div>
 
+      <div>
+        <label className="mb-1 block text-xs font-medium text-[#6d2a96]">{TP2026_TOELICHTING_POW_TITLE}</label>
+        <textarea
+          className={TEXTAREA_CLASS}
+          value={toelichting}
+          onChange={(e) => updateToelichting(e.target.value)}
+          rows={5}
+        />
+      </div>
+
       {(parsed.huidige_trede || parsed.werkzame_uren || parsed.verwachting) && (
         <div>
           <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
           <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-            <PowInschalingTable raw={buildPowInschalingBlock(parsed)} />
+            <PowInschalingTable raw={raw} />
           </div>
         </div>
       )}

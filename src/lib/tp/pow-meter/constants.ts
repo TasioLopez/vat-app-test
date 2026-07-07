@@ -1,6 +1,9 @@
 /** Delimiter before inschaling JSON in pow_meter field. */
 export const INSCHALING_DELIMITER = '<<<INSCHALING>>>';
 
+/** Delimiter before toelichting text in pow_meter field. */
+export const TOELICHTING_POW_DELIMITER = '<<<TOELICHTING_POW>>>';
+
 export const DEFAULT_POW_METER_MODEL = 'gpt-5.1-2025-11-13';
 
 export const GENERATION_FALLBACK =

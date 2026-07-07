@@ -5,6 +5,7 @@
 import {
   TP2026_POW_OVERVIEW_TITLE,
   TP2026_TOELICHTING_POW_TITLE,
+  TP2026_VISIE_PLAATSBARHEID_TITLE,
 } from '@/lib/tp2026/basis-profiel-field-order';
 
 export const BASIS_INHOUDSOPGAVE_TITLE = 'Inhoudsopgave';
@@ -36,6 +37,7 @@ export const BASIS_INHOUDSOPGAVE_SECTIONS: BasisInhoudsopgaveSection[] = [
       'Advies passende arbeid',
       TP2026_POW_OVERVIEW_TITLE,
       TP2026_TOELICHTING_POW_TITLE,
+      TP2026_VISIE_PLAATSBARHEID_TITLE,
       'Visie loopbaanadviseur',
       'Zoekprofiel',
     ],

@@ -12,6 +12,11 @@ import {
   normalizeBasisSectionReview,
 } from '@/lib/tp2026/basis-section-review';
 import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
+import {
+  hasToelichtingOpener,
+  updatePowMeterToelichting,
+} from '@/lib/tp/pow-meter/build-fields';
+import { TOELICHTING_POW_DELIMITER } from '@/lib/tp/pow-meter/constants';
 
 export const PRACTISCHE_BELEMMERINGEN_DEFAULT =
   'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
@@ -95,6 +100,18 @@ function normalizeBijlage1Phases(raw: unknown): TP2026Bijlage1Phase[] {
     });
 }
 
+function normalizePowMeterLegacyFields(next: Record<string, any>): void {
+  const powMeter = String(next.pow_meter ?? '').trim();
+  const visiePlaatsbaarheid = String(next.visie_plaatsbaarheid ?? '').trim();
+
+  if (!visiePlaatsbaarheid) return;
+  if (powMeter.includes(TOELICHTING_POW_DELIMITER)) return;
+  if (!hasToelichtingOpener(visiePlaatsbaarheid)) return;
+
+  next.pow_meter = updatePowMeterToelichting(powMeter, visiePlaatsbaarheid);
+  next.visie_plaatsbaarheid = '';
+}
+
 export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any> {
   const next = { ...raw };
 
@@ -168,6 +185,8 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   if (isAbsentText(next.other_employers)) {
     next.other_employers = '';
   }
+
+  normalizePowMeterLegacyFields(next);
 
   return next;
 }

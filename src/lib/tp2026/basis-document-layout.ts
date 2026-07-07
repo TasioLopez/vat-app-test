@@ -41,6 +41,7 @@ export function normalizeWkMarkdown(md: string): string {
   return body || WETTELIJKE_KADERS.trim();
 }
 
-export function getBasisToelichtingLabel(_key: string): string | null {
+export function getBasisToelichtingLabel(key: string): string | null {
+  if (key === 'wk') return TP_WK_INTRO_LINE;
   return null;
 }

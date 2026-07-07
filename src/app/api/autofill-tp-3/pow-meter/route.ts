@@ -51,13 +51,11 @@ export async function GET(req: NextRequest) {
     );
 
     let pow_meter: string;
-    let visie_plaatsbaarheid: string;
 
     try {
       const result = await generatePowMeter(openai, supabase, docs, ctx);
       pow_meter = result.pow_meter;
-      visie_plaatsbaarheid = result.visie_plaatsbaarheid;
-      if (!pow_meter.trim() && !visie_plaatsbaarheid.trim()) {
+      if (!pow_meter.trim()) {
         return NextResponse.json(
           { error: 'Geen POW-meter informatie gevonden', details: {} },
           { status: 200 }
@@ -66,17 +64,16 @@ export async function GET(req: NextRequest) {
     } catch (error) {
       console.error('❌ POW-meter generation failed:', error);
       pow_meter = GENERATION_FALLBACK;
-      visie_plaatsbaarheid = GENERATION_FALLBACK;
     }
 
     await supabase.from('tp_meta').upsert(
-      { employee_id: employeeId, pow_meter, visie_plaatsbaarheid } as any,
+      { employee_id: employeeId, pow_meter } as any,
       { onConflict: 'employee_id' }
     );
 
     return NextResponse.json({
-      details: { pow_meter, visie_plaatsbaarheid },
-      autofilled_fields: ['pow_meter', 'visie_plaatsbaarheid'],
+      details: { pow_meter },
+      autofilled_fields: ['pow_meter'],
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

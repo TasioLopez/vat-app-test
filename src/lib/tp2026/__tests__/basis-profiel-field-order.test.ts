@@ -48,4 +48,9 @@ describe('TP2026BasisFields', () => {
     const field = TP2026BasisFields.find((f) => f.key === 'prognose_bedrijfsarts');
     assert.equal(field?.label, 'Belastbaarheidsprofiel');
   });
+
+  it('labels visie_plaatsbaarheid as Visie op plaatsbaarheid', () => {
+    const field = TP2026BasisFields.find((f) => f.key === 'visie_plaatsbaarheid');
+    assert.equal(field?.label, 'Visie op plaatsbaarheid');
+  });
 });

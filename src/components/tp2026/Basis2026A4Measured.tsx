@@ -20,12 +20,12 @@ import {
   TP_BASIS_BODY_BOX_CLASS,
   TP_BASIS_DISCLAIMER_CLASS,
   formatBasisFootnoteDisplay,
-  TP_WK_INTRO_LINE,
 } from '@/lib/tp2026/basis-document-layout';
 import {
   TP2026_PROFIEL_PREVIEW_META,
   TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
   TP2026_POW_OVERVIEW_TITLE,
+  TP2026_TOELICHTING_POW_TITLE,
   type TP2026ProfielWerknemerFieldKey,
 } from '@/lib/tp2026/basis-profiel-field-order';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
@@ -40,6 +40,7 @@ import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { POW_METER_FOOTNOTE } from '@/lib/tp/pow-meter/constants';
+import { parsePowToelichting } from '@/lib/tp/pow-meter/build-fields';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import {
   TP_SPOOR2_SUBSECTIONS,
@@ -63,6 +64,7 @@ export type BasisTextVariant =
   | 'powStatic'
   | 'powGraphic'
   | 'powInschaling'
+  | 'powToelichting'
   | 'pow';
 
 /** Body atoms only — front page is always rendered separately on page 1. */
@@ -256,8 +258,8 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   pushTextField(
     'wk',
     'Wettelijke kaders en terminologie',
-    data.wettelijke_kaders,
-    WETTELIJKE_KADERS
+    normalizeWkMarkdown(String(data.wettelijke_kaders ?? '')),
+    normalizeWkMarkdown(WETTELIJKE_KADERS)
   );
   atoms.push({
     id: 'profiel-banner',
@@ -269,6 +271,8 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
     const meta = TP2026_PROFIEL_PREVIEW_META[fieldKey];
 
     if (fieldKey === 'pow_meter') {
+      const powMeterRaw = String(data.pow_meter ?? '').trim();
+      const toelichtingMd = parsePowToelichting(powMeterRaw);
       atoms.push(
         {
           id: 'pow-static',
@@ -293,9 +297,18 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
           kind: 'text',
           key: 'pow-inschaling',
           title: meta.title,
-          md: String(data.pow_meter ?? '').trim(),
+          md: powMeterRaw,
           showSectionTitle: false,
           variant: 'powInschaling',
+        },
+        {
+          id: 'pow-toelichting',
+          kind: 'text',
+          key: 'pow-toelichting',
+          title: TP2026_TOELICHTING_POW_TITLE,
+          md: toelichtingMd,
+          showSectionTitle: true,
+          variant: 'powToelichting',
         }
       );
       continue;
@@ -323,7 +336,8 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
     if (
       atom.variant === 'powStatic' ||
       atom.variant === 'powGraphic' ||
-      atom.variant === 'powInschaling'
+      atom.variant === 'powInschaling' ||
+      atom.variant === 'powToelichting'
     ) {
       return null;
     }
@@ -486,6 +500,13 @@ function TextBlockBody({
 
   if (variant === 'powInschaling') {
     return <PowInschalingTable raw={trimmed} />;
+  }
+
+  if (variant === 'powToelichting') {
+    if (!trimmed) {
+      return <span className="text-[12px] text-neutral-600">— nog niet ingevuld —</span>;
+    }
+    return <Basis2026MarkdownBody markdown={trimmed} />;
   }
 
   if (variant === 'pow') {

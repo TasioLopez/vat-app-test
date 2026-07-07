@@ -12,6 +12,7 @@ import {
   hasToelichtingOpener,
   hasVerwachtingOpener,
   parsePowInschaling,
+  parsePowToelichting,
 } from '../build-fields';
 import {
   INSCHALING_DELIMITER,
@@ -22,6 +23,7 @@ import {
   MAX_WORDS_VERWACHTING,
   MAX_WORDS_WERKZAME_UREN,
   SPOOR2_VERWACHTING_BLOCK,
+  TOELICHTING_POW_DELIMITER,
   VERWACHTING_OPENER,
 } from '../constants';
 import type { PowMeterContentResult } from '../schema';
@@ -38,18 +40,20 @@ const baseContent: PowMeterContentResult = {
 };
 
 describe('buildPowMeterFields V10', () => {
-  it('assembles server trede sentence and openers into inschaling + toelichting', () => {
-    const { pow_meter, visie_plaatsbaarheid } = buildPowMeterFields(baseContent);
+  it('assembles server trede sentence and openers into combined pow_meter storage', () => {
+    const { pow_meter } = buildPowMeterFields(baseContent);
 
     assert.ok(pow_meter.startsWith(INSCHALING_DELIMITER));
+    assert.ok(pow_meter.includes(TOELICHTING_POW_DELIMITER));
     const parsed = parsePowInschaling(pow_meter);
     assert.ok(parsed);
     assert.equal(parsed!.huidige_trede, buildHuidigeTredeText(2));
     assert.match(parsed!.werkzame_uren, /0,5 uur per week/);
     assert.ok(hasVerwachtingOpener(parsed!.verwachting));
     assert.match(parsed!.verwachting, /trede 3/);
-    assert.ok(hasToelichtingOpener(visie_plaatsbaarheid, 2));
-    assert.match(visie_plaatsbaarheid, /omdat werknemer beperkt buitenshuis actief is/);
+    const toelichting = parsePowToelichting(pow_meter);
+    assert.ok(hasToelichtingOpener(toelichting, 2));
+    assert.match(toelichting, /omdat werknemer beperkt buitenshuis actief is/);
   });
 
   it('strips leaked verwachting opener from model kernel', () => {
@@ -93,8 +97,9 @@ describe('buildPowMeterFields V10', () => {
       ...baseContent,
       toelichting_kern: longKern,
     };
-    const { visie_plaatsbaarheid } = buildPowMeterFields(content);
-    assert.ok(countWords(visie_plaatsbaarheid) <= MAX_WORDS_TOELICHTING);
+    const { pow_meter } = buildPowMeterFields(content);
+    const toelichting = parsePowToelichting(pow_meter);
+    assert.ok(countWords(toelichting) <= MAX_WORDS_TOELICHTING);
   });
 
   it('parsePowInschaling round-trips buildPowInschalingBlock', () => {

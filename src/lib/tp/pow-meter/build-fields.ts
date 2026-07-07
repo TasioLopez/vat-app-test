@@ -10,6 +10,7 @@ import {
   MAX_WORDS_WERKZAME_UREN,
   SPOOR2_VERWACHTING_BLOCK,
   TOELICHTING_OPENER_PREFIX,
+  TOELICHTING_POW_DELIMITER,
   VERWACHTING_OPENER,
   VERWACHTING_OPENER_SUFFIX,
   type TredeNumber,
@@ -24,7 +25,6 @@ export type PowInschalingData = {
 
 export type PowMeterFields = {
   pow_meter: string;
-  visie_plaatsbaarheid: string;
 };
 
 export type ClampInschalingOptions = {
@@ -249,12 +249,33 @@ export function buildPowInschalingBlock(data: PowInschalingData): string {
   return `${INSCHALING_DELIMITER}\n${json}`;
 }
 
+export function buildPowToelichtingBlock(toelichting: string): string {
+  const text = String(toelichting || '').trim();
+  if (!text) return '';
+  return `${TOELICHTING_POW_DELIMITER}\n${text}`;
+}
+
+export function buildPowMeterStorage(inschaling: PowInschalingData, toelichting: string): string {
+  const parts = [buildPowInschalingBlock(inschaling), buildPowToelichtingBlock(toelichting)].filter(Boolean);
+  return parts.join('\n\n');
+}
+
+function inschalingSegment(raw: string): string {
+  const text = String(raw || '').trim();
+  if (!text.includes(INSCHALING_DELIMITER)) return text;
+  const afterInschaling = text.split(INSCHALING_DELIMITER)[1] ?? '';
+  if (!afterInschaling.includes(TOELICHTING_POW_DELIMITER)) {
+    return afterInschaling.trim();
+  }
+  return afterInschaling.split(TOELICHTING_POW_DELIMITER)[0]?.trim() ?? '';
+}
+
 export function parsePowInschaling(raw: string): PowInschalingData | null {
   const text = String(raw || '').trim();
   if (!text) return null;
 
   if (text.includes(INSCHALING_DELIMITER)) {
-    const block = text.split(INSCHALING_DELIMITER)[1]?.trim() ?? '';
+    const block = inschalingSegment(text);
     try {
       const parsed = JSON.parse(block) as Record<string, unknown>;
       return {
@@ -270,6 +291,30 @@ export function parsePowInschaling(raw: string): PowInschalingData | null {
   return null;
 }
 
+export function parsePowToelichting(raw: string): string {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+
+  if (text.includes(TOELICHTING_POW_DELIMITER)) {
+    return text.split(TOELICHTING_POW_DELIMITER)[1]?.trim() ?? '';
+  }
+
+  if (!text.includes(INSCHALING_DELIMITER)) {
+    return text;
+  }
+
+  return '';
+}
+
+export function updatePowMeterToelichting(raw: string, toelichting: string): string {
+  const inschaling = parsePowInschaling(raw);
+  const nextToelichting = String(toelichting || '').trim();
+  if (!inschaling) {
+    return nextToelichting ? buildPowToelichtingBlock(nextToelichting) : String(raw || '').trim();
+  }
+  return buildPowMeterStorage(inschaling, nextToelichting);
+}
+
 export function buildPowMeterFields(content: PowMeterContentResult): PowMeterFields {
   const assembled = assemblePowMeterContent(content);
   const sanitized = sanitizePowMeterContent(assembled);
@@ -280,8 +325,7 @@ export function buildPowMeterFields(content: PowMeterContentResult): PowMeterFie
   };
 
   return {
-    pow_meter: buildPowInschalingBlock(inschaling),
-    visie_plaatsbaarheid: sanitized.toelichting_pow,
+    pow_meter: buildPowMeterStorage(inschaling, sanitized.toelichting_pow),
   };
 }
 
@@ -289,6 +333,10 @@ export function hasVerwachtingOpener(text: string): boolean {
   return text.trim().toLowerCase().startsWith(VERWACHTING_OPENER.toLowerCase());
 }
 
-export function hasToelichtingOpener(text: string, trede: TredeNumber): boolean {
-  return text.trim().toLowerCase().startsWith(buildToelichtingOpener(trede).toLowerCase());
+export function hasToelichtingOpener(text: string, trede?: TredeNumber): boolean {
+  const trimmed = text.trim().toLowerCase();
+  if (trede !== undefined) {
+    return trimmed.startsWith(buildToelichtingOpener(trede).toLowerCase());
+  }
+  return /^Werknemer bevindt zich tijdens de intake in trede \d+ van de POW-meter™ omdat/.test(trimmed);
 }
