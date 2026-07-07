@@ -9,12 +9,17 @@ import {
   type ZoekprofielFields,
 } from './build-fields';
 import { DEFAULT_ZOEKPROFIEL_MODEL } from './constants';
-import { ZOEKPROFIEL_CONTENT_PROMPT, buildZoekprofielContextMessage } from './prompt';
+import {
+  ZOEKPROFIEL_CONTENT_PROMPT,
+  buildZoekprofielContextMessage,
+  buildZoekprofielRetryMessage,
+} from './prompt';
 import {
   ZOEKPROFIEL_CONTENT_JSON_SCHEMA,
   parseZoekprofielContentResult,
   type ZoekprofielContentResult,
 } from './schema';
+import { formatValidationIssues } from './validate-output';
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
 
@@ -125,11 +130,62 @@ function buildApiContext(ctx: ZoekprofielBuildContext): Record<string, unknown> 
   };
 }
 
+type GenerateContentOptions = {
+  retryHints?: string;
+};
+
+async function callZoekprofielModel(
+  openai: OpenAI,
+  fileIds: string[],
+  ctx: ZoekprofielBuildContext,
+  options?: GenerateContentOptions
+): Promise<ZoekprofielContentResult> {
+  const contextMessage = buildZoekprofielContextMessage(buildApiContext(ctx));
+  const userContent: OpenAI.Responses.ResponseInputContent[] = [
+    { type: 'input_text', text: contextMessage },
+    ...fileIds.map(
+      (file_id): OpenAI.Responses.ResponseInputContent => ({
+        type: 'input_file',
+        file_id,
+      })
+    ),
+  ];
+
+  if (options?.retryHints) {
+    userContent.push({ type: 'input_text', text: options.retryHints });
+  }
+
+  const reasoningEffort = getReasoningEffort();
+  const response = await openai.responses.create({
+    model: getZoekprofielModel(),
+    instructions: ZOEKPROFIEL_CONTENT_PROMPT,
+    input: [{ role: 'user', content: userContent }],
+    ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'zoekprofiel_content',
+        strict: true,
+        schema: ZOEKPROFIEL_CONTENT_JSON_SCHEMA as Record<string, unknown>,
+      },
+    },
+  });
+
+  const outputText = response.output_text;
+  if (!outputText) {
+    throw new Error('Empty response from model');
+  }
+
+  const parsed = JSON.parse(outputText) as unknown;
+  return parseZoekprofielContentResult(parsed);
+}
+
 export async function generateZoekprofielContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: ZoekprofielBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  options?: GenerateContentOptions
 ): Promise<ZoekprofielContentResult> {
   const fileIds = await uploadZoekprofielDocs(openai, supabase, docs);
 
@@ -138,43 +194,21 @@ export async function generateZoekprofielContent(
   }
 
   try {
-    const contextMessage = buildZoekprofielContextMessage(buildApiContext(ctx));
-    const userContent: OpenAI.Responses.ResponseInputContent[] = [
-      { type: 'input_text', text: contextMessage },
-      ...fileIds.map(
-        (file_id): OpenAI.Responses.ResponseInputContent => ({
-          type: 'input_file',
-          file_id,
-        })
-      ),
-    ];
-
-    const reasoningEffort = getReasoningEffort();
-    const response = await openai.responses.create({
-      model: getZoekprofielModel(),
-      instructions: ZOEKPROFIEL_CONTENT_PROMPT,
-      input: [{ role: 'user', content: userContent }],
-      ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'zoekprofiel_content',
-          strict: true,
-          schema: ZOEKPROFIEL_CONTENT_JSON_SCHEMA as Record<string, unknown>,
-        },
-      },
-    });
-
-    const outputText = response.output_text;
-    if (!outputText) {
-      throw new Error('Empty response from model');
-    }
-
-    const parsed = JSON.parse(outputText) as unknown;
-    return parseZoekprofielContentResult(parsed);
+    return await callZoekprofielModel(openai, fileIds, ctx, options);
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }
+}
+
+function pickBetterFields(
+  first: ZoekprofielFields,
+  second: ZoekprofielFields
+): ZoekprofielFields {
+  const firstIssues = first.validationIssues?.length ?? 0;
+  const secondIssues = second.validationIssues?.length ?? 0;
+  if (secondIssues < firstIssues) return second;
+  if (secondIssues === firstIssues && !second.validationIssues?.length) return second;
+  return first;
 }
 
 export async function generateZoekprofiel(
@@ -184,7 +218,26 @@ export async function generateZoekprofiel(
   docs: EmployeeDoc[]
 ): Promise<ZoekprofielFields> {
   const content = await generateZoekprofielContent(openai, supabase, ctx, docs);
-  return buildZoekprofielFields(ctx, content);
+  let fields = buildZoekprofielFields(ctx, content);
+
+  if (fields.validationIssues?.length) {
+    const retryHints = buildZoekprofielRetryMessage(
+      formatValidationIssues(fields.validationIssues)
+    );
+    console.warn('⚠️ Zoekprofiel: validation failed, retrying once:', retryHints);
+
+    try {
+      const retryContent = await generateZoekprofielContent(openai, supabase, ctx, docs, {
+        retryHints,
+      });
+      const retryFields = buildZoekprofielFields(ctx, retryContent);
+      fields = pickBetterFields(fields, retryFields);
+    } catch (retryError) {
+      console.warn('⚠️ Zoekprofiel: retry failed, using first attempt', retryError);
+    }
+  }
+
+  return fields;
 }
 
 export function buildZoekprofielContextFromMeta(

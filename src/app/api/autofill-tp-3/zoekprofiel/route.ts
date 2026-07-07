@@ -68,6 +68,11 @@ export async function GET(req: NextRequest) {
     try {
       const result = await generateZoekprofiel(openai, supabase, ctx, allDocs);
       zoekprofiel = result.zoekprofiel;
+      if (result.validationIssues?.length) {
+        for (const issue of result.validationIssues) {
+          warnings.push(`Zoekprofiel validatie: ${issue.message}`);
+        }
+      }
       if (!zoekprofiel.trim()) {
         return NextResponse.json(
           { error: "Geen zoekprofielinformatie gevonden in documenten", details: {} },

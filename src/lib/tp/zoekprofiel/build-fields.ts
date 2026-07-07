@@ -1,25 +1,22 @@
 import {
-  FORBIDDEN_TERMS,
-  MAX_WORDS_TOTAL,
-  MIN_WORDS_TOTAL,
   OPENING_PATTERN,
   PARA1_CLOSING_TEMPLATES,
   SECTION_HEADING_PATTERN,
   type BelastbaarheidsdocumentType,
 } from './constants';
 import type { ZoekprofielContentResult } from './schema';
+import {
+  formatValidationIssues,
+  validateZoekprofielOutput,
+  type ZoekprofielBuildContext,
+  type ZoekprofielValidationIssue,
+} from './validate-output';
 
-export type ZoekprofielBuildContext = {
-  employee: { first_name?: string | null; last_name?: string | null };
-  meta: {
-    fml_izp_lab_date_voluit?: string | null;
-    /** When false, skip FML/IZP/LAB closing (AD/intake-only generation). Defaults to true. */
-    has_belastbaarheids_doc?: boolean;
-  };
-};
+export type { ZoekprofielBuildContext };
 
 export type ZoekprofielFields = {
   zoekprofiel: string;
+  validationIssues?: ZoekprofielValidationIssue[];
 };
 
 export function nlDate(iso?: string | null): string {
@@ -78,31 +75,6 @@ export function buildPara1Closing(
   return template.replace('[datum]', datumVoluit);
 }
 
-function validateZoekprofielOutput(zoekprofiel: string, alinea1Kern: string): void {
-  const wordCount = countWords(zoekprofiel);
-  if (wordCount < MIN_WORDS_TOTAL || wordCount > MAX_WORDS_TOTAL) {
-    console.warn(
-      `⚠️ Zoekprofiel: woordenaantal ${wordCount} buiten bereik ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL}`
-    );
-  }
-
-  if (!hasV2OpeningSentence(alinea1Kern)) {
-    console.warn('⚠️ Zoekprofiel: alinea_1_kern missing mandatory V2 opening sentence');
-  }
-
-  const paragraphCount = zoekprofiel.split(/\n\n+/).filter((p) => p.trim()).length;
-  if (paragraphCount !== 2) {
-    console.warn(`⚠️ Zoekprofiel: verwacht 2 alinea's, gevonden ${paragraphCount}`);
-  }
-
-  const lower = zoekprofiel.toLowerCase();
-  for (const term of FORBIDDEN_TERMS) {
-    if (lower.includes(term)) {
-      console.warn(`⚠️ Zoekprofiel: verboden term gevonden: "${term}"`);
-    }
-  }
-}
-
 export function buildZoekprofielFields(
   ctx: ZoekprofielBuildContext,
   content: ZoekprofielContentResult
@@ -124,7 +96,16 @@ export function buildZoekprofielFields(
     : '';
 
   const zoekprofiel = [para1, para2].filter(Boolean).join('\n\n');
-  validateZoekprofielOutput(zoekprofiel, alinea1Kern);
+  const validation = validateZoekprofielOutput(zoekprofiel, alinea1Kern, ctx, content);
 
-  return { zoekprofiel };
+  if (!validation.ok) {
+    for (const message of formatValidationIssues(validation.issues)) {
+      console.warn(`⚠️ Zoekprofiel: ${message}`);
+    }
+  }
+
+  return {
+    zoekprofiel,
+    validationIssues: validation.ok ? undefined : validation.issues,
+  };
 }

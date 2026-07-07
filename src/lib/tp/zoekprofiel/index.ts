@@ -35,3 +35,9 @@ export {
   parseZoekprofielContentResult,
   type ZoekprofielContentResult,
 } from './schema';
+export {
+  validateZoekprofielOutput,
+  formatValidationIssues,
+  type ZoekprofielValidationIssue,
+  type ZoekprofielValidationResult,
+} from './validate-output';

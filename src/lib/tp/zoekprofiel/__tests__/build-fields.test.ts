@@ -22,7 +22,7 @@ const v2Opening =
 const baseContent: ZoekprofielContentResult = {
   alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker en productiemedewerker in de logistiek en productie.`,
   alinea_2:
-    'Werkzaamheden met een overzichtelijke structuur en voorspelbare werkomgeving zijn passend. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Regelmatige werktijden en geen nachtdiensten zijn passend.',
+    'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Beperkt fysiek belastend werk is passend. Een rustige werkomgeving is passend. Regelmatige werktijden en geen nachtdiensten zijn passend.',
   belastbaarheidsdocument_type: 'fml',
   belastbaarheidsdocument_datum_voluit: '3 februari 2026',
 };
@@ -37,7 +37,7 @@ describe('buildZoekprofielFields', () => {
       parts[0],
       /Functionele Mogelijkhedenlijst van 12 december 2025/
     );
-    assert.match(parts[1], /overzichtelijke structuur/);
+    assert.match(parts[1], /overzichtelijke/);
   });
 
   it('returns empty string when alinea_1_kern is null', () => {
