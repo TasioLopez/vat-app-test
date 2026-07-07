@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
+import { parsePowToelichting } from '@/lib/tp/pow-meter/build-fields';
 import {
   buildPowMeterContextFromMeta,
   filterPowMeterDocs,
@@ -15,7 +16,7 @@ const supabase = createClient(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/** Delegates to POW-meter V10 — returns only visie_plaatsbaarheid (toelichting). */
+/** Legacy delegate — generates POW-meter storage (inschaling + toelichting in pow_meter). */
 export async function GET(req: NextRequest) {
   try {
     const access = await requireEmployeeAutofillAccess(req);
@@ -51,12 +52,12 @@ export async function GET(req: NextRequest) {
       meta?.fml_izp_lab_date
     );
 
-    let visie_plaatsbaarheid: string;
+    let pow_meter: string;
 
     try {
       const result = await generatePowMeter(openai, supabase, docs, ctx);
-      visie_plaatsbaarheid = result.visie_plaatsbaarheid;
-      if (!visie_plaatsbaarheid.trim()) {
+      pow_meter = result.pow_meter;
+      if (!pow_meter.trim()) {
         return NextResponse.json(
           { error: 'Geen toelichting POW-meter gevonden', details: {} },
           { status: 200 }
@@ -64,17 +65,19 @@ export async function GET(req: NextRequest) {
       }
     } catch (error) {
       console.error('❌ visie-plaatsbaarheid (POW) generation failed:', error);
-      visie_plaatsbaarheid = GENERATION_FALLBACK;
+      pow_meter = GENERATION_FALLBACK;
     }
 
     await supabase.from('tp_meta').upsert(
-      { employee_id: employeeId, visie_plaatsbaarheid } as any,
+      { employee_id: employeeId, pow_meter } as any,
       { onConflict: 'employee_id' }
     );
 
+    const toelichting = parsePowToelichting(pow_meter);
+
     return NextResponse.json({
-      details: { visie_plaatsbaarheid },
-      autofilled_fields: ['visie_plaatsbaarheid'],
+      details: { pow_meter, visie_plaatsbaarheid: toelichting },
+      autofilled_fields: ['pow_meter'],
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
