@@ -482,12 +482,6 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
                 variant: "block",
             },
             {
-                key: "plaats",
-                title: "Visie op plaatsbaarheid",
-                text: tpData.visie_plaatsbaarheid || "—",
-                variant: "block",
-            },
-            {
                 key: "vlb",
                 title: "Visie van loopbaanadviseur",
                 text: tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS,

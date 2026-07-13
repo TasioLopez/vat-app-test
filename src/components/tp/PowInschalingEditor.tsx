@@ -9,7 +9,7 @@ import {
   updatePowMeterToelichting,
   type PowInschalingData,
 } from '@/lib/tp/pow-meter/build-fields';
-import { TP2026_TOELICHTING_POW_TITLE } from '@/lib/tp2026/basis-profiel-field-order';
+import { TP2026_VISIE_PLAATSBARHEID_TITLE } from '@/lib/tp2026/basis-profiel-field-order';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 
@@ -85,7 +85,7 @@ export function PowInschalingEditor({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-[#6d2a96]">{TP2026_TOELICHTING_POW_TITLE}</label>
+        <label className="mb-1 block text-xs font-medium text-[#6d2a96]">{TP2026_VISIE_PLAATSBARHEID_TITLE}</label>
         <textarea
           className={TEXTAREA_CLASS}
           value={toelichting}

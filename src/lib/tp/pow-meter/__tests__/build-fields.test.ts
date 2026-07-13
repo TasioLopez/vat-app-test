@@ -56,6 +56,27 @@ describe('buildPowMeterFields V10', () => {
     assert.match(toelichting, /omdat werknemer beperkt buitenshuis actief is/);
   });
 
+  it('sanitizes toelichting by removing FML dates and bedrijfsarts attribution phrases', () => {
+    const content: PowMeterContentResult = {
+      ...baseContent,
+      huidige_trede_nummer: 3,
+      toelichting_kern:
+        'de bedrijfsarts benutbare mogelijkheden heeft vastgelegd in de FML van 29 april 2026 met een urenbeperking tot circa 2 uur per dag en 10 uur per week, maar werknemer op dit moment geen werk verricht en 0 uur per week werkt.',
+    };
+
+    const { pow_meter } = buildPowMeterFields(content);
+    const toelichting = parsePowToelichting(pow_meter);
+
+    assert.ok(hasToelichtingOpener(toelichting, 3));
+    assert.equal(/\bbedrijfsarts\b/i.test(toelichting), false);
+    assert.equal(/\bFML\b/i.test(toelichting), false);
+    assert.equal(/29\s+april\s+2026/i.test(toelichting), false);
+
+    // The substantive clause should remain.
+    assert.match(toelichting, /urenbeperking/i);
+    assert.match(toelichting, /0\s+uur\s+per\s+week/i);
+  });
+
   it('strips leaked verwachting opener from model kernel', () => {
     const content: PowMeterContentResult = {
       ...baseContent,

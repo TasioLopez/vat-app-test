@@ -214,6 +214,26 @@ function validateAssembledOutput(content: AssembledPowMeterContent): void {
   }
 }
 
+function stripFmlAndBedrijfsartsAttribution(text: string): string {
+  let out = String(text || '');
+
+  // Remove common source/date attribution phrases while keeping the factual remainder.
+  out = out.replace(
+    /\bomdat\s+de\s+bedrijfsarts[\s\S]*?\bmet\s+een\s+/gi,
+    'omdat er sprake is van een '
+  );
+  out = out.replace(/\bomdat\s+de\s+bedrijfsarts\b/gi, 'omdat');
+  out = out.replace(/\bde\s+bedrijfsarts\b/gi, '');
+
+  // Strip explicit document references + dates (keep surrounding facts).
+  out = out.replace(/\b(in\s+de\s+)?fml\s+van\s+\d{1,2}\s+\p{L}+\s+\d{4}\b/giu, '');
+  out = out.replace(/\b(in\s+de\s+)?(fml|izp|lab)\b/giu, '');
+
+  // Collapse whitespace and fix double punctuation.
+  out = out.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').replace(/\s+\./g, '.').trim();
+  return out;
+}
+
 export function sanitizePowMeterContent(content: AssembledPowMeterContent): AssembledPowMeterContent {
   const werkzameUren = clampInschalingText(content.huidige_werkzame_uren, {
     maxWords: MAX_WORDS_WERKZAME_UREN,
@@ -227,7 +247,10 @@ export function sanitizePowMeterContent(content: AssembledPowMeterContent): Asse
     preserveOpener: VERWACHTING_OPENER,
   });
 
-  const toelichting = truncateToWordLimit(stripCitations(content.toelichting_pow), MAX_WORDS_TOELICHTING);
+  const toelichting = truncateToWordLimit(
+    stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow)),
+    MAX_WORDS_TOELICHTING
+  );
 
   const sanitized: AssembledPowMeterContent = {
     huidige_trede_tekst: stripCitations(content.huidige_trede_tekst),

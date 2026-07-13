@@ -18,8 +18,8 @@ import {
 } from '@/lib/tp2026/basis-section-review';
 
 describe('BASIS_EDITOR_SECTIONS', () => {
-  it('lists 12 editable sections without wettelijke_kaders or inleiding_sub', () => {
-    assert.equal(BASIS_EDITOR_SECTIONS.length, 12);
+  it('lists 11 editable sections without wettelijke_kaders or inleiding_sub', () => {
+    assert.equal(BASIS_EDITOR_SECTIONS.length, 11);
     assert.equal(BASIS_EDITOR_SECTIONS[0]?.id, 'inleiding');
     assert.equal(BASIS_EDITOR_SECTIONS.at(-1)?.id, 'tp3_activities');
     assert.equal(BASIS_EDITOR_SECTIONS.some((s) => s.id === 'wettelijke_kaders'), false);

@@ -14,13 +14,12 @@ const EXPECTED_PROFIEL_ORDER = [
   'praktische_belemmeringen',
   'advies_ad_passende_arbeid',
   'pow_meter',
-  'visie_plaatsbaarheid',
   'visie_loopbaanadviseur',
   'zoekprofiel',
 ] as const;
 
 describe('TP2026_PROFIEL_WERKNEMER_FIELD_ORDER', () => {
-  it('has exactly 10 profiel fields in official order', () => {
+  it('has exactly 9 profiel fields in official order', () => {
     assert.deepEqual([...TP2026_PROFIEL_WERKNEMER_FIELD_ORDER], [...EXPECTED_PROFIEL_ORDER]);
   });
 });
@@ -47,10 +46,5 @@ describe('TP2026BasisFields', () => {
   it('labels prognose_bedrijfsarts as Belastbaarheidsprofiel', () => {
     const field = TP2026BasisFields.find((f) => f.key === 'prognose_bedrijfsarts');
     assert.equal(field?.label, 'Belastbaarheidsprofiel');
-  });
-
-  it('labels visie_plaatsbaarheid as Visie op plaatsbaarheid', () => {
-    const field = TP2026BasisFields.find((f) => f.key === 'visie_plaatsbaarheid');
-    assert.equal(field?.label, 'Visie op plaatsbaarheid');
   });
 });

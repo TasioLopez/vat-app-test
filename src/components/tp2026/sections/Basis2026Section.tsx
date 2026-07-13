@@ -374,14 +374,6 @@ function BasisFieldEditorRow({
           </div>
         </div>
       ) : null}
-      {field.key === 'visie_plaatsbaarheid' && String(data[field.key] ?? '').trim() ? (
-        <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
-          <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2 text-sm leading-relaxed text-neutral-900">
-            <Basis2026MarkdownBody markdown={String(data[field.key] ?? '')} />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

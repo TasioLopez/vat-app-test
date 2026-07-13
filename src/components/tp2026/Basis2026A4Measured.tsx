@@ -25,7 +25,7 @@ import {
   TP2026_PROFIEL_PREVIEW_META,
   TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
   TP2026_POW_OVERVIEW_TITLE,
-  TP2026_TOELICHTING_POW_TITLE,
+  TP2026_VISIE_PLAATSBARHEID_TITLE,
   type TP2026ProfielWerknemerFieldKey,
 } from '@/lib/tp2026/basis-profiel-field-order';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
@@ -304,7 +304,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
           id: 'pow-toelichting',
           kind: 'text',
           key: 'pow-toelichting',
-          title: TP2026_TOELICHTING_POW_TITLE,
+          title: TP2026_VISIE_PLAATSBARHEID_TITLE,
           md: toelichtingMd,
           showSectionTitle: true,
           variant: 'powToelichting',

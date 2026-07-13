@@ -590,7 +590,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         { id: 'praktische-belemmeringen', label: 'Praktische belemmeringen', run: runBelemmeringen },
         { id: 'ad-advies', label: 'AD advies over passende arbeid', run: runAdAdviesPassendeArbeid },
         { id: 'pow', label: 'PoW-meter', run: runPowMeter },
-        { id: 'plaatsbaarheid', label: 'Visie op plaatsbaarheid', run: runVisiePlaatsbaarheid },
         { id: 'visie-adviseur', label: 'Visie van loopbaanadviseur', run: runVisieAdviseur },
         { id: 'zoekprofiel', label: 'Zoekprofiel', run: runZoekprofiel },
     ];
@@ -669,7 +668,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
         B("ad", "In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid",
             tpData.advies_ad_passende_arbeid || (tpData.has_ad_report === false ? "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld." : "— nog niet ingevuld —")),
         B("pow", "Perspectief op Werk (PoW-meter)", tpData.pow_meter || "— door werknemer in te vullen —"),
-        B("plaats", "Visie op plaatsbaarheid", tpData.visie_plaatsbaarheid || "— nog niet ingevuld —"),
         B("vlb", "Visie van loopbaanadviseur", tpData.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS),
         B("zp", "Zoekprofiel", tpData.zoekprofiel || "— nog niet ingevuld —"),
 
@@ -817,11 +815,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                             content={tpData.pow_meter}
                             onClick={() => setOpenModal('pow')}
                         />
-                        <SectionCard
-                            title="Visie op plaatsbaarheid"
-                            content={tpData.visie_plaatsbaarheid}
-                            onClick={() => setOpenModal('plaatsbaarheid')}
-                        />
                     </div>
                 </div>
 
@@ -951,19 +944,6 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                 isAutofilling={busy.powMeter}
                 isRewriting={rewriting.pow_meter}
                 placeholder="Laat AI dit genereren uit AD rapport, FML/IZP en intakeformulier — of pas handmatig aan."
-            />
-            
-            <SectionEditorModal
-                isOpen={openModal === 'plaatsbaarheid'}
-                onClose={() => setOpenModal(null)}
-                title="Visie op plaatsbaarheid"
-                value={tpData.visie_plaatsbaarheid || ''}
-                onChange={(v) => updateField('visie_plaatsbaarheid', v)}
-                onAutofill={genVisiePlaatsbaarheid}
-                onRewrite={() => rewriteInMyStyle('visie_plaatsbaarheid', tpData.visie_plaatsbaarheid || '')}
-                isAutofilling={busy.plaatsbaarheid}
-                isRewriting={rewriting.visie_plaatsbaarheid}
-                placeholder="Laat AI dit genereren uit alle documenten — of pas handmatig aan."
             />
 
             {/* Bulk autofill selection modal */}

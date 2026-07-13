@@ -9,6 +9,5 @@ export const TP2026_BASIS_AUTOFILL_ENDPOINTS: Partial<Record<string, string>> = 
   praktische_belemmeringen: '/api/autofill-tp-3/belemmeringen',
   zoekprofiel: '/api/autofill-tp-3/zoekprofiel',
   advies_ad_passende_arbeid: '/api/autofill-tp-3/ad-advies-passende-arbeid',
-  visie_plaatsbaarheid: '/api/autofill-tp-3/plaatsbaarheid',
   pow_meter: '/api/autofill-tp-3/pow-meter',
 };

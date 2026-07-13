@@ -443,12 +443,6 @@ export default function Section3A4({ data }: { data: TPData }) {
       variant: "block",
     },
     {
-      key: "plaats",
-      title: "Visie op plaatsbaarheid",
-      text: safe(data.visie_plaatsbaarheid),
-      variant: "block",
-    },
-    {
       key: "vlb",
       title: "Visie van loopbaanadviseur",
       text: data.visie_loopbaanadviseur || VISIE_LOOPBAANADVISEUR_BASIS,

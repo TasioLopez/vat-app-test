@@ -59,7 +59,6 @@ export const TP2026_BASIS_FIELD_LABELS: Record<string, string> = {
   praktische_belemmeringen: 'Praktische belemmeringen',
   zoekprofiel: 'Zoekprofiel',
   advies_ad_passende_arbeid: 'AD advies over passende arbeid',
-  visie_plaatsbaarheid: 'Visie op plaatsbaarheid',
   pow_meter: 'PoW-meter',
 };
 

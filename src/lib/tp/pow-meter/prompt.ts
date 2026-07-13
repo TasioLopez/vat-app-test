@@ -59,6 +59,7 @@ OUTPUT (model levert kernels — vaste zinnen worden door het systeem toegevoegd
    toelichting_kern: vervolg na "omdat", max ~${MAX_WORDS_TOELICHTING} woorden totaal (inclusief opener na samenstelling).
    Onderbouw: waarom deze trede, actuele werkuren, contractverhouding, aangepast/onbetaald werk, Spoor 1/2, activiteiten buitenshuis, participatie, dagstructuur, motivatie, waarom geen hogere trede nu, waarom hogere trede over 3 maanden realistisch.
    Actuele werkuren per week altijd expliciet noemen. Geen Spoor 2-block in toelichting.
+   VERMIJD BRON-ATTRIBUTIE: noem geen documentnamen (FML/IZP/LAB), geen datums, en schrijf niet “de bedrijfsarts heeft vastgesteld/vastgelegd/aangegeven…”. Gebruik neutrale formuleringen (bijv. “er is sprake van een urenbeperking …”) en behoud alleen de feiten.
 
 SCHRIJFREGELS
 - Objectieve arbeidsdeskundige taal, UWV-proof, derde persoon ("werknemer")

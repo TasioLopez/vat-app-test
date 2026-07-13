@@ -105,10 +105,13 @@ function normalizePowMeterLegacyFields(next: Record<string, any>): void {
   const visiePlaatsbaarheid = String(next.visie_plaatsbaarheid ?? '').trim();
 
   if (!visiePlaatsbaarheid) return;
-  if (powMeter.includes(TOELICHTING_POW_DELIMITER)) return;
-  if (!hasToelichtingOpener(visiePlaatsbaarheid)) return;
 
-  next.pow_meter = updatePowMeterToelichting(powMeter, visiePlaatsbaarheid);
+  // If legacy visie_plaatsbaarheid looks like POW toelichting and pow_meter has no toelichting block yet,
+  // merge it in; otherwise we still discard the standalone field (section removed from TP2026).
+  if (!powMeter.includes(TOELICHTING_POW_DELIMITER) && hasToelichtingOpener(visiePlaatsbaarheid)) {
+    next.pow_meter = updatePowMeterToelichting(powMeter, visiePlaatsbaarheid);
+  }
+
   next.visie_plaatsbaarheid = '';
 }
 

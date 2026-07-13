@@ -43,7 +43,7 @@ export const POW_METER_CONTENT_JSON_SCHEMA = {
     toelichting_kern: {
       type: 'string',
       description:
-        'Continues after "omdat" (do not repeat opener). Max ~120 words total with opener. Underpin trede, hours, contract, spoor, participation, motivation.',
+        'Continues after "omdat" (do not repeat opener). Max ~120 words total with opener. Underpin trede, hours, contract, spoor, participation, motivation. Do not mention FML/IZP/LAB or dates; avoid attribution phrasing like "de bedrijfsarts heeft vastgesteld/vastgelegd...".',
     },
   },
   required: [
