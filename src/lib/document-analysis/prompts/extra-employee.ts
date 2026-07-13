@@ -6,7 +6,7 @@ Als dit document een intakeformulier is (secties 1–17, "Hoe verplaatst werknem
 ${INTAKE_EMPLOYEE_PROMPT}
 
 Anders extract uit vrije tekst:
-- current_job, contract_hours, date_of_birth, gender, work_experience, education_level (hoogste), education_name
+- current_job, contract_hours, date_of_birth, gender, work_experience, education_level (hoogste afgeronde basisopleiding), education_name
 
 REGELS: geen gokken met defaults. ALLEEN JSON object.`;
 

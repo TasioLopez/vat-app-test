@@ -356,6 +356,30 @@ function SignatureBlock({
     );
 }
 
+function AgreementSignatureBlock({
+    employeeName,
+    advisorName,
+    employerContact,
+    employerFunctionCompany,
+}: {
+    employeeName: string;
+    advisorName: string;
+    employerContact: string;
+    employerFunctionCompany?: string;
+}) {
+    return (
+        <div className="[break-inside:avoid] print:[break-inside:avoid]">
+            <AgreementBlock />
+            <SignatureBlock
+                employeeName={employeeName}
+                advisorName={advisorName}
+                employerContact={employerContact}
+                employerFunctionCompany={employerFunctionCompany}
+            />
+        </div>
+    );
+}
+
 export default function Section3A4Client({ employeeId }: { employeeId: string }) {
     const { tpData } = useTP();
     
@@ -479,13 +503,11 @@ export default function Section3A4Client({ employeeId }: { employeeId: string })
 
         list.push({ key: "spoor2", variant: "custom", node: <BasisSpoor2Block /> });
 
-        // Agreement and signatures as custom nodes
-        list.push({ key: "agree", variant: "custom", node: <AgreementBlock /> });
         list.push({
-            key: "sign",
+            key: "agree-sign",
             variant: "custom",
             node: (
-                <SignatureBlock
+                <AgreementSignatureBlock
                     employeeName={
                         `${tpData.first_name ?? ""} ${tpData.last_name ?? ""}`.trim() ||
                         "Naam werknemer"

@@ -124,10 +124,13 @@ async function processDocumentWithAssistant(
       if (education.education_level) {
         console.log(`✅ Resolved education level: ${education.education_level}`);
         mapped.education_level = education.education_level;
-      }
-      if (education.education_name) {
-        mapped.education_name = education.education_name;
-      } else if (mapped.education_name && education.education_level) {
+        if (education.education_name) {
+          mapped.education_name = education.education_name;
+        } else {
+          delete mapped.education_name;
+        }
+      } else {
+        delete mapped.education_level;
         delete mapped.education_name;
       }
 

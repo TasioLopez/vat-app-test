@@ -120,3 +120,18 @@ export function applyTrajectoryDateDerivations<T extends Record<string, unknown>
   if (Object.keys(updates).length === 0) return data;
   return { ...data, ...updates };
 }
+
+/** Parse tp_lead_time (weeks) from stored string/number values. */
+export function parseTpLeadTimeWeeks(value: unknown): number | null {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** True when doorlooptijd is below the threshold (default 10 weeks). */
+export function isLowTpLeadTime(value: unknown, threshold = 10): boolean {
+  const weeks = parseTpLeadTimeWeeks(value);
+  return weeks != null && weeks < threshold;
+}

@@ -10,7 +10,7 @@ import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
 import { formatEmployeeName } from '@/lib/utils';
-import FieldControl from '@/components/tp2026/FieldControl';
+import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 
 /**
  * Positive = shift artwork (and banner) slightly below strict vertical center on A4,
@@ -152,7 +152,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
               <CoverInfoLine label="Datum rapportage" value={formatNLDate(data.tp_creation_date)} />
               <CoverInfoLine
                 label="Opdrachtgever"
-                value={data.employer_name || data.client_name || ''}
+                value={getWerkgeverName(data)}
               />
             </div>
           </div>

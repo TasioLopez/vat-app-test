@@ -10,6 +10,7 @@ import { loadTPData } from "@/lib/tp/load";
 import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
 import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
+import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
@@ -313,6 +314,8 @@ export async function GET(req: NextRequest) {
     snapshotData = ((instance.data_json || {}) as Record<string, any>);
     if (resolvedLayout === "tp_2026") {
       snapshotData = ensureTP2026Shape(snapshotData);
+      const profileContext = await resolveTPProfileContext(ssr, employeeId);
+      snapshotData = applyTPProfileContext(snapshotData, profileContext) as Record<string, any>;
     }
   }
 

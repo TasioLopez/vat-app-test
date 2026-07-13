@@ -38,7 +38,7 @@ export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefine
 export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
   return (
     <ValentineZLogoBulletRow className="mt-2">
-      <span className="text-[12px] leading-relaxed text-neutral-900">{subText.trim()}</span>
+      <span className="text-[12px] leading-snug text-neutral-900">{subText.trim()}</span>
     </ValentineZLogoBulletRow>
   );
 }
@@ -58,6 +58,9 @@ export function Spoor2SubsectionUnit({
 }) {
   const trimmed = String(body || '').trim();
   const hasSubText = typeof subText === 'string' && subText.trim().length > 0;
+  const boxClass = hasSubText
+    ? `${SPOOR2_BOX_CLASS} [break-inside:avoid] print:[break-inside:avoid]`
+    : SPOOR2_BOX_CLASS;
 
   return (
     <>
@@ -69,7 +72,7 @@ export function Spoor2SubsectionUnit({
         />
       ) : null}
       {trimmed || showSubsectionTitle || hasSubText ? (
-        <div className={SPOOR2_BOX_CLASS}>
+        <div className={boxClass}>
           {showSubsectionTitle ? (
             <div className={SPOOR2_HEADING_CLASS}>{subsectionTitle}</div>
           ) : null}

@@ -28,6 +28,7 @@ import {
 import { formatPhoneForDisplay } from '@/lib/phone/format-dutch-display';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
+import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 
@@ -63,7 +64,7 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
     data.first_name && data.last_name
       ? formatTP2026CoverVoorName(data.first_name, data.last_name)
       : [data.last_name, data.first_name].filter(Boolean).join(' ').trim() || '—';
-  const werkgever = data.employer_name || data.client_name || '—';
+  const werkgever = getWerkgeverName(data) || '—';
   const adviseur = data.consultant_name || '—';
 
   const items: { label: string; value: React.ReactNode }[] = [
@@ -119,6 +120,17 @@ export function Gegevens2026Editor({
       {GEGEVENS_EDITOR_SECTIONS.map((section) => (
         <GegevensEditorSection key={section.id} title={section.title} icon={section.icon}>
           <div className="space-y-4">
+            {section.id === 'opdrachtgever' ? (
+              <>
+                <div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">Werkgever</div>
+                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
+                    {getWerkgeverName(data) || '—'}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Wijzig op het werknemersprofiel</p>
+              </>
+            ) : null}
             {section.rows.map((row, i) => (
               <GegevensEditorRow key={`${section.id}-${i}`} row={row} data={data} updateField={updateField} />
             ))}
@@ -165,7 +177,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
         <div className="mt-7">
           <SectionBand title="Gegevens opdrachtgever" />
           <TP2026FieldTable>
-            <DataRow label="Werkgever" value={data.employer_name || '—'} />
+            <DataRow label="Werkgever" value={getWerkgeverName(data) || '—'} />
             <DataRow label="Contactpersoon" value={data.client_referent_name || '—'} />
             <DataRow label="Telefoon" value={formatPhoneForDisplay(data.client_referent_phone)} />
             <DataRow label="E-mail" value={data.client_referent_email || '—'} />
@@ -226,7 +238,7 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
               label="Andere werkgever(s)"
               value={formatGegevensOtherEmployers(
                 data.other_employers,
-                data.client_name || data.employer_name
+                getWerkgeverName(data)
               )}
             />
           </TP2026FieldTable>

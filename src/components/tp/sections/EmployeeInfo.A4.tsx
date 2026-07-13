@@ -16,6 +16,7 @@ import {
   formatGegevensOtherEmployers,
 } from "@/lib/utils";
 import { formatPhoneForDisplay } from "@/lib/phone/format-dutch-display";
+import { getWerkgeverName } from "@/lib/tp/resolve-profile-context";
 
 const page = "bg-white w-[794px] h-[1123px] shadow border p-10 text-[12px] font-sans mx-auto mb-6 print:shadow-none print:border-0";
 const heading = "text-lg font-semibold text-center mb-6";
@@ -174,7 +175,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
       <div className={paperText}>
         <Table
           rows={[
-            { label: "Werkgever", value: data.client_name || "—" },
+            { label: "Werkgever", value: getWerkgeverName(data) || "—" },
             { label: "Contactpersoon", value: data.client_referent_name || "—" },
             { label: "Telefoon", value: formatPhoneForDisplay(data.client_referent_phone) },
             { label: "Email", value: data.client_referent_email || "—" },
@@ -218,7 +219,7 @@ export default function EmployeeInfoA4({ data }: { data: TPData }) {
               label: "Aantal contracturen",
               value: data.contract_hours ? `${data.contract_hours} uur per week` : "—",
             },
-            { label: "Andere werkgever(s)", value: formatGegevensOtherEmployers(data.other_employers, data.client_name || data.employer_name) },
+            { label: "Andere werkgever(s)", value: formatGegevensOtherEmployers(data.other_employers, getWerkgeverName(data)) },
           ]}
         />
       </div>

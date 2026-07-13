@@ -1,5 +1,7 @@
 /** Shared option lists for Gegevens / employee profile fields. */
 
+import { isAbsentText } from '@/lib/utils';
+
 export const EDUCATION_LEVEL_OPTIONS = [
   'Praktijkonderwijs',
   'VMBO',
@@ -196,23 +198,139 @@ export function getHighestEducationLevel(levels: string[]): string | null {
   return highestLevel;
 }
 
+export type IntakeEducationRow = {
+  level: string;
+  name?: string;
+  finished: boolean;
+};
+
+/** Reject non-schooling tokens that sometimes appear in autofill output. */
+export function isInvalidEducationLevelToken(value: unknown): boolean {
+  if (value == null) return true;
+  if (isAbsentText(value)) return true;
+  const lower = String(value).trim().toLowerCase();
+  return lower === 'nee' || lower === 'nei' || lower === 'ongeschoold';
+}
+
+function detectEducationLineFinished(line: string): boolean | null {
+  const lower = line.toLowerCase();
+  if (/\bniet\s+afgerond\b/.test(lower)) return false;
+  if (/\bnee\b/.test(lower)) return false;
+  if (/\bafgerond\b/.test(lower)) return true;
+  if (/\bja\b/.test(lower)) return true;
+  return null;
+}
+
+function findLevelInEducationLine(line: string): { level: string; remainder: string } | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  for (const { pattern, canonical } of levelPrefixPatterns()) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      const remainder = trimmed
+        .slice(match[0].length)
+        .replace(/^[\s\-–—]+/, '')
+        .trim();
+      return { level: canonical, remainder };
+    }
+  }
+
+  return null;
+}
+
+function cleanEducationNameFromLine(remainder: string, level: string): string | undefined {
+  let name = remainder
+    .replace(/\b(?:ja|nee|afgerond|niet\s+afgerond)\b/gi, '')
+    .replace(/^[\s\-–—,;:]+|[\s\-–—,;:]+$/g, '')
+    .trim();
+
+  if (!name) return undefined;
+  if (isEducationCertification(name)) return undefined;
+
+  const stripped = stripLevelPrefixFromName(level, name);
+  name = stripped || name;
+  if (!name || name.toLowerCase() === level.toLowerCase()) return undefined;
+  return name;
+}
+
+/** Parse intake education table rows with Afgerond status. */
+export function parseIntakeEducationRows(sectionText: string): IntakeEducationRow[] {
+  if (!sectionText?.trim()) return [];
+
+  const rows: IntakeEducationRow[] = [];
+
+  for (const rawLine of sectionText.split(/[\n\r]+/)) {
+    let line = rawLine.trim();
+    if (!line) continue;
+    if (/^algemene\s+informatie/i.test(line)) continue;
+    if (/^werkervaring/i.test(line)) continue;
+
+    if (/^opleidingen/i.test(line)) {
+      const afterHeader = line.replace(/^opleidingen\s*\??\s*afgerond\s*\??\s*/i, '').trim();
+      if (!afterHeader) continue;
+      line = afterHeader;
+    }
+
+    const found = findLevelInEducationLine(line);
+    if (!found) continue;
+
+    const { level, remainder } = found;
+    if (isEducationCertification(level)) continue;
+
+    const finishedStatus = detectEducationLineFinished(line);
+    const finished = finishedStatus === true;
+
+    const name = cleanEducationNameFromLine(remainder, level);
+
+    rows.push({ level, name, finished });
+  }
+
+  return rows;
+}
+
+/** Pick the highest finished schooling row from parsed intake rows. */
+export function resolveHighestFinishedEducation(rows: IntakeEducationRow[]): {
+  education_level?: string;
+  education_name?: string;
+} {
+  const finished = rows.filter((row) => row.finished);
+  if (finished.length === 0) return {};
+
+  const highestLevel = getHighestEducationLevel(finished.map((row) => row.level));
+  if (!highestLevel) return {};
+
+  const matching = finished.filter((row) => row.level === highestLevel);
+  const name = matching
+    .map((row) => row.name)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return {
+    education_level: highestLevel,
+    ...(name ? { education_name: name } : {}),
+  };
+}
+
 /**
- * Resolve education_level after intake autofill: trust valid LLM output;
- * otherwise prefer first level in the education section (top table row).
+ * Resolve education_level from intake document text: highest finished base schooling.
+ * Falls back to normalized LLM level only when document text is absent.
  */
 export function resolveEducationLevelFromIntake(
   mappedLevel: unknown,
   rawText: string
 ): string | undefined {
+  if (rawText?.trim()) {
+    const section = sliceEducationSection(rawText);
+    const resolved = resolveHighestFinishedEducation(parseIntakeEducationRows(section));
+    if (resolved.education_level) return resolved.education_level;
+    return undefined;
+  }
+
   const llmLevel = normalizeEducationLevel(mappedLevel);
-  if (llmLevel) return llmLevel;
+  if (llmLevel && !isInvalidEducationLevelToken(mappedLevel)) return llmLevel;
 
-  if (!rawText) return undefined;
-
-  const section = sliceEducationSection(rawText);
-  const ordered = extractEducationLevelsInTextOrder(section);
-  const primary = ordered[0] ? normalizeEducationLevel(ordered[0]) : undefined;
-  return primary ?? getHighestEducationLevel(ordered) ?? undefined;
+  return undefined;
 }
 
 function levelPrefixPatterns(): { pattern: RegExp; canonical: string }[] {
@@ -315,10 +433,18 @@ export function repairEmployeeEducationFields(
   level: unknown,
   name: unknown
 ): { education_level?: string; education_name?: string } {
+  if (isInvalidEducationLevelToken(level)) {
+    return {};
+  }
+
   const split = splitEducationNameLevel(
     level != null && String(level).trim() ? String(level) : undefined,
     name != null && String(name).trim() ? String(name) : undefined
   );
+
+  if (!split.level || isInvalidEducationLevelToken(split.level)) {
+    return {};
+  }
 
   let educationName = split.name;
   if (educationName && isEducationCertification(educationName)) {

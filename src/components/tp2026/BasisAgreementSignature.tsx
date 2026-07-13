@@ -113,3 +113,28 @@ export function BasisSignatureBlock({
     </div>
   );
 }
+
+/** Agreement + signature kept together for pagination and PDF export. */
+export function BasisAgreementSignatureBlock({
+  employeeName,
+  advisorName,
+  employerContact,
+  employerFunction,
+}: {
+  employeeName: string;
+  advisorName: string;
+  employerContact: string;
+  employerFunction?: string;
+}) {
+  return (
+    <div className="[break-inside:avoid] print:[break-inside:avoid]">
+      <BasisAgreementBlock />
+      <BasisSignatureBlock
+        employeeName={employeeName}
+        advisorName={advisorName}
+        employerContact={employerContact}
+        employerFunction={employerFunction}
+      />
+    </div>
+  );
+}

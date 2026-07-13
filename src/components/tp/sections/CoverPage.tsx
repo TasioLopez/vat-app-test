@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useTP } from '@/context/TPContext';
 import { supabase } from '@/lib/supabase/client';
 import { formatEmployeeName } from '@/lib/utils';
+import { getWerkgeverName, resolveTPProfileContext, syncTPProfileContextFields } from '@/lib/tp/resolve-profile-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
@@ -38,17 +39,8 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                 );
                 updateField('employee_name', formattedName);
 
-                if (employee.client_id) {
-                    const { data: client } = await supabase
-                        .from('clients')
-                        .select('name')
-                        .eq('id', employee.client_id)
-                        .single();
-
-                    if (client) {
-                        updateField('employer_name', client.name);
-                    }
-                }
+                const profileContext = await resolveTPProfileContext(supabase, employeeId);
+                syncTPProfileContextFields(updateField, profileContext);
             }
 
             const { data: meta } = await supabase
@@ -127,8 +119,9 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Werkgever Naam</label>
                     <div className="w-full p-4 border-2 border-purple-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
-                        {tpData.employer_name || '—'}
+                        {getWerkgeverName(tpData) || '—'}
                     </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Wijzig op het werknemersprofiel</p>
                 </div>
                 <div className="pt-4">
                     <Button
@@ -174,7 +167,7 @@ export default function CoverPage({ employeeId }: { employeeId: string }) {
 
                     {/* Bottom-right employer block */}
                     <div className="absolute bottom-0 right-0 w-[33%] h-[100%] bg-[#660066ff] flex items-end justify-center z-0">
-                        <p className="text-white font-semibold text-[10px] mb-12">{tpData.employer_name}</p>
+                        <p className="text-white font-semibold text-[10px] mb-12">{getWerkgeverName(tpData) || '—'}</p>
                     </div>
                 </div>
             </div>

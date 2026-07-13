@@ -5,7 +5,7 @@ import { useTP } from "@/context/TPContext";
 import { supabase } from "@/lib/supabase/client";
 import { makePreviewNodes } from "@/components/tp/sections/registry";
 import { formatEmployeeName } from "@/lib/utils";
-import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
+import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 
 export default function TPPreview({ employeeId }: { employeeId: string }) {
   const { tpData, setTPData } = useTP();
@@ -89,34 +89,10 @@ export default function TPPreview({ employeeId }: { employeeId: string }) {
           });
         }
 
-        // Client name + referent (from referents table; mergedData already has tp_meta snapshot, fill blanks from resolved referent)
-        if (employee?.client_id && isMounted) {
-          const { data: client } = await supabase
-            .from('clients')
-            .select('name')
-            .eq('id', employee.client_id)
-            .single();
-
-          if (client?.name) {
-            mergedData.client_name = client.name;
-            mergedData.employer_name = client.name;
-          }
-
-          const referent = await resolveReferentForEmployee(supabase, {
-            referent_id: employee.referent_id,
-            client_id: employee.client_id,
-          });
-          const refFields = referentToClientReferentFields(referent);
-          const setIfEmpty = (key: string, value: string | null) => {
-            if (value != null && value !== '' && (mergedData[key] == null || mergedData[key] === '')) {
-              mergedData[key] = value;
-            }
-          };
-          setIfEmpty('client_referent_name', refFields.client_referent_name);
-          setIfEmpty('client_referent_phone', refFields.client_referent_phone);
-          setIfEmpty('client_referent_email', refFields.client_referent_email);
-          setIfEmpty('client_referent_function', refFields.client_referent_function);
-          setIfEmpty('client_referent_gender', refFields.client_referent_gender);
+        // Werkgever + referent — always live from worker profile
+        if (isMounted) {
+          const profileContext = await resolveTPProfileContext(supabase, employeeId);
+          Object.assign(mergedData, applyTPProfileContext(mergedData, profileContext));
         }
 
         // Format employee name

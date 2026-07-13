@@ -33,7 +33,7 @@ export const TP2026CoverFields: TP2026FieldDef[] = [
   { key: 'first_name', label: 'Voornaam', type: 'text' },
   { key: 'last_name', label: 'Achternaam', type: 'text' },
   { key: 'tp_creation_date', label: 'Datum rapportage', type: 'date' },
-  { key: 'client_name', label: 'Opdrachtgever', type: 'text' },
+  { key: 'client_name', label: 'Opdrachtgever', type: 'readonly' },
 ];
 
 export const TP2026GegevensFields: TP2026FieldDef[] = [
@@ -50,9 +50,9 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'occupational_doctor_name', label: 'Arbeidsdeskundige', type: 'text' },
   { key: 'occupational_doctor_org', label: 'Bedrijfsarts', type: 'text' },
   { key: 'fml_izp_lab_date', label: 'Datum FML/IZP/LAB', type: 'date' },
-  { key: 'client_referent_name', label: 'Contactpersoon opdrachtgever', type: 'text' },
-  { key: 'client_referent_phone', label: 'Telefoon opdrachtgever', type: 'text' },
-  { key: 'client_referent_email', label: 'E-mail opdrachtgever', type: 'text' },
+  { key: 'client_referent_name', label: 'Contactpersoon opdrachtgever', type: 'readonly' },
+  { key: 'client_referent_phone', label: 'Telefoon opdrachtgever', type: 'readonly' },
+  { key: 'client_referent_email', label: 'E-mail opdrachtgever', type: 'readonly' },
   { key: 'current_job', label: 'Huidige functie', type: 'text' },
   { key: 'work_experience', label: 'Werkervaring', type: 'multiline' },
   { key: 'education_level', label: 'Opleidingsniveau', type: 'select', options: [...EDUCATION_LEVEL_OPTIONS] },

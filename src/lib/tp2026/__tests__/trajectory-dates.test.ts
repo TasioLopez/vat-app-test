@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getTrajectoryDateUpdates, applyTrajectoryDateDerivations } from '../trajectory-dates';
+import {
+  getTrajectoryDateUpdates,
+  applyTrajectoryDateDerivations,
+  isLowTpLeadTime,
+  parseTpLeadTimeWeeks,
+} from '../trajectory-dates';
 
 describe('getTrajectoryDateUpdates', () => {
   it('does not overwrite explicit tp_start_date and tp_end_date from intake', () => {
@@ -41,6 +46,36 @@ describe('getTrajectoryDateUpdates', () => {
 
     const updates = getTrajectoryDateUpdates(data);
     assert.equal(updates.tp_start_date, '2020-06-01');
+  });
+});
+
+describe('parseTpLeadTimeWeeks', () => {
+  it('parses numeric strings', () => {
+    assert.equal(parseTpLeadTimeWeeks('9'), 9);
+    assert.equal(parseTpLeadTimeWeeks(57), 57);
+  });
+
+  it('returns null for empty or invalid values', () => {
+    assert.equal(parseTpLeadTimeWeeks(''), null);
+    assert.equal(parseTpLeadTimeWeeks(null), null);
+    assert.equal(parseTpLeadTimeWeeks('abc'), null);
+  });
+});
+
+describe('isLowTpLeadTime', () => {
+  it('flags values below 10 weeks', () => {
+    assert.equal(isLowTpLeadTime('9'), true);
+    assert.equal(isLowTpLeadTime(0), true);
+  });
+
+  it('does not flag 10 weeks or above', () => {
+    assert.equal(isLowTpLeadTime('10'), false);
+    assert.equal(isLowTpLeadTime('57'), false);
+  });
+
+  it('returns false for missing values', () => {
+    assert.equal(isLowTpLeadTime(''), false);
+    assert.equal(isLowTpLeadTime(undefined), false);
   });
 });
 

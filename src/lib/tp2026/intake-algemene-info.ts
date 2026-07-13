@@ -2,10 +2,12 @@
 import { parseWorkExperience } from '@/lib/utils';
 import { stripAssistantArtifacts } from '@/lib/document-analysis/stripAssistantArtifacts';
 import {
-  extractEducationLevelsInTextOrder,
   isEducationCertification,
+  isInvalidEducationLevelToken,
   normalizeEducationLevel,
-  resolveEducationLevelFromIntake,
+  parseIntakeEducationRows,
+  repairEmployeeEducationFields,
+  resolveHighestFinishedEducation,
   sliceEducationSection,
 } from '@/lib/tp2026/gegevens-field-options';
 
@@ -65,59 +67,33 @@ export function isPlausibleWorkExperience(raw: string): boolean {
   return true;
 }
 
-function sanitizeEducationName(
-  name: unknown,
-  level: string | undefined
-): string | undefined {
-  if (name == null || String(name).trim() === '') return undefined;
-  const trimmed = String(name).trim();
-  if (isEducationCertification(trimmed)) return undefined;
-  if (level && trimmed.toLowerCase() === level.toLowerCase()) return undefined;
-  const normalizedFromName = normalizeEducationLevel(trimmed);
-  if (normalizedFromName && normalizedFromName === level) return undefined;
-  return trimmed;
-}
-
-function extractPrimaryEducationLabelFromSection(section: string): string | undefined {
-  const beforeWork = section.split(/werkervaring\s*\??\s*van[\s-]*tot\s*\??/i)[0] ?? section;
-  const lhnoMatch = beforeWork.match(/\bLHNO\b/i);
-  if (lhnoMatch) return 'LHNO';
-
-  const ordered = extractEducationLevelsInTextOrder(beforeWork);
-  for (const label of ordered) {
-    const normalized = normalizeEducationLevel(label);
-    if (normalized) return normalized;
-  }
-  return undefined;
-}
-
 export function resolveIntakeEducationFields(
   mapped: { education_level?: unknown; education_name?: unknown },
   documentText: string
 ): { education_level?: string; education_name?: string } {
-  let level = resolveEducationLevelFromIntake(mapped.education_level, documentText);
-
-  if (!level && documentText) {
+  if (documentText?.trim()) {
     const section = sliceEducationSection(documentText);
-    level = extractPrimaryEducationLabelFromSection(section);
+    const fromDocument = resolveHighestFinishedEducation(parseIntakeEducationRows(section));
+    if (fromDocument.education_level) {
+      return repairEmployeeEducationFields(
+        fromDocument.education_level,
+        fromDocument.education_name ?? mapped.education_name
+      );
+    }
+    return {};
   }
 
-  if (!level && mapped.education_level != null) {
-    const raw = String(mapped.education_level).trim();
-    const normalized = normalizeEducationLevel(raw);
-    if (normalized) level = normalized;
+  const repaired = repairEmployeeEducationFields(mapped.education_level, mapped.education_name);
+  if (repaired.education_level) return repaired;
+
+  if (mapped.education_level != null && !isInvalidEducationLevelToken(mapped.education_level)) {
+    const normalized = normalizeEducationLevel(mapped.education_level);
+    if (normalized) {
+      return repairEmployeeEducationFields(normalized, mapped.education_name);
+    }
   }
 
-  let name = sanitizeEducationName(mapped.education_name, level);
-
-  if (level && !name && mapped.education_name != null) {
-    name = sanitizeEducationName(mapped.education_name, level);
-  }
-
-  return {
-    ...(level ? { education_level: level } : {}),
-    ...(name ? { education_name: name } : {}),
-  };
+  return {};
 }
 
 /** Slice text around the intake werkervaring table. */

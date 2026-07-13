@@ -5,10 +5,10 @@ import {
 } from '@/lib/employee/autofill-persist';
 import {
   GEGEVENS_EMPLOYEE_KEYS,
-  GEGEVENS_REFERENT_KEYS,
   GEGEVENS_TP2_KEYS,
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
+import { stripTPProfileFields } from '@/lib/tp/resolve-profile-context';
 
 export type PersistTp2026DraftParams = {
   tpInstanceId: string;
@@ -37,7 +37,7 @@ function pickKeys(
 /** Keys stored on employee_details (excludes email — stored on employees). */
 const DETAILS_KEYS_FOR_PERSIST = GEGEVENS_EMPLOYEE_KEYS.filter((k) => k !== 'email');
 
-const TP_META_PERSIST_KEYS = [...GEGEVENS_TP2_KEYS, ...GEGEVENS_REFERENT_KEYS, 'tp3_activities'] as const;
+const TP_META_PERSIST_KEYS = [...GEGEVENS_TP2_KEYS, 'tp3_activities'] as const;
 
 export function pickGegevensEmployeeDetailsPayload(
   tpData: Record<string, unknown>,
@@ -69,7 +69,7 @@ export async function persistTp2026Draft(
   params: PersistTp2026DraftParams
 ): Promise<PersistTp2026DraftResult> {
   const { tpInstanceId, employeeId, tpData, userId } = params;
-  const shaped = ensureTP2026Shape(tpData as Record<string, any>);
+  const shaped = stripTPProfileFields(ensureTP2026Shape(tpData as Record<string, any>));
 
   const { error: instanceError } = await (supabase as any)
     .from('tp_instances')

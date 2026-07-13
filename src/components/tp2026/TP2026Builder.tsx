@@ -34,8 +34,8 @@ import {
   Bijlage1A4Pages,
   Bijlage1Editor,
 } from '@/components/tp2026/sections/Bijlage1Section';
-import { referentToClientReferentFields, resolveReferentForEmployee } from '@/lib/referents';
-import { getTrajectoryDateUpdates } from '@/lib/tp2026/trajectory-dates';
+import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import { getTrajectoryDateUpdates, isLowTpLeadTime, parseTpLeadTimeWeeks } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
 import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
@@ -55,8 +55,9 @@ type Props = {
 function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; tpInstanceId: string }) {
   const guardedRouter = useGuardedRouter();
   const { tpData, setTPData, updateField, saveAll, isDirty, markDirty, markSaved } = useTPInstance();
-  const { showSuccess, showError, showInfo } = useToastHelpers();
+  const { showSuccess, showError, showInfo, showWarning } = useToastHelpers();
   const employeeHydrateKeyRef = useRef<string | null>(null);
+  const lowLeadTimeWarnedRef = useRef<string | null>(null);
   const autofillCancelRef = useRef(false);
   const autofillAbortRef = useRef<AbortController | null>(null);
   const supabase = useMemo(
@@ -308,22 +309,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       if (cancelled) return;
 
       const employee = employeeRes.data || {};
-
-      let clientCompanyName: string | null = null;
-      if (employee.client_id) {
-        const { data: client } = await supabase
-          .from('clients')
-          .select('name')
-          .eq('id', employee.client_id)
-          .maybeSingle();
-        clientCompanyName = client?.name ?? null;
-      }
-
-      const referent = await resolveReferentForEmployee(supabase, {
-        referent_id: employee.referent_id,
-        client_id: employee.client_id,
-      });
-      const refFields = referentToClientReferentFields(referent);
+      const profileContext = await resolveTPProfileContext(supabase, employeeId);
 
       const {
         data: { user },
@@ -358,12 +344,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         merged = mergeRecordFillBlanks(merged, (detailsRes.data || {}) as Record<string, unknown>);
         merged = mergeRecordFillBlanks(merged, meta as Record<string, unknown>);
 
-        const next = ensureTP2026Shape(merged as Record<string, any>);
+        const shaped = ensureTP2026Shape(merged as Record<string, any>);
+        const next = applyTPProfileContext(shaped, profileContext) as Record<string, any>;
 
-        if (clientCompanyName && !String(next.employer_name || '').trim()) {
-          next.employer_name = clientCompanyName;
-          next.client_name = clientCompanyName;
-        }
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;
         }
@@ -372,19 +355,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         }
         if (!String(next.consultant_email || '').trim() && appUserEmail) {
           next.consultant_email = appUserEmail;
-        }
-
-        if (!String(next.client_referent_name || '').trim() && refFields.client_referent_name) {
-          next.client_referent_name = refFields.client_referent_name;
-        }
-        if (!String(next.client_referent_phone || '').trim() && refFields.client_referent_phone) {
-          next.client_referent_phone = refFields.client_referent_phone;
-        }
-        if (!String(next.client_referent_email || '').trim() && refFields.client_referent_email) {
-          next.client_referent_email = refFields.client_referent_email;
-        }
-        if (!String(next.client_referent_function || '').trim() && refFields.client_referent_function) {
-          next.client_referent_function = refFields.client_referent_function;
         }
 
         return next;
@@ -409,6 +379,33 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       if (value !== undefined) updateField(key, value);
     }
   }, [tpData.first_sick_day, tpData.registration_date, tpData.intake_date, tpData.tp_end_date, tpData.tp_start_date, updateField]);
+
+  useEffect(() => {
+    const updates = getTrajectoryDateUpdates(tpData);
+    const effectiveLeadTime = updates.tp_lead_time ?? tpData.tp_lead_time;
+    if (!isLowTpLeadTime(effectiveLeadTime)) return;
+
+    const weeks = parseTpLeadTimeWeeks(effectiveLeadTime);
+    if (weeks == null) return;
+
+    const warnKey = `${tpInstanceId}:${weeks}`;
+    if (lowLeadTimeWarnedRef.current === warnKey) return;
+    lowLeadTimeWarnedRef.current = warnKey;
+
+    showWarning(
+      'Lage doorlooptijd',
+      `Doorlooptijd is ${weeks} weken. Controleer of de trajectdata kloppen.`
+    );
+  }, [
+    tpData.tp_lead_time,
+    tpData.tp_start_date,
+    tpData.tp_end_date,
+    tpData.first_sick_day,
+    tpData.registration_date,
+    tpData.intake_date,
+    tpInstanceId,
+    showWarning,
+  ]);
 
   // Bijlage 1: merge legacy dates and auto-fill periods when trajectory dates become available
   useEffect(() => {

@@ -194,7 +194,7 @@ export function ValentineZLogoBullet({
   );
 }
 
-/** Flex row with Z-logo bullet vertically centered on the first text line. */
+/** Flex row with Z-logo bullet aligned to the first text line. */
 export function ValentineZLogoBulletRow({
   children,
   className = '',
@@ -205,8 +205,8 @@ export function ValentineZLogoBulletRow({
   eagerLoading?: boolean;
 }) {
   return (
-    <div className={`flex gap-2 ${className}`}>
-      <span className="flex h-[1.625em] shrink-0 items-center" aria-hidden>
+    <div className={`flex items-start gap-2 ${className}`}>
+      <span className="mt-0.5 shrink-0" aria-hidden>
         <ValentineZLogoBullet eagerLoading={eagerLoading} />
       </span>
       <span className="min-w-0 flex-1">{children}</span>

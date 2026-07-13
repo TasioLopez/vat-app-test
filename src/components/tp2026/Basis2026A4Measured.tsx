@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
-import { BasisAgreementBlock, BasisSignatureBlock } from '@/components/tp2026/BasisAgreementSignature';
+import { BasisAgreementSignatureBlock } from '@/components/tp2026/BasisAgreementSignature';
 import {
   A4LogoHeader,
   A4Page,
@@ -102,8 +102,7 @@ export type BasisAtom =
       title: string;
       pageBreakBefore: boolean;
     }
-  | { id: string; kind: 'agreement' }
-  | { id: string; kind: 'signature' };
+  | { id: string; kind: 'agreementSignature' };
 
 function chunkByParagraphs(text: string, softMaxChars: number): string[] {
   const trimmed = text.trim();
@@ -323,7 +322,7 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   }
 
   atoms.push(...buildSpoor2Atoms(data));
-  atoms.push({ id: 'agree', kind: 'agreement' }, { id: 'sign', kind: 'signature' });
+  atoms.push({ id: 'agree-sign', kind: 'agreementSignature' });
 
   return atoms;
 }
@@ -392,6 +391,13 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
       },
       ...atoms.slice(idx + 1),
     ];
+  }
+
+  if (atom.kind === 'agreementSignature') return null;
+
+  if (atom.kind === 'spoor2') {
+    if (atom.subText && String(atom.subText).trim()) return null;
+    if (!atom.body.trim()) return null;
   }
 
   if (atom.kind === 'spoor2' && atom.body.trim()) {
@@ -657,11 +663,9 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
       return <Spoor2AtomPreview atom={atom} />;
     case 'groupBanner':
       return <PurpleSectionBar title={atom.title} className="mb-3" />;
-    case 'agreement':
-      return <BasisAgreementBlock />;
-    case 'signature':
+    case 'agreementSignature':
       return (
-        <BasisSignatureBlock
+        <BasisAgreementSignatureBlock
           employeeName={`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim() || 'Naam werknemer'}
           advisorName={data.consultant_name || 'Loopbaanadviseur'}
           employerContact={data.client_referent_name || 'Naam opdrachtgever'}
@@ -677,10 +681,12 @@ function BasisBodyPage({
   data,
   atoms,
   pageNumber,
+  printMode = false,
 }: {
   data: Record<string, any>;
   atoms: BasisAtom[];
   pageNumber: number;
+  printMode?: boolean;
 }) {
   const displayAtoms = mergeSectionAtomsOnPage(atoms);
 
@@ -689,7 +695,7 @@ function BasisBodyPage({
       <A4LogoHeader />
       <div
         data-basis-body
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        className={`flex min-h-0 flex-1 flex-col ${printMode ? 'overflow-visible print:overflow-visible' : 'overflow-hidden'}`}
       >
         {displayAtoms.map((atom, idx) => (
           <div
@@ -735,7 +741,8 @@ type PackBasisPagesResult =
 function doesBasisPageFitDom(
   data: Record<string, any>,
   bodyAtoms: BasisAtom[],
-  atomIndices: number[]
+  atomIndices: number[],
+  printMode = false
 ): boolean {
   if (atomIndices.length === 0) return true;
 
@@ -750,11 +757,18 @@ function doesBasisPageFitDom(
 
   try {
     flushSync(() => {
-      root.render(<BasisBodyPage data={data} atoms={atoms} pageNumber={1} />);
+      root.render(
+        <BasisBodyPage
+          data={data}
+          atoms={atoms}
+          pageNumber={1}
+          printMode={printMode}
+        />
+      );
     });
     const bodyEl = mount.querySelector('[data-basis-body]') as HTMLElement | null;
     if (!bodyEl) return true;
-    const room = 4;
+    const room = 10;
     return bodyEl.scrollHeight <= bodyEl.clientHeight + room;
   } finally {
     root.unmount();
@@ -769,13 +783,14 @@ function doesBasisPageFitDom(
 function packPagesWithDomMeasure(
   data: Record<string, any>,
   bodyAtoms: BasisAtom[],
-  onNeedSplit: (atomIndex: number) => boolean
+  onNeedSplit: (atomIndex: number) => boolean,
+  printMode = false
 ): PackBasisPagesResult {
   const n = bodyAtoms.length;
   if (n === 0) return { ok: true, pages: [] };
 
   for (let i = 0; i < n; i++) {
-    if (!doesBasisPageFitDom(data, bodyAtoms, [i])) {
+    if (!doesBasisPageFitDom(data, bodyAtoms, [i], printMode)) {
       if (onNeedSplit(i)) return { ok: false, reason: 'split_retry' };
       return { ok: false, reason: 'unsplittable', atomIndex: i };
     }
@@ -796,12 +811,12 @@ function packPagesWithDomMeasure(
     }
 
     const trial = [...current, i];
-    if (doesBasisPageFitDom(data, bodyAtoms, trial)) {
+    if (doesBasisPageFitDom(data, bodyAtoms, trial, printMode)) {
       current = trial;
     } else {
       if (current.length) pages.push(current);
       current = [i];
-      if (!doesBasisPageFitDom(data, bodyAtoms, [i])) {
+      if (!doesBasisPageFitDom(data, bodyAtoms, [i], printMode)) {
         if (onNeedSplit(i)) return { ok: false, reason: 'split_retry' };
         return { ok: false, reason: 'unsplittable', atomIndex: i };
       }
@@ -851,14 +866,19 @@ export function Basis2026A4Pages({
     await preloadImages(BASIS_PRELOAD_IMG_SRC);
     await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-    const result = packPagesWithDomMeasure(data, bodyAtoms, (idx) => {
-      const split = trySplitAtom(bodyAtoms, idx);
-      if (split) {
-        setBodyAtoms(split);
-        return true;
-      }
-      return false;
-    });
+    const result = packPagesWithDomMeasure(
+      data,
+      bodyAtoms,
+      (idx) => {
+        const split = trySplitAtom(bodyAtoms, idx);
+        if (split) {
+          setBodyAtoms(split);
+          return true;
+        }
+        return false;
+      },
+      printMode
+    );
 
     if (!result.ok && result.reason === 'split_retry') {
       return;
@@ -876,7 +896,7 @@ export function Basis2026A4Pages({
     const packed = result.pages;
     setBodyPages(packed.length ? packed : bodyAtoms.map((_, i) => [i]));
     emitReady();
-  }, [bodyAtoms, data, emitReady]);
+  }, [bodyAtoms, data, emitReady, printMode]);
 
   useLayoutEffect(() => {
     void measureAndPaginate();
@@ -922,6 +942,7 @@ export function Basis2026A4Pages({
             data={data}
             atoms={idxs.map((i) => bodyAtoms[i]).filter(Boolean)}
             pageNumber={basisStartPage + 1 + pi}
+            printMode={printMode}
           />,
           `basis-body-${pi}`
         )

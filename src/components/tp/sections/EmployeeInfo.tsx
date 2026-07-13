@@ -15,7 +15,9 @@ import {
   formatGegevensOtherEmployers,
 } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
-import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
+import { getWerkgeverName, resolveTPProfileContext, syncTPProfileContextFields } from '@/lib/tp/resolve-profile-context';
+import { isLowTpLeadTime, parseTpLeadTimeWeeks } from '@/lib/tp2026/trajectory-dates';
+import { useToastHelpers } from '@/components/ui/Toast';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { Button } from '@/components/ui/button';
@@ -73,6 +75,8 @@ const DATE_FIELDS = [
 
 export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
   const { tpData, updateField, setSectionPageCount, getPageOffset, markSaved, registerSaveHandler, unregisterSaveHandler } = useTP();
+  const { showWarning } = useToastHelpers();
+  const lowLeadTimeWarnedRef = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
@@ -128,23 +132,9 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
       }
 
 
-      // Client name + resolved referent (referents table only)
-      if (employee?.client_id) {
-        const { data: client } = await supabase
-          .from('clients')
-          .select('name')
-          .eq('id', employee.client_id)
-          .single();
-        if (client?.name) updateField('client_name', client.name);
-
-        const referent = await resolveReferentForEmployee(supabase, { referent_id: employee.referent_id, client_id: employee.client_id });
-        const refFields = referentToClientReferentFields(referent);
-        if (refFields.client_referent_name != null) updateField('client_referent_name', refFields.client_referent_name);
-        if (refFields.client_referent_phone != null) updateField('client_referent_phone', refFields.client_referent_phone);
-        if (refFields.client_referent_email != null) updateField('client_referent_email', refFields.client_referent_email);
-        if (refFields.client_referent_function != null) updateField('client_referent_function', refFields.client_referent_function);
-        if (refFields.client_referent_gender != null) updateField('client_referent_gender', refFields.client_referent_gender);
-      }
+      // Werkgever + referent — always live from worker profile
+      const profileContext = await resolveTPProfileContext(supabase, employeeId);
+      syncTPProfileContextFields(updateField, profileContext);
 
       // Fetch current user info (consultant)
       const {
@@ -232,6 +222,22 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     }
   }, [tpData.tp_start_date, tpData.tp_end_date]);
 
+  useEffect(() => {
+    if (!isLowTpLeadTime(tpData.tp_lead_time)) return;
+
+    const weeks = parseTpLeadTimeWeeks(tpData.tp_lead_time);
+    if (weeks == null) return;
+
+    const warnKey = `${employeeId}:${weeks}`;
+    if (lowLeadTimeWarnedRef.current === warnKey) return;
+    lowLeadTimeWarnedRef.current = warnKey;
+
+    showWarning(
+      'Lage doorlooptijd',
+      `Doorlooptijd is ${weeks} weken. Controleer of de trajectdata kloppen.`
+    );
+  }, [employeeId, tpData.tp_lead_time, showWarning]);
+
 
   // employee_details columns (add phone, remove first_sick_day)
   const DETAILS_FIELDS = [
@@ -241,12 +247,11 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
     'has_computer', 'computer_skills', 'contract_hours', 'other_employers'
   ] as const;
 
-  // tp_meta columns - CONSULTANT FIELDS REMOVED (they come from users table); referent snapshot for TP
+  // tp_meta columns - CONSULTANT FIELDS REMOVED (they come from users table); referent is profile-linked
   const META_FIELDS = [
     'first_sick_day',
     'tp_lead_time', 'tp_start_date', 'tp_end_date', 'fml_izp_lab_date', 'intake_date', 'registration_date', 'tp_creation_date',
     'ad_report_date', 'occupational_doctor_name', 'occupational_doctor_org', 'has_ad_report',
-    'client_referent_name', 'client_referent_phone', 'client_referent_email', 'client_referent_function', 'client_referent_gender'
   ] as const;
 
   // employees columns (drop phone; keep email here if it's editable)
@@ -603,7 +608,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
               <table className="w-full border-collapse mb-4">
                 <tbody className="bg-[#e7e6e6]">
                   <tr><td colSpan={2} className="font-bold text-[#660066] p-2 bg-white">Gegevens opdrachtgever</td></tr>
-                  <tr><td className={tdLabel}>Werkgever</td><td className={tdValue}>{tpData.client_name}</td></tr>
+                  <tr><td className={tdLabel}>Werkgever</td><td className={tdValue}>{getWerkgeverName(tpData) || '—'}</td></tr>
                   <tr><td className={tdLabel}>Contactpersoon</td><td className={tdValue}>{tpData.client_referent_name}</td></tr>
                   <tr><td className={tdLabel}>Telefoon</td><td className={tdValue}>{tpData.client_referent_phone}</td></tr>
                   <tr><td className={tdLabel}>Email</td><td className={tdValue}>{tpData.client_referent_email}</td></tr>
@@ -653,7 +658,7 @@ export default function EmployeeInfo({ employeeId }: { employeeId: string }) {
                   <tr><td className={tdLabel}>Beschikt over een PC</td><td className={tdValue}>{tpData.has_computer ? 'Ja' : 'Geen'}</td></tr>
                   <tr><td className={tdLabel}>PC-vaardigheden</td><td className={tdValue}>{formatComputerSkills(tpData.computer_skills)}</td></tr>
                   <tr><td className={tdLabel}>Aantal contracturen</td><td className={tdValue}>{tpData.contract_hours} uur per week</td></tr>
-                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{formatGegevensOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name)}</td></tr>
+                  <tr><td className={tdLabel}>Andere werkgever(s)</td><td className={tdValue}>{formatGegevensOtherEmployers(tpData.other_employers, getWerkgeverName(tpData))}</td></tr>
                 </tbody>
               </table>
 

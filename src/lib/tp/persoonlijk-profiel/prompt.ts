@@ -15,7 +15,7 @@ const INTAKE_PROFIEL_SECTIONS_HINT = `
 INTAKE SECTIES VOOR PERSOONLIJK PROFIEL:
 - Sectie 2 Persoonsgegevens: functietitel (geen werkgevernaam in output)
 - Blok "Algemene informatie" (sectie 17 in V5, of onderaan in V4):
-  • Opleidingen/werkervaring tabellen
+  • Opleidingen/werkervaring tabellen — bij opleidingen alleen afgeronde schooling noemen; onvoltooide opleidingen weglaten
   • Vervoer / rijbewijzen
   • PC/laptop en computervaardigheden
   • Talen: Spreken/Schrijven/Lezen (G/R/O)

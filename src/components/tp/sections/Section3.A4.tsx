@@ -340,6 +340,30 @@ function SignatureBlock({
   );
 }
 
+function AgreementSignatureBlock({
+  employeeName,
+  advisorName,
+  employerContact,
+  employerFunctionCompany,
+}: {
+  employeeName: string;
+  advisorName: string;
+  employerContact: string;
+  employerFunctionCompany?: string;
+}) {
+  return (
+    <div className={avoidBreak}>
+      <AgreementBlock />
+      <SignatureBlock
+        employeeName={employeeName}
+        advisorName={advisorName}
+        employerContact={employerContact}
+        employerFunctionCompany={employerFunctionCompany}
+      />
+    </div>
+  );
+}
+
 /* ------------ main render ------------ */
 export default function Section3A4({ data }: { data: TPData }) {
   // inleiding + NB rule
@@ -361,7 +385,7 @@ export default function Section3A4({ data }: { data: TPData }) {
 
   type Block =
     | { key: string; title?: string; text: string; subText?: string | null; variant: "block" | "subtle" }
-    | { key: string; custom: "agreement" | "signature" | "spoor2" };
+    | { key: string; custom: "agreementSignature" | "spoor2" };
 
   const blocks: Block[] = [
     { key: "inl", title: "Inleiding", text: inleiding, variant: "block" },
@@ -439,9 +463,7 @@ export default function Section3A4({ data }: { data: TPData }) {
 
     { key: "spoor2", custom: "spoor2" },
 
-    // Agreement + signatures
-    { key: "agree", custom: "agreement" },
-    { key: "sign", custom: "signature" },
+    { key: "agree-sign", custom: "agreementSignature" },
   ];
 
   // CSS page-breaks handle splitting; avoidBreak keeps each title with its text.
@@ -456,20 +478,18 @@ export default function Section3A4({ data }: { data: TPData }) {
         {firstBlock && (
           <>
             {("custom" in firstBlock) ? (
-              firstBlock.custom === "agreement" ? (
-                <AgreementBlock key={firstBlock.key} />
-              ) : firstBlock.custom === "spoor2" ? (
-                <div key={firstBlock.key} className={avoidBreak}>
-                  <BasisSpoor2Block />
-                </div>
-              ) : (
-                <SignatureBlock
+              firstBlock.custom === "agreementSignature" ? (
+                <AgreementSignatureBlock
                   key={firstBlock.key}
                   employeeName={employeeName}
                   advisorName={advisorName}
                   employerContact={employerContact}
                   employerFunctionCompany={employerFunctionCompany}
                 />
+              ) : (
+                <div key={firstBlock.key} className={avoidBreak}>
+                  <BasisSpoor2Block />
+                </div>
               )
             ) : (
               <div key={firstBlock.key} className={avoidBreak}>
@@ -518,22 +538,21 @@ export default function Section3A4({ data }: { data: TPData }) {
         )}
         {restBlocks.map((b) => {
           if ("custom" in b) {
-            if (b.custom === "agreement") return <AgreementBlock key={b.key} />;
-            if (b.custom === "spoor2") {
+            if (b.custom === "agreementSignature") {
               return (
-                <div key={b.key} className={avoidBreak}>
-                  <BasisSpoor2Block />
-                </div>
+                <AgreementSignatureBlock
+                  key={b.key}
+                  employeeName={employeeName}
+                  advisorName={advisorName}
+                  employerContact={employerContact}
+                  employerFunctionCompany={employerFunctionCompany}
+                />
               );
             }
             return (
-              <SignatureBlock
-                key={b.key}
-                employeeName={employeeName}
-                advisorName={advisorName}
-                employerContact={employerContact}
-                employerFunctionCompany={employerFunctionCompany}
-              />
+              <div key={b.key} className={avoidBreak}>
+                <BasisSpoor2Block />
+              </div>
             );
           }
           return (

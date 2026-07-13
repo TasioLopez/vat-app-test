@@ -3,50 +3,20 @@ import Image from "next/image";
 import Cover from "@/assets/images/valentinez-cover.jpg";
 import { TPData } from "@/lib/tp/load";
 import { formatEmployeeName } from "@/lib/utils";
+import { getWerkgeverName } from "@/lib/tp/resolve-profile-context";
 
 type Props = { data: TPData };
 
 export default function CoverPageA4({ data }: Props) {
-  console.log('🎨 CoverPageA4 received data:', {
-    employee_name: data.employee_name,
-    employer_name: data.employer_name,
-    client_name: data.client_name,
-    first_name: data.first_name,
-    last_name: data.last_name,
-    tp_creation_date: data.tp_creation_date,
-    fullData: data
-  });
-
-  // Helper function to get employee name from various possible sources
   const getEmployeeName = (): string => {
-    // Use formatEmployeeName utility for consistent formatting
-    const formattedName = formatEmployeeName(
+    return formatEmployeeName(
       data.first_name,
       data.last_name,
       data.gender
     );
-    
-    console.log('✅ Using formatted name:', formattedName);
-    return formattedName;
   };
 
-  // Helper function to get employer name from various possible sources
-  const getEmployerName = (): string => {
-    // Try client_name first (from database join)
-    if (data.client_name) {
-      console.log('✅ Using client_name:', data.client_name);
-      return data.client_name;
-    }
-    
-    // Then try employer_name (from context)
-    if (data.employer_name) {
-      console.log('✅ Using employer_name:', data.employer_name);
-      return data.employer_name;
-    }
-    
-    console.log('❌ No employer name found, returning em dash');
-    return "—";
-  };
+  const employerName = getWerkgeverName(data) || "—";
 
   return (
     <div className="relative aspect-[210/297] h-full w-full bg-white shadow border border-border overflow-hidden print:shadow-none">
@@ -84,7 +54,7 @@ export default function CoverPageA4({ data }: Props) {
       {/* Bottom-right employer block */}
       <div className="absolute bottom-0 right-0 w-[33%] h-full bg-[#660066ff] flex items-end justify-center z-0">
         <p className="text-white font-semibold text-[24px] mb-12">
-          {getEmployerName()}
+          {employerName}
         </p>
       </div>
     </div>

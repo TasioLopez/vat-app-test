@@ -79,13 +79,30 @@ describe('resolveIntakeEducationFields', () => {
     assert.equal(result.education_name, undefined);
   });
 
-  it('trusts valid LLM LHNO level', () => {
+  it('uses document table over inconsistent LLM output', () => {
     const result = resolveIntakeEducationFields(
-      { education_level: 'LHNO', education_name: 'VCA' },
+      { education_level: 'VMBO', education_name: 'VCA' },
       SAMPLE_ALGEMENE_INFO
     );
     assert.equal(result.education_level, 'LHNO');
     assert.equal(result.education_name, undefined);
+  });
+
+  it('picks highest finished study when multiple are completed', () => {
+    const text = `Algemene informatie:
+Opleidingen? Afgerond?
+VMBO Ja
+MBO 4 Ja`;
+    const result = resolveIntakeEducationFields({ education_level: 'VMBO' }, text);
+    assert.equal(result.education_level, 'MBO 4');
+  });
+
+  it('returns empty when only unfinished studies exist', () => {
+    const text = `Algemene informatie:
+Opleidingen? Afgerond?
+MBO 2 Nee`;
+    const result = resolveIntakeEducationFields({ education_level: 'MBO 2' }, text);
+    assert.deepEqual(result, {});
   });
 });
 

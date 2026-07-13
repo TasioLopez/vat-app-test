@@ -13,6 +13,7 @@ import {
   formatGegevensOtherEmployers,
 } from "@/lib/utils";
 import { formatPhoneForDisplay } from "@/lib/phone/format-dutch-display";
+import { getWerkgeverName } from "@/lib/tp/resolve-profile-context";
 import Image from "next/image";
 import Logo2 from "@/assets/images/logo-2.png";
 
@@ -206,7 +207,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
       node: (
         <Table
           rows={[
-            { label: "Werkgever", value: safe(tpData.client_name) },
+            { label: "Werkgever", value: safe(getWerkgeverName(tpData)) },
             { label: "Contactpersoon", value: safe(tpData.client_referent_name) },
             { label: "Telefoon", value: formatPhoneForDisplay(tpData.client_referent_phone) },
             { label: "Email", value: safe(tpData.client_referent_email) },
@@ -254,7 +255,7 @@ export default function EmployeeInfoA4Client({ employeeId }: { employeeId: strin
               label: "Aantal contracturen",
               value: tpData.contract_hours ? `${tpData.contract_hours} uur per week` : "—",
             },
-            { label: "Andere werkgever(s)", value: formatGegevensOtherEmployers(tpData.other_employers, tpData.client_name || tpData.employer_name) },
+            { label: "Andere werkgever(s)", value: formatGegevensOtherEmployers(tpData.other_employers, getWerkgeverName(tpData)) },
           ]}
         />
       ),

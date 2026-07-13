@@ -12,6 +12,31 @@ export function normalizePersonName(value: string | null | undefined): string | 
 }
 
 /**
+ * Title-case organization names for display (e.g. "Axxicom airport caddy" → "Axxicom Airport Caddy").
+ * Preserves short all-caps tokens (2–4 chars) such as BV, NV, HR.
+ */
+export function formatOrganizationDisplayName(name: string | null | undefined): string {
+  const trimmed = String(name ?? '').trim();
+  if (!trimmed) return '';
+
+  return trimmed
+    .split(/\s+/)
+    .map((word) => {
+      if (
+        word.length >= 2 &&
+        word.length <= 4 &&
+        word === word.toUpperCase() &&
+        /[A-Z]/.test(word)
+      ) {
+        return word;
+      }
+      if (word.length <= 1) return word.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+/**
  * Formats employee name as "Title Initial. LastName (FirstName)"
  * e.g., "Mevrouw K. Baaijens (Kim)"
  * 
@@ -188,9 +213,18 @@ export function formatEducationLevel(
   level: string | null | undefined,
   name?: string | null | undefined
 ): string {
-  if (!level) return name || "—";
-  if (!name) return level;
-  return `${level} (${name})`;
+  const invalidLevel =
+    isAbsentText(level) ||
+    (typeof level === 'string' &&
+      ['nee', 'nei', 'ongeschoold'].includes(level.trim().toLowerCase()));
+
+  const cleanLevel = invalidLevel ? undefined : String(level).trim();
+  const cleanName = isAbsentText(name) ? undefined : String(name).trim();
+
+  if (!cleanLevel && !cleanName) return 'Ongeschoold';
+  if (!cleanLevel) return cleanName!;
+  if (!cleanName) return cleanLevel;
+  return `${cleanLevel} (${cleanName})`;
 }
 
 /**
@@ -345,7 +379,9 @@ export function filterOtherEmployers(
     (employer) => employer.toLowerCase() !== currentEmployerName.toLowerCase()
   );
 
-  return filtered.length > 0 ? filtered.join(', ') : '—';
+  return filtered.length > 0
+    ? filtered.map((employer) => formatOrganizationDisplayName(employer)).join(', ')
+    : '—';
 }
 
 /** TP2026 Gegevens: empty andere werkgevers → "Geen". */

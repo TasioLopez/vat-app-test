@@ -17,7 +17,7 @@ import SectionEditorModal from '../SectionEditorModal';
 import { FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
-import { resolveReferentForEmployee, referentToClientReferentFields } from '@/lib/referents';
+import { resolveTPProfileContext, syncTPProfileContextFields } from '@/lib/tp/resolve-profile-context';
 
 const safeParse = <T,>(v: any, fallback: T): T => {
     try { return v ?? fallback; } catch { return fallback; }
@@ -213,23 +213,9 @@ export default function Section3({ employeeId }: { employeeId: string }) {
                         Object.entries(meta).forEach(([key, value]) => updateField(key, value));
                     }
 
-                    // Client name + resolved referent (referents table only)
-                    if (employee?.client_id) {
-                        const { data: client } = await supabase
-                            .from('clients')
-                            .select('name')
-                            .eq('id', employee.client_id)
-                            .single();
-                        if (client?.name) updateField('client_name', client.name);
-
-                        const referent = await resolveReferentForEmployee(supabase, { referent_id: employee.referent_id, client_id: employee.client_id });
-                        const refFields = referentToClientReferentFields(referent);
-                        if (refFields.client_referent_name != null) updateField('client_referent_name', refFields.client_referent_name);
-                        if (refFields.client_referent_phone != null) updateField('client_referent_phone', refFields.client_referent_phone);
-                        if (refFields.client_referent_email != null) updateField('client_referent_email', refFields.client_referent_email);
-                        if (refFields.client_referent_function != null) updateField('client_referent_function', refFields.client_referent_function);
-                        if (refFields.client_referent_gender != null) updateField('client_referent_gender', refFields.client_referent_gender);
-                    }
+                    // Werkgever + referent — always live from worker profile
+                    const profileContext = await resolveTPProfileContext(supabase, employeeId);
+                    syncTPProfileContextFields(updateField, profileContext);
 
                     // Fetch current user info (consultant)
                     const {

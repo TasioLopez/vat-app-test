@@ -2,7 +2,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { formatEmployeeName, isAbsentText, normalizePersonName } from "@/lib/utils";
 import { normalizePhoneForStorage } from "@/lib/phone/format-dutch-display";
-import { resolveReferentForEmployee, referentToClientReferentFields } from "@/lib/referents";
+import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 
 export type TPData = Record<string, any>;
 
@@ -67,30 +67,9 @@ export async function loadTP(
     data.last_name = normalizePersonName(employee.last_name) ?? employee.last_name;
   }
 
-  // 4) Client name + referent (from referents table only; tp_meta snapshot wins, then resolved referent fills blanks)
-  if (employee?.client_id) {
-    const { data: client } = await supabase
-      .from("clients")
-      .select("name")
-      .eq("id", employee.client_id)
-      .maybeSingle();
-
-    if (client?.name) {
-      data.client_name = client.name;
-      data.employer_name = client.name;
-    }
-
-    const referent = await resolveReferentForEmployee(supabase, {
-      referent_id: employee.referent_id,
-      client_id: employee.client_id,
-    });
-    const refFields = referentToClientReferentFields(referent);
-    if (!isFilled(data.client_referent_name)) data.client_referent_name = refFields.client_referent_name;
-    if (!isFilled(data.client_referent_phone)) data.client_referent_phone = refFields.client_referent_phone;
-    if (!isFilled(data.client_referent_email)) data.client_referent_email = refFields.client_referent_email;
-    if (!isFilled(data.client_referent_function)) data.client_referent_function = refFields.client_referent_function;
-    if (!isFilled(data.client_referent_gender)) data.client_referent_gender = refFields.client_referent_gender;
-  }
+  // 4) Werkgever + referent — always live from worker profile
+  const profileContext = await resolveTPProfileContext(supabase, employeeId);
+  Object.assign(data, applyTPProfileContext(data, profileContext));
 
   // 5) Full employee name - use formatted version with gender/title
   if (data.first_name && data.last_name) {
