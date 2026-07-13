@@ -9,6 +9,7 @@ import { TP2026CoverFields, formatNLDate } from '@/lib/tp2026/schema';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
+import FieldControl from '@/components/tp2026/FieldControl';
 import { formatEmployeeName } from '@/lib/utils';
 import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 
