@@ -127,6 +127,15 @@ describe('applyAutofillReviewMarks', () => {
 });
 
 describe('ensureTP2026Shape review normalization', () => {
+  it('forces has_ad_report false when ad_report_concept is true', () => {
+    const shaped = ensureTP2026Shape({
+      has_ad_report: true,
+      ad_report_concept: true,
+    });
+    assert.equal(shaped.has_ad_report, false);
+    assert.equal(shaped.ad_report_concept, true);
+  });
+
   it('strips unknown section ids from review maps', () => {
     const shaped = ensureTP2026Shape({
       basis_section_review: {

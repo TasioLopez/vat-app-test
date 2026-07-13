@@ -1,4 +1,4 @@
-import { buildArtsPhrase, nlDate } from '@/lib/tp/format-context';
+import { buildArtsPhrase, enrichArtsOrgFromMeta, nlDate } from '@/lib/tp/format-context';
 import {
   FML_INTRO_TEMPLATE,
   MEDISCH_SPREEKUUR_INTRO_TEMPLATE,
@@ -48,9 +48,13 @@ function resolveIntroVars(
 ): { datum: string; artsPhrase: string } {
   const spreekuurMeta = content.spreekuur_meta;
   if (spreekuurMeta?.datum || spreekuurMeta?.arts_org) {
+    const enrichedArtsOrg = enrichArtsOrgFromMeta(
+      spreekuurMeta.arts_org,
+      ctx.meta.occupational_doctor_org
+    );
     return {
       datum: nlDate(spreekuurMeta.datum) || '[datum spreekuur]',
-      artsPhrase: buildArtsPhrase(spreekuurMeta.arts_org),
+      artsPhrase: buildArtsPhrase(enrichedArtsOrg),
     };
   }
 
@@ -72,17 +76,13 @@ export function buildBelastbaarheidsprofielFields(
     .map((r) => `• ${r}`)
     .join('\n');
 
-  const quoteParts: string[] = [];
-  if (content.prognose_citaat) {
-    quoteParts.push(stripCitations(content.prognose_citaat));
-  }
-  if (content.reintegratieadvies_citaat) {
-    quoteParts.push(stripCitations(content.reintegratieadvies_citaat));
-  }
+  const prognoseQuote = content.prognose_citaat
+    ? stripCitations(content.prognose_citaat)
+    : '';
 
   const parts = [fmlIntro, rubriekenLines, spreekuurIntro];
-  if (quoteParts.length > 0) {
-    parts.push(`${PROGNOSE_DELIMITER}\n${quoteParts.join('\n')}`);
+  if (prognoseQuote) {
+    parts.push(`${PROGNOSE_DELIMITER}\n${prognoseQuote}`);
   }
 
   return { prognose_bedrijfsarts: parts.filter(Boolean).join('\n\n') };

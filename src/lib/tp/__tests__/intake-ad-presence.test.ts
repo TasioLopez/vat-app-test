@@ -23,17 +23,33 @@ describe('hasFilledAdReportDate', () => {
 
 describe('resolveTp2HasAdReport', () => {
   it('sets has_ad_report true when AD document or date is present', () => {
-    const withDoc: Record<string, unknown> = { ad_report_concept: true };
+    const withDoc: Record<string, unknown> = { ad_report_concept: false };
     resolveTp2HasAdReport(withDoc, true);
     assert.equal(withDoc.has_ad_report, true);
-    assert.equal(withDoc.ad_report_concept, true);
 
+    const withDateOnly: Record<string, unknown> = {
+      ad_report_concept: false,
+      ad_report_date: '2026-02-02',
+    };
+    resolveTp2HasAdReport(withDateOnly, false);
+    assert.equal(withDateOnly.has_ad_report, true);
+  });
+
+  it('forces has_ad_report false when concept even with AD date', () => {
     const withDateOnly: Record<string, unknown> = {
       ad_report_concept: true,
       ad_report_date: '2026-02-02',
     };
     resolveTp2HasAdReport(withDateOnly, false);
-    assert.equal(withDateOnly.has_ad_report, true);
+    assert.equal(withDateOnly.has_ad_report, false);
+    assert.equal(withDateOnly.ad_report_concept, true);
+  });
+
+  it('forces has_ad_report false when concept even with AD document', () => {
+    const withDoc: Record<string, unknown> = { ad_report_concept: true };
+    resolveTp2HasAdReport(withDoc, true);
+    assert.equal(withDoc.has_ad_report, false);
+    assert.equal(withDoc.ad_report_concept, true);
   });
 
   it('does not force has_ad_report false from concept flag alone', () => {

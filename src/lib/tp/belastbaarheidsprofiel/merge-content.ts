@@ -32,7 +32,6 @@ export function mergeBelastbaarheidsprofielContent(
 
   const rubrieken =
     spreekuur.rubrieken.length > 0 ? spreekuur.rubrieken : main.rubrieken;
-  const prognose_citaat = spreekuur.prognose_citaat ?? main.prognose_citaat;
 
   if (hasSpreekuurDoc && spreekuurMeta && !spreekuurMeta.datum && !spreekuurMeta.arts_org) {
     console.warn(
@@ -42,8 +41,7 @@ export function mergeBelastbaarheidsprofielContent(
 
   return {
     rubrieken,
-    prognose_citaat,
-    reintegratieadvies_citaat: main.reintegratieadvies_citaat,
+    prognose_citaat: main.prognose_citaat,
     spreekuur_meta: spreekuurMeta,
   };
 }

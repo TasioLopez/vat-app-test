@@ -4,14 +4,17 @@ INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/
 - Sectie 1 Gespreksinformatie: naam werknemer, Datum gesprek
 - Sectie 2 Persoonsgegevens: leeftijd, geslacht, functietitel, werkgever/organisatie, urenomvang, woonplaats, Telefoonnummer (werknemer → phone), Andere werkgever
 - Sectie 4 Aanmelding: Naam contactpersoon, Functietitel contactpersoon, Telefoonnummer contactpersoon, Email contactpersoon (enige bron voor referent_*)
-- Sectie 5 Medische situatie: Datum eerste ziekte dag
+- Sectie 5 Medische situatie:
+  • Datum eerste ziekte dag
+  • FML/IZP rubriek checkboxes (beperkingen)
+  • Quote prognose en quote advies belastbaarheid (bedrijfsarts): — verbatim quote for TP Belastbaarheidsprofiel prognose block
 - Sectie 6 Re-integratie en houding (TWEE-KOLOMS raster):
   • Bovenste rij (V5): Geboortedatum | Weken — geboortedatum werknemer, geen trajectdatum
   • Linker: Aanmelddatum | Rechter: Startdatum
   • Linker: Datum FML/IZP | Rechter: Einddatum
-  • Linker: Naam ☐ Arts ☐ Anios ☐ BA ☐ VA | Rechter: Datum AD-rapport
+  • Linker: Naam ☐ Arts ☐ Anios ☐ BA ☐ VA (volgende arts) | Rechter: Datum AD-rapport
   • Onder "AD-rapport:" staat checkbox ☐ Concept (Juni V6) — aangevinkt = het AD-rapport is een concept
-  • Linker: OSV ☐ Arts ☐ Anios ☐ BA | Rechter: Naam AD
+  • Linker: OSV ☐ Arts ☐ Anios ☐ BA (onder supervisie van — superviserend arts/BA) | Rechter: Naam AD
 - Sectie 7 Arbeidsdeskundig rapport:
   • Naam arbeidsdeskundige
   • Quote advies spoor 2 (inleiding) — adviesparagraaf over 2e spoor

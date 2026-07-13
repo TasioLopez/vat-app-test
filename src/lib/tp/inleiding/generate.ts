@@ -100,6 +100,7 @@ function buildApiContext(ctx: InleidingBuildContext): Record<string, unknown> {
   const ref = ctx.referent;
   return {
     has_ad_report: ctx.meta.has_ad_report ?? false,
+    ad_report_concept: ctx.meta.ad_report_concept ?? false,
     employee: {
       first_name: ctx.employee.first_name,
       last_name: ctx.employee.last_name,

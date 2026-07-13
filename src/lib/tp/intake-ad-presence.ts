@@ -27,11 +27,16 @@ export function resolveTp2HasAdReport(
   } else if (extracted.has_ad_report !== true && extracted.has_ad_report !== false) {
     extracted.has_ad_report = false;
   }
+
+  if (extracted.ad_report_concept === true) {
+    extracted.has_ad_report = false;
+  }
 }
 
 export const EMPTY_INTAKE_SECTIE7_CONTENT = {
   ad_auteur: null,
   ad_datum_iso: null,
   quote_advies_spoor2: null,
+  quote_passende_functies: null,
   functie_categorien: [] as { naam: string; toelichting: string }[],
 };

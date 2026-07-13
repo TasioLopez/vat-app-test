@@ -9,68 +9,74 @@ import {
 import { ADVIES_DELIMITER } from '../constants';
 import type { AdAdviesContentResult } from '../schema';
 
-const CALVIN_ADVIES =
-  'Er is nu geen perspectief op volledige hervatting in werk bij de voormalige eigen werkgever waardoor een 2e spoor traject dient te worden opgestart. Uitgangspunt hierbij is dat werknemer arbeidsmogelijkheden heeft, maar hij is nog niet direct (volledig) inzetbaar. Nadruk op: activering en opbouw inzetbaarheid (bijv. WEP of activeringstraject), met als doel (partiële) werkhervatting in eigen of ander (beter) passend werk.';
+const CALVIN_SPOOR2_ADVIES =
+  'Er is nu geen perspectief op volledige hervatting in werk bij de voormalige eigen werkgever waardoor een 2e spoor traject dient te worden opgestart.';
+
+const KELLY_PASSENDE_FUNCTIES = `Ik denk aan eventuele functies zoals:
+- lichte, zittende werkzaamheden zoals assemblage medewerker of visuele controle en inspectiewerk in een hygiënische productieomgeving;
+- werkomgeving (of vanuit huis), waarbij vooral gekeken wordt, tellen, controleren of sorteren op zicht, in eigen tempo; lichte/kleine producten die met minimale handkracht verplaatst kunnen worden; geen of weinig repeterende handbewegingen.
+- Lichte voorbereidende werkzaamheden (etiketten sorteren, eenvoudige materialen klaarleggen) aan een tafel. Er moet meer dan voldoende zelfregie zijn om zitten, staan en lopen goed af te wisselen.`;
 
 const ctx = {
   meta: {
     ad_report_date: '2026-02-02',
     has_ad_report: true,
-    occupational_doctor_name: 'Bea Delhaes',
+    occupational_doctor_name: 'Patricia Boomsma',
   },
 };
 
 describe('buildAdAdviesFields', () => {
-  it('assembles Calvin intake Sectie 7 advies quote only', () => {
+  it('assembles intake Sectie 7 Quote passende functies verbatim', () => {
     const content: AdAdviesContentResult = {
-      ad_auteur: 'Bea Delhaes',
+      ad_auteur: 'Patricia Boomsma',
       ad_datum_iso: '2026-02-02',
-      advies_citaat: CALVIN_ADVIES,
+      advies_citaat: KELLY_PASSENDE_FUNCTIES,
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
 
     assert.match(
       advies_ad_passende_arbeid,
-      /In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:/
+      /In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:/
     );
     assert.ok(advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
-    assert.match(advies_ad_passende_arbeid, /geen perspectief op volledige hervatting/);
-    assert.doesNotMatch(advies_ad_passende_arbeid, /Computergericht/);
-    assert.doesNotMatch(advies_ad_passende_arbeid, /Facilitair/);
+    assert.match(advies_ad_passende_arbeid, /Ik denk aan eventuele functies zoals/);
+    assert.match(advies_ad_passende_arbeid, /assemblage medewerker/);
+    assert.match(advies_ad_passende_arbeid, /etiketten sorteren/);
+    assert.doesNotMatch(advies_ad_passende_arbeid, /geen perspectief op volledige hervatting/);
   });
 
   it('uses meta occupational_doctor_name when model returns no auteur', () => {
     const content: AdAdviesContentResult = {
       ad_auteur: null,
       ad_datum_iso: null,
-      advies_citaat: CALVIN_ADVIES,
+      advies_citaat: KELLY_PASSENDE_FUNCTIES,
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
-    assert.match(advies_ad_passende_arbeid, /opgesteld door Bea Delhaes/);
+    assert.match(advies_ad_passende_arbeid, /opgesteld door Patricia Boomsma/);
     assert.match(advies_ad_passende_arbeid, /op 2 februari 2026/);
   });
 
   it('buildAdAdviesIntro matches expected format', () => {
-    const intro = buildAdAdviesIntro('Bea Delhaes', '2 februari 2026');
+    const intro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026');
     assert.equal(
       intro,
-      'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:'
+      'In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
 
-    const conceptIntro = buildAdAdviesIntro('Bea Delhaes', '2 februari 2026', true);
+    const conceptIntro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026', true);
     assert.equal(
       conceptIntro,
-      'In het concept arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:'
+      'In het concept arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
   });
 
   it('uses concept intro when ad_report_concept is true', () => {
     const content: AdAdviesContentResult = {
-      ad_auteur: 'S. Dijkstra',
+      ad_auteur: 'Patricia Boomsma',
       ad_datum_iso: '2026-05-21',
-      advies_citaat: CALVIN_ADVIES,
+      advies_citaat: KELLY_PASSENDE_FUNCTIES,
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(
@@ -83,8 +89,8 @@ describe('buildAdAdviesFields', () => {
 
   it('parseAdAdvies and buildAdAdviesBlock round-trip', () => {
     const intro =
-      'In het arbeidsdeskundigrapport, opgesteld door Bea Delhaes, op 2 februari 2026 staat het volgende advies over passende arbeid:';
-    const citaat = CALVIN_ADVIES;
+      'In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:';
+    const citaat = KELLY_PASSENDE_FUNCTIES;
     const block = buildAdAdviesBlock(intro, citaat);
 
     assert.ok(block.includes(ADVIES_DELIMITER));
@@ -98,5 +104,16 @@ describe('buildAdAdviesFields', () => {
     const parsed = parseAdAdvies(legacy);
     assert.equal(parsed.intro, legacy);
     assert.equal(parsed.citaat, '');
+  });
+
+  it('does not include spoor 2 advies when quoting passende functies', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'Patricia Boomsma',
+      ad_datum_iso: '2026-02-02',
+      advies_citaat: KELLY_PASSENDE_FUNCTIES,
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
+    assert.doesNotMatch(advies_ad_passende_arbeid, new RegExp(CALVIN_SPOOR2_ADVIES));
   });
 });

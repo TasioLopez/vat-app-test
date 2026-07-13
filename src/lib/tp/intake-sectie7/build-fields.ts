@@ -18,6 +18,9 @@ export function sanitizeIntakeSectie7Content(content: IntakeSectie7Content): Int
     quote_advies_spoor2: content.quote_advies_spoor2
       ? stripCitations(content.quote_advies_spoor2)
       : null,
+    quote_passende_functies: content.quote_passende_functies
+      ? stripCitations(content.quote_passende_functies)
+      : null,
     functie_categorien: content.functie_categorien.map((c) => ({
       naam: stripCitations(c.naam),
       toelichting: stripCitations(c.toelichting),
@@ -43,6 +46,10 @@ export function buildFunctiesFromIntakeCategories(
 
 export function hasIntakeAdviesQuote(content: IntakeSectie7Content): boolean {
   return Boolean(content.quote_advies_spoor2?.trim());
+}
+
+export function hasIntakePassendeFunctiesQuote(content: IntakeSectie7Content): boolean {
+  return Boolean(content.quote_passende_functies?.trim());
 }
 
 export function hasIntakeFunctieCategories(content: IntakeSectie7Content): boolean {

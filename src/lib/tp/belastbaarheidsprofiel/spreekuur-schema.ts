@@ -2,7 +2,6 @@ export type SpreekuurContentResult = {
   datum: string | null;
   arts_org: string | null;
   rubrieken: string[];
-  prognose_citaat: string | null;
 };
 
 function nullableStringProperty(description: string) {
@@ -27,11 +26,8 @@ export const SPREEKUUR_CONTENT_JSON_SCHEMA = {
         'FML-rubrieken met daadwerkelijke beperkingen genoemd in de Spreekuurrapportage',
       items: { type: 'string' },
     },
-    prognose_citaat: nullableStringProperty(
-      'Exact letterlijk citaat van de prognose uit de Spreekuurrapportage. Null if not found.'
-    ),
   },
-  required: ['datum', 'arts_org', 'rubrieken', 'prognose_citaat'],
+  required: ['datum', 'arts_org', 'rubrieken'],
   additionalProperties: false,
 } as const;
 
@@ -52,16 +48,10 @@ export function parseSpreekuurContentResult(raw: unknown): SpreekuurContentResul
     datum: coerceNullableString(o.datum),
     arts_org: coerceNullableString(o.arts_org),
     rubrieken: coerceRubrieken(o.rubrieken),
-    prognose_citaat: coerceNullableString(o.prognose_citaat),
   };
 }
 
 export function hasSpreekuurContent(result: SpreekuurContentResult | null | undefined): boolean {
   if (!result) return false;
-  return Boolean(
-    result.datum ||
-      result.arts_org ||
-      result.rubrieken.length > 0 ||
-      result.prognose_citaat
-  );
+  return Boolean(result.datum || result.arts_org || result.rubrieken.length > 0);
 }

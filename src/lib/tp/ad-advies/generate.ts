@@ -22,7 +22,7 @@ function mapIntakeToAdAdviesContent(
       ctx.meta.occupational_doctor_name?.trim() ||
       null,
     ad_datum_iso: intake.ad_datum_iso || ctx.meta.ad_report_date || null,
-    advies_citaat: intake.quote_advies_spoor2,
+    advies_citaat: intake.quote_passende_functies,
   };
 }
 

@@ -7,6 +7,7 @@ export type IntakeSectie7Content = {
   ad_auteur: string | null;
   ad_datum_iso: string | null;
   quote_advies_spoor2: string | null;
+  quote_passende_functies: string | null;
   functie_categorien: IntakeSectie7FunctieCategorie[];
 };
 
@@ -45,6 +46,9 @@ export const INTAKE_SECTIE7_JSON_SCHEMA = {
     quote_advies_spoor2: nullableStringProperty(
       'EXACT verbatim advice paragraph from Sectie 7 Quote advies spoor 2. Exclude Quote passende functies. Null if not found.'
     ),
+    quote_passende_functies: nullableStringProperty(
+      'EXACT verbatim full text block from Sectie 7 Quote passende functies including intro sentence and all bullets/lines. Exclude Quote advies spoor 2. Null if not found.'
+    ),
     functie_categorien: {
       type: 'array',
       description:
@@ -52,7 +56,7 @@ export const INTAKE_SECTIE7_JSON_SCHEMA = {
       items: functieCategorieSchema,
     },
   },
-  required: ['ad_auteur', 'ad_datum_iso', 'quote_advies_spoor2', 'functie_categorien'],
+  required: ['ad_auteur', 'ad_datum_iso', 'quote_advies_spoor2', 'quote_passende_functies', 'functie_categorien'],
   additionalProperties: false,
 } as const;
 
@@ -81,6 +85,7 @@ export function parseIntakeSectie7Content(raw: unknown): IntakeSectie7Content {
     ad_auteur: coerceNullableString(o.ad_auteur),
     ad_datum_iso: coerceNullableString(o.ad_datum_iso),
     quote_advies_spoor2: coerceNullableString(o.quote_advies_spoor2),
+    quote_passende_functies: coerceNullableString(o.quote_passende_functies),
     functie_categorien: coerceFunctieCategorien(o.functie_categorien),
   };
 }

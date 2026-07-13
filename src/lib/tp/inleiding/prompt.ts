@@ -41,8 +41,9 @@ werknemer_doel_toelichting
 - Alleen invullen als werknemer het doel van het 2e spoor anders ervaart dan standaard; anders null.
 
 ad_quote
-- Letterlijk citaat uit AD-rapport (conclusie/advies over 2e spoor) indien AD aanwezig.
-- Null wanneer geen AD-rapport in documenten of context.has_ad_report is false.
+- Letterlijk citaat uit AD-rapport of intake sectie 7 "Quote advies spoor 2" (conclusie/advies over 2e spoor).
+- Invullen wanneer definitief AD aanwezig is (context.has_ad_report true en geen concept), OF wanneer context.ad_report_concept true is (concept AD — quote uit intake, geen definitief rapport).
+- Null wanneer geen AD-inhoud in documenten en geen concept-flag.
 
 extra_aanmelder
 - Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw), organisatie en gender ("Man" of "Vrouw") indien bekend.

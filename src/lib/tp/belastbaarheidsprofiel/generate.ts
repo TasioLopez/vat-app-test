@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import { generateIntakeSectie5Content } from '@/lib/tp/intake-sectie5';
 import {
   buildBelastbaarheidsprofielFields,
   stripCitations,
@@ -172,14 +173,7 @@ export async function generateBelastbaarheidsprofielContent(
     }
 
     const parsed = JSON.parse(outputText) as unknown;
-    const content = parseBelastbaarheidsprofielContentResult(parsed);
-    if (content.prognose_citaat) {
-      content.prognose_citaat = stripCitations(content.prognose_citaat);
-    }
-    if (content.reintegratieadvies_citaat) {
-      content.reintegratieadvies_citaat = stripCitations(content.reintegratieadvies_citaat);
-    }
-    return content;
+    return parseBelastbaarheidsprofielContentResult(parsed);
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }
@@ -199,37 +193,49 @@ export async function generateBelastbaarheidsprofiel(
     has_spreekuurrapportage: hasSpreekuurDoc,
   };
 
-  let spreekuurResult: SpreekuurContentResult | null = null;
-  if (spreekuurDoc) {
-    spreekuurResult = await extractSpreekuurContent(openai, supabase, spreekuurDoc);
-  }
+  const spreekuurPromise = spreekuurDoc
+    ? extractSpreekuurContent(openai, supabase, spreekuurDoc)
+    : Promise.resolve(null as SpreekuurContentResult | null);
 
-  let mainContent: BelastbaarheidsprofielContentResult;
-  try {
-    mainContent = await generateBelastbaarheidsprofielContent(
-      openai,
-      supabase,
-      buildCtx,
-      docs
-    );
-  } catch (error) {
+  const mainContentPromise = generateBelastbaarheidsprofielContent(
+    openai,
+    supabase,
+    buildCtx,
+    docs
+  ).catch((error) => {
     if (!hasSpreekuurDoc) throw error;
     console.warn(
       '⚠️ Belastbaarheidsprofiel: geen FML/AD documenten — alleen Spreekuurrapportage beschikbaar'
     );
-    mainContent = {
+    return {
       rubrieken: [],
       prognose_citaat: null,
-      reintegratieadvies_citaat: null,
       spreekuur_meta: null,
-    };
-  }
+    } satisfies BelastbaarheidsprofielContentResult;
+  });
+
+  const intakeSectie5Promise = generateIntakeSectie5Content(openai, supabase, docs).catch(
+    (error) => {
+      console.warn('⚠️ Belastbaarheidsprofiel: intake Sectie 5 extractie mislukt', error);
+      return { quote_prognose_advies_belastbaarheid: null };
+    }
+  );
+
+  const [spreekuurResult, mainContent, intakeSectie5] = await Promise.all([
+    spreekuurPromise,
+    mainContentPromise,
+    intakeSectie5Promise,
+  ]);
 
   const mergedContent = mergeBelastbaarheidsprofielContent(
     mainContent,
     spreekuurResult,
     hasSpreekuurDoc
   );
+
+  mergedContent.prognose_citaat = intakeSectie5.quote_prognose_advies_belastbaarheid
+    ? stripCitations(intakeSectie5.quote_prognose_advies_belastbaarheid)
+    : null;
 
   return buildBelastbaarheidsprofielFields(buildCtx, mergedContent);
 }

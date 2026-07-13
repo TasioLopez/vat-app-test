@@ -81,4 +81,20 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
 
     assert.equal(result.occupational_doctor_org, supervisie);
   });
+
+  it('combines primary Arts and OSV BA into supervisie phrase (Melissa case)', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'M. Stevens',
+      doctor_role: 'Arts',
+      osv_doctor_name: 'M. Montagne',
+      osv_doctor_role: 'BA',
+    });
+
+    assert.equal(
+      result.occupational_doctor_org,
+      'Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne'
+    );
+    assert.equal(result.osv_doctor_name, undefined);
+    assert.equal(result.osv_doctor_role, undefined);
+  });
 });

@@ -3,7 +3,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { DEFAULT_BELASTBAARHEID_MODEL } from './constants';
-import { stripCitations } from './build-fields';
 import {
   SPREEKUUR_CONTENT_PROMPT,
   buildSpreekuurContextMessage,
@@ -101,11 +100,7 @@ export async function extractSpreekuurContent(
     }
 
     const parsed = JSON.parse(outputText) as unknown;
-    const content = parseSpreekuurContentResult(parsed);
-    if (content.prognose_citaat) {
-      content.prognose_citaat = stripCitations(content.prognose_citaat);
-    }
-    return content;
+    return parseSpreekuurContentResult(parsed);
   } catch (error) {
     console.error('❌ Spreekuurrapportage extraction failed:', error);
     return null;

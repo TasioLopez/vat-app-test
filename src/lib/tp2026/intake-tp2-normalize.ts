@@ -1,7 +1,11 @@
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
+import {
+  buildSupervisiePhrase,
+  type DoctorRole,
+} from '@/lib/tp/format-context';
 
-export type DoctorRole = 'Arts' | 'Anios' | 'BA' | 'VA';
+export type { DoctorRole };
 
 const TP2_DATE_KEYS = [
   'first_sick_day',
@@ -98,10 +102,17 @@ export function normalizeTp2ExtractedData(
   }
 
   if (out.occupational_doctor_org != null) {
-    const formatted = formatOccupationalDoctorOrg(
-      String(out.occupational_doctor_org),
-      doctorRole
-    );
+    const primaryRaw = String(out.occupational_doctor_org);
+    const osvName = out.osv_doctor_name != null ? String(out.osv_doctor_name).trim() : '';
+    const osvRole = normalizeDoctorRole(out.osv_doctor_role);
+
+    let formatted: string | undefined;
+    if (osvName && !/werkend onder supervisie van/i.test(primaryRaw)) {
+      formatted = buildSupervisiePhrase(primaryRaw, doctorRole, osvName, osvRole);
+    } else {
+      formatted = formatOccupationalDoctorOrg(primaryRaw, doctorRole);
+    }
+
     if (formatted) out.occupational_doctor_org = formatted;
     else delete out.occupational_doctor_org;
   }
@@ -123,5 +134,7 @@ export function normalizeTp2ExtractedData(
   delete out.intake_concept;
 
   delete out.doctor_role;
+  delete out.osv_doctor_name;
+  delete out.osv_doctor_role;
   return out;
 }

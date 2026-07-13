@@ -4,6 +4,7 @@ import {
   buildFunctiesFromIntakeCategories,
   hasIntakeAdviesQuote,
   hasIntakeFunctieCategories,
+  hasIntakePassendeFunctiesQuote,
 } from '../build-fields';
 import type { IntakeSectie7Content } from '../schema';
 
@@ -27,6 +28,9 @@ const CALVIN_CATEGORIES = [
   },
 ];
 
+const KELLY_PASSENDE_FUNCTIES = `Ik denk aan eventuele functies zoals:
+- lichte, zittende werkzaamheden zoals assemblage medewerker`;
+
 describe('buildFunctiesFromIntakeCategories', () => {
   it('pads Calvin categories to four entries with En soortgelijk', () => {
     const functies = buildFunctiesFromIntakeCategories(CALVIN_CATEGORIES);
@@ -47,16 +51,30 @@ describe('buildFunctiesFromIntakeCategories', () => {
   });
 });
 
-describe('hasIntakeAdviesQuote / hasIntakeFunctieCategories', () => {
+describe('hasIntakeAdviesQuote / hasIntakeFunctieCategories / hasIntakePassendeFunctiesQuote', () => {
   it('detects Calvin content flags', () => {
     const content: IntakeSectie7Content = {
       ad_auteur: 'Bea Delhaes',
       ad_datum_iso: '2026-02-02',
       quote_advies_spoor2: CALVIN_ADVIES,
+      quote_passende_functies: null,
       functie_categorien: CALVIN_CATEGORIES,
     };
     assert.ok(hasIntakeAdviesQuote(content));
     assert.ok(hasIntakeFunctieCategories(content));
+    assert.ok(!hasIntakePassendeFunctiesQuote(content));
     assert.doesNotMatch(CALVIN_ADVIES, /Computergericht/);
+  });
+
+  it('detects verbatim passende functies quote', () => {
+    const content: IntakeSectie7Content = {
+      ad_auteur: 'Patricia Boomsma',
+      ad_datum_iso: '2026-02-02',
+      quote_advies_spoor2: null,
+      quote_passende_functies: KELLY_PASSENDE_FUNCTIES,
+      functie_categorien: [],
+    };
+    assert.ok(hasIntakePassendeFunctiesQuote(content));
+    assert.ok(!hasIntakeAdviesQuote(content));
   });
 });

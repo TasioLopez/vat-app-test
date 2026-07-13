@@ -12,6 +12,7 @@ import {
   normalizeBasisSectionReview,
 } from '@/lib/tp2026/basis-section-review';
 import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
+import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   hasToelichtingOpener,
   updatePowMeterToelichting,
@@ -187,6 +188,10 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   if (isAbsentText(next.other_employers)) {
     next.other_employers = '';
+  }
+
+  if (isAdReportConcept(next) && next.has_ad_report !== false) {
+    next.has_ad_report = false;
   }
 
   normalizePowMeterLegacyFields(next);

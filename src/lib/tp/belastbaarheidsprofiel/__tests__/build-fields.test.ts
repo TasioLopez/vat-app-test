@@ -18,16 +18,17 @@ const nikkiCtx = {
   },
 };
 
+const KELLY_INTAKE_QUOTE =
+  'Er zijn benutbare mogelijkheden. Terugkeer in eigen werk is onzeker maar niet uitgesloten. Belastbaarheid kan verder verbeteren. Arbeidsdeskundig onderzoek noodzakelijk.';
+
 const baseContent: BelastbaarheidsprofielContentResult = {
   rubrieken: ['Persoonlijk functioneren', 'Werktijden'],
-  prognose_citaat:
-    'Op basis van de huidige ontvangen informatie is de geschatte prognose positief.',
-  reintegratieadvies_citaat: 'Werknemer kan deels hervatten in aangepast werk.',
+  prognose_citaat: KELLY_INTAKE_QUOTE,
   spreekuur_meta: null,
 };
 
 describe('buildBelastbaarheidsprofielFields', () => {
-  it('assembles FML intro, rubrieken, spreekuur intro and prognose block', () => {
+  it('assembles FML intro, rubrieken, spreekuur intro and intake Sectie 5 prognose quote', () => {
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, baseContent);
 
     assert.match(prognose_bedrijfsarts, /Functionele Mogelijkheden Lijst \(FML\) van 23 januari 2026/);
@@ -40,17 +41,27 @@ describe('buildBelastbaarheidsprofielFields', () => {
     assert.ok(prognose_bedrijfsarts.includes(PROGNOSE_DELIMITER));
 
     const prognosePart = prognose_bedrijfsarts.split(PROGNOSE_DELIMITER)[1] ?? '';
-    const prognoseIdx = prognosePart.indexOf('positief');
-    const reintIdx = prognosePart.indexOf('aangepast werk');
-    assert.ok(prognoseIdx >= 0 && reintIdx >= 0);
-    assert.ok(prognoseIdx < reintIdx, 'prognose quote should come before reintegratieadvies');
+    assert.match(prognosePart, /Er zijn benutbare mogelijkheden/);
+    assert.match(prognosePart, /Arbeidsdeskundig onderzoek noodzakelijk/);
+  });
+
+  it('omits prognose block when intake Sectie 5 quote is empty', () => {
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren'],
+      prognose_citaat: null,
+      spreekuur_meta: null,
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
+    assert.doesNotMatch(prognose_bedrijfsarts, new RegExp(PROGNOSE_DELIMITER));
+    assert.match(prognose_bedrijfsarts, /medisch spreekuur/);
   });
 
   it('uses spreekuur meta for both intro paragraphs when present', () => {
     const content: BelastbaarheidsprofielContentResult = {
       ...baseContent,
       rubrieken: ['Statische houdingen'],
-      prognose_citaat: 'Prognose uit spreekuurrapportage.',
+      prognose_citaat: KELLY_INTAKE_QUOTE,
       spreekuur_meta: {
         datum: '2026-12-05',
         arts_org: 'C.J. de Bode',
@@ -60,18 +71,65 @@ describe('buildBelastbaarheidsprofielFields', () => {
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
 
     assert.match(prognose_bedrijfsarts, /Functionele Mogelijkheden Lijst \(FML\) van 5 december 2026/);
-    assert.match(prognose_bedrijfsarts, /arts C\.J\. de Bode, beperkingen/);
-    assert.match(prognose_bedrijfsarts, /door arts C\.J\. de Bode, staat onderstaande/);
+    assert.match(prognose_bedrijfsarts, /Arts C\.J\. de Bode, beperkingen/);
+    assert.match(prognose_bedrijfsarts, /door Arts C\.J\. de Bode, staat onderstaande/);
     assert.match(prognose_bedrijfsarts, /• Statische houdingen/);
     assert.doesNotMatch(prognose_bedrijfsarts, /23 januari 2026/);
     assert.doesNotMatch(prognose_bedrijfsarts, /L\. Bollen/);
   });
 
+  it('preserves Verzekeringsarts in both intro paragraphs', () => {
+    const kellyCtx = {
+      meta: {
+        fml_izp_lab_date: '2026-04-29',
+        occupational_doctor_org: 'Verzekeringsarts Ankersmit',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: null,
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(kellyCtx, content);
+
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld door Verzekeringsarts Ankersmit, beperkingen/
+    );
+    assert.match(
+      prognose_bedrijfsarts,
+      /door Verzekeringsarts Ankersmit, staat onderstaande/
+    );
+    assert.doesNotMatch(prognose_bedrijfsarts, /opgesteld door arts Ankersmit/);
+  });
+
+  it('enriches spreekuur name-only arts_org with Verzekeringsarts from meta', () => {
+    const kellyCtx = {
+      meta: {
+        fml_izp_lab_date: '2026-04-29',
+        occupational_doctor_org: 'Verzekeringsarts Ankersmit',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Statische houdingen'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: {
+        datum: '2026-04-29',
+        arts_org: 'Ankersmit',
+      },
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(kellyCtx, content);
+
+    assert.match(prognose_bedrijfsarts, /door Verzekeringsarts Ankersmit, staat onderstaande/);
+    assert.match(prognose_bedrijfsarts, /opgesteld door Verzekeringsarts Ankersmit, beperkingen/);
+  });
+
   it('preserves supervisie doctor phrase verbatim', () => {
     const content: BelastbaarheidsprofielContentResult = {
       rubrieken: ['Sociaal functioneren'],
-      prognose_citaat: 'Prognose tekst.',
-      reintegratieadvies_citaat: null,
+      prognose_citaat: KELLY_INTAKE_QUOTE,
       spreekuur_meta: null,
     };
 
@@ -90,30 +148,13 @@ describe('buildBelastbaarheidsprofielFields', () => {
     const content: BelastbaarheidsprofielContentResult = {
       rubrieken: [],
       prognose_citaat: null,
-      reintegratieadvies_citaat: null,
       spreekuur_meta: null,
     };
 
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
     assert.match(prognose_bedrijfsarts, /• Persoonlijk functioneren/);
     assert.match(prognose_bedrijfsarts, /• Werktijden/);
-  });
-
-  it('keeps AD reintegratieadvies alongside spreekuur prognose', () => {
-    const content: BelastbaarheidsprofielContentResult = {
-      rubrieken: ['Dynamische handelingen'],
-      prognose_citaat: 'Spreekuur prognose.',
-      reintegratieadvies_citaat: 'AD re-integratieadvies blijft staan.',
-      spreekuur_meta: {
-        datum: '2026-12-05',
-        arts_org: 'C.J. de Bode',
-      },
-    };
-
-    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
-    const prognosePart = prognose_bedrijfsarts.split(PROGNOSE_DELIMITER)[1] ?? '';
-    assert.ok(prognosePart.includes('Spreekuur prognose.'));
-    assert.ok(prognosePart.includes('AD re-integratieadvies blijft staan.'));
+    assert.doesNotMatch(prognose_bedrijfsarts, new RegExp(PROGNOSE_DELIMITER));
   });
 });
 
@@ -123,8 +164,7 @@ describe('parseBelastbaarheidsprofiel / buildBelastbaarheidsprofielBlock', () =>
     const parsed = parseBelastbaarheidsprofiel(prognose_bedrijfsarts);
 
     assert.ok(parsed.limitationsBlock.includes('Functionele Mogelijkheden Lijst'));
-    assert.ok(parsed.prognoseQuote.includes('positief'));
-    assert.ok(parsed.prognoseQuote.includes('aangepast werk'));
+    assert.ok(parsed.prognoseQuote.includes('benutbare mogelijkheden'));
     assert.equal(
       buildBelastbaarheidsprofielBlock(parsed.limitationsBlock, parsed.prognoseQuote),
       prognose_bedrijfsarts
@@ -142,11 +182,10 @@ describe('parseBelastbaarheidsprofiel / buildBelastbaarheidsprofielBlock', () =>
 });
 
 describe('mergeBelastbaarheidsprofielContent', () => {
-  it('prefers spreekuur rubrieken and prognose while keeping AD reintegratieadvies', () => {
+  it('prefers spreekuur rubrieken while keeping main prognose_citaat from intake', () => {
     const main: BelastbaarheidsprofielContentResult = {
       rubrieken: ['Persoonlijk functioneren'],
-      prognose_citaat: 'AD prognose.',
-      reintegratieadvies_citaat: 'AD reintegratie.',
+      prognose_citaat: KELLY_INTAKE_QUOTE,
       spreekuur_meta: null,
     };
 
@@ -156,14 +195,12 @@ describe('mergeBelastbaarheidsprofielContent', () => {
         datum: '2026-12-05',
         arts_org: 'C.J. de Bode',
         rubrieken: ['Werktijden', 'Statische houdingen'],
-        prognose_citaat: 'Spreekuur prognose.',
       },
       true
     );
 
     assert.deepEqual(merged.rubrieken, ['Werktijden', 'Statische houdingen']);
-    assert.equal(merged.prognose_citaat, 'Spreekuur prognose.');
-    assert.equal(merged.reintegratieadvies_citaat, 'AD reintegratie.');
+    assert.equal(merged.prognose_citaat, KELLY_INTAKE_QUOTE);
     assert.deepEqual(merged.spreekuur_meta, {
       datum: '2026-12-05',
       arts_org: 'C.J. de Bode',
@@ -178,7 +215,7 @@ describe('mergeBelastbaarheidsprofielContent', () => {
   it('falls back to main when spreekuur extraction is empty', () => {
     const merged = mergeBelastbaarheidsprofielContent(
       baseContent,
-      { datum: null, arts_org: null, rubrieken: [], prognose_citaat: null },
+      { datum: null, arts_org: null, rubrieken: [] },
       true
     );
     assert.equal(merged.spreekuur_meta, null);
@@ -193,13 +230,12 @@ describe('mergeBelastbaarheidsprofielContent', () => {
         datum: '2026-12-05',
         arts_org: 'C.J. de Bode',
         rubrieken: [],
-        prognose_citaat: 'Spreekuur prognose.',
       },
       true
     );
 
     assert.deepEqual(merged.rubrieken, baseContent.rubrieken);
-    assert.equal(merged.prognose_citaat, 'Spreekuur prognose.');
+    assert.equal(merged.prognose_citaat, baseContent.prognose_citaat);
   });
 });
 
@@ -209,12 +245,10 @@ describe('parseSpreekuurContentResult', () => {
       datum: '2026-12-05',
       arts_org: 'Arts X werkend onder supervisie van arts Y',
       rubrieken: ['Werktijden'],
-      prognose_citaat: 'Letterlijke prognose.',
     });
 
     assert.equal(parsed.datum, '2026-12-05');
     assert.equal(parsed.arts_org, 'Arts X werkend onder supervisie van arts Y');
     assert.deepEqual(parsed.rubrieken, ['Werktijden']);
-    assert.equal(parsed.prognose_citaat, 'Letterlijke prognose.');
   });
 });

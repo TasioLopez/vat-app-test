@@ -28,9 +28,13 @@ DATUMVELDEN (YYYY-MM-DD):
 
 PERSOONSVELDEN:
 
-8. occupational_doctor_org — bedrijfsarts: sectie 6 rij "Naam ☐ Arts ☐ Anios ☐ BA ☐ VA:"
+8. occupational_doctor_org — volgende arts: sectie 6 rij "Naam ☐ Arts ☐ Anios ☐ BA ☐ VA:"
    - Geef ook doctor_role: "Arts" | "Anios" | "BA" | "VA" (welke checkbox is aangevinkt)
-   - Alleen de ingevulde naam, geen "intern gebruik bij..." tenzij supervisie-zin aanwezig
+   - Alleen de ingevulde naam (zonder role-prefix), geen "intern gebruik bij..." tenzij supervisie-zin aanwezig
+   - osv_doctor_name — naam op sectie 6 rij "OSV ☐ Arts ☐ Anios ☐ BA" (superviserend arts/BA)
+   - osv_doctor_role — "Arts" | "Anios" | "BA" (welke OSV-checkbox is aangevinkt)
+   - Wanneer osv_doctor_name is ingevuld: zet occupational_doctor_org op de gecombineerde supervisie-zin:
+     "{primary} werkend onder supervisie van {supervisor}" (met role-prefixen, bijv. Arts + Bedrijfsarts)
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
 
@@ -53,6 +57,7 @@ Voorbeelden:
 - "Datum AD-rapport: 2-2-2026" → ad_report_date: "2026-02-02"
 - VA aangevinkt, naam "A.J. Karim" → occupational_doctor_org: "A.J. Karim", doctor_role: "VA"
 - "Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas"
+- Arts aangevinkt "M. Stevens", OSV BA "M. Montagne" → occupational_doctor_org: "Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne", doctor_role: "Arts", osv_doctor_name: "M. Montagne", osv_doctor_role: "BA"
 
 Return ONLY a JSON object met de gevonden velden.
 `.trim();

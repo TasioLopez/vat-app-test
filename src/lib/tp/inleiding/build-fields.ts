@@ -1,6 +1,7 @@
 import type { ReferentRow } from '@/lib/referents';
 import {
   buildInleidingAdIntroPrefix,
+  hasDefinitiveAdReport,
   isAdReportConcept,
 } from '@/lib/tp/ad-report-wording';
 import {
@@ -302,17 +303,20 @@ export function buildInleidingFields(
     buildReintegratieEnDoel(ctx, content),
   ];
 
-  const hasAd = Boolean(ctx.meta.has_ad_report);
-  if (!hasAd) {
+  const hasDefinitiveAd = hasDefinitiveAdReport(ctx.meta);
+  const isConceptAd = isAdReportConcept(ctx.meta);
+  const quote =
+    coerceText(content.ad_quote) || coerceText(ctx.meta.advies_ad_passende_arbeid);
+  const hasConceptAdQuote = isConceptAd && Boolean(quote);
+
+  if (!hasDefinitiveAd && !hasConceptAdQuote) {
     paragraphs.push(`**${INLEIDING_GEEN_AD}**`);
   }
 
   const inleiding = paragraphs.join('\n\n');
 
   let inleiding_sub = '';
-  if (hasAd) {
-    const quote =
-      coerceText(content.ad_quote) || coerceText(ctx.meta.advies_ad_passende_arbeid);
+  if (hasDefinitiveAd || hasConceptAdQuote) {
     if (quote) {
       const adName = coerceText(ctx.meta.occupational_doctor_name, '[naam arbeidsdeskundige]');
       const adDate = nlDate(ctx.meta.ad_report_date) || '[datum]';
@@ -320,7 +324,7 @@ export function buildInleidingFields(
         adName,
         adDate,
         quote,
-        isAdReportConcept(ctx.meta)
+        isConceptAd
       );
     }
   }

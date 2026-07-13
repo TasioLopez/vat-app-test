@@ -21,7 +21,7 @@ export const AD_ADVIES_CONTENT_JSON_SCHEMA = {
       'Datum AD-rapport from intake Sectie 6 in YYYY-MM-DD. Null if not found.'
     ),
     advies_citaat: nullableStringProperty(
-      'EXACT verbatim Quote advies spoor 2 from intake Sectie 7. Exclude passende functies. Null if not found.'
+      'EXACT verbatim Quote passende functies from intake Sectie 7. Exclude Quote advies spoor 2. Null if not found.'
     ),
   },
   required: ['ad_auteur', 'ad_datum_iso', 'advies_citaat'],

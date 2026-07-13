@@ -11,6 +11,7 @@ export {
   buildFunctiesFromIntakeCategories,
   hasIntakeAdviesQuote,
   hasIntakeFunctieCategories,
+  hasIntakePassendeFunctiesQuote,
   sanitizeIntakeSectie7Content,
   stripCitations,
 } from './build-fields';

@@ -26,7 +26,12 @@ VELDEN:
    - Neem NOOIT "Quote passende functies" op in dit veld
    - Null als niet gevonden
 
-4. functie_categorien — Parseer "Quote passende functies" uit Sectie 7
+4. quote_passende_functies — EXACT letterlijk de volledige tekst onder "Quote passende functies"
+   - Inclusief inleidende zin (bijv. "Ik denk aan eventuele functies zoals:") en alle bullets/regels
+   - Neem NOOIT "Quote advies spoor 2" op in dit veld
+   - Null als niet gevonden
+
+5. functie_categorien — Parseer "Quote passende functies" uit Sectie 7
    - Per categorie: naam = categorielabel (bijv. "Computergericht/Administratief", "Facilitair")
    - toelichting = verbatim "Zoals:" voorbeelden of aanvullende tekst bij die categorie
    - Neem "En vergelijkbaar..." als aparte categorie op indien aanwezig (naam: "En vergelijkbaar", toelichting: resterende tekst)

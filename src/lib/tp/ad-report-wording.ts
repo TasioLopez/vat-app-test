@@ -10,6 +10,22 @@ export function isAdReportConcept(meta?: { ad_report_concept?: boolean | null })
   return meta?.ad_report_concept === true;
 }
 
+/** Definitive AD report present at registration (not a concept). */
+export function hasDefinitiveAdReport(meta?: {
+  has_ad_report?: boolean | null;
+  ad_report_concept?: boolean | null;
+}): boolean {
+  return meta?.has_ad_report === true && !isAdReportConcept(meta);
+}
+
+/** Intake has AD-related narrative (definitive or concept). */
+export function hasIntakeAdNarrative(meta?: {
+  has_ad_report?: boolean | null;
+  ad_report_concept?: boolean | null;
+}): boolean {
+  return isAdReportConcept(meta) || meta?.has_ad_report === true;
+}
+
 export function adReportDateLabel(concept: boolean): string {
   return concept ? 'Datum concept AD rapportage' : 'Datum AD rapportage';
 }

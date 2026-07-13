@@ -81,6 +81,21 @@ describe('buildInleidingFields', () => {
     assert.equal(inleiding_sub, '');
   });
 
+  it('includes concept AD quote without geen-AD paragraph when ad_report_concept is true', () => {
+    const ctx = {
+      ...baseCtx,
+      meta: {
+        ...baseCtx.meta,
+        has_ad_report: false,
+        ad_report_concept: true,
+      },
+    };
+    const { inleiding, inleiding_sub } = buildInleidingFields(ctx, baseContent);
+    assert.doesNotMatch(inleiding, new RegExp(INLEIDING_GEEN_AD.replace(/\./g, '\\.')));
+    assert.match(inleiding_sub, /concept arbeidsdeskundig rapport/);
+    assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
+  });
+
   it('uses male pronouns for man gender', () => {
     const ctx: InleidingBuildContext = {
       ...baseCtx,

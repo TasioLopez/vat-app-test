@@ -4,6 +4,8 @@ import {
   adReportDateLabel,
   buildAdAdviesIntroPrefix,
   buildInleidingAdIntroPrefix,
+  hasDefinitiveAdReport,
+  hasIntakeAdNarrative,
   isAdReportConcept,
   normalizeAdReportConcept,
   patchAdviesIntroForConcept,
@@ -25,6 +27,24 @@ describe('isAdReportConcept', () => {
     assert.equal(isAdReportConcept({ ad_report_concept: true }), true);
     assert.equal(isAdReportConcept({ ad_report_concept: false }), false);
     assert.equal(isAdReportConcept({}), false);
+  });
+});
+
+describe('hasDefinitiveAdReport', () => {
+  it('is false when concept even if has_ad_report true', () => {
+    assert.equal(hasDefinitiveAdReport({ has_ad_report: true, ad_report_concept: true }), false);
+  });
+
+  it('is true when definitive AD present', () => {
+    assert.equal(hasDefinitiveAdReport({ has_ad_report: true, ad_report_concept: false }), true);
+  });
+});
+
+describe('hasIntakeAdNarrative', () => {
+  it('is true for concept or definitive AD', () => {
+    assert.equal(hasIntakeAdNarrative({ ad_report_concept: true }), true);
+    assert.equal(hasIntakeAdNarrative({ has_ad_report: true }), true);
+    assert.equal(hasIntakeAdNarrative({ has_ad_report: false }), false);
   });
 });
 
