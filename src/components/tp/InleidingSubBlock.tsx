@@ -6,6 +6,7 @@ import {
   parseInleidingSub,
   stripInleidingSubQuoteWrapping,
 } from '@/lib/tp/inleiding/build-fields';
+import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 
 const NB_PATTERN = 'nog geen AD-rapport';
 
@@ -36,9 +37,11 @@ export function InleidingSubBlock({
     return (
       <div className={className}>
         <strong>{patchedIntro}</strong>
-        <p className="mt-4">
-          <em>&ldquo;{quote}&rdquo;</em>
-        </p>
+        <div className="mt-4 italic">
+          <span aria-hidden>&ldquo;</span>
+          <Basis2026MarkdownBody markdown={quote} />
+          <span aria-hidden>&rdquo;</span>
+        </div>
       </div>
     );
   }
@@ -65,8 +68,10 @@ export function InleidingSubQuotePreview({
   const cleaned = stripInleidingSubQuoteWrapping(quote);
   if (!cleaned) return null;
   return (
-    <p className={className}>
-      <em>&ldquo;{cleaned}&rdquo;</em>
-    </p>
+    <div className={`${className} italic`}>
+      <span aria-hidden>&ldquo;</span>
+      <Basis2026MarkdownBody markdown={cleaned} />
+      <span aria-hidden>&rdquo;</span>
+    </div>
   );
 }

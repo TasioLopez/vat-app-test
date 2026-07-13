@@ -103,6 +103,34 @@ function getInitials(firstName?: string | null): string {
   );
 }
 
+function getFirstInitial(firstName?: string | null): string {
+  const first = String(firstName ?? '').trim();
+  if (!first) return '';
+  const ch = first[0]?.toUpperCase();
+  return ch ? `${ch}.` : '';
+}
+
+function employeeShortName(ctx: InleidingBuildContext): string {
+  const initial = getFirstInitial(ctx.employee.first_name);
+  const lastName = coerceText(ctx.employee.last_name, '[achternaam]');
+  return `${initial} ${lastName}`.trim();
+}
+
+function applyEmployeeNameConsistency(ctx: InleidingBuildContext, text: string): string {
+  const first = String(ctx.employee.first_name ?? '').trim();
+  const last = String(ctx.employee.last_name ?? '').trim();
+  if (!first || !last) return text;
+
+  const short = employeeShortName(ctx);
+  const escapedFirst = first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedLast = last.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Replace "First Last" first, then remaining standalone First.
+  return text
+    .replace(new RegExp(`\\b${escapedFirst}\\s+${escapedLast}\\b`, 'gi'), short)
+    .replace(new RegExp(`\\b${escapedFirst}\\b`, 'gi'), short);
+}
+
 function calculateAge(dateOfBirth?: string | null): number | null {
   if (!dateOfBirth) return null;
   const dob = new Date(dateOfBirth);
@@ -138,8 +166,8 @@ function buildUitval(ctx: InleidingBuildContext): string {
   return `Werknemer is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
 }
 
-function buildFunctieomschrijving(body: string): string {
-  const trimmed = body.trim() || '...';
+function buildFunctieomschrijving(ctx: InleidingBuildContext, body: string): string {
+  const trimmed = applyEmployeeNameConsistency(ctx, body.trim() || '...');
   return `**Functieomschrijving**\n${trimmed}`;
 }
 
@@ -222,7 +250,8 @@ function findAdDelimiterIndex(text: string): { index: number; delimiter: string 
 }
 
 export function stripInleidingSubQuoteWrapping(quote: string): string {
-  let q = quote.replace(/\*+/g, '').trim();
+  // Preserve markdown styling; only strip surrounding quote marks.
+  let q = quote.trim();
   if (q.startsWith('"') && q.endsWith('"')) {
     q = q.slice(1, -1).trim();
   }
@@ -244,7 +273,7 @@ export function parseInleidingSub(raw: string): ParsedInleidingSub {
 
   const match = findAdDelimiterIndex(text);
   if (match) {
-    const intro = text.slice(0, match.index + match.delimiter.length).replace(/\*+/g, '').trim();
+    const intro = text.slice(0, match.index + match.delimiter.length).trim();
     const quote = stripInleidingSubQuoteWrapping(text.slice(match.index + match.delimiter.length));
     return { intro, quote };
   }
@@ -267,7 +296,7 @@ export function buildInleidingFields(
   const paragraphs: string[] = [
     buildGesprek(ctx),
     buildUitval(ctx),
-    buildFunctieomschrijving(content.functieomschrijving),
+    buildFunctieomschrijving(ctx, content.functieomschrijving),
     buildAanmelding(ctx, content),
     buildMedischeSituatie(ctx, content),
     buildReintegratieEnDoel(ctx, content),

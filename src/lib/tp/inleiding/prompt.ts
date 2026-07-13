@@ -17,6 +17,7 @@ ALGEMENE REGELS VOOR CONTENT
 - Functietitel in kleine letters waar van toepassing.
 - Geen medische diagnoses, behandelingen of specifieke beperkingen beschrijven.
 - Zakelijke rapportagestijl.
+- CONSISTENTIE NAAM: verwijs nooit naar werknemer met de volledige voornaam. Gebruik óf \"werknemer\" óf uitsluitend \"[voorletter]. [achternaam]\" (geen volledige voornaam).
 
 VELDEN (JSON output)
 
