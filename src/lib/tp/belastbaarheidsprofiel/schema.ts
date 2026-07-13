@@ -10,6 +10,7 @@ export type BelastbaarheidsprofielContentResult = {
   spreekuur_meta: SpreekuurMeta | null;
 };
 
+export const BELASTBAARHEID_CONTENT_JSON_SCHEMA = {
   type: 'object',
   properties: {
     rubrieken: {
