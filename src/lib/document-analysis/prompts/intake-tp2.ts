@@ -59,7 +59,7 @@ Voorbeelden:
 - "Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas"
 - Arts aangevinkt "M. Stevens", OSV BA "M. Montagne" → occupational_doctor_org: "Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne", doctor_role: "Arts", osv_doctor_name: "M. Montagne", osv_doctor_role: "BA"
 
-Return ONLY a JSON object met de gevonden velden.
+Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.
 `.trim();
 
 export const INTAKE_TP2_USER_MESSAGE =
@@ -67,14 +67,14 @@ export const INTAKE_TP2_USER_MESSAGE =
 
 export const AD_TP2_DATE_PROMPT = `
 Extract ALLEEN ad_report_date (YYYY-MM-DD) uit dit arbeidsdeskundig rapport.
-Zoek "Datum rapport:" of vergelijkbaar. Return JSON: { "ad_report_date": "YYYY-MM-DD" } of {}.
+Zoek "Datum rapport:" of vergelijkbaar. Gebruik null als de datum niet gevonden wordt.
 `.trim();
 
 export const AD_TP2_DATE_USER_MESSAGE = 'Extract de rapportdatum uit dit AD-document.';
 
 export const FML_TP2_DATE_PROMPT = `
 Extract ALLEEN fml_izp_lab_date (YYYY-MM-DD) uit dit FML/IZP/LAB document.
-Zoek "Datum FML:", "Datum IZP:" of documentdatum. Return JSON: { "fml_izp_lab_date": "YYYY-MM-DD" } of {}.
+Zoek "Datum FML:", "Datum IZP:" of documentdatum. Gebruik null als de datum niet gevonden wordt.
 `.trim();
 
 export const FML_TP2_DATE_USER_MESSAGE = 'Extract de FML/IZP datum uit dit document.';

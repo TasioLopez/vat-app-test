@@ -8,7 +8,7 @@ ${INTAKE_EMPLOYEE_PROMPT}
 Anders extract uit vrije tekst:
 - current_job, contract_hours, date_of_birth, gender, work_experience, education_level (hoogste afgeronde basisopleiding), education_name
 
-REGELS: geen gokken met defaults. ALLEEN JSON object.`;
+REGELS: geen gokken met defaults. Gebruik null voor velden die niet in dit document staan.`;
 
 export const EXTRA_EMPLOYEE_USER_MESSAGE =
   'Analyseer dit document en extract relevante werknemersprofiel velden.';

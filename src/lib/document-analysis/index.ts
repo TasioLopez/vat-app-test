@@ -1,5 +1,5 @@
 export { extractStoragePath, getFileType, isIntakeDocumentType, INTAKE_TYPE_VARIANTS } from './storage';
-export { parseJsonFromAssistant, flattenExtractionPayload } from './parseJsonResponse';
+export { parseJsonFromAssistant, flattenExtractionPayload, parseMarkdownFieldList } from './parseJsonResponse';
 export { getOpenAIFileParams, buildOpenAIFile } from '@/lib/openai-file-upload';
 export {
   mapAndValidateEmployeeDetails,
@@ -8,7 +8,34 @@ export {
   splitContactPersonName,
 } from './nullSafeDetails';
 export { getAutofillCompleteness, type AutofillWarning } from './incomplete';
-export { runAssistantExtraction, type RunAssistantExtractionOptions } from './runAssistantExtraction';
+export {
+  runStructuredFileExtraction,
+  runDocumentTextExtraction,
+  type StructuredFileExtractionOptions,
+  type DocumentTextExtractionOptions,
+} from './runStructuredExtraction';
+export {
+  DEFAULT_DOCUMENT_EXTRACTION_MODEL,
+  getDocumentExtractionModel,
+  getDocumentExtractionReasoningEffort,
+} from './constants';
+export { isFmlDocumentType, isAdDocumentType } from './doc-type-matchers';
+export {
+  EMPLOYEE_EXTRACTION_JSON_SCHEMA,
+  parseEmployeeExtractionResult,
+  type EmployeeExtractionResult,
+} from './schemas/employee-extraction-schema';
+export {
+  TP2_EXTRACTION_JSON_SCHEMA,
+  parseTp2ExtractionResult,
+  type Tp2ExtractionResult,
+} from './schemas/tp2-extraction-schema';
+export {
+  AD_REPORT_DATE_JSON_SCHEMA,
+  FML_IZP_DATE_JSON_SCHEMA,
+  parseAdReportDateResult,
+  parseFmlIzpDateResult,
+} from './schemas/tp2-date-schema';
 export { getIntakeDocumentForEmployee, runIntakeAssistantText, type IntakeDocumentFile } from './getIntakeDocument';
 export { getIntakeContextForTp } from './tpIntakeContext';
 export { getEmployeeDocumentContext } from './getEmployeeDocumentContext';

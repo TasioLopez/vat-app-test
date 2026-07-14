@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { runAssistantExtraction } from './runAssistantExtraction';
+import { runDocumentTextExtraction } from './runStructuredExtraction';
 import { extractStoragePath, INTAKE_TYPE_VARIANTS } from './storage';
 
 export type IntakeDocumentFile = {
@@ -43,7 +43,7 @@ export async function getIntakeDocumentForEmployee(
   return null;
 }
 
-/** Run file_search on intake with custom instructions; returns assistant text. */
+/** Read intake document with custom instructions; returns model text. */
 export async function runIntakeAssistantText(
   openai: OpenAI,
   supabase: SupabaseClient,
@@ -54,13 +54,12 @@ export async function runIntakeAssistantText(
   const doc = await getIntakeDocumentForEmployee(supabase, employeeId);
   if (!doc) return '';
 
-  const { rawText } = await runAssistantExtraction(openai, {
+  return runDocumentTextExtraction({
+    openai,
     buffer: doc.buffer,
     storagePath: doc.path,
     fallbackName: doc.displayName || doc.path,
-    assistantName: 'Intake Section Analyzer',
     instructions,
     userMessage,
   });
-  return rawText;
 }

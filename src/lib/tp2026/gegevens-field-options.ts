@@ -433,7 +433,7 @@ export function repairEmployeeEducationFields(
   level: unknown,
   name: unknown
 ): { education_level?: string; education_name?: string } {
-  if (isInvalidEducationLevelToken(level)) {
+  if (level != null && String(level).trim() && isInvalidEducationLevelToken(level)) {
     return {};
   }
 

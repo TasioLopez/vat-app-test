@@ -7,7 +7,7 @@ VELDEN TE EXTRACTEN (employee_details):
 
 NIET EXTRACTEN: transport_type, computer_skills, language skills, etc.
 
-REGELS: ontbrekende velden weglaten. ALLEEN JSON object.`;
+REGELS: ontbrekende velden null. Gebruik null voor velden die niet in dit document staan.`;
 
 export const FML_EMPLOYEE_USER_MESSAGE =
   'Analyseer dit FML/IZP document en extract relevante demografische gegevens.';

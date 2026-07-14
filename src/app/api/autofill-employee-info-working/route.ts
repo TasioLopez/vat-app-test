@@ -4,7 +4,6 @@ import OpenAI from 'openai';
 import {
   extractStoragePath,
   isIntakeDocumentType,
-  runAssistantExtraction,
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   mergeReferentFields,
@@ -18,6 +17,12 @@ import {
   EXTRA_EMPLOYEE_PROMPT,
   EXTRA_EMPLOYEE_USER_MESSAGE,
 } from '@/lib/document-analysis';
+import { isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
+import {
+  EMPLOYEE_EXTRACTION_JSON_SCHEMA,
+  parseEmployeeExtractionResult,
+} from '@/lib/document-analysis/schemas/employee-extraction-schema';
 import { bufferToPlainText, detectDocumentKind } from '@/lib/document-analysis/documentPlainText';
 import { stripAssistantArtifacts, stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
 import { getOpenAIFileParams } from '@/lib/openai-file-upload';
@@ -77,7 +82,6 @@ async function processDocumentWithAssistant(
   doc: DocRow,
   options: {
     logLabel: string;
-    assistantName: string;
     instructions: string;
     userMessage: string;
     postProcessAlgemeneInfo?: boolean;
@@ -92,16 +96,20 @@ async function processDocumentWithAssistant(
     const { buffer, path } = downloaded;
     const fallbackName = doc.name || `${doc.type || 'document'}`;
 
-    const { rawText, parsed } = await runAssistantExtraction(openai, {
+    const parsed = await runStructuredFileExtraction({
+      openai,
       buffer,
       storagePath: path,
       fallbackName,
-      assistantName: options.assistantName,
       instructions: options.instructions,
       userMessage: options.userMessage,
+      schemaName: 'employee_extraction',
+      schema: EMPLOYEE_EXTRACTION_JSON_SCHEMA as Record<string, unknown>,
+      parse: parseEmployeeExtractionResult,
     });
 
     const cleanedParsed = stripAssistantArtifactsFromRecord(parsed);
+    const rawText = '';
     const documentKind = detectDocumentKind(path, fallbackName);
     const documentText = stripAssistantArtifacts(await bufferToPlainText(buffer, documentKind));
 
@@ -157,7 +165,6 @@ async function processDocumentWithAssistant(
 async function processIntakeForm(doc: DocRow) {
   return processDocumentWithAssistant(doc, {
     logLabel: 'intake form',
-    assistantName: 'Intake Form Analyzer',
     instructions: INTAKE_EMPLOYEE_PROMPT,
     userMessage: INTAKE_EMPLOYEE_USER_MESSAGE,
     postProcessAlgemeneInfo: true,
@@ -167,7 +174,6 @@ async function processIntakeForm(doc: DocRow) {
 async function processADReport(doc: DocRow) {
   return processDocumentWithAssistant(doc, {
     logLabel: 'AD report',
-    assistantName: 'AD Report Analyzer',
     instructions: AD_EMPLOYEE_PROMPT,
     userMessage: AD_EMPLOYEE_USER_MESSAGE,
   });
@@ -176,7 +182,6 @@ async function processADReport(doc: DocRow) {
 async function processFMLIZP(doc: DocRow) {
   return processDocumentWithAssistant(doc, {
     logLabel: 'FML/IZP',
-    assistantName: 'FML/IZP Analyzer',
     instructions: FML_EMPLOYEE_PROMPT,
     userMessage: FML_EMPLOYEE_USER_MESSAGE,
   });
@@ -189,7 +194,6 @@ async function processExtraDoc(doc: DocRow) {
 
   return processDocumentWithAssistant(doc, {
     logLabel: 'extra document',
-    assistantName: 'Extra Document Analyzer',
     instructions: EXTRA_EMPLOYEE_PROMPT,
     userMessage: EXTRA_EMPLOYEE_USER_MESSAGE,
   });
@@ -248,10 +252,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log(`✅ AD report: ${Object.keys(adResult.mapped).length} fields extracted`);
   }
 
-  const fmlDoc = docs.find((d) => {
-    const type = (d.type || '').toLowerCase();
-    return type === 'fml' || type === 'izp' || type === 'lab';
-  });
+  const fmlDoc = docs.find((d) => isFmlDocumentType(d.type));
 
   if (fmlDoc) {
     console.log('📄 Processing FML/IZP (priority 3)...');
@@ -275,9 +276,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
       !type.includes('intake') &&
       !type.includes('ad') &&
       !type.includes('arbeidsdeskundig') &&
-      type !== 'fml' &&
-      type !== 'izp' &&
-      type !== 'lab' &&
+      !isFmlDocumentType(type) &&
       !isCvEmployeeDocType(type) &&
       !isSpreekReportageDocType(type)
     );

@@ -1,13 +1,13 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { runAssistantExtraction } from './runAssistantExtraction';
+import { runDocumentTextExtraction } from './runStructuredExtraction';
 import { extractStoragePath } from './storage';
 import { stripAssistantArtifacts } from './stripAssistantArtifacts';
 
 const MAX_CONTEXT_CHARS = 22_000;
 
 /**
- * Find newest employee document matching any type substring and return file_search context.
+ * Find newest employee document matching any type substring and return document context text.
  */
 export async function getEmployeeDocumentContext(
   openai: OpenAI,
@@ -15,7 +15,7 @@ export async function getEmployeeDocumentContext(
   employeeId: string,
   typeMatchers: string[],
   focusInstructions: string,
-  userMessage = 'Lees het document via file_search en geef de gevraagde informatie.'
+  userMessage = 'Lees het document en geef de gevraagde informatie.'
 ): Promise<string> {
   const { data: docs } = await supabase
     .from('documents')
@@ -38,11 +38,11 @@ export async function getEmployeeDocumentContext(
     const buffer = Buffer.from(await file.arrayBuffer());
     const fallbackName = hit.name || `${hit.type || 'document'}`;
 
-    const { rawText } = await runAssistantExtraction(openai, {
+    const rawText = await runDocumentTextExtraction({
+      openai,
       buffer,
       storagePath: path,
       fallbackName,
-      assistantName: 'Document Context Extractor',
       instructions: focusInstructions,
       userMessage,
     });

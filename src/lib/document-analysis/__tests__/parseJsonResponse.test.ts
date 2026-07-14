@@ -57,6 +57,22 @@ describe('flattenExtractionPayload', () => {
     assert.equal(parsed.education_name, null);
   });
 
+  it('parseJsonFromAssistant recovers markdown bullet lists with citations', () => {
+    const parsed = parseJsonFromAssistant(`Hier zijn de geëxtraheerde werknemersprofielvelden:
+
+- **current_job**: Supervisor【4:0†Intakeformulier.docx】
+- **contract_hours**: 36
+- **date_of_birth**: 1991-09-08
+- **gender**: Vrouw
+- **phone**: 0613345230`);
+
+    assert.equal(parsed.current_job, 'Supervisor');
+    assert.equal(parsed.contract_hours, 36);
+    assert.equal(parsed.date_of_birth, '1991-09-08');
+    assert.equal(parsed.gender, 'Vrouw');
+    assert.equal(parsed.phone, '0613345230');
+  });
+
   it('mergeReferentFields fills gaps without overwriting intake', () => {
     const merged = mergeReferentFields(
       { referent_first_name: 'Jan' },

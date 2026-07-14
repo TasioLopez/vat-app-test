@@ -1,6 +1,6 @@
 export const AD_EMPLOYEE_PROMPT = `Je bent een expert in het analyseren van Nederlandse AD (arbeidsdeskundige) rapporten.
 
-BELANGRIJK: Lees het volledige geüploade document via file_search.
+BELANGRIJK: Lees het volledige geüploade document.
 
 VELDEN TE EXTRACTEN (employee_details):
 
@@ -19,9 +19,8 @@ NIET EXTRACTEN:
 - referent_* velden — contactpersoon werkgever komt uit het intakeformulier sectie 4 Aanmelding
 
 REGELS:
-- Geen gokken: ontbrekende velden weglaten of null.
-- Return een PLAT JSON object met keys direct op root-niveau; NIET wrappen in "employee_details" of "referent" objecten.
-- ALLEEN JSON object teruggeven, geen markdown.`;
+- Geen gokken: ontbrekende velden null.
+- Gebruik null voor velden die niet in dit document staan.`;
 
 export const AD_EMPLOYEE_USER_MESSAGE =
   'Analyseer dit AD rapport en extract relevante werknemersprofiel velden uit het document.';

@@ -47,9 +47,9 @@ NOOIT referent_* vullen met namen of contactgegevens uit andere secties, o.a.:
 - ValentineZ / loopbaanadviseur
 - enig ander "Naam …" veld buiten sectie 4
 
-referent_gender: alleen invullen als expliciet bij contactpersoon in sectie 4; anders weglaten.
+referent_gender: alleen invullen als expliciet bij contactpersoon in sectie 4; anders null.
 
-RETURN FORMAT: PLAT JSON object (keys direct op root); NIET wrappen in "employee_details" of "referent". Geen markdown.`;
+Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.`;
 
 export const INTAKE_EMPLOYEE_USER_MESSAGE =
   'Analyseer dit intakeformulier en vul employee_details-velden volgens de instructies. Let op: werknemer telefoon uit sectie 2; contactpersoon werkgever (referent) uitsluitend uit sectie 4 Aanmelding. Let ook op aangevinkte vervoer, rijbewijs, talen (G/R/O), en computervaardigheden.';

@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import {
   extractStoragePath,
   isIntakeDocumentType,
-  runAssistantExtraction,
   INTAKE_TP2_PROMPT,
   INTAKE_TP2_USER_MESSAGE,
   AD_TP2_DATE_PROMPT,
@@ -12,12 +11,20 @@ import {
   FML_TP2_DATE_PROMPT,
   FML_TP2_DATE_USER_MESSAGE,
 } from '@/lib/document-analysis';
-import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
+import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import {
-  docsIncludeAdReport,
-  isAdDocumentType,
-  resolveTp2HasAdReport,
-} from '@/lib/tp/intake-ad-presence';
+  TP2_EXTRACTION_JSON_SCHEMA,
+  parseTp2ExtractionResult,
+} from '@/lib/document-analysis/schemas/tp2-extraction-schema';
+import {
+  AD_REPORT_DATE_JSON_SCHEMA,
+  FML_IZP_DATE_JSON_SCHEMA,
+  parseAdReportDateResult,
+  parseFmlIzpDateResult,
+} from '@/lib/document-analysis/schemas/tp2-date-schema';
+import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
+import { docsIncludeAdReport, resolveTp2HasAdReport } from '@/lib/tp/intake-ad-presence';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
 const supabase = createClient(
@@ -48,32 +55,34 @@ function isFilled(v: unknown): boolean {
   return v != null && v !== '' && (typeof v !== 'string' || v.trim() !== '');
 }
 
-function isFmlDocumentType(type: string | null | undefined): boolean {
-  const t = (type || '').toLowerCase();
-  return t === 'fml' || t === 'izp' || t === 'lab' || t.includes('fml') || t.includes('izp');
-}
+type ExtractionSchemaConfig<T> = {
+  schemaName: string;
+  schema: Record<string, unknown>;
+  parse: (raw: unknown) => T;
+  instructions: string;
+  userMessage: string;
+};
 
-async function extractFromDocument(
+async function extractFromDocument<T extends Record<string, unknown>>(
   doc: DocRow,
-  options: {
-    assistantName: string;
-    instructions: string;
-    userMessage: string;
-  }
+  config: ExtractionSchemaConfig<T>
 ): Promise<Record<string, unknown>> {
   const downloaded = await downloadDocumentBuffer(doc);
   if (!downloaded) return {};
 
   try {
-    const { parsed } = await runAssistantExtraction(openai, {
+    const parsed = await runStructuredFileExtraction({
+      openai,
       buffer: downloaded.buffer,
       storagePath: downloaded.path,
       fallbackName: doc.name ?? undefined,
-      assistantName: options.assistantName,
-      instructions: options.instructions,
-      userMessage: options.userMessage,
+      instructions: config.instructions,
+      userMessage: config.userMessage,
+      schemaName: config.schemaName,
+      schema: config.schema,
+      parse: config.parse,
     });
-    return parsed;
+    return parsed as Record<string, unknown>;
   } catch (error) {
     console.error('❌ Extraction failed for', doc.type, error);
     return {};
@@ -90,7 +99,9 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
   if (intakeDoc) {
     console.log('📋 TP2 primary extraction: intake only');
     merged = await extractFromDocument(intakeDoc, {
-      assistantName: 'TP2 Intake Metadata Extractor',
+      schemaName: 'tp2_extraction',
+      schema: TP2_EXTRACTION_JSON_SCHEMA as Record<string, unknown>,
+      parse: parseTp2ExtractionResult,
       instructions: INTAKE_TP2_PROMPT,
       userMessage: INTAKE_TP2_USER_MESSAGE,
     });
@@ -101,7 +112,9 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
   if (!isFilled(merged.ad_report_date) && adDoc) {
     console.log('📋 TP2 fallback: AD report date');
     const adParsed = await extractFromDocument(adDoc, {
-      assistantName: 'TP2 AD Date Extractor',
+      schemaName: 'ad_report_date',
+      schema: AD_REPORT_DATE_JSON_SCHEMA as Record<string, unknown>,
+      parse: parseAdReportDateResult,
       instructions: AD_TP2_DATE_PROMPT,
       userMessage: AD_TP2_DATE_USER_MESSAGE,
     });
@@ -113,7 +126,9 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
   if (!isFilled(merged.fml_izp_lab_date) && fmlDoc) {
     console.log('📋 TP2 fallback: FML/IZP date');
     const fmlParsed = await extractFromDocument(fmlDoc, {
-      assistantName: 'TP2 FML Date Extractor',
+      schemaName: 'fml_izp_date',
+      schema: FML_IZP_DATE_JSON_SCHEMA as Record<string, unknown>,
+      parse: parseFmlIzpDateResult,
       instructions: FML_TP2_DATE_PROMPT,
       userMessage: FML_TP2_DATE_USER_MESSAGE,
     });
