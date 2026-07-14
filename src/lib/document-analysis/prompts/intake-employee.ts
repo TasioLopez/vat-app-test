@@ -1,5 +1,6 @@
 import { INTAKE_LAYOUT_V75_HINT } from './intake-layout-v75';
 
+/** @deprecated Use INTAKE_CORE_PROMPT + INTAKE_ALGEMENE_INFO_EXTRACTION_PROMPT for Step 2 vision extraction. */
 export const INTAKE_EMPLOYEE_PROMPT = `Je analyseert een Nederlands intakeformulier voor werknemersprofiel-extractie.
 
 ${INTAKE_LAYOUT_V75_HINT}

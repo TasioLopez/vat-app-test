@@ -9,16 +9,42 @@ export {
 } from './nullSafeDetails';
 export { getAutofillCompleteness, type AutofillWarning } from './incomplete';
 export {
-  runStructuredFileExtraction,
-  runDocumentTextExtraction,
-  type StructuredFileExtractionOptions,
-  type DocumentTextExtractionOptions,
-} from './runStructuredExtraction';
-export {
   DEFAULT_DOCUMENT_EXTRACTION_MODEL,
   getDocumentExtractionModel,
   getDocumentExtractionReasoningEffort,
+  getDocumentExtractionPdfDetail,
+  MAX_EXTRACTION_RETRIES,
 } from './constants';
+export { normalizeForAnalysis, getGotenbergUrl } from './normalizeForAnalysis';
+export { extractIntakeEmployeeDetailsFromVision } from './extractIntakeEmployeeDetails';
+export {
+  runStructuredFileExtraction,
+  runMultiPassExtraction,
+  runDocumentTextExtraction,
+  type StructuredFileExtractionOptions,
+  type DocumentTextExtractionOptions,
+  type ValidationResult,
+  type StructuredExtractionPass,
+  type MultiPassExtractionOptions,
+} from './runStructuredExtraction';
+export {
+  validateIntakeCoreExtraction,
+  validateIntakeAlgemeneInfoExtraction,
+  validateMergedIntakeExtraction,
+} from './validateEmployeeExtraction';
+export {
+  INTAKE_CORE_JSON_SCHEMA,
+  parseIntakeCoreExtractionResult,
+} from './schemas/intake-core-schema';
+export {
+  INTAKE_ALGEMENE_INFO_JSON_SCHEMA,
+  parseIntakeAlgemeneInfoExtractionResult,
+} from './schemas/intake-algemene-info-schema';
+export { INTAKE_CORE_PROMPT, INTAKE_CORE_USER_MESSAGE } from './prompts/intake-core';
+export {
+  INTAKE_ALGEMENE_INFO_EXTRACTION_PROMPT,
+  INTAKE_ALGEMENE_INFO_USER_MESSAGE,
+} from './prompts/intake-algemene-info-extraction';
 export { isFmlDocumentType, isAdDocumentType } from './doc-type-matchers';
 export {
   EMPLOYEE_EXTRACTION_JSON_SCHEMA,

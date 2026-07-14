@@ -63,3 +63,12 @@ export function buildOpenAIFile(
   const { filename, mimeType } = getOpenAIFileParams(pathForNaming);
   return new File([buffer], filename, { type: mimeType });
 }
+
+/** Build a File for vision PDF extraction (always application/pdf). */
+export function buildOpenAIFileFromPdf(pdfBuffer: Buffer, analysisFilename: string): File {
+  const base = basename(analysisFilename);
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const filename = `${stem}.pdf`;
+  return new File([pdfBuffer], filename, { type: PDF_MIME });
+}

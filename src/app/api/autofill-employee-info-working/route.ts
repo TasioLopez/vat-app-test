@@ -8,8 +8,6 @@ import {
   extractReferentFromRaw,
   mergeReferentFields,
   getAutofillCompleteness,
-  INTAKE_EMPLOYEE_PROMPT,
-  INTAKE_EMPLOYEE_USER_MESSAGE,
   AD_EMPLOYEE_PROMPT,
   AD_EMPLOYEE_USER_MESSAGE,
   FML_EMPLOYEE_PROMPT,
@@ -18,19 +16,15 @@ import {
   EXTRA_EMPLOYEE_USER_MESSAGE,
 } from '@/lib/document-analysis';
 import { isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { extractIntakeEmployeeDetailsFromVision } from '@/lib/document-analysis/extractIntakeEmployeeDetails';
+import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import {
   EMPLOYEE_EXTRACTION_JSON_SCHEMA,
   parseEmployeeExtractionResult,
 } from '@/lib/document-analysis/schemas/employee-extraction-schema';
-import { bufferToPlainText, detectDocumentKind } from '@/lib/document-analysis/documentPlainText';
-import { stripAssistantArtifacts, stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
-import { getOpenAIFileParams } from '@/lib/openai-file-upload';
+import { stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
-import {
-  resolveIntakeEducationFields,
-  resolveWorkExperienceFromIntake,
-} from '@/lib/tp2026/intake-algemene-info';
 import {
   isCvEmployeeDocType,
   isSpreekReportageDocType,
@@ -78,23 +72,62 @@ async function downloadDocumentBuffer(
   return { buffer, path };
 }
 
-async function processDocumentWithAssistant(
+async function processIntakeForm(doc: DocRow): Promise<{
+  mapped: Record<string, unknown>;
+  referent: Record<string, unknown>;
+}> {
+  console.log(`📋 Processing intake form (vision): ${doc.type}`);
+
+  try {
+    const downloaded = await downloadDocumentBuffer(doc);
+    if (!downloaded) return { mapped: {}, referent: {} };
+
+    const { buffer, path } = downloaded;
+    const fallbackName = doc.name || `${doc.type || 'document'}`;
+
+    const { raw, referentFields } = await extractIntakeEmployeeDetailsFromVision(
+      openai,
+      buffer,
+      fallbackName || path
+    );
+
+    const cleanedParsed = stripAssistantArtifactsFromRecord(raw);
+    const referent = extractReferentFromRaw({ ...cleanedParsed, ...referentFields });
+    const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
+
+    console.log(`✅ Intake form processing completed: ${Object.keys(mapped).length} fields`);
+    return { mapped, referent };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error processing intake form:', message);
+    return { mapped: {}, referent: {} };
+  }
+}
+
+async function processDocumentWithVisionExtraction(
   doc: DocRow,
   options: {
     logLabel: string;
     instructions: string;
     userMessage: string;
-    postProcessAlgemeneInfo?: boolean;
   }
-): Promise<{ mapped: Record<string, unknown>; referent: Record<string, unknown>; rawText: string }> {
+): Promise<{ mapped: Record<string, unknown>; referent: Record<string, unknown> }> {
   console.log(`📋 Processing ${options.logLabel}: ${doc.type}`);
 
   try {
     const downloaded = await downloadDocumentBuffer(doc);
-    if (!downloaded) return { mapped: {}, referent: {}, rawText: '' };
+    if (!downloaded) return { mapped: {}, referent: {} };
 
     const { buffer, path } = downloaded;
     const fallbackName = doc.name || `${doc.type || 'document'}`;
+
+    const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
+      buffer,
+      fallbackName || path
+    );
+    if (wasConverted) {
+      console.log(`✅ ${options.logLabel} normalized to PDF (${analysisFilename})`);
+    }
 
     const parsed = await runStructuredFileExtraction({
       openai,
@@ -106,79 +139,26 @@ async function processDocumentWithAssistant(
       schemaName: 'employee_extraction',
       schema: EMPLOYEE_EXTRACTION_JSON_SCHEMA as Record<string, unknown>,
       parse: parseEmployeeExtractionResult,
+      pdfBuffer,
+      analysisFilename,
+      usePdfVision: true,
     });
 
     const cleanedParsed = stripAssistantArtifactsFromRecord(parsed);
-    const rawText = '';
-    const documentKind = detectDocumentKind(path, fallbackName);
-    const documentText = stripAssistantArtifacts(await bufferToPlainText(buffer, documentKind));
-
-    const { mimeType } = getOpenAIFileParams(doc.name || path);
-    console.log(`✅ Uploaded ${options.logLabel} (${mimeType})`);
-
     const referent = extractReferentFromRaw(cleanedParsed);
     const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
 
-    if (options.postProcessAlgemeneInfo) {
-      const textSource = documentText.trim() || stripAssistantArtifacts(rawText);
-
-      if (documentText.trim().length < 100) {
-        console.log(
-          `⚠️ Intake plain text very short (${documentText.trim().length} chars) — education/work post-processing may fail`
-        );
-      }
-
-      const education = resolveIntakeEducationFields(
-        {
-          education_level: mapped.education_level,
-          education_name: mapped.education_name,
-        },
-        textSource
-      );
-      if (education.education_level) {
-        console.log(`✅ Resolved education level: ${education.education_level}`);
-        mapped.education_level = education.education_level;
-        if (education.education_name) {
-          mapped.education_name = education.education_name;
-        } else {
-          delete mapped.education_name;
-        }
-      } else {
-        delete mapped.education_level;
-        delete mapped.education_name;
-      }
-
-      const workExperience = resolveWorkExperienceFromIntake(mapped.work_experience, textSource, {
-        currentJob: mapped.current_job,
-      });
-      if (workExperience) {
-        console.log('✅ Resolved work experience from intake document');
-        mapped.work_experience = workExperience;
-      } else {
-        delete mapped.work_experience;
-      }
-    }
-
-    console.log(`✅ ${options.logLabel} processing completed:`, Object.keys(mapped).length, 'fields');
-    return { mapped, referent, rawText };
+    console.log(`✅ ${options.logLabel} processing completed: ${Object.keys(mapped).length} fields`);
+    return { mapped, referent };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Error processing ${options.logLabel}:`, message);
-    return { mapped: {}, referent: {}, rawText: '' };
+    return { mapped: {}, referent: {} };
   }
 }
 
-async function processIntakeForm(doc: DocRow) {
-  return processDocumentWithAssistant(doc, {
-    logLabel: 'intake form',
-    instructions: INTAKE_EMPLOYEE_PROMPT,
-    userMessage: INTAKE_EMPLOYEE_USER_MESSAGE,
-    postProcessAlgemeneInfo: true,
-  });
-}
-
 async function processADReport(doc: DocRow) {
-  return processDocumentWithAssistant(doc, {
+  return processDocumentWithVisionExtraction(doc, {
     logLabel: 'AD report',
     instructions: AD_EMPLOYEE_PROMPT,
     userMessage: AD_EMPLOYEE_USER_MESSAGE,
@@ -186,7 +166,7 @@ async function processADReport(doc: DocRow) {
 }
 
 async function processFMLIZP(doc: DocRow) {
-  return processDocumentWithAssistant(doc, {
+  return processDocumentWithVisionExtraction(doc, {
     logLabel: 'FML/IZP',
     instructions: FML_EMPLOYEE_PROMPT,
     userMessage: FML_EMPLOYEE_USER_MESSAGE,
@@ -198,7 +178,7 @@ async function processExtraDoc(doc: DocRow) {
     return processIntakeForm(doc);
   }
 
-  return processDocumentWithAssistant(doc, {
+  return processDocumentWithVisionExtraction(doc, {
     logLabel: 'extra document',
     instructions: EXTRA_EMPLOYEE_PROMPT,
     userMessage: EXTRA_EMPLOYEE_USER_MESSAGE,
@@ -210,7 +190,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   referent: Record<string, unknown>;
   intakeProcessed: boolean;
 }> {
-  console.log('🚀 Processing documents separately with document-specific instructions...');
+  console.log('🚀 Processing documents separately with vision extraction...');
 
   const results: Record<string, unknown> = {};
   let referent: Record<string, unknown> = {};

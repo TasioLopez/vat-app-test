@@ -37,3 +37,12 @@ describe('buildOpenAIFile', () => {
     );
   });
 });
+
+describe('buildOpenAIFileFromPdf', () => {
+  it('always uses application/pdf', async () => {
+    const { buildOpenAIFileFromPdf } = await import('../openai-file-upload');
+    const file = buildOpenAIFileFromPdf(Buffer.from('%PDF'), 'intake.docx');
+    assert.equal(file.name, 'intake.pdf');
+    assert.equal(file.type, 'application/pdf');
+  });
+});
