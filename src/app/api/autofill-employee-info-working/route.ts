@@ -122,6 +122,12 @@ async function processDocumentWithAssistant(
     if (options.postProcessAlgemeneInfo) {
       const textSource = documentText.trim() || stripAssistantArtifacts(rawText);
 
+      if (documentText.trim().length < 100) {
+        console.log(
+          `⚠️ Intake plain text very short (${documentText.trim().length} chars) — education/work post-processing may fail`
+        );
+      }
+
       const education = resolveIntakeEducationFields(
         {
           education_level: mapped.education_level,

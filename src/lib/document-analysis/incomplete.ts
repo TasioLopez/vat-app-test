@@ -4,7 +4,14 @@ const INTAKE_CRITICAL_FIELDS = [
   'transport_type',
   'dutch_speaking',
   'computer_skills',
+  'education_level',
+  'work_experience',
 ] as const;
+
+const FIELD_WARNING_MESSAGES: Partial<Record<(typeof INTAKE_CRITICAL_FIELDS)[number], string>> = {
+  education_level: 'Opleidingsniveau kon niet betrouwbaar worden ingevuld — controleer handmatig.',
+  work_experience: 'Werkervaring kon niet betrouwbaar worden ingevuld — controleer handmatig.',
+};
 
 export function getAutofillCompleteness(
   details: Record<string, unknown>,
@@ -28,7 +35,9 @@ export function getAutofillCompleteness(
     } else if (value == null || value === '') {
       warnings.push({
         field,
-        message: `${field} kon niet betrouwbaar worden ingevuld — controleer handmatig.`,
+        message:
+          FIELD_WARNING_MESSAGES[field] ??
+          `${field} kon niet betrouwbaar worden ingevuld — controleer handmatig.`,
       });
     }
   }

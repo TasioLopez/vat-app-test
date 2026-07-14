@@ -41,6 +41,19 @@ Zorgmedewerker gehandicaptenzorg (ADL taken en ze ergens brengen) Ongeveer 5 jaa
 Rijbewijzen
 `;
 
+const MELISSA_V7_ALGEMENE_INFO = `
+Algemene informatie:
+Opleidingen? Afgerond?
+Mbo lucht vaar dienstverlenig  ☒ ☐  Axxicom  13+ jaar
+Hbo Toerisme en reacreatie  ☒ ☐  Voor studie half jaar in buitenland 2 x.
+
+Werkervaring? Van-tot?
+Axxicom  13+ jaar
+
+Sectie 13 Werkverleden
+Heeft ook wel andere functies gedaan passagiers assistent, operationele planner.
+`;
+
 describe('isEducationCertification', () => {
   it('detects VCA variants', () => {
     assert.equal(isEducationCertification('VCA'), true);
@@ -103,6 +116,15 @@ Opleidingen? Afgerond?
 MBO 2 Nee`;
     const result = resolveIntakeEducationFields({ education_level: 'MBO 2' }, text);
     assert.deepEqual(result, {});
+  });
+
+  it('resolves Melissa V7 checkbox education rows to HBO with specialization', () => {
+    const result = resolveIntakeEducationFields(
+      { education_level: undefined, education_name: undefined },
+      MELISSA_V7_ALGEMENE_INFO
+    );
+    assert.equal(result.education_level, 'HBO');
+    assert.match(result.education_name ?? '', /Toerisme/i);
   });
 });
 
@@ -205,5 +227,18 @@ describe('resolveWorkExperienceFromIntake', () => {
     const llm = 'Teamleider PostNL/PTT, Thuiszorg, Keukenassistent, Winkelmedewerker';
     const result = resolveWorkExperienceFromIntake(llm, 'Algemene informatie:\nWerkervaring? Van-tot?\n');
     assert.equal(result, llm);
+  });
+
+  it('falls back to sectie 13 when table has only employer/duration', () => {
+    const result = resolveWorkExperienceFromIntake(
+      undefined,
+      MELISSA_V7_ALGEMENE_INFO,
+      { currentJob: 'Supervisor' }
+    );
+    assert.ok(result);
+    assert.match(result!, /passagiers assistent/i);
+    assert.match(result!, /operationele planner/i);
+    assert.doesNotMatch(result!, /Supervisor/i);
+    assert.doesNotMatch(result!, /Axxicom/i);
   });
 });

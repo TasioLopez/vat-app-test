@@ -212,12 +212,24 @@ export function isInvalidEducationLevelToken(value: unknown): boolean {
   return lower === 'nee' || lower === 'nei' || lower === 'ongeschoold';
 }
 
-function detectEducationLineFinished(line: string): boolean | null {
+/** Detect Afgerond=Ja from words or V7 checkboxes. */
+export function detectEducationLineFinished(line: string): boolean | null {
   const lower = line.toLowerCase();
+
   if (/\bniet\s+afgerond\b/.test(lower)) return false;
   if (/\bnee\b/.test(lower)) return false;
+
+  // V7 checkbox pairs: first box = Ja, second = Nee
+  if (/☐\s*☒/.test(line) || /☐\s*☑/.test(line)) return false;
+  if (/☒\s*☐/.test(line) || /☑\s*☐/.test(line)) return true;
+
   if (/\bafgerond\b/.test(lower)) return true;
   if (/\bja\b/.test(lower)) return true;
+
+  // Lone checked box in Afgerond column
+  if (/[☒☑✓✔]/.test(line) && !/☐/.test(line)) return true;
+  if (/\[\s*x\s*\]/i.test(line)) return true;
+
   return null;
 }
 
@@ -239,11 +251,34 @@ function findLevelInEducationLine(line: string): { level: string; remainder: str
   return null;
 }
 
+function stripWorkExperienceTailFromEducationName(name: string): string {
+  let s = name.trim();
+  if (!s) return s;
+
+  // Combined opleiding/werkervaring row: keep text before checkbox cluster
+  const checkboxIdx = s.search(/[☒☐☑✓✔]/);
+  if (checkboxIdx > 0) {
+    s = s.slice(0, checkboxIdx).trim();
+  }
+
+  // Drop werkervaring-column employer/duration tails
+  s = s
+    .replace(/\b\d+\+?\s*jaar\b.*$/i, '')
+    .replace(/\b(?:voor\s+)?studie\b.*$/i, '')
+    .replace(/\bAxxicom\b.*$/i, '')
+    .trim();
+
+  return s;
+}
+
 function cleanEducationNameFromLine(remainder: string, level: string): string | undefined {
   let name = remainder
+    .replace(/[☒☐☑✓✔]/g, ' ')
     .replace(/\b(?:ja|nee|afgerond|niet\s+afgerond)\b/gi, '')
     .replace(/^[\s\-–—,;:]+|[\s\-–—,;:]+$/g, '')
     .trim();
+
+  name = stripWorkExperienceTailFromEducationName(name);
 
   if (!name) return undefined;
   if (isEducationCertification(name)) return undefined;
@@ -350,6 +385,11 @@ function levelPrefixPatterns(): { pattern: RegExp; canonical: string }[] {
       canonical: `MBO ${i}`,
     });
   }
+
+  patterns.push({
+    pattern: /^MBO(?:\s|$|[-–—])/i,
+    canonical: 'MBO 4',
+  });
 
   patterns.push({
     pattern: /^MIDDELBARE\s+TECHNISCHE\s+SCHOOL(?:\s|$|[-–—])/i,

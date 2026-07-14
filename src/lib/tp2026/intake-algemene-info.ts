@@ -26,7 +26,7 @@ const WORK_EXPERIENCE_END_MARKERS = [
 const DATE_ONLY_PATTERN = /^(?:\d{4}\s*[-–—]\s*(?:\d{4}|heden)|\d+[,.]?\d*\s*jaar|heden|ongeveer\s+\d+\s*jaar(?:\s+gedaan)?)$/i;
 
 const JOB_TITLE_KEYWORDS =
-  /\b(medewerker|teamleider|assistent|thuiszorg|verzorgende|magazijn|productie|logistiek|administratief|kassier|winkel|keuken|schoonmaak|operator|monteur|chauffeur|begeleider)\b/i;
+  /\b(medewerker|teamleider|assistent|thuiszorg|verzorgende|magazijn|productie|logistiek|administratief|kassier|winkel|keuken|schoonmaak|operator|monteur|chauffeur|begeleider|planner|passagiers|supervisor)\b/i;
 
 const ROLE_FRAGMENTS = [
   'assistent',
@@ -40,6 +40,9 @@ const ROLE_FRAGMENTS = [
   'chauffeur',
   'begeleider',
   'schoonmaak',
+  'planner',
+  'passagiers',
+  'supervisor',
 ];
 
 function looksLikeJobTitle(text: string): boolean {
@@ -232,6 +235,64 @@ function extractWorkTitlesFromSection(section: string, currentJob?: string): str
   return titles;
 }
 
+/** Extract job titles from sectie 13 "Werkverleden" narrative when table has only employer/duration. */
+export function extractWorkExperienceFromSectie13(documentText: string, currentJob?: string): string[] {
+  if (!documentText?.trim()) return [];
+
+  const titles: string[] = [];
+  const seen = new Set<string>();
+
+  const addTitle = (raw: string) => {
+    const cleaned = sanitizeWorkExperiencePart(raw.trim(), currentJob);
+    if (!cleaned || cleaned.length < 3) return;
+    if (!looksLikeJobTitle(cleaned)) return;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    titles.push(cleaned);
+  };
+
+  const andereFuncties = documentText.match(
+    /andere\s+functies\s+gedaan\s+([^.;\n]+)/i
+  );
+  if (andereFuncties?.[1]) {
+    for (const part of andereFuncties[1].split(/[,;]+/)) {
+      addTitle(part);
+    }
+  }
+
+  const sectie13Match = documentText.match(
+    /(?:sectie\s*13|werkverleden)[\s\S]{0,800}/i
+  );
+  if (sectie13Match) {
+    const functieLines = sectie13Match[0].match(/[^\n.]*functie[^\n.]*/gi) ?? [];
+    for (const line of functieLines) {
+      const afterColon = line.split(/:\s*/).pop() ?? line;
+      for (const part of afterColon.split(/[,;]+/)) {
+        if (/\b(?:assistent|planner|medewerker|operator|supervisor|passagiers)\b/i.test(part)) {
+          addTitle(part);
+        }
+      }
+    }
+  }
+
+  return titles;
+}
+
+function mergeWorkExperienceTitles(...sources: string[][]): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const source of sources) {
+    for (const title of source) {
+      const key = title.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(title);
+    }
+  }
+  return merged;
+}
+
 function resolveMappedWorkExperience(
   mappedWorkExperience: unknown,
   currentJob?: string
@@ -261,9 +322,15 @@ export function resolveWorkExperienceFromIntake(
 
   if (documentText?.trim()) {
     const section = sliceWorkExperienceSection(documentText);
-    const extracted = extractWorkTitlesFromSection(section, currentJob);
-    if (extracted.length > 0) {
-      return extracted.join(', ');
+    const fromTable = extractWorkTitlesFromSection(section, currentJob);
+    const fromSectie13 =
+      fromTable.length === 0
+        ? extractWorkExperienceFromSectie13(documentText, currentJob)
+        : [];
+
+    const merged = mergeWorkExperienceTitles(fromTable, fromSectie13);
+    if (merged.length > 0) {
+      return merged.join(', ');
     }
   }
 

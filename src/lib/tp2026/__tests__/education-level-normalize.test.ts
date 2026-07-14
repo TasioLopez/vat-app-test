@@ -4,6 +4,7 @@ import { mapAndValidateEmployeeDetails } from '@/lib/document-analysis/nullSafeD
 import { formatEducationLevel } from '@/lib/utils';
 import {
   EDUCATION_LEVEL_OPTIONS,
+  detectEducationLineFinished,
   extractEducationLevelsInTextOrder,
   normalizeEducationLevel,
   parseIntakeEducationRows,
@@ -105,6 +106,36 @@ MBO 2 Nee`);
     assert.equal(rows.length, 2);
     assert.equal(rows[0]?.finished, true);
     assert.equal(rows[1]?.finished, false);
+  });
+
+  it('parses V7 checkbox lines as finished', () => {
+    const rows = parseIntakeEducationRows(`Algemene informatie:
+Opleidingen? Afgerond?
+Mbo lucht vaar dienstverlenig  ☒ ☐  Axxicom  13+ jaar
+Hbo Toerisme en reacreatie  ☒ ☐  Voor studie half jaar in buitenland 2 x.`);
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0]?.finished, true);
+    assert.equal(rows[0]?.level, 'MBO 4');
+    assert.equal(rows[1]?.finished, true);
+    assert.equal(rows[1]?.level, 'HBO');
+    assert.match(rows[1]?.name ?? '', /Toerisme/i);
+  });
+
+  it('parses plain Mbo without level digit', () => {
+    const rows = parseIntakeEducationRows('Mbo luchtvaardienst ☒ ☐');
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.level, 'MBO 4');
+    assert.equal(rows[0]?.finished, true);
+  });
+});
+
+describe('detectEducationLineFinished', () => {
+  it('treats checked Afgerond checkbox as finished', () => {
+    assert.equal(detectEducationLineFinished('Hbo X ☒ ☐ tail'), true);
+  });
+
+  it('treats Nee checkbox pair as unfinished', () => {
+    assert.equal(detectEducationLineFinished('Mbo 2 ☐ ☒'), false);
   });
 });
 
