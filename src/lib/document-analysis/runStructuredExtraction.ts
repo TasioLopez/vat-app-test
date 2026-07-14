@@ -92,6 +92,20 @@ function buildCorrectionMessage(errors: string[]): string {
   ].join('\n');
 }
 
+/** PDF detail is supported by the Responses API; SDK types may lag behind. */
+function buildPdfInputFileContent(
+  fileId: string,
+  usePdfVision: boolean
+): OpenAI.Responses.ResponseInputContent {
+  const base = { type: 'input_file' as const, file_id: fileId };
+  if (!usePdfVision) return base;
+
+  const pdfDetail = getDocumentExtractionPdfDetail();
+  if (pdfDetail === 'auto') return base;
+
+  return { ...base, detail: pdfDetail } as OpenAI.Responses.ResponseInputContent;
+}
+
 async function callStructuredExtraction<T>(
   openai: OpenAI,
   options: {
@@ -104,14 +118,7 @@ async function callStructuredExtraction<T>(
     usePdfVision: boolean;
   }
 ): Promise<unknown> {
-  const pdfDetail = getDocumentExtractionPdfDetail();
-  const inputFile: OpenAI.Responses.ResponseInputContent = options.usePdfVision
-    ? {
-        type: 'input_file',
-        file_id: options.fileId,
-        detail: pdfDetail === 'auto' ? undefined : pdfDetail,
-      }
-    : { type: 'input_file', file_id: options.fileId };
+  const inputFile = buildPdfInputFileContent(options.fileId, options.usePdfVision);
 
   const userContent: OpenAI.Responses.ResponseInputContent[] = [
     { type: 'input_text', text: options.userMessage },
