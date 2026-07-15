@@ -1,12 +1,17 @@
 import type { TredeNumber } from './constants';
+import type { PowMeterFacts } from './facts';
+import { parsePowMeterFacts, POW_METER_FACTS_JSON_PROPERTIES, POW_METER_FACTS_REQUIRED_KEYS } from './facts';
 import { computeTredeFromLadder, type PowLadderAnswers } from './ladder';
+import { resolveLadderFromFacts } from './resolve-ladder';
 
 /** Structured content after parse: ladder-computed trede + kernels for server assembly. */
 export type PowMeterContentResult = {
   huidige_trede_nummer: TredeNumber;
   ladder: PowLadderAnswers;
+  facts: PowMeterFacts;
   huidige_werkzame_uren: string;
   verwachting_trede_nummer: TredeNumber;
+  verwachting_includes_spoor2_block: boolean;
   verwachting_kern: string;
   toelichting_kern: string;
 };
@@ -27,29 +32,30 @@ const ladderBooleanProperty = (description: string) => ({
 export const POW_METER_CONTENT_JSON_SCHEMA = {
   type: 'object',
   properties: {
+    ...POW_METER_FACTS_JSON_PROPERTIES,
     q1_duurzaam_benutbare_mogelijkheden: ladderBooleanProperty(
-      'Vraag 1: Zijn er volgens de bedrijfsarts duurzaam benutbare mogelijkheden? true=Ja, false=Nee.'
+      'Vraag 1: duurzaam benutbare mogelijkheden op intake? Moet consistent zijn met facts. true=Ja, false=Nee.'
     ),
     q2_minimaal_2x_buitenshuis: ladderBooleanProperty(
-      'Vraag 2: Komt werknemer minimaal twee keer per week buitenshuis? true=Ja, false=Nee.'
+      'Vraag 2 (strict): bewuste buitenactiviteiten ≥2×/week? Zorgtaken/boodschappen alleen = false. Moet consistent zijn met outside_deliberate_min_2_per_week.'
     ),
     q3_regelmatige_sociale_participatie: ladderBooleanProperty(
-      'Vraag 3: Is sprake van regelmatige sociale participatie buitenshuis? true=Ja, false=Nee.'
+      'Vraag 3 (strict): regelmatige sociale participatie buitenshuis? Thuiscontact/sporadisch = false.'
     ),
     q4_gemotiveerd_richting_arbeid: ladderBooleanProperty(
-      'Vraag 4: Is werknemer gemotiveerd richting arbeid? true=Ja, false=Nee.'
+      'Vraag 4: gemotiveerd richting arbeid? Moet consistent zijn met motivated_toward_work.'
     ),
     q5_belastbaar_min_12u: ladderBooleanProperty(
-      'Vraag 5: Kan werknemer tijdens de intake ongeveer minimaal 12 uur per week belast worden? true=Ja, false=Nee.'
+      'Vraag 5: feitelijk ~≥12 uur/week belastbaar op intake (niet FML-theorie alleen). FML <12 = false.'
     ),
     q6_verricht_werkzaamheden: ladderBooleanProperty(
-      'Vraag 6: Verricht werknemer momenteel werkzaamheden? true=Ja, false=Nee. 0 uur → false.'
+      'Vraag 6: verricht werkzaamheden? Moet consistent zijn met performs_work_activities. 0 uur → false.'
     ),
     q7_betaald_werk: ladderBooleanProperty(
-      'Vraag 7: Is sprake van betaald werk? true=Ja, false=Nee (vrijwilligerswerk/stage/WEP). Alleen relevant als q6 true.'
+      'Vraag 7: betaald werk? Moet consistent zijn met paid_work. Alleen relevant als q6 true.'
     ),
     q7_duurzaam_passend_min_65: ladderBooleanProperty(
-      'Alleen bij betaald werk: duurzaam passend zonder tijdelijke voorzieningen en ≥~65% loonwaarde/contract → true (trede 6); anders false (trede 5).'
+      'Alleen bij betaald werk: duurzaam passend ≥~65%. Moet consistent zijn met duurzaam_passend_min_65.'
     ),
     huidige_werkzame_uren: {
       type: 'string',
@@ -62,18 +68,24 @@ export const POW_METER_CONTENT_JSON_SCHEMA = {
       description:
         'Expected trede in 3 months based on prognose bedrijfsarts and actuele situatie (not the huidige ladder).',
     },
+    verwachting_includes_spoor2_block: {
+      type: 'boolean',
+      description:
+        'true wanneer Spoor 2 logisch uit documenten volgt. Systeem voegt het vaste Spoor 2-blok toe — zet het NIET in verwachting_kern.',
+    },
     verwachting_kern: {
       type: 'string',
       description:
-        'Body AFTER the verwachting opener (do not include opener). Complete sentence(s) starting with a capital letter. Never a fragment after "omdat", never start with de/het/omdat/comma. Max ~80 words total with opener. Include exact Spoor 2 block only when logically supported.',
+        'Body AFTER the verwachting opener (do not include opener or Spoor 2-block). Complete sentence(s) starting with a capital letter. Never start with de/het/omdat/comma. Max ~130 words total with opener + Spoor2 indien van toepassing.',
     },
     toelichting_kern: {
       type: 'string',
       description:
-        'Continues after "omdat" (do not repeat opener). Grammatical Dutch continuation. Max ~120 words total with opener. Underpin trede, hours, contract, spoor, participation, motivation. Do not mention FML/IZP/LAB, dates, or "benutbare mogelijkheden".',
+        'Continues after "omdat" (do not repeat opener). Grammatical Dutch continuation. Max ~150 words total with opener. Underpin trede, hours, contract, spoor, participation, motivation. Do not mention FML/IZP/LAB, dates, or "benutbare mogelijkheden".',
     },
   },
   required: [
+    ...POW_METER_FACTS_REQUIRED_KEYS,
     'q1_duurzaam_benutbare_mogelijkheden',
     'q2_minimaal_2x_buitenshuis',
     'q3_regelmatige_sociale_participatie',
@@ -84,6 +96,7 @@ export const POW_METER_CONTENT_JSON_SCHEMA = {
     'q7_duurzaam_passend_min_65',
     'huidige_werkzame_uren',
     'verwachting_trede_nummer',
+    'verwachting_includes_spoor2_block',
     'verwachting_kern',
     'toelichting_kern',
   ],
@@ -135,7 +148,9 @@ function parseLadderAnswers(o: Record<string, unknown>): PowLadderAnswers {
 
 export function parsePowMeterContentResult(raw: unknown): PowMeterContentResult {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const ladder = parseLadderAnswers(o);
+  const facts = parsePowMeterFacts(o);
+  const modelLadder = parseLadderAnswers(o);
+  const { ladder } = resolveLadderFromFacts(facts, modelLadder);
   const huidige_trede_nummer = computeTredeFromLadder(ladder);
 
   if (o.huidige_trede_nummer != null) {
@@ -150,8 +165,10 @@ export function parsePowMeterContentResult(raw: unknown): PowMeterContentResult 
   return {
     huidige_trede_nummer,
     ladder,
+    facts,
     huidige_werkzame_uren: coerceString(o.huidige_werkzame_uren),
     verwachting_trede_nummer: coerceTredeNumber(o.verwachting_trede_nummer),
+    verwachting_includes_spoor2_block: coerceBoolean(o.verwachting_includes_spoor2_block),
     verwachting_kern: coerceString(o.verwachting_kern),
     toelichting_kern: coerceString(o.toelichting_kern),
   };

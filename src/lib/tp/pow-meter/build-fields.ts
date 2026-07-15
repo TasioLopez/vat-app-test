@@ -64,9 +64,48 @@ function splitSentences(text: string): string[] {
 }
 
 function truncateToWordLimit(text: string, maxWords: number): string {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= maxWords) return text.trim();
+  return truncateToWordLimitOnSentenceBoundary(text, maxWords);
+}
+
+/** Drop trailing incomplete sentence when over word limit instead of mid-clause cut. */
+export function truncateToWordLimitOnSentenceBoundary(text: string, maxWords: number): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  if (countWords(trimmed) <= maxWords) return trimmed;
+
+  const sentences = splitSentences(trimmed);
+  if (sentences.length === 0) {
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    return words.slice(0, maxWords).join(' ').replace(/[,;:\-–—]+$/, '').trim();
+  }
+
+  let result = '';
+  for (const sentence of sentences) {
+    const candidate = result ? `${result} ${sentence}` : sentence;
+    if (countWords(candidate) <= maxWords) {
+      result = candidate;
+    } else {
+      break;
+    }
+  }
+
+  if (result) return result;
+
+  // Single sentence still too long — hard truncate that sentence only.
+  const words = sentences[0]!.split(/\s+/).filter(Boolean);
   return words.slice(0, maxWords).join(' ').replace(/[,;:\-–—]+$/, '').trim();
+}
+
+function stripSpoor2FromKern(kern: string): string {
+  let text = sanitizeKernel(kern);
+  if (!text) return text;
+  const block = SPOOR2_VERWACHTING_BLOCK;
+  if (text.includes(block)) {
+    text = text.replace(block, '').trim();
+  }
+  // Partial / fuzzy strip if model paraphrased start
+  text = text.replace(/Daarnaast kunnen binnen het tweede spoor[\s\S]*?belastbaarheid\.?\s*/i, '').trim();
+  return text;
 }
 
 function findOpenerSentence(sentences: string[], opener: string): string | null {
@@ -172,6 +211,16 @@ export function buildVerwachtingText(trede: TredeNumber, kern: string): string {
   return body ? `${opener} ${body}` : opener;
 }
 
+/** Assemble verwachting body; Spoor 2 block is appended server-side during sanitize. */
+export function buildVerwachtingWithSpoor2(
+  trede: TredeNumber,
+  kern: string,
+  _includeSpoor2: boolean
+): string {
+  const cleanedKern = stripSpoor2FromKern(kern);
+  return buildVerwachtingText(trede, cleanedKern);
+}
+
 export function buildToelichtingText(trede: TredeNumber, kern: string): string {
   const body = sanitizeToelichtingBody(stripLeakedToelichtingOpener(kern, trede));
   const opener = buildToelichtingOpener(trede);
@@ -182,15 +231,44 @@ export function assemblePowMeterContent(content: PowMeterContentResult): Assembl
   return {
     huidige_trede_tekst: buildHuidigeTredeText(content.huidige_trede_nummer),
     huidige_werkzame_uren: sanitizeKernel(content.huidige_werkzame_uren),
-    verwachting_3_maanden: buildVerwachtingText(
+    verwachting_3_maanden: buildVerwachtingWithSpoor2(
       content.verwachting_trede_nummer,
-      content.verwachting_kern
+      content.verwachting_kern,
+      content.verwachting_includes_spoor2_block
     ),
     toelichting_pow: buildToelichtingText(
       content.huidige_trede_nummer,
       content.toelichting_kern
     ),
   };
+}
+
+function clampVerwachtingWithSpoor2(
+  text: string,
+  trede: TredeNumber,
+  includeSpoor2: boolean
+): string {
+  const opener = buildVerwachtingOpenerSentence(trede);
+  const spoor2 = includeSpoor2 ? SPOOR2_VERWACHTING_BLOCK : '';
+  const reservedWords =
+    countWords(opener) + (spoor2 ? countWords(spoor2) : 0);
+  const bodyBudget = Math.max(0, MAX_WORDS_VERWACHTING - reservedWords);
+
+  let body = text.trim();
+  if (body.toLowerCase().startsWith(opener.toLowerCase())) {
+    body = body.slice(opener.length).trim();
+  }
+  body = stripSpoor2FromKern(body);
+  body = truncateToWordLimitOnSentenceBoundary(body, bodyBudget);
+
+  const parts = [opener];
+  if (body) parts.push(body);
+  if (spoor2) parts.push(spoor2);
+
+  let result = parts.join(' ').trim();
+  const sentences = splitSentences(result);
+  result = sentences.slice(0, MAX_SENTENCES_VERWACHTING).join(' ').trim();
+  return result;
 }
 
 export function clampInschalingText(
@@ -221,12 +299,15 @@ export function clampInschalingText(
         const openerWords = countWords(openerSentence);
         const remainingBudget = Math.max(0, maxWords - openerWords);
         const restText = rest.join(' ').trim();
-        const clampedRest = remainingBudget > 0 ? truncateToWordLimit(restText, remainingBudget) : '';
+        const clampedRest =
+          remainingBudget > 0
+            ? truncateToWordLimitOnSentenceBoundary(restText, remainingBudget)
+            : '';
         result = clampedRest ? `${openerSentence} ${clampedRest}`.trim() : openerSentence;
         return result;
       }
     }
-    result = truncateToWordLimit(result, maxWords);
+    result = truncateToWordLimitOnSentenceBoundary(result, maxWords);
   }
 
   return result;
@@ -241,7 +322,10 @@ function containsForbiddenWerkzameUrenPhrase(text: string): void {
   }
 }
 
-function validateAssembledOutput(content: AssembledPowMeterContent): void {
+function validateAssembledOutput(
+  content: AssembledPowMeterContent,
+  source?: PowMeterContentResult
+): void {
   const verwachtingWords = countWords(content.verwachting_3_maanden);
   if (verwachtingWords > MAX_WORDS_VERWACHTING) {
     console.warn(
@@ -269,6 +353,15 @@ function validateAssembledOutput(content: AssembledPowMeterContent): void {
 
   if (/benutbare\s+mogelijkheden/i.test(content.toelichting_pow)) {
     console.warn('⚠️ POW-meter: "benutbare mogelijkheden" nog aanwezig in toelichting_pow');
+  }
+
+  if (source && source.huidige_trede_nummer <= 2) {
+    const lowerToel = content.toelichting_pow.toLowerCase();
+    if (/spoor\s*1\s+actief|activeringsplek|aangepast werk binnen spoor 1/i.test(lowerToel)) {
+      console.warn(
+        `⚠️ POW-meter: toelichting mentions Spoor 1/activation but huidige trede is ${source.huidige_trede_nummer}`
+      );
+    }
   }
 }
 
@@ -313,25 +406,35 @@ export function stripForbiddenToelichtingPhrases(text: string): string {
   return out;
 }
 
-export function sanitizePowMeterContent(content: AssembledPowMeterContent): AssembledPowMeterContent {
+export function sanitizePowMeterContent(
+  content: AssembledPowMeterContent,
+  source?: PowMeterContentResult
+): AssembledPowMeterContent {
   const werkzameUren = clampInschalingText(content.huidige_werkzame_uren, {
     maxWords: MAX_WORDS_WERKZAME_UREN,
     maxSentences: MAX_SENTENCES_WERKZAME_UREN,
   });
   containsForbiddenWerkzameUrenPhrase(werkzameUren);
 
-  const verwachting = clampInschalingText(content.verwachting_3_maanden, {
-    maxWords: MAX_WORDS_VERWACHTING,
-    maxSentences: MAX_SENTENCES_VERWACHTING,
-    preserveOpener: VERWACHTING_OPENER,
-  });
+  const verwachting =
+    source != null
+      ? clampVerwachtingWithSpoor2(
+          content.verwachting_3_maanden,
+          source.verwachting_trede_nummer,
+          source.verwachting_includes_spoor2_block
+        )
+      : clampInschalingText(content.verwachting_3_maanden, {
+          maxWords: MAX_WORDS_VERWACHTING,
+          maxSentences: MAX_SENTENCES_VERWACHTING,
+          preserveOpener: VERWACHTING_OPENER,
+        });
 
   let toelichting = stripForbiddenToelichtingPhrases(
     stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow))
   );
   // Re-heal "omdat is/zijn…" orphans after strip.
   toelichting = toelichting.replace(/\bomdat\s+(is|zijn|was|waren|maar)\s+/gi, 'omdat ');
-  toelichting = truncateToWordLimit(toelichting, MAX_WORDS_TOELICHTING);
+  toelichting = truncateToWordLimitOnSentenceBoundary(toelichting, MAX_WORDS_TOELICHTING);
 
   const sanitized: AssembledPowMeterContent = {
     huidige_trede_tekst: stripCitations(content.huidige_trede_tekst),
@@ -340,7 +443,7 @@ export function sanitizePowMeterContent(content: AssembledPowMeterContent): Asse
     toelichting_pow: toelichting,
   };
 
-  validateAssembledOutput(sanitized);
+  validateAssembledOutput(sanitized, source);
   return sanitized;
 }
 
@@ -421,7 +524,7 @@ export function updatePowMeterToelichting(raw: string, toelichting: string): str
 
 export function buildPowMeterFields(content: PowMeterContentResult): PowMeterFields {
   const assembled = assemblePowMeterContent(content);
-  const sanitized = sanitizePowMeterContent(assembled);
+  const sanitized = sanitizePowMeterContent(assembled, content);
   const inschaling: PowInschalingData = {
     huidige_trede: sanitized.huidige_trede_tekst,
     werkzame_uren: sanitized.huidige_werkzame_uren,

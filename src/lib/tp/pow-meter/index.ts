@@ -1,4 +1,6 @@
 export {
+  LADDER_EXAMPLES_V10,
+  LADDER_RUBRIC_V10,
   INSCHALING_DELIMITER,
   INSCHALING_ROW_LABELS,
   INSCHALING_STYLE_REFERENCE_V10,
@@ -24,6 +26,12 @@ export {
   type TredeNumber,
 } from './constants';
 export {
+  parsePowMeterFacts,
+  POW_METER_FACTS_JSON_PROPERTIES,
+  POW_METER_FACTS_REQUIRED_KEYS,
+  type PowMeterFacts,
+} from './facts';
+export {
   assemblePowMeterContent,
   buildHuidigeTredeText,
   buildPowInschalingBlock,
@@ -33,6 +41,7 @@ export {
   buildToelichtingText,
   buildVerwachtingOpenerSentence,
   buildVerwachtingText,
+  buildVerwachtingWithSpoor2,
   clampInschalingText,
   countWords,
   hasToelichtingOpener,
@@ -46,6 +55,7 @@ export {
   stripCitations,
   stripForbiddenToelichtingPhrases,
   stripLeakedVerwachtingOpener,
+  truncateToWordLimitOnSentenceBoundary,
   updatePowMeterToelichting,
   type ClampInschalingOptions,
   type PowInschalingData,
@@ -56,6 +66,10 @@ export {
   ladderYesThrough,
   type PowLadderAnswers,
 } from './ladder';
+export {
+  resolveLadderFromFacts,
+  type ResolveLadderResult,
+} from './resolve-ladder';
 export {
   buildPowMeterContextFromMeta,
   filterPowMeterDocs,

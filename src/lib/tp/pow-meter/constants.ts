@@ -34,11 +34,11 @@ export const MAX_WORDS_WERKZAME_UREN = 50;
 
 export const MAX_SENTENCES_WERKZAME_UREN = 2;
 
-export const MAX_WORDS_VERWACHTING = 80;
+export const MAX_WORDS_VERWACHTING = 130;
 
 export const MAX_SENTENCES_VERWACHTING = 4;
 
-export const MAX_WORDS_TOELICHTING = 120;
+export const MAX_WORDS_TOELICHTING = 150;
 
 /** Server-built trede sentence — [n] replaced at assembly time. */
 export const HUIDIGE_TREDE_TEMPLATE =
@@ -75,7 +75,7 @@ Nee → stop daar (trede hoort bij die vraag). Ja → ga door naar de volgende v
 Geen holistische "voelt als trede X"-inschatting. Server berekent huidige trede uit jouw Ja/Nee-antwoorden.
 
 Vraag 1: Zijn er volgens de bedrijfsarts duurzaam benutbare mogelijkheden? Nee → Trede 1. Ja → verder.
-Vraag 2: Komt werknemer minimaal twee keer per week buitenshuis? Nee → Trede 1. Ja → verder.
+Vraag 2 (STRICT): Komt werknemer minimaal twee keer per week bewust buitenshuis (niet alleen zorgtaken/boodschappen/school)? Nee → Trede 1. Ja → verder.
 Vraag 3: Is sprake van regelmatige sociale participatie buitenshuis? Nee → Trede 2. Ja → verder.
 Vraag 4: Is werknemer gemotiveerd richting arbeid? Nee → Trede 3. Ja → verder.
 Vraag 5: Kan werknemer tijdens de intake ongeveer minimaal 12 uur per week belast worden? Nee → Trede 3. Ja → verder.
@@ -88,6 +88,52 @@ Vraag 7: Is sprake van betaald werk?
     Duurzaam passend werk zonder tijdelijke voorzieningen, ≥ 65% loonwaarde of volledig hersteld → Trede 6 (q7_duurzaam_passend_min_65=true).
 
 De trede wordt nooit uitsluitend bepaald door het aantal uren. Beoordeel altijd via de ladder: benutbare mogelijkheden, activiteiten buitenshuis, sociale participatie, motivatie, belastbaarheid, huidige werkzaamheden, betaald/onbetaald werk, verhouding tot contracturen, duurzaamheid, Spoor 1 en Spoor 2.
+`.trim();
+
+export const LADDER_RUBRIC_V10 = `
+OPERATIONELE RUBRIC (strikt toepassen — geen holistische inschatting):
+
+Q1 — Duurzaam benutbare mogelijkheden op INTAKE:
+  Ja: bedrijfsarts ondersteunt feitelijke participatie/re-integratie nu of zeer binnenkort.
+  Nee: wacht op intensief revalidatie, expliciet niet belastbaar op intake, geen arbeidsmogelijkheden tijdens behandeling.
+  FOUT: FML noemt theoretisch plafond → automatisch Ja terwijl intake "niet belastbaar" zegt.
+
+Q2 — Buitenshuis ≥2×/week (STRICT):
+  Ja: bewuste buitenactiviteiten (sociaal, sport, club, regelmatige ontmoetingen buiten).
+  Nee: alleen functionele trips (school/gastouder, boodschappen, zorgafspraken), leeg intakeveld buitenshuis, inactiviteit.
+  FOUT: "regelmatig contact met ouders" thuis tellen als buitenshuis.
+
+Q3 — Regelmatige sociale participatie BUITENSHUIS (STRICT):
+  Ja: herhaalde, structurele sociale activiteit buiten de woning.
+  Nee: sporadisch feestje, soms lunch buurvrouw, contact thuis/telefonisch, bank/TV-daginvulling.
+  FOUT: motivatie of familiecontact = Q3 Ja.
+
+Q4 — Gemotiveerd richting arbeid:
+  Ja: bereid/willens in principe (ook "eerst lichaam/revalidatie").
+  Nee: geen enkele motivatie richting arbeid.
+
+Q5 — ~≥12 uur/week belastbaar OP INTAKE (feitelijk, niet FML-theorie):
+  Ja: intake ondersteunt minimaal ~12 uur belastbaarheid nu.
+  Nee: FML max ~10 uur, expliciet niet belastbaar, revalidatie blokkeert belasting.
+  FOUT: FML-plafond 10 uur → toch Q5 Ja.
+
+Q6 — Verricht werkzaamheden:
+  Ja: aangepast werk, WEP, stage, activeringsplek (≥ enige uren).
+  Nee: 0 uur, "niet werkzaam".
+  Let op: 0 uur ≠ automatisch Trede 1 — alleen relevant als Q1–Q5 al Ja waren.
+
+Q7 — Betaald vs onbetaald; duurzaam passend ≥65% bij betaald werk.
+`.trim();
+
+export const LADDER_EXAMPLES_V10 = `
+VOORBEELD A (pre-revalidatie, 0 uur, inactiviteit — patroon Hulstaart):
+  facts: 0 uur, wacht revalidatie, niet belastbaar, inactiviteit, buitenshuis alleen functioneel, geen sociale participatie buiten.
+  ladder: Q1=Nee OF Q2=Nee → Trede 1. (Q3=Nee → max Trede 2 als Q1–Q2 Ja.)
+  NOOIT Trede 3 alleen vanwege 0 uur werk.
+
+VOORBEELD B (~1,5 uur aangepast Spoor 1 — patroon Melissa):
+  facts: 1,5 uur aangepast werk, gemotiveerd, regelmatig buitenshuis sociaal, FML max ~10 uur.
+  ladder: Q1–Q4 Ja, Q5=Nee (FML <12) → Trede 3.
 `.trim();
 
 export const DOCUMENT_SCOPE_HINT = `
