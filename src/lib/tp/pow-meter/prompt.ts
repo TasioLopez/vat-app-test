@@ -10,6 +10,8 @@ import {
   MAX_WORDS_WERKZAME_UREN,
   SPOOR2_VERWACHTING_BLOCK,
   SOURCE_HIERARCHY_V10,
+  TOELICHTING_STYLE_BAD_EXAMPLE,
+  TOELICHTING_STYLE_GOOD_EXAMPLE,
 } from './constants';
 
 /**
@@ -60,6 +62,10 @@ OUTPUT (model levert kernels — vaste zinnen worden door het systeem toegevoegd
    Onderbouw: waarom deze trede, actuele werkuren, contractverhouding, aangepast/onbetaald werk, Spoor 1/2, activiteiten buitenshuis, participatie, dagstructuur, motivatie, waarom geen hogere trede nu, waarom hogere trede over 3 maanden realistisch.
    Actuele werkuren per week altijd expliciet noemen. Geen Spoor 2-block in toelichting.
    VERMIJD BRON-ATTRIBUTIE: noem geen documentnamen (FML/IZP/LAB), geen datums, en schrijf niet “de bedrijfsarts heeft vastgesteld/vastgelegd/aangegeven…”. Gebruik neutrale formuleringen (bijv. “er is sprake van een urenbeperking …”) en behoud alleen de feiten.
+   VERBODEN IN toelichting_kern: schrijf nooit "benutbare mogelijkheden", "geen benutbare mogelijkheden", "duurzaam benutbare mogelijkheden", of letterlijke antwoorden op beslisboom-vragen.
+   Verklaar de trede NIET door interne besliscriteria te herhalen; gebruik alleen waarneembare, professionele feiten (belastbaarheid, urenbeperking, actuele werkuren, participatie buitenshuis, motivatie, Spoor 1/2-status).
+   Goed voorbeeld (vervolg na "omdat"): "${TOELICHTING_STYLE_GOOD_EXAMPLE}"
+   Slecht voorbeeld: "${TOELICHTING_STYLE_BAD_EXAMPLE}"
 
 SCHRIJFREGELS
 - Objectieve arbeidsdeskundige taal, UWV-proof, derde persoon ("werknemer")
@@ -75,6 +81,7 @@ EINDCONTROLE
 - Geen vaste openers in model-output (alleen kernels)
 - Geen zoekprofiel
 - Spoor 2-block alleen in verwachting_kern wanneer passend
+- toelichting_kern bevat geen "benutbare mogelijkheden"
 
 STIJLREFERENTIE (alleen lengte en toon — niet kopiëren):
 ${INSCHALING_STYLE_REFERENCE_V10}

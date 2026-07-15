@@ -212,6 +212,10 @@ function validateAssembledOutput(content: AssembledPowMeterContent): void {
       console.warn(`⚠️ POW-meter: verboden term in toelichting: "${term}"`);
     }
   }
+
+  if (/benutbare\s+mogelijkheden/i.test(content.toelichting_pow)) {
+    console.warn('⚠️ POW-meter: "benutbare mogelijkheden" nog aanwezig in toelichting_pow');
+  }
 }
 
 function stripFmlAndBedrijfsartsAttribution(text: string): string {
@@ -234,6 +238,25 @@ function stripFmlAndBedrijfsartsAttribution(text: string): string {
   return out;
 }
 
+/** Remove decision-tree jargon ("benutbare mogelijkheden") from client-facing toelichting. */
+export function stripForbiddenToelichtingPhrases(text: string): string {
+  let out = String(text || '');
+
+  // Decision-tree echo after "omdat" / in kernel (order matters).
+  out = out.replace(
+    /\b(er\s+)?(geen\s+)?(werknemer\s+)?(wel\s+)?(duurzaam\s+)?benutbare\s+mogelijkheden\s+(heeft|hebben|zijn)(\s+maar)?\s*/gi,
+    ''
+  );
+  // Standalone mentions (incl. "geen …").
+  out = out.replace(/\b(geen\s+)?(duurzaam\s+)?benutbare\s+mogelijkheden\b/gi, '');
+
+  // Grammar cleanup after stripping.
+  out = out.replace(/\bomdat\s+maar\s+/gi, 'omdat ');
+  out = out.replace(/\bomdat\s+werknemer\s+werknemer\b/gi, 'omdat werknemer');
+  out = out.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').replace(/\s+\./g, '.').trim();
+  return out;
+}
+
 export function sanitizePowMeterContent(content: AssembledPowMeterContent): AssembledPowMeterContent {
   const werkzameUren = clampInschalingText(content.huidige_werkzame_uren, {
     maxWords: MAX_WORDS_WERKZAME_UREN,
@@ -248,7 +271,9 @@ export function sanitizePowMeterContent(content: AssembledPowMeterContent): Asse
   });
 
   const toelichting = truncateToWordLimit(
-    stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow)),
+    stripForbiddenToelichtingPhrases(
+      stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow))
+    ),
     MAX_WORDS_TOELICHTING
   );
 

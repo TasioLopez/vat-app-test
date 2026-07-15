@@ -99,7 +99,22 @@ export const INSCHALING_STYLE_REFERENCE_V10 = `
 Huidige trede: Werknemer bevindt zich in trede 2 van de POW-meter™.
 Huidige werkzame uren: Werknemer werkt momenteel 0,5 uur per week. Zij verricht geen betaald werk.
 Verwachting over 3 maanden: Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™. Dit kan worden gerealiseerd door een gefaseerde urenopbouw binnen spoor 1 of door het vinden van een passende activerings- of werkervaringsplaats.
+Toelichting: Werknemer bevindt zich tijdens de intake in trede 2 van de POW-meter™ omdat haar belastbaarheid laag is, er een duidelijke urenbeperking geldt met advies voor zeer geleidelijke opbouw, en zij nog beperkt buitenshuis actief is.
 `.trim();
+
+/** Phrases forbidden in client-facing toelichting (decision-tree jargon). */
+export const FORBIDDEN_TOELICHTING_PHRASES = [
+  'benutbare mogelijkheden',
+  'geen benutbare mogelijkheden',
+  'duurzaam benutbare mogelijkheden',
+  'wel benutbare mogelijkheden heeft',
+] as const;
+
+export const TOELICHTING_STYLE_GOOD_EXAMPLE =
+  'haar belastbaarheid laag is, er een duidelijke urenbeperking geldt met advies voor zeer geleidelijke opbouw, en zij nog beperkt buitenshuis actief is.';
+
+export const TOELICHTING_STYLE_BAD_EXAMPLE =
+  'werknemer wel benutbare mogelijkheden heeft maar haar belastbaarheid laag is';
 
 export const FORBIDDEN_WERKZAME_UREN_PHRASES = [
   'er is sprake van',

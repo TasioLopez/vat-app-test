@@ -13,6 +13,7 @@ import {
   hasVerwachtingOpener,
   parsePowInschaling,
   parsePowToelichting,
+  stripForbiddenToelichtingPhrases,
 } from '../build-fields';
 import {
   INSCHALING_DELIMITER,
@@ -71,10 +72,28 @@ describe('buildPowMeterFields V10', () => {
     assert.equal(/\bbedrijfsarts\b/i.test(toelichting), false);
     assert.equal(/\bFML\b/i.test(toelichting), false);
     assert.equal(/29\s+april\s+2026/i.test(toelichting), false);
+    assert.equal(/benutbare\s+mogelijkheden/i.test(toelichting), false);
 
     // The substantive clause should remain.
     assert.match(toelichting, /urenbeperking/i);
     assert.match(toelichting, /0\s+uur\s+per\s+week/i);
+  });
+
+  it('strips benutbare mogelijkheden decision-tree jargon from toelichting (Melissa case)', () => {
+    const content: PowMeterContentResult = {
+      ...baseContent,
+      huidige_trede_nummer: 3,
+      toelichting_kern:
+        'werknemer wel benutbare mogelijkheden heeft maar haar belastbaarheid laag is en er een duidelijke urenbeperking geldt met een advies voor zeer geleidelijke opbouw. Zij komt wekelijks naar het werk voor circa anderhalf uur aangepast werk.',
+    };
+
+    const { pow_meter } = buildPowMeterFields(content);
+    const toelichting = parsePowToelichting(pow_meter);
+
+    assert.ok(hasToelichtingOpener(toelichting, 3));
+    assert.equal(/benutbare\s+mogelijkheden/i.test(toelichting), false);
+    assert.match(toelichting, /omdat haar belastbaarheid/i);
+    assert.match(toelichting, /urenbeperking/i);
   });
 
   it('strips leaked verwachting opener from model kernel', () => {
@@ -143,6 +162,24 @@ describe('buildPowMeterFields V10', () => {
 
   it('style reference V10 mentions trede sentence pattern', () => {
     assert.ok(INSCHALING_STYLE_REFERENCE_V10.includes('trede 2'));
+  });
+});
+
+describe('stripForbiddenToelichtingPhrases', () => {
+  it('removes wel benutbare mogelijkheden heeft maar', () => {
+    const result = stripForbiddenToelichtingPhrases(
+      'Werknemer bevindt zich tijdens de intake in trede 3 van de POW-meter™ omdat werknemer wel benutbare mogelijkheden heeft maar haar belastbaarheid laag is.'
+    );
+    assert.equal(/benutbare\s+mogelijkheden/i.test(result), false);
+    assert.match(result, /omdat haar belastbaarheid/i);
+  });
+
+  it('removes geen benutbare mogelijkheden edge case', () => {
+    const result = stripForbiddenToelichtingPhrases(
+      'er geen benutbare mogelijkheden zijn maar werknemer beperkt buitenshuis actief is'
+    );
+    assert.equal(/benutbare\s+mogelijkheden/i.test(result), false);
+    assert.match(result, /buitenshuis actief/i);
   });
 });
 
