@@ -27,10 +27,18 @@ import {
   TOELICHTING_POW_DELIMITER,
   VERWACHTING_OPENER,
 } from '../constants';
+import { ladderYesThrough } from '../ladder';
 import type { PowMeterContentResult } from '../schema';
+
+/** Ladder stops at Q2 Ja / Q3 Nee → trede 2. */
+const ladderTrede2 = {
+  ...ladderYesThrough(2),
+  q3_regelmatige_sociale_participatie: false,
+};
 
 const baseContent: PowMeterContentResult = {
   huidige_trede_nummer: 2,
+  ladder: ladderTrede2,
   huidige_werkzame_uren:
     'Werknemer werkt momenteel 0,5 uur per week. Zij verricht geen betaald werk.',
   verwachting_trede_nummer: 3,
@@ -109,6 +117,31 @@ describe('buildPowMeterFields V10', () => {
     );
   });
 
+  it('capitalizes mid-sentence verwachting kern starting with de', () => {
+    const assembled = assemblePowMeterContent({
+      ...baseContent,
+      verwachting_kern: 'de belastbaarheid laag is en de urenopbouw zeer geleidelijk moet verlopen.',
+    });
+    assert.match(
+      assembled.verwachting_3_maanden,
+      /^Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™\. De belastbaarheid/
+    );
+    assert.doesNotMatch(assembled.verwachting_3_maanden, /POW-meter™,\s*de/i);
+  });
+
+  it('strips leaked opener with comma join without double debris', () => {
+    const assembled = assemblePowMeterContent({
+      ...baseContent,
+      verwachting_kern:
+        'Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™, de belastbaarheid laag is en opbouw geleidelijk verloopt.',
+    });
+    assert.match(
+      assembled.verwachting_3_maanden,
+      /^Werknemer bevindt zich vermoedelijk in trede 3 van de POW-meter™\. De belastbaarheid/
+    );
+    assert.equal((assembled.verwachting_3_maanden.match(/POW-meter™/g) || []).length, 1);
+  });
+
   it('includes Spoor 2 block in verwachting when present in kern', () => {
     const content: PowMeterContentResult = {
       ...baseContent,
@@ -181,6 +214,14 @@ describe('stripForbiddenToelichtingPhrases', () => {
     assert.equal(/benutbare\s+mogelijkheden/i.test(result), false);
     assert.match(result, /buitenshuis actief/i);
   });
+
+  it('heals orphan "omdat is voor zorg" after strip', () => {
+    const result = stripForbiddenToelichtingPhrases(
+      'Werknemer bevindt zich tijdens de intake in trede 2 van de POW-meter™ omdat is voor zorg voor haar kind en huishoudelijke taken.'
+    );
+    assert.doesNotMatch(result, /omdat is voor/i);
+    assert.match(result, /omdat voor zorg|omdat zorg/i);
+  });
 });
 
 describe('clampInschalingText', () => {
@@ -213,19 +254,30 @@ describe('clampInschalingText', () => {
 });
 
 describe('parsePowMeterContentResult', () => {
-  it('coerces trede numbers to 1-6', async () => {
+  it('computes huidige trede from ladder and ignores model huidige_trede_nummer', async () => {
     const { parsePowMeterContentResult, coerceTredeNumber } = await import('../schema');
     assert.equal(coerceTredeNumber(0), 1);
     assert.equal(coerceTredeNumber(9), 6);
+
     const result = parsePowMeterContentResult({
-      huidige_trede_nummer: 3,
+      q1_duurzaam_benutbare_mogelijkheden: true,
+      q2_minimaal_2x_buitenshuis: true,
+      q3_regelmatige_sociale_participatie: true,
+      q4_gemotiveerd_richting_arbeid: true,
+      q5_belastbaar_min_12u: false,
+      q6_verricht_werkzaamheden: true,
+      q7_betaald_werk: true,
+      q7_duurzaam_passend_min_65: true,
+      huidige_trede_nummer: 6,
       huidige_werkzame_uren: 'test',
       verwachting_trede_nummer: 4,
-      verwachting_kern: 'kern',
+      verwachting_kern: 'Kern body.',
       toelichting_kern: 'kern',
     });
+    // Q5 Nee → trede 3; model said 6 is ignored
     assert.equal(result.huidige_trede_nummer, 3);
     assert.equal(result.verwachting_trede_nummer, 4);
+    assert.equal(result.ladder.q5_belastbaar_min_12u, false);
   });
 });
 

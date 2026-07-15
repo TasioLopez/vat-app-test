@@ -70,19 +70,24 @@ Alleen feitelijke informatie mag door een recenter document worden vervangen.
 `.trim();
 
 export const DECISION_TREE_V10 = `
+STRICTE LADDER (verplicht — beantwoord alleen Ja/Nee per vraag, in volgorde):
+Nee → stop daar (trede hoort bij die vraag). Ja → ga door naar de volgende vraag.
+Geen holistische "voelt als trede X"-inschatting. Server berekent huidige trede uit jouw Ja/Nee-antwoorden.
+
 Vraag 1: Zijn er volgens de bedrijfsarts duurzaam benutbare mogelijkheden? Nee → Trede 1. Ja → verder.
 Vraag 2: Komt werknemer minimaal twee keer per week buitenshuis? Nee → Trede 1. Ja → verder.
 Vraag 3: Is sprake van regelmatige sociale participatie buitenshuis? Nee → Trede 2. Ja → verder.
 Vraag 4: Is werknemer gemotiveerd richting arbeid? Nee → Trede 3. Ja → verder.
 Vraag 5: Kan werknemer tijdens de intake ongeveer minimaal 12 uur per week belast worden? Nee → Trede 3. Ja → verder.
 Vraag 6: Verricht werknemer momenteel werkzaamheden? Nee → Trede 3. Ja → verder.
+  (Let op: 0 uur werk alleen = Nee op vraag 6 → Trede 3 als vragen 1–5 Ja zijn — geen Trede 1 alleen omdat uren laag zijn.)
 Vraag 7: Is sprake van betaald werk?
   Nee (vrijwilligerswerk, stage, werkervaringsplaats of activeringsplaats) → Trede 4.
   Ja: beoordeel verhouding tot contracturen, duurzaamheid, passendheid.
-    Aangepast werk ≥ ~65% contracturen maar nog tijdelijke voorzieningen of Spoor 1/2-traject → Trede 5.
-    Duurzaam passend werk zonder tijdelijke voorzieningen, ≥ 65% loonwaarde of volledig hersteld → Trede 6.
+    Aangepast werk ≥ ~65% contracturen maar nog tijdelijke voorzieningen of Spoor 1/2-traject → Trede 5 (q7_duurzaam_passend_min_65=false).
+    Duurzaam passend werk zonder tijdelijke voorzieningen, ≥ 65% loonwaarde of volledig hersteld → Trede 6 (q7_duurzaam_passend_min_65=true).
 
-De trede wordt nooit uitsluitend bepaald door het aantal uren. Beoordeel altijd de combinatie van benutbare mogelijkheden, activiteiten buitenshuis, sociale participatie, motivatie, belastbaarheid, huidige werkzaamheden, betaald/onbetaald werk, verhouding tot contracturen, duurzaamheid, Spoor 1 en Spoor 2.
+De trede wordt nooit uitsluitend bepaald door het aantal uren. Beoordeel altijd via de ladder: benutbare mogelijkheden, activiteiten buitenshuis, sociale participatie, motivatie, belastbaarheid, huidige werkzaamheden, betaald/onbetaald werk, verhouding tot contracturen, duurzaamheid, Spoor 1 en Spoor 2.
 `.trim();
 
 export const DOCUMENT_SCOPE_HINT = `

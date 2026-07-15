@@ -90,16 +90,55 @@ export function buildToelichtingOpener(trede: TredeNumber): string {
   return TOELICHTING_OPENER_PREFIX.replace('[n]', String(trede));
 }
 
-function stripLeakedVerwachtingOpener(kern: string, trede: TredeNumber): string {
+function capitalizeFirstLetter(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+/** Drop fragments that cannot stand as a post-opener sentence. */
+function isInvalidVerwachtingBody(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  // Relative-clause residue without a finite clause subject ("de X is Y" after strip can be ok if capitalized)
+  if (/^(is|zijn|was|waren|maar|,)\b/i.test(t)) return true;
+  if (/^omdat\b/i.test(t)) return true;
+  return false;
+}
+
+/**
+ * Strip leaked verwachting opener and mid-sentence debris from model kern.
+ */
+export function stripLeakedVerwachtingOpener(kern: string, trede: TredeNumber): string {
   let text = sanitizeKernel(kern);
   const opener = buildVerwachtingOpenerSentence(trede);
   if (text.toLowerCase().startsWith(opener.toLowerCase())) {
     text = text.slice(opener.length).trim();
   }
-  if (text.toLowerCase().startsWith(VERWACHTING_OPENER.toLowerCase())) {
-    text = text.replace(/^Werknemer bevindt zich vermoedelijk in trede \d+ van de POW-meter™\.?\s*/i, '').trim();
-  }
-  return text;
+  // Allow period or comma after POW-meter™ in leaked openers.
+  text = text
+    .replace(
+      /^Werknemer bevindt zich vermoedelijk in trede \d+ van de POW-meter™[.,]?\s*/i,
+      ''
+    )
+    .trim();
+  // Leading debris from bad joins.
+  text = text.replace(/^[,:;–—-]+\s*/u, '').trim();
+  text = text.replace(/^omdat\s+/i, '').trim();
+  text = text.replace(/^,\s*de\s+/i, '').trim();
+
+  if (isInvalidVerwachtingBody(text)) return '';
+
+  // Capitalize sentence start after opener (which ends with ".").
+  return capitalizeFirstLetter(text);
+}
+
+export function sanitizeVerwachtingBody(body: string): string {
+  let text = sanitizeKernel(body);
+  text = text.replace(/^[,:;–—-]+\s*/u, '').trim();
+  text = text.replace(/^omdat\s+/i, '').trim();
+  if (isInvalidVerwachtingBody(text)) return '';
+  return capitalizeFirstLetter(text);
 }
 
 function stripLeakedToelichtingOpener(kern: string, trede: TredeNumber): string {
@@ -108,20 +147,35 @@ function stripLeakedToelichtingOpener(kern: string, trede: TredeNumber): string 
   if (text.toLowerCase().startsWith(opener.toLowerCase())) {
     text = text.slice(opener.length).trim();
   }
-  text = text.replace(/^Werknemer bevindt zich tijdens de intake in trede \d+ van de POW-meter™ omdat\s*/i, '').trim();
+  text = text
+    .replace(/^Werknemer bevindt zich tijdens de intake in trede \d+ van de POW-meter™ omdat\s*/i, '')
+    .trim();
+  return text;
+}
+
+/** Clean toelichting continuation after "omdat"; drop orphan fragments. */
+export function sanitizeToelichtingBody(body: string): string {
+  let text = sanitizeKernel(body);
+  text = text.replace(/^[,:;–—-]+\s*/u, '').trim();
+  // Orphan verb starts after aggressive stripping.
+  if (/^(is|zijn|was|waren|maar)\b/i.test(text)) {
+    text = text.replace(/^(is|zijn|was|waren|maar)\s+/i, '').trim();
+  }
+  if (!text || /^(is|zijn|was|waren|maar)\b/i.test(text)) return '';
+  // Prefer lowercase first letter after "omdat" for natural Dutch continuation when it's "haar/zijn/werknemer..."
   return text;
 }
 
 export function buildVerwachtingText(trede: TredeNumber, kern: string): string {
-  const body = stripLeakedVerwachtingOpener(kern, trede);
+  const body = sanitizeVerwachtingBody(stripLeakedVerwachtingOpener(kern, trede));
   const opener = buildVerwachtingOpenerSentence(trede);
   return body ? `${opener} ${body}` : opener;
 }
 
 export function buildToelichtingText(trede: TredeNumber, kern: string): string {
-  const body = stripLeakedToelichtingOpener(kern, trede);
+  const body = sanitizeToelichtingBody(stripLeakedToelichtingOpener(kern, trede));
   const opener = buildToelichtingOpener(trede);
-  return body ? `${opener} ${body}` : `${opener} ${body}`.trim();
+  return body ? `${opener} ${body}` : opener;
 }
 
 export function assemblePowMeterContent(content: PowMeterContentResult): AssembledPowMeterContent {
@@ -253,6 +307,8 @@ export function stripForbiddenToelichtingPhrases(text: string): string {
   // Grammar cleanup after stripping.
   out = out.replace(/\bomdat\s+maar\s+/gi, 'omdat ');
   out = out.replace(/\bomdat\s+werknemer\s+werknemer\b/gi, 'omdat werknemer');
+  // Orphan verb after "omdat" (e.g. "omdat is voor zorg").
+  out = out.replace(/\bomdat\s+(is|zijn|was|waren|maar)\s+/gi, 'omdat ');
   out = out.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').replace(/\s+\./g, '.').trim();
   return out;
 }
@@ -270,12 +326,12 @@ export function sanitizePowMeterContent(content: AssembledPowMeterContent): Asse
     preserveOpener: VERWACHTING_OPENER,
   });
 
-  const toelichting = truncateToWordLimit(
-    stripForbiddenToelichtingPhrases(
-      stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow))
-    ),
-    MAX_WORDS_TOELICHTING
+  let toelichting = stripForbiddenToelichtingPhrases(
+    stripFmlAndBedrijfsartsAttribution(stripCitations(content.toelichting_pow))
   );
+  // Re-heal "omdat is/zijn…" orphans after strip.
+  toelichting = toelichting.replace(/\bomdat\s+(is|zijn|was|waren|maar)\s+/gi, 'omdat ');
+  toelichting = truncateToWordLimit(toelichting, MAX_WORDS_TOELICHTING);
 
   const sanitized: AssembledPowMeterContent = {
     huidige_trede_tekst: stripCitations(content.huidige_trede_tekst),

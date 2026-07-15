@@ -82,7 +82,9 @@ function getPowMeterModel(): string {
 function getReasoningEffort(): 'low' | 'medium' | 'high' | undefined {
   const raw = process.env.OPENAI_POW_METER_REASONING?.trim().toLowerCase();
   if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
-  return undefined;
+  // Default medium for ladder yes/no quality; set OPENAI_POW_METER_REASONING=off to disable.
+  if (raw === 'off' || raw === 'none' || raw === 'false') return undefined;
+  return 'medium';
 }
 
 async function uploadPowMeterDocs(

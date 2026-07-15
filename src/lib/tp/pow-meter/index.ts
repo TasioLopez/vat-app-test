@@ -41,13 +41,21 @@ export {
   parsePowInschaling,
   parsePowToelichting,
   sanitizePowMeterContent,
+  sanitizeToelichtingBody,
+  sanitizeVerwachtingBody,
   stripCitations,
   stripForbiddenToelichtingPhrases,
+  stripLeakedVerwachtingOpener,
   updatePowMeterToelichting,
   type ClampInschalingOptions,
   type PowInschalingData,
   type PowMeterFields,
 } from './build-fields';
+export {
+  computeTredeFromLadder,
+  ladderYesThrough,
+  type PowLadderAnswers,
+} from './ladder';
 export {
   buildPowMeterContextFromMeta,
   filterPowMeterDocs,
