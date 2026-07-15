@@ -1,4 +1,10 @@
-import { OPENING_PREFIX, SECTION_HEADING_PATTERN } from './constants';
+import {
+  BANNED_PHRASES,
+  MISSING_INFO_PATTERN,
+  OPENING_PREFIX,
+  SECTION_HEADING_PATTERN,
+  SOURCE_REFERENCE_PATTERN,
+} from './constants';
 import type { PersoonlijkProfielContentResult } from './schema';
 
 export type PersoonlijkProfielBuildContext = {
@@ -33,8 +39,29 @@ export function stripCitations(text: string): string {
     .trim();
 }
 
+export function stripSourceReferenceSentences(text: string): string {
+  if (!text) return text;
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const kept = sentences.filter(
+    (sentence) =>
+      !SOURCE_REFERENCE_PATTERN.test(sentence) && !MISSING_INFO_PATTERN.test(sentence)
+  );
+  if (kept.length === 0) return '';
+  return kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+}
+
+export function sanitizeFragment(text: string): string {
+  let cleaned = stripCitations(text);
+  for (const phrase of BANNED_PHRASES) {
+    const re = new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    cleaned = cleaned.replace(re, '');
+  }
+  cleaned = stripSourceReferenceSentences(cleaned);
+  return cleaned.replace(/\s{2,}/g, ' ').trim();
+}
+
 function sanitizeParagraph(text: string): string {
-  return stripCitations(text).replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  return sanitizeFragment(text).replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 }
 
 function stripSectionHeading(text: string): string {

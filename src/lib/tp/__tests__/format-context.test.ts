@@ -54,11 +54,18 @@ describe('buildSupervisiePhrase', () => {
 });
 
 describe('enrichArtsOrgFromMeta', () => {
-  it('returns artsOrg when it already has a role prefix', () => {
+  it('returns artsOrg when it already has a role prefix and meta is a different doctor', () => {
     assert.equal(
       enrichArtsOrgFromMeta('Verzekeringsarts Ankersmit', 'Bedrijfsarts Other'),
       'Verzekeringsarts Ankersmit'
     );
+  });
+
+  it('merges supervisie from meta when spreekuur arts matches primary doctor (Melissa case)', () => {
+    const meta =
+      'Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne';
+    assert.equal(enrichArtsOrgFromMeta('Arts M. Stevens', meta), meta);
+    assert.equal(enrichArtsOrgFromMeta('M. Stevens', meta), meta);
   });
 
   it('prepends role from meta when artsOrg is name-only and names match', () => {

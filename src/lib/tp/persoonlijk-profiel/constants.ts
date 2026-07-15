@@ -36,3 +36,25 @@ export const SECTION_HEADING_PATTERN = /^Persoonlijk profiel\s*/i;
 
 /** Opening validation prefix. */
 export const OPENING_PREFIX = 'Werknemer is een';
+
+/** Phrases the model must not use; stripped in post-processing when present. */
+export const BANNED_PHRASES = [
+  'in het intakeformulier',
+  'intakeformulier',
+  'intake formulier',
+  'hierover is geen informatie beschikbaar',
+  'hierover zijn geen gegevens opgenomen',
+  'niet opgenomen in het',
+  'niet vermeld in het',
+  'niet benoemd in het',
+  'geen expliciet benoemde vaardigheden',
+  'verdere expliciet benoemde vaardigheden',
+] as const;
+
+/** Matches source-document references in output (for sentence removal). */
+export const SOURCE_REFERENCE_PATTERN =
+  /\b(intake\s*-?\s*formulier|intakeformulier|het\s+formulier|bron\s*document)\b/i;
+
+/** Matches meta-sentences about missing or unavailable information. */
+export const MISSING_INFO_PATTERN =
+  /\b(niet opgenomen|niet vermeld|niet benoemd|geen informatie beschikbaar|geen gegevens opgenomen|expliciet benoemde vaardigheden)\b/i;

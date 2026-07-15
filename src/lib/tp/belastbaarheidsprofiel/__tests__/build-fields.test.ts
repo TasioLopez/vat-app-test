@@ -144,6 +144,34 @@ describe('buildBelastbaarheidsprofielFields', () => {
     );
   });
 
+  it('merges supervisie from tp_meta when spreekuur arts_org lacks supervisie (Melissa case)', () => {
+    const melissaCtx = {
+      meta: {
+        fml_izp_lab_date: '2026-05-27',
+        occupational_doctor_org:
+          'Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: {
+        datum: '2026-05-27',
+        arts_org: 'Arts M. Stevens',
+      },
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(melissaCtx, content);
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld door Arts M\. Stevens werkend onder supervisie van Bedrijfsarts M\. Montagne, beperkingen/
+    );
+    assert.match(
+      prognose_bedrijfsarts,
+      /door Arts M\. Stevens werkend onder supervisie van Bedrijfsarts M\. Montagne, staat onderstaande/
+    );
+  });
+
   it('uses default rubrieken when model returns empty list', () => {
     const content: BelastbaarheidsprofielContentResult = {
       rubrieken: [],

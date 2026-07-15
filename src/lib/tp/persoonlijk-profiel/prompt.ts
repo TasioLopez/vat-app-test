@@ -1,5 +1,6 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
 import {
+  BANNED_PHRASES,
   MAX_SENTENCES_ALINEA_1,
   MAX_SENTENCES_ALINEA_2,
   MAX_SENTENCES_ALINEA_3,
@@ -43,7 +44,16 @@ Gebruik uitsluitend informatie die letterlijk of ondubbelzinnig in het intakefor
 Niet: aannames, interpretaties, conclusies, eigen aanvullingen.
 Niet afleiden: vaardigheden uit functies, opleidingen, werkervaring of hobby's.
 Niet afleiden: persoonskenmerken uit uitspraken of functieverleden.
-Bij twijfel: niet opnemen. Ontbrekende informatie niet benoemen.
+Bij twijfel: niet opnemen.
+
+ONTBREKENDE INFORMATIE
+Benoem nooit dat informatie ontbreekt, niet is opgenomen of niet beschikbaar is.
+Vermijd o.a.: ${BANNED_PHRASES.slice(0, 6).join('; ')}.
+Als vaardigheden of kenmerken niet expliciet zijn benoemd: laat weg — geen commentaar op afwezigheid.
+
+BRONVERWIJZING IN OUTPUT (strikt verboden)
+Noem nooit "intakeformulier", "intake", "formulier" of enige verwijzing naar brondocumenten in de output.
+De lezer mag niet merken dat de tekst uit een intake komt.
 
 LENGTE EN STIJL (verplicht)
 - Maximaal drie alinea's; totaal circa ${MAX_WORDS_TOTAL} woorden
@@ -73,7 +83,7 @@ ALINEA 3
 Alleen objectief benoemde persoonskenmerken (bijv. zelfstandig, nauwkeurig). Geen zelftyperingen ("geeft aan", "ziet zichzelf als"). Null wanneer geen kenmerken in intake.
 
 NOOIT OPNEMEN
-Medisch, belastbaarheid, privé, gezin, sociaal netwerk, hobby's, spoor 2, motivatie, terugkeer-wensen, werkgeversnamen.
+Medisch, belastbaarheid, privé, gezin, sociaal netwerk, hobby's, spoor 2, motivatie, terugkeer-wensen, werkgeversnamen, bronverwijzingen (intakeformulier e.d.), meta-zinnen over ontbrekende informatie.
 
 JSON OUTPUT
 Lever exact: alinea_1, alinea_2, alinea_3. Geen sectiekop. Geen toelichting.

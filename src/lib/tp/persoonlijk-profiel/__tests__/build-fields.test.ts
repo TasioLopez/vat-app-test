@@ -4,7 +4,9 @@ import {
   buildPersoonlijkProfielFields,
   calculateAge,
   hasValidOpening,
+  sanitizeFragment,
   stripCitations,
+  stripSourceReferenceSentences,
   type PersoonlijkProfielBuildContext,
 } from '../build-fields';
 import type { PersoonlijkProfielContentResult } from '../schema';
@@ -79,6 +81,41 @@ describe('buildPersoonlijkProfielFields', () => {
     const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
     assert.ok(!persoonlijk_profiel.includes('\n\n\n'));
     assert.match(persoonlijk_profiel, /verpleegkundige.*mbo-4/);
+  });
+
+  it('removes sentences that reference the intakeformulier', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1:
+        'Werknemer is een 34-jarige vrouw met circa dertien jaar werkervaring als Supervisor. Verdere expliciet benoemde vaardigheden zijn in het intakeformulier niet opgenomen.',
+      alinea_2: 'Werknemer beschikt over rijbewijs B.',
+      alinea_3: null,
+    };
+
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
+    assert.doesNotMatch(persoonlijk_profiel, /intakeformulier/i);
+    assert.match(persoonlijk_profiel, /Supervisor/);
+    assert.match(persoonlijk_profiel, /rijbewijs B/);
+  });
+});
+
+describe('stripSourceReferenceSentences', () => {
+  it('drops sentences containing intakeformulier', () => {
+    const input =
+      'Werknemer is een 34-jarige vrouw. Verdere vaardigheden zijn in het intakeformulier niet opgenomen. Werknemer heeft mbo afgerond.';
+    const result = stripSourceReferenceSentences(input);
+    assert.doesNotMatch(result, /intakeformulier/i);
+    assert.match(result, /34-jarige vrouw/);
+    assert.match(result, /mbo afgerond/);
+  });
+});
+
+describe('sanitizeFragment', () => {
+  it('strips banned phrases about missing intake information', () => {
+    const result = sanitizeFragment(
+      'Werknemer is een supervisor. Verdere expliciet benoemde vaardigheden zijn niet opgenomen.'
+    );
+    assert.doesNotMatch(result, /niet opgenomen/i);
+    assert.match(result, /supervisor/i);
   });
 });
 

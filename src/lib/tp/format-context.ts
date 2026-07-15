@@ -126,6 +126,21 @@ export function buildArtsPhrase(occupational_doctor_org: string | null | undefin
   return cleaned ? `Arts ${cleaned}` : 'Arts [naam]';
 }
 
+function extractPrimaryDoctorName(value: string): string {
+  const primary = value.trim().split(/\s+werkend onder supervisie van/i)[0].trim();
+  const prefix = extractDoctorRolePrefix(primary);
+  const name = prefix ? primary.slice(prefix.length).trim() : primary;
+  return name.toLowerCase();
+}
+
+function primaryDoctorsMatch(arts: string, meta: string): boolean {
+  if (arts.toLowerCase() === meta.toLowerCase()) return true;
+  if (meta.toLowerCase().startsWith(`${arts.toLowerCase()} werkend onder supervisie van`)) {
+    return true;
+  }
+  return extractPrimaryDoctorName(arts) === extractPrimaryDoctorName(meta);
+}
+
 /** Enrich spreekuur-extracted name-only arts_org with role from tp_meta occupational_doctor_org. */
 export function enrichArtsOrgFromMeta(
   artsOrg: string | null | undefined,
@@ -135,6 +150,11 @@ export function enrichArtsOrgFromMeta(
   const meta = (occupationalDoctorOrg || '').trim();
 
   if (!arts) return meta || null;
+
+  if (meta && /werkend onder supervisie van/i.test(meta) && primaryDoctorsMatch(arts, meta)) {
+    return meta;
+  }
+
   if (hasDoctorRolePrefix(arts)) return arts;
 
   const metaPrefix = meta ? extractDoctorRolePrefix(meta) : null;
