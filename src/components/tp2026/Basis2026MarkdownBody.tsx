@@ -8,10 +8,6 @@ import { cn } from '@/lib/utils';
 
 const basisSanitizeSchema = defaultSchema;
 
-/** Apply on the markdown root so ::before/::after sit on first/last block (p, ul, ol). */
-export const MARKDOWN_INLINE_QUOTE_CLASS =
-  '[&>*:first-child]:before:content-["\u201C"] [&>*:last-child]:after:content-["\u201D"]';
-
 const components: Components = {
   p: ({ children }) => (
     <p className="mb-2 whitespace-pre-line text-[12px] leading-relaxed text-neutral-900 last:mb-0">{children}</p>
@@ -65,7 +61,7 @@ export function Basis2026MarkdownBody({
     <div
       className={cn(
         'max-w-none text-neutral-900',
-        withInlineQuotes && MARKDOWN_INLINE_QUOTE_CLASS
+        withInlineQuotes && 'markdown-inline-quotes'
       )}
     >
       <ReactMarkdown rehypePlugins={[[rehypeSanitize, basisSanitizeSchema]]} components={components}>

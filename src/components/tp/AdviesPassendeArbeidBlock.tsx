@@ -45,9 +45,9 @@ export function AdviesPassendeArbeidBlock({
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       {intro ? <p className={TEAL_BOLD_CLASS}>{intro}</p> : null}
       {quote ? (
-        <p className="mt-2">
-          <em>&ldquo;{quote}&rdquo;</em>
-        </p>
+        <div className="mt-2 italic">
+          <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
+        </div>
       ) : null}
     </div>
   );

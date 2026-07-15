@@ -229,6 +229,14 @@ html, body {
 }
 .print-page:last-child { page-break-after: auto; }
 
+/* Inline opening/closing quotes on first and last markdown block */
+.markdown-inline-quotes > :first-child::before {
+  content: "\201C";
+}
+.markdown-inline-quotes > :last-child::after {
+  content: "\201D";
+}
+
 /* Remove chrome in print */
 @media print {
   /* common floating things to hide */

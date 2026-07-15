@@ -8,32 +8,6 @@ import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody
 
 const TEAL_BOLD_CLASS = 'text-[12px] font-bold leading-tight text-[#64b6a6]';
 
-function renderPrognoseQuote(quote: string): React.ReactNode {
-  const segments = quote.split(/\n\n+/).map((s) => s.trim()).filter(Boolean);
-  if (segments.length <= 1) {
-    return (
-      <p className="mt-2">
-        <em>&ldquo;{quote}&rdquo;</em>
-      </p>
-    );
-  }
-
-  return (
-    <p className="mt-2">
-      <em>
-        &ldquo;{segments[0]}
-        {segments.slice(1).map((segment, index) => (
-          <React.Fragment key={index}>
-            <br />
-            {segment}
-          </React.Fragment>
-        ))}
-        &rdquo;
-      </em>
-    </p>
-  );
-}
-
 function splitBeforeRubrieken(text: string): { intro: string; rest: string } {
   const bulletIdx = text.search(/\n•\s/);
   if (bulletIdx === -1) return { intro: text.trim(), rest: '' };
@@ -97,7 +71,9 @@ export function BelastbaarheidsprofielBlock({
       {quote ? (
         <div className="mt-4">
           <BasisToelichtingHeading label="Prognose:" />
-          {renderPrognoseQuote(quote)}
+          <div className="mt-2 italic">
+            <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
+          </div>
         </div>
       ) : null}
     </div>
