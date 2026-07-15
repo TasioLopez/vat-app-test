@@ -16,6 +16,12 @@ export {
   MAX_EXTRACTION_RETRIES,
 } from './constants';
 export { normalizeForAnalysis, getGotenbergUrl } from './normalizeForAnalysis';
+export {
+  GotenbergConversionError,
+  gotenbergErrorToUserMessage,
+  isGotenbergConversionError,
+  isGotenbergConfigError,
+} from './gotenberg-errors';
 export { extractIntakeEmployeeDetailsFromVision } from './extractIntakeEmployeeDetails';
 export {
   runStructuredFileExtraction,

@@ -14,6 +14,8 @@ import {
   FML_EMPLOYEE_USER_MESSAGE,
   EXTRA_EMPLOYEE_PROMPT,
   EXTRA_EMPLOYEE_USER_MESSAGE,
+  GotenbergConversionError,
+  isGotenbergConversionError,
 } from '@/lib/document-analysis';
 import { isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
 import { extractIntakeEmployeeDetailsFromVision } from '@/lib/document-analysis/extractIntakeEmployeeDetails';
@@ -30,6 +32,8 @@ import {
   isSpreekReportageDocType,
 } from '@/lib/documents/employee-doc-types';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
+
+export const maxDuration = 120;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,6 +103,11 @@ async function processIntakeForm(doc: DocRow): Promise<{
     return { mapped, referent };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof GotenbergConversionError || isGotenbergConversionError(message)) {
+      throw error instanceof GotenbergConversionError
+        ? error
+        : new GotenbergConversionError(message);
+    }
     console.error('❌ Error processing intake form:', message);
     return { mapped: {}, referent: {} };
   }
@@ -151,6 +160,9 @@ async function processDocumentWithVisionExtraction(
     console.log(`✅ ${options.logLabel} processing completed: ${Object.keys(mapped).length} fields`);
     return { mapped, referent };
   } catch (error: unknown) {
+    if (error instanceof GotenbergConversionError) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Error processing ${options.logLabel}:`, message);
     return { mapped: {}, referent: {} };
@@ -423,6 +435,19 @@ export async function GET(req: NextRequest) {
       message: `Employee information successfully extracted from ${docs.length} documents using separate document processing`,
     });
   } catch (error: unknown) {
+    if (error instanceof GotenbergConversionError) {
+      console.error('❌ Gotenberg conversion error:', error.message);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.userMessage,
+          details: error.message,
+          data: { details: {} },
+        },
+        { status: 503 }
+      );
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     console.error('❌ API Error:', error);
     return NextResponse.json({

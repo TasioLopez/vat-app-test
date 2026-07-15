@@ -7,6 +7,12 @@ import {
   MAX_DOCUMENT_UPLOAD_BYTES,
   MAX_EXTRACTION_RETRIES,
 } from './constants';
+import { normalizeForAnalysis } from './normalizeForAnalysis';
+
+/** Responses API file inputs — use user_data per OpenAI docs. */
+const RESPONSES_FILE_PURPOSE = 'user_data' as const;
+const FILE_READY_POLL_MS = 500;
+const FILE_READY_TIMEOUT_MS = 30_000;
 
 export type ValidationResult = {
   ok: boolean;
@@ -62,6 +68,18 @@ export type DocumentTextExtractionOptions = {
   model?: string;
 };
 
+async function waitForOpenAIFileReady(openai: OpenAI, fileId: string): Promise<void> {
+  const deadline = Date.now() + FILE_READY_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const file = await openai.files.retrieve(fileId);
+    if (file.status === 'processed') return;
+    if (file.status === 'error') {
+      throw new Error(`OpenAI file processing failed for ${fileId}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, FILE_READY_POLL_MS));
+  }
+}
+
 async function uploadPdfForResponses(
   openai: OpenAI,
   pdfBuffer: Buffer,
@@ -74,8 +92,28 @@ async function uploadPdfForResponses(
   const uploadFile = buildOpenAIFileFromPdf(pdfBuffer, analysisFilename);
   const uploaded = await openai.files.create({
     file: uploadFile,
-    purpose: 'assistants',
+    purpose: RESPONSES_FILE_PURPOSE,
   });
+  await waitForOpenAIFileReady(openai, uploaded.id);
+  return uploaded.id;
+}
+
+async function uploadBufferForResponses(
+  openai: OpenAI,
+  buffer: Buffer,
+  storagePath: string,
+  fallbackName?: string
+): Promise<string> {
+  const { buildOpenAIFile } = await import('@/lib/openai-file-upload');
+  const uploadFile = buildOpenAIFile(buffer, storagePath, fallbackName);
+  if (uploadFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+    throw new Error(`Document exceeds upload size limit (${MAX_DOCUMENT_UPLOAD_BYTES} bytes)`);
+  }
+  const uploaded = await openai.files.create({
+    file: uploadFile,
+    purpose: RESPONSES_FILE_PURPOSE,
+  });
+  await waitForOpenAIFileReady(openai, uploaded.id);
   return uploaded.id;
 }
 
@@ -241,19 +279,10 @@ export async function runStructuredFileExtraction<T>(
     if (pdfBuffer && analysisFilename) {
       fileId = await uploadPdfForResponses(openai, pdfBuffer, analysisFilename);
     } else {
-      const { buildOpenAIFile } = await import('@/lib/openai-file-upload');
-      const uploadFile = buildOpenAIFile(buffer, storagePath, fallbackName);
-      if (uploadFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
-        throw new Error(`Document exceeds upload size limit (${MAX_DOCUMENT_UPLOAD_BYTES} bytes)`);
-      }
-      const uploaded = await openai.files.create({
-        file: uploadFile,
-        purpose: 'assistants',
-      });
-      fileId = uploaded.id;
+      fileId = await uploadBufferForResponses(openai, buffer, storagePath, fallbackName);
     }
 
-    return runPassWithValidation(
+    return await runPassWithValidation(
       openai,
       fileId,
       {
@@ -326,16 +355,23 @@ export async function runDocumentTextExtraction(
     model = getDocumentExtractionModel(),
   } = options;
 
+  const analysisName = fallbackName || storagePath;
+  const { pdfBuffer, analysisFilename } = await normalizeForAnalysis(buffer, analysisName);
+
   let fileId: string | null = null;
 
   try {
-    const { buildOpenAIFile } = await import('@/lib/openai-file-upload');
-    const uploadFile = buildOpenAIFile(buffer, storagePath, fallbackName);
+    if (pdfBuffer.length > MAX_DOCUMENT_UPLOAD_BYTES) {
+      throw new Error(`Document exceeds upload size limit (${MAX_DOCUMENT_UPLOAD_BYTES} bytes)`);
+    }
+
+    const uploadFile = buildOpenAIFileFromPdf(pdfBuffer, analysisFilename);
     const uploaded = await openai.files.create({
       file: uploadFile,
-      purpose: 'assistants',
+      purpose: RESPONSES_FILE_PURPOSE,
     });
     fileId = uploaded.id;
+    await waitForOpenAIFileReady(openai, fileId);
 
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: userMessage },

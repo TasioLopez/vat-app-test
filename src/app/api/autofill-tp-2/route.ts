@@ -10,8 +10,10 @@ import {
   AD_TP2_DATE_USER_MESSAGE,
   FML_TP2_DATE_PROMPT,
   FML_TP2_DATE_USER_MESSAGE,
+  GotenbergConversionError,
 } from '@/lib/document-analysis';
 import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import {
   TP2_EXTRACTION_JSON_SCHEMA,
@@ -26,6 +28,8 @@ import {
 import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
 import { docsIncludeAdReport, resolveTp2HasAdReport } from '@/lib/tp/intake-ad-presence';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
+
+export const maxDuration = 120;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,7 +74,17 @@ async function extractFromDocument<T extends Record<string, unknown>>(
   const downloaded = await downloadDocumentBuffer(doc);
   if (!downloaded) return {};
 
+  const fallbackName = doc.name ?? `${doc.type || 'document'}`;
+
   try {
+    const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
+      downloaded.buffer,
+      fallbackName || downloaded.path
+    );
+    if (wasConverted) {
+      console.log(`✅ TP2 document normalized to PDF (${analysisFilename})`);
+    }
+
     const parsed = await runStructuredFileExtraction({
       openai,
       buffer: downloaded.buffer,
@@ -81,9 +95,15 @@ async function extractFromDocument<T extends Record<string, unknown>>(
       schemaName: config.schemaName,
       schema: config.schema,
       parse: config.parse,
+      pdfBuffer,
+      analysisFilename,
+      usePdfVision: true,
     });
     return parsed as Record<string, unknown>;
   } catch (error) {
+    if (error instanceof GotenbergConversionError) {
+      throw error;
+    }
     console.error('❌ Extraction failed for', doc.type, error);
     return {};
   }
@@ -217,6 +237,19 @@ export async function GET(req: NextRequest) {
       message: `TP2 metadata gevonden in documenten - ${Object.keys(extractedData).length} velden ingevuld`,
     });
   } catch (err: unknown) {
+    if (err instanceof GotenbergConversionError) {
+      console.error('❌ Gotenberg conversion error:', err.message);
+      return NextResponse.json(
+        {
+          success: false,
+          error: err.userMessage,
+          details: err.message,
+          data: { details: {} },
+        },
+        { status: 503 }
+      );
+    }
+
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('❌ Server error:', err);
     return NextResponse.json(

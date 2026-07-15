@@ -1,19 +1,35 @@
-import { describe, it, mock } from 'node:test';
+import { describe, it, mock, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { runStructuredFileExtraction, runMultiPassExtraction } from '../runStructuredExtraction';
+import {
+  runStructuredFileExtraction,
+  runMultiPassExtraction,
+  runDocumentTextExtraction,
+} from '../runStructuredExtraction';
+
+function mockOpenAIFiles() {
+  return {
+    create: mock.fn(async () => ({ id: 'file-123', status: 'processed' })),
+    retrieve: mock.fn(async () => ({ id: 'file-123', status: 'processed' })),
+    delete: mock.fn(async () => {}),
+  };
+}
 
 describe('runStructuredFileExtraction', () => {
   it('calls responses.create with strict json_schema, detail high for PDF vision, and deletes uploaded file', async () => {
     const deletedIds: string[] = [];
     const createPayloads: unknown[] = [];
+    const uploadPurposes: string[] = [];
+    const files = mockOpenAIFiles();
+    files.delete = mock.fn(async (id: string) => {
+      deletedIds.push(id);
+    });
+    files.create = mock.fn(async (opts: { purpose: string }) => {
+      uploadPurposes.push(opts.purpose);
+      return { id: 'file-123', status: 'processed' };
+    });
 
     const openai = {
-      files: {
-        create: mock.fn(async () => ({ id: 'file-123' })),
-        delete: mock.fn(async (id: string) => {
-          deletedIds.push(id);
-        }),
-      },
+      files,
       responses: {
         create: mock.fn(async (payload: unknown) => {
           createPayloads.push(payload);
@@ -39,6 +55,7 @@ describe('runStructuredFileExtraction', () => {
 
     assert.deepEqual(result, { current_job: 'Supervisor' });
     assert.equal(createPayloads.length, 1);
+    assert.deepEqual(uploadPurposes, ['user_data']);
 
     const payload = createPayloads[0] as {
       model: string;
@@ -52,13 +69,50 @@ describe('runStructuredFileExtraction', () => {
     assert.deepEqual(deletedIds, ['file-123']);
   });
 
+  it('deletes uploaded file only after responses.create completes', async () => {
+    const events: string[] = [];
+    const files = mockOpenAIFiles();
+    files.create = mock.fn(async () => {
+      events.push('upload');
+      return { id: 'file-123', status: 'processed' };
+    });
+    files.delete = mock.fn(async () => {
+      events.push('delete');
+    });
+
+    const openai = {
+      files,
+      responses: {
+        create: mock.fn(async () => {
+          events.push('responses.start');
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          events.push('responses.end');
+          return { output_text: '{"current_job":"Supervisor"}' };
+        }),
+      },
+    };
+
+    await runStructuredFileExtraction({
+      openai: openai as never,
+      buffer: Buffer.from('pdf'),
+      storagePath: 'docs/test.pdf',
+      instructions: 'Extract fields',
+      userMessage: 'Analyze',
+      schemaName: 'employee_extraction',
+      schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+      parse: (raw) => raw as Record<string, unknown>,
+      pdfBuffer: Buffer.from('%PDF'),
+      analysisFilename: 'test.pdf',
+      usePdfVision: true,
+    });
+
+    assert.deepEqual(events, ['upload', 'responses.start', 'responses.end', 'delete']);
+  });
+
   it('retries when validation fails then succeeds', async () => {
     let call = 0;
     const openai = {
-      files: {
-        create: mock.fn(async () => ({ id: 'file-456' })),
-        delete: mock.fn(async () => {}),
-      },
+      files: mockOpenAIFiles(),
       responses: {
         create: mock.fn(async () => {
           call++;
@@ -106,11 +160,11 @@ describe('runMultiPassExtraction', () => {
 
     const openai = {
       files: {
+        ...mockOpenAIFiles(),
         create: mock.fn(async () => {
           uploads++;
-          return { id: 'file-multi' };
+          return { id: 'file-multi', status: 'processed' };
         }),
-        delete: mock.fn(async () => {}),
       },
       responses: {
         create: mock.fn(async () => {
@@ -151,5 +205,55 @@ describe('runMultiPassExtraction', () => {
     assert.equal(apiCalls, 2);
     assert.equal(merged.current_job, 'Supervisor');
     assert.equal(merged.education_level, 'HBO');
+  });
+});
+
+describe('runDocumentTextExtraction', () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = process.env.GOTENBERG_URL;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    if (originalEnv === undefined) {
+      delete process.env.GOTENBERG_URL;
+    } else {
+      process.env.GOTENBERG_URL = originalEnv;
+    }
+  });
+
+  it('normalizes DOCX via Gotenberg before OpenAI upload', async () => {
+    process.env.GOTENBERG_URL = 'https://gotenberg.example.com';
+    globalThis.fetch = mock.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => Buffer.from('%PDF-from-docx').buffer,
+    })) as typeof fetch;
+
+    let uploadedName = '';
+    const openai = {
+      files: {
+        ...mockOpenAIFiles(),
+        create: mock.fn(async (opts: { file: { name: string } }) => {
+          uploadedName = opts.file.name;
+          return { id: 'file-text', status: 'processed' };
+        }),
+      },
+      responses: {
+        create: mock.fn(async () => ({ output_text: 'Samenvatting intake' })),
+      },
+    };
+
+    const text = await runDocumentTextExtraction({
+      openai: openai as never,
+      buffer: Buffer.from('PK'),
+      storagePath: 'docs/intake.docx',
+      fallbackName: 'intake.docx',
+      instructions: 'Summarize',
+      userMessage: 'Analyze',
+      model: 'gpt-test',
+    });
+
+    assert.equal(text, 'Samenvatting intake');
+    assert.equal(uploadedName, 'intake.pdf');
+    assert.equal((globalThis.fetch as ReturnType<typeof mock.fn>).mock.calls.length, 1);
   });
 });
