@@ -2,8 +2,10 @@ import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   buildSupervisiePhrase,
+  extractDoctorRolePrefix,
   type DoctorRole,
 } from '@/lib/tp/format-context';
+import { formatPersonShortName } from '@/lib/utils';
 
 export type { DoctorRole };
 
@@ -76,7 +78,15 @@ export function formatOccupationalDoctorOrg(
 export function normalizeOccupationalDoctorName(raw: unknown): string | undefined {
   if (raw == null || raw === '') return undefined;
   const str = String(raw).trim().replace(/\s+/g, ' ');
-  return str || undefined;
+  if (!str) return undefined;
+
+  const rolePrefix = extractDoctorRolePrefix(str);
+  const namePart = rolePrefix
+    ? str.slice(rolePrefix.length).trim()
+    : str;
+  const shortName = formatPersonShortName(namePart);
+  if (!shortName) return undefined;
+  return rolePrefix ? `${rolePrefix} ${shortName}`.trim() : shortName;
 }
 
 /** Normalize raw TP2 extraction from intake / fallback documents. */

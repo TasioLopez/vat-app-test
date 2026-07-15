@@ -46,7 +46,7 @@ ad_quote
 - Null wanneer geen AD-inhoud in documenten en geen concept-flag.
 
 extra_aanmelder
-- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw), organisatie en gender ("Man" of "Vrouw") indien bekend.
+- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw; formaat \"I. Achternaam\"), organisatie en gender ("Man" of "Vrouw") indien bekend.
 - gender null wanneer geslacht niet vast te stellen is.
 - Anders null voor het hele object.
 `.trim();

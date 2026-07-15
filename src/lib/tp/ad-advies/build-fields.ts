@@ -1,4 +1,5 @@
 import { nlDate } from '@/lib/tp/format-context';
+import { formatPersonShortName } from '@/lib/utils';
 import {
   buildAdAdviesIntroPrefix,
   isAdReportConcept,
@@ -30,11 +31,11 @@ export function stripCitations(text: string): string {
 }
 
 function resolveAuteur(content: AdAdviesContentResult, ctx: AdAdviesBuildContext): string {
-  return (
+  const raw =
     content.ad_auteur?.trim() ||
     ctx.meta.occupational_doctor_name?.trim() ||
-    '[naam arbeidsdeskundige]'
-  );
+    '[naam arbeidsdeskundige]';
+  return formatPersonShortName(raw) || raw;
 }
 
 function resolveDatum(content: AdAdviesContentResult, ctx: AdAdviesBuildContext): string {

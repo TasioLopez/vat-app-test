@@ -1,4 +1,5 @@
 import type { ReferentRow } from '@/lib/referents';
+import { formatPersonShortName } from '@/lib/utils';
 import {
   buildInleidingAdIntroPrefix,
   hasDefinitiveAdReport,
@@ -185,16 +186,19 @@ function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentRe
 
   if (content.extra_aanmelder) {
     const extra = content.extra_aanmelder;
-    const extraNaam = withOptionalTitle(refTitle(extra.gender), extra.naam);
+    const extraNaam = withOptionalTitle(
+      refTitle(extra.gender),
+      formatPersonShortName(extra.naam)
+    );
     const referentNaam = withOptionalTitle(
       referentTitle,
-      `${refInitials} ${refLastName}`.trim()
+      formatPersonShortName(`${refInitials} ${refLastName}`.trim())
     );
     return `Werknemer is door ${extraNaam}, ${extra.functie} bij ${extra.organisatie} In opdracht van: ${referentNaam}, ${refFunction} ${companyName}${suffix}`;
   }
 
   const refName = ref
-    ? `${refFunction} ${refInitials} ${refLastName}`.trim()
+    ? `${refFunction} ${formatPersonShortName(`${refInitials} ${refLastName}`.trim())}`.trim()
     : refLastName;
   return `Werknemer is door ${refName} namens ${companyName}${suffix}`;
 }
@@ -318,7 +322,9 @@ export function buildInleidingFields(
   let inleiding_sub = '';
   if (hasDefinitiveAd || hasConceptAdQuote) {
     if (quote) {
-      const adName = coerceText(ctx.meta.occupational_doctor_name, '[naam arbeidsdeskundige]');
+      const adName = formatPersonShortName(
+        coerceText(ctx.meta.occupational_doctor_name, '[naam arbeidsdeskundige]')
+      );
       const adDate = nlDate(ctx.meta.ad_report_date) || '[datum]';
       inleiding_sub = buildAdSubBlock(
         adName,

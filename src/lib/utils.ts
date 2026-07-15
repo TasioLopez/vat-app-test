@@ -11,6 +11,33 @@ export function normalizePersonName(value: string | null | undefined): string | 
   return trimmed || null;
 }
 
+const PERSON_HONORIFIC_PREFIX =
+  /^(?:de\s+heer|mevrouw|meneer|dhr\.?|mevr\.?|mr\.?|dr\.?|ing\.?)\s+/i;
+
+/** Already formatted as "I. Last" or "I. van Last". */
+const PERSON_INITIAL_LAST_PATTERN = /^[A-Z]\.\s+\S/;
+
+/**
+ * Format a display name as "I. Last" (initial + surname, Dutch particles preserved).
+ * Leaves names that already use an initial unchanged.
+ */
+export function formatPersonShortName(raw: string | null | undefined): string {
+  const trimmed = String(raw ?? '').trim().replace(/\s+/g, ' ');
+  if (!trimmed) return '';
+
+  let name = trimmed.replace(PERSON_HONORIFIC_PREFIX, '').trim();
+  if (!name) return trimmed;
+
+  if (PERSON_INITIAL_LAST_PATTERN.test(name)) return name;
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return trimmed;
+
+  const initial = `${parts[0]![0]?.toUpperCase() ?? ''}.`;
+  const rest = parts.slice(1).join(' ');
+  return `${initial} ${rest}`.trim();
+}
+
 /**
  * Title-case organization names for display (e.g. "Axxicom airport caddy" → "Axxicom Airport Caddy").
  * Preserves short all-caps tokens (2–4 chars) such as BV, NV, HR.

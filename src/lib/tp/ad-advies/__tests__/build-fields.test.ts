@@ -37,7 +37,7 @@ describe('buildAdAdviesFields', () => {
 
     assert.match(
       advies_ad_passende_arbeid,
-      /In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:/
+      /opgesteld door P\. Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:/
     );
     assert.ok(advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
     assert.match(advies_ad_passende_arbeid, /Ik denk aan eventuele functies zoals/);
@@ -54,7 +54,7 @@ describe('buildAdAdviesFields', () => {
     };
 
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
-    assert.match(advies_ad_passende_arbeid, /opgesteld door Patricia Boomsma/);
+    assert.match(advies_ad_passende_arbeid, /opgesteld door P\. Boomsma/);
     assert.match(advies_ad_passende_arbeid, /op 2 februari 2026/);
   });
 

@@ -66,7 +66,8 @@ describe('buildInleidingFields', () => {
     assert.match(parts[5], /re-integreert werknemer niet in spoor 1/);
     assert.match(parts[5], /ValentineZ heeft uitgelegd/);
     assert.ok(inleiding_sub.includes(AD_INTRO_SUFFIX));
-    assert.ok(inleiding_sub.includes('dhr. R. Teegelaar'));
+    assert.ok(inleiding_sub.includes('R. Teegelaar'));
+    assert.doesNotMatch(inleiding_sub, /dhr\. R\. Teegelaar/);
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
@@ -163,8 +164,7 @@ describe('buildInleidingFields', () => {
       },
     };
     const { inleiding } = buildInleidingFields(ctx, content);
-    assert.match(inleiding, /door Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
-    assert.doesNotMatch(inleiding, /door mevrouw Hans Nooijen/);
+    assert.match(inleiding, /door H\. Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
     assert.match(inleiding, /In opdracht van: mevrouw E\. Bosma, Casemanager Cordaan/);
   });
 
@@ -186,7 +186,7 @@ describe('buildInleidingFields', () => {
       },
     };
     const { inleiding } = buildInleidingFields(ctx, content);
-    assert.match(inleiding, /door meneer Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
+    assert.match(inleiding, /door meneer H\. Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
     assert.match(inleiding, /In opdracht van: mevrouw J\. Jansen/);
   });
 
@@ -201,7 +201,7 @@ describe('buildInleidingFields', () => {
       },
     };
     const { inleiding } = buildInleidingFields(baseCtx, content);
-    assert.match(inleiding, /door meneer Hans Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
+    assert.match(inleiding, /door meneer H\. Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
     assert.doesNotMatch(inleiding, /meneer mevrouw/);
   });
 
@@ -212,6 +212,33 @@ describe('buildInleidingFields', () => {
     };
     const { inleiding } = buildInleidingFields(ctx, baseContent);
     assert.match(inleiding, /urenomvang van 32 uur per week/);
+  });
+
+  it('formats AD author name as initial + last name in inleiding_sub', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      meta: {
+        ...baseCtx.meta,
+        occupational_doctor_name: 'Inge Beewen',
+      },
+    };
+    const { inleiding_sub } = buildInleidingFields(ctx, baseContent);
+    assert.match(inleiding_sub, /opgesteld door I\. Beewen op/);
+    assert.doesNotMatch(inleiding_sub, /Inge Beewen/);
+  });
+
+  it('formats extra aanmelder naam as initial + last name', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'HR Manager',
+        naam: 'Noortje van Mierlo',
+        organisatie: 'Axxicom',
+        gender: 'Vrouw' as const,
+      },
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /door mevrouw N\. van Mierlo, HR Manager bij Axxicom/);
   });
 
   it('falls back to advies_ad_passende_arbeid for AD quote when model quote empty', () => {

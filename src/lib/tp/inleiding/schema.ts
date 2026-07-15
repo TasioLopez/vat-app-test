@@ -63,7 +63,7 @@ export const INLEIDING_CONTENT_JSON_SCHEMA = {
       type: ['object', 'null'],
       properties: {
         functie: { type: 'string' },
-        naam: { type: 'string', description: 'Naam zonder meneer/mevrouw.' },
+        naam: { type: 'string', description: 'Naam zonder meneer/mevrouw; formaat "I. Achternaam".' },
         organisatie: { type: 'string' },
         gender: {
           type: ['string', 'null'],

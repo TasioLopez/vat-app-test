@@ -104,22 +104,20 @@ export type BasisAtom =
     }
   | { id: string; kind: 'agreementSignature' };
 
-function chunkByParagraphs(text: string, softMaxChars: number): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [''];
-  const paras = trimmed.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-  const out: string[] = [];
-  let cur = '';
-  for (const p of paras) {
-    if (cur && cur.length + p.length + 2 > softMaxChars) {
-      out.push(cur);
-      cur = p;
-    } else {
-      cur = cur ? `${cur}\n\n${p}` : p;
-    }
+function splitInleidingAtParagraphBoundary(md: string): [string, string] | null {
+  const trimmed = md.trim();
+  if (!trimmed) return null;
+
+  const paragraphs = trimmed.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paragraphs.length < 2) return splitTextAggressive(trimmed);
+
+  for (let splitAt = paragraphs.length - 1; splitAt >= 1; splitAt--) {
+    const a = paragraphs.slice(0, splitAt).join('\n\n');
+    const b = paragraphs.slice(splitAt).join('\n\n');
+    if (a.length >= 40 && b.length >= 40) return [a, b];
   }
-  if (cur) out.push(cur);
-  return out.length ? out : [''];
+
+  return splitTextAggressive(trimmed);
 }
 
 function bisectMarkdown(md: string): [string, string] | null {
@@ -225,18 +223,27 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   const atoms: BasisAtom[] = [];
 
   const sub = String(data.inleiding_sub || '').trim();
-  const introSlices = chunkByParagraphs(String(data.inleiding ?? ''), 760);
-  introSlices.forEach((slice, i) => {
-    const isLast = i === introSlices.length - 1;
+  const inleidingMd = String(data.inleiding ?? '').trim();
+
+  atoms.push({
+    id: 'inl-0',
+    kind: 'inleiding',
+    md: inleidingMd,
+    showSectionTitle: true,
+    showToelichting: false,
+    showAvgDisclaimer: false,
+  });
+
+  if (sub) {
     atoms.push({
-      id: `inl-${i}`,
+      id: 'inl-sub',
       kind: 'inleiding',
-      md: slice,
-      showSectionTitle: i === 0,
-      showToelichting: isLast && Boolean(sub),
+      md: '',
+      showSectionTitle: false,
+      showToelichting: true,
       showAvgDisclaimer: false,
     });
-  });
+  }
 
   const pushTextField = (key: string, title: string, value: unknown, fallback: string) => {
     const raw = String(value ?? '').trim();
@@ -366,7 +373,8 @@ function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   }
 
   if (atom.kind === 'inleiding') {
-    const parts = splitTextAggressive(atom.md);
+    if (!atom.md.trim()) return null;
+    const parts = splitInleidingAtParagraphBoundary(atom.md);
     if (!parts) return null;
     const [a, b] = parts;
     const hadFooter = atom.showToelichting;
