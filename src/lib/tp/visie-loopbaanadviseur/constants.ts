@@ -63,10 +63,10 @@ export const SELECTION_PROCESS_V10 = `
 Stap 1 — Analyseer persoonlijk profiel: opleiding, werkervaring, competenties, interesses, werk-/denkniveau, taal, digitale vaardigheden, mobiliteit.
 Stap 2 — Analyseer zoekprofiel (leidend). Wanneer afwezig: leid af uit opleiding, werkervaring en persoonlijk profiel.
 Stap 3 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren, fysieke omgeving, dynamische handelingen, statische houdingen, werktijden; plus staan, lopen, tillen/dragen, buigen, knielen/hurken, reiken, houdingsafwisseling, werktempo, omgevingseisen. Bij één wezenlijke overschrijding: afwijzen. Werk conservatief.
-Stap 4 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden).
+Stap 4 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook de structured list ad_uitsluiting_functies in context.
 Stap 5 — Arbeidsmarkttoets: regulier, Nederlandse arbeidsmarkt, voldoende vacatures, realistisch bemiddelbaar, maximaal circa zes maanden scholing.
 Stap 6 — Praktijktoets: functies waarin regelmatig langdurig staan/lopen, productietempo, assemblage, productiewerk, kwaliteitscontrole, zwaar tillen, veel bukken/traplopen/reiken of structurele fysieke belasting: afwijzen. Bij twijfel afwijzen.
-Stap 7 — Onderlinge controle: exact vier functies, duidelijk verschillend in sector, werkzaamheden, werkomgeving, competenties.
+Stap 7 — Onderlinge controle: exact vier functies. De drie concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet drie herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering.
 Stap 8 — Eindcontrole: volledig passend binnen belastbaarheid, aansluitend bij profiel en zoekprofiel, niet door AD genoemd, geen synoniemen, regulier en kansrijk.
 `.trim();
 
@@ -76,6 +76,10 @@ kwaliteitscontrole → geen kwaliteitscontroleur
 productie → geen productiemedewerker
 operator → geen machinebediende
 receptie → geen receptionist wanneer frontoffice al genoemd is
+klantcontact / callcenter → geen backoffice-klantcontact of frontoffice-receptie wanneer AD dat al noemt
+administratie → geen secretarieel werk, boekenwerk of administratief medewerker als AD-variant
+planning → geen roostermedewerker of planner wanneer AD planning al noemt
+reisorganisatie / toerisme → geen bijna-identieke reisbureau- of toerismetitels als AD die al noemt
 `.trim();
 
 export const PRAKTIJKTOETS_AVOID = [
@@ -97,7 +101,20 @@ export const EINDCONTROLE_CHECKLIST = `
 - Juiste inleidende zin functies (systeem)
 - Exact vier functies + vierde "En soortgelijk"
 - Maximaal één zin toelichting per functie
-- Geen AD-synoniemen
-- Functies onderling verschillend
+- Geen AD-titels of synoniemen (inclusief ad_uitsluiting_functies)
+- Drie suggesties = verschillende roltypen (niet drie near-clones)
+- Toelichtingen niet copy-paste (verschillende passendheidsargumenten)
 - Passend binnen belastbaarheid en zoekprofiel
 `.trim();
+
+/** Shared banned toelichting phrase families (quality gate). */
+export const TOELICHTING_CLONE_PHRASES = [
+  'prikkelarm',
+  'lage druk',
+  'geen deadlines',
+  'productiedruk',
+  'zonder hoge tempo',
+  'zonder hoog tempo',
+  'strakke deadlines',
+  'weinig prikkels',
+] as const;

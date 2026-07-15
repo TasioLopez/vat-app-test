@@ -25,6 +25,13 @@ export {
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
 export {
+  assessFunctieQuality,
+  extractAdExclusionPhrases,
+  normalizeFunctieNaam,
+  significantTokens,
+  type FunctieQualityResult,
+} from './functie-quality';
+export {
   detectDocumentScenario,
   filterVisieLoopbaanadviseurDocs,
   generateVisieLoopbaanadviseur,

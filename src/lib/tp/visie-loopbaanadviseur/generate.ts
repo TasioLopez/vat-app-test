@@ -10,6 +10,11 @@ import {
 import { type DocumentScenario } from './constants';
 import { DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL } from './constants';
 import {
+  assessFunctieQuality,
+  buildRepairFeedbackMessage,
+  extractAdExclusionPhrases,
+} from './functie-quality';
+import {
   VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
   buildVisieLoopbaanadviseurContextMessage,
 } from './prompt';
@@ -149,6 +154,7 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
 }
 
 function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string, unknown> {
+  const adUitsluiting = extractAdExclusionPhrases(ctx.meta.advies_ad_passende_arbeid);
   return {
     details: { gender: ctx.details.gender },
     meta: {
@@ -159,7 +165,51 @@ function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string,
       zoekprofiel: ctx.meta.zoekprofiel || null,
       persoonlijk_profiel: ctx.meta.persoonlijk_profiel || null,
     },
+    ad_uitsluiting_functies: adUitsluiting,
   };
+}
+
+async function callVisieLoopbaanadviseurModel(
+  openai: OpenAI,
+  fileIds: string[],
+  contextMessage: string,
+  repairMessage?: string
+): Promise<VisieLoopbaanadviseurContentResult> {
+  const userContent: OpenAI.Responses.ResponseInputContent[] = [
+    { type: 'input_text', text: contextMessage },
+    ...fileIds.map(
+      (file_id): OpenAI.Responses.ResponseInputContent => ({
+        type: 'input_file',
+        file_id,
+      })
+    ),
+  ];
+  if (repairMessage) {
+    userContent.push({ type: 'input_text', text: repairMessage });
+  }
+
+  const reasoningEffort = getReasoningEffort();
+  const response = await openai.responses.create({
+    model: getVisieLoopbaanadviseurModel(),
+    instructions: VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
+    input: [{ role: 'user', content: userContent }],
+    ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'visie_loopbaanadviseur_content',
+        strict: true,
+        schema: VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA as Record<string, unknown>,
+      },
+    },
+  });
+
+  const outputText = response.output_text;
+  if (!outputText) {
+    throw new Error('Empty response from model');
+  }
+
+  return parseVisieLoopbaanadviseurContentResult(JSON.parse(outputText) as unknown);
 }
 
 export async function generateVisieLoopbaanadviseurContent(
@@ -182,41 +232,36 @@ export async function generateVisieLoopbaanadviseurContent(
     throw new Error('No visie loopbaanadviseur files could be uploaded');
   }
 
+  const adExclusion = extractAdExclusionPhrases(ctx.meta.advies_ad_passende_arbeid);
+
   try {
     const contextMessage = buildVisieLoopbaanadviseurContextMessage(buildApiContext(ctx));
-    const userContent: OpenAI.Responses.ResponseInputContent[] = [
-      { type: 'input_text', text: contextMessage },
-      ...fileIds.map(
-        (file_id): OpenAI.Responses.ResponseInputContent => ({
-          type: 'input_file',
-          file_id,
-        })
-      ),
-    ];
+    let content = await callVisieLoopbaanadviseurModel(openai, fileIds, contextMessage);
+    let quality = assessFunctieQuality(content, adExclusion);
 
-    const reasoningEffort = getReasoningEffort();
-    const response = await openai.responses.create({
-      model: getVisieLoopbaanadviseurModel(),
-      instructions: VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
-      input: [{ role: 'user', content: userContent }],
-      ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'visie_loopbaanadviseur_content',
-          strict: true,
-          schema: VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA as Record<string, unknown>,
-        },
-      },
-    });
-
-    const outputText = response.output_text;
-    if (!outputText) {
-      throw new Error('Empty response from model');
+    if (!quality.ok) {
+      console.warn(
+        '⚠️ Visie loopbaanadviseur: kwaliteit onvoldoende, één reparatiepoging',
+        quality.issues
+      );
+      const rejectedNames = content.functies.slice(0, 3).map((f) => f.naam);
+      const repairMessage = buildRepairFeedbackMessage(quality.issues, rejectedNames);
+      content = await callVisieLoopbaanadviseurModel(
+        openai,
+        fileIds,
+        contextMessage,
+        repairMessage
+      );
+      quality = assessFunctieQuality(content, adExclusion);
+      if (!quality.ok) {
+        console.warn(
+          '⚠️ Visie loopbaanadviseur: reparatiepoging nog steeds onvoldoende — output behouden',
+          quality.issues
+        );
+      }
     }
 
-    const parsed = JSON.parse(outputText) as unknown;
-    return parseVisieLoopbaanadviseurContentResult(parsed);
+    return content;
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }

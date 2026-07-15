@@ -44,15 +44,17 @@ CONTEXT
 - zoekprofiel uit dossier is LEIDEND voor functiekeuze
 - persoonlijk_profiel: opleiding, werkervaring, competenties
 - advies_ad_passende_arbeid: functies/richtingen die NOOIT opnieuw genoemd mogen worden
+- ad_uitsluiting_functies: gestructureerde uitsluitingslijst — titels/synoniemen hierin NOOIT opnieuw noemen
 
 OUTPUT (model levert alleen functies)
 Selecteer exact vier functies:
 - Drie concrete functienamen op de Nederlandse arbeidsmarkt
 - Vierde functie: exact "${EN_SOORTGELIJK}" met lege toelichting
 - Per functie (1–3): maximaal één zin toelichting waarom passend binnen belastbaarheid
-- Functies moeten duidelijk verschillen in sector, werkzaamheden, werkomgeving, competenties
-- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport
-- Conservatief binnen belastbaarheid; maximaal circa zes maanden scholing
+- Drie verschillende roltypen (bijv. contactgericht vs planning/organisatie vs specialistisch/intern) — geen drie near-clones van admin/backoffice
+- Per toelichting een ander passendheidsargument; geen herhaling van dezelfde prikkelarm/lage druk-formulering
+- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport of ad_uitsluiting_functies
+- Conservatief binnen belastbaarheid en zoekprofiel; maximaal circa zes maanden scholing; geen onrealistische of te verliggende functies
 
 EINDCONTROLE
 ${EINDCONTROLE_CHECKLIST}
