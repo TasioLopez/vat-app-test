@@ -10,10 +10,6 @@ import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody
 
 const NB_PATTERN = 'nog geen AD-rapport';
 
-/** Opening/closing quotes inline on first and last markdown block lines. */
-const INLINE_QUOTE_CLASS =
-  "[&>*:first-child]:before:content-['\\201C'] [&>*:last-child]:after:content-['\\201D']";
-
 /**
  * Renders inleiding_sub using delimiter-based parsing.
  * Intro (up to and including the AD delimiter phrase) = bold.
@@ -41,8 +37,8 @@ export function InleidingSubBlock({
     return (
       <div className={className}>
         <strong>{patchedIntro}</strong>
-        <div className={`mt-4 italic ${INLINE_QUOTE_CLASS}`}>
-          <Basis2026MarkdownBody markdown={quote} />
+        <div className="mt-4 italic">
+          <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
         </div>
       </div>
     );
@@ -70,8 +66,8 @@ export function InleidingSubQuotePreview({
   const cleaned = stripInleidingSubQuoteWrapping(quote);
   if (!cleaned) return null;
   return (
-    <div className={`${className} italic ${INLINE_QUOTE_CLASS}`}>
-      <Basis2026MarkdownBody markdown={cleaned} />
+    <div className={`${className} italic`}>
+      <Basis2026MarkdownBody markdown={cleaned} withInlineQuotes />
     </div>
   );
 }

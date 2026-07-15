@@ -4,8 +4,13 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
+import { cn } from '@/lib/utils';
 
 const basisSanitizeSchema = defaultSchema;
+
+/** Apply on the markdown root so ::before/::after sit on first/last block (p, ul, ol). */
+export const MARKDOWN_INLINE_QUOTE_CLASS =
+  '[&>*:first-child]:before:content-["\u201C"] [&>*:last-child]:after:content-["\u201D"]';
 
 const components: Components = {
   p: ({ children }) => (
@@ -49,9 +54,20 @@ const components: Components = {
   ),
 };
 
-export function Basis2026MarkdownBody({ markdown }: { markdown: string }) {
+export function Basis2026MarkdownBody({
+  markdown,
+  withInlineQuotes = false,
+}: {
+  markdown: string;
+  withInlineQuotes?: boolean;
+}) {
   return (
-    <div className="max-w-none text-neutral-900">
+    <div
+      className={cn(
+        'max-w-none text-neutral-900',
+        withInlineQuotes && MARKDOWN_INLINE_QUOTE_CLASS
+      )}
+    >
       <ReactMarkdown rehypePlugins={[[rehypeSanitize, basisSanitizeSchema]]} components={components}>
         {markdown}
       </ReactMarkdown>
