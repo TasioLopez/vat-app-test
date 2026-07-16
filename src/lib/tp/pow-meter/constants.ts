@@ -99,9 +99,9 @@ Q1 — Duurzaam benutbare mogelijkheden op INTAKE:
   FOUT: FML noemt theoretisch plafond → automatisch Ja terwijl intake "niet belastbaar" zegt.
 
 Q2 — Buitenshuis ≥2×/week (STRICT):
-  Ja: bewuste buitenactiviteiten (sociaal, sport, club, regelmatige ontmoetingen buiten).
-  Nee: alleen functionele trips (school/gastouder, boodschappen, zorgafspraken), leeg intakeveld buitenshuis, inactiviteit.
-  FOUT: "regelmatig contact met ouders" thuis tellen als buitenshuis.
+  Ja: bewuste buitenactiviteiten (sociaal, sport, club, regelmatige ontmoetingen buiten) of structureel aangepast/on-site werk bij werkgever (Spoor 1).
+  Nee: alleen functionele trips (school/gastouder, boodschappen, zorgafspraken) zonder werk buitenshuis, leeg intakeveld buitenshuis, inactiviteit.
+  FOUT: "regelmatig contact met ouders" thuis tellen als buitenshuis; aangepast werk Cordaan negeren omdat ook boodschappen voorkomen.
 
 Q3 — Regelmatige sociale participatie BUITENSHUIS (STRICT):
   Ja: herhaalde, structurele sociale activiteit buiten de woning.

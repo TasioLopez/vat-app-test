@@ -86,12 +86,12 @@ export const POW_METER_FACTS_JSON_PROPERTIES = {
   outside_deliberate_min_2_per_week: {
     type: 'boolean',
     description:
-      'Strict Q2: true alleen bij bewuste buitenactiviteiten ≥2×/week (sociaal, sport, club). false bij alleen zorgtaken/boodschappen.',
+      'Strict Q2: true bij bewuste buitenactiviteiten ≥2×/week (sociaal, sport, club) of structureel aangepast/on-site werk. false bij alleen zorgtaken/boodschappen zonder werk buitenshuis.',
   },
   outside_functional_only: {
     type: 'boolean',
     description:
-      'true indien buitenshuis alleen functionele trips (school/gastouder, boodschappen, afspraken zorg) — telt niet als Q2 Ja.',
+      'true indien buitenshuis alleen functionele trips (school/gastouder, boodschappen, afspraken zorg) — telt niet als Q2 Ja. false wanneer ook structureel aangepast/on-site werk buitenshuis.',
   },
   regular_social_participation_outside: {
     type: 'boolean',

@@ -133,6 +133,39 @@ export function coerceTredeNumber(value: unknown): TredeNumber {
   return rounded as TredeNumber;
 }
 
+const MAX_VERWACHTING_JUMP = 2;
+
+/**
+ * Cap model verwachting so it stays plausible vs ladder-computed huidige trede and intake hours.
+ */
+export function capVerwachtingTrede(
+  huidige: TredeNumber,
+  modelVerwachting: TredeNumber,
+  facts: PowMeterFacts
+): TredeNumber {
+  let capped = Math.min(modelVerwachting, huidige + MAX_VERWACHTING_JUMP) as TredeNumber;
+
+  if (
+    facts.current_work_hours_per_week < 12 &&
+    !facts.duurzaam_passend_min_65 &&
+    capped > Math.max(huidige + 1, 3)
+  ) {
+    capped = Math.max(huidige + 1, 3) as TredeNumber;
+  }
+
+  if (capped < huidige) {
+    capped = huidige;
+  }
+
+  if (capped !== modelVerwachting) {
+    console.warn(
+      `⚠️ POW-meter: verwachting_trede ${modelVerwachting} → ${capped} (huidige=${huidige}, intake=${facts.current_work_hours_per_week}h)`
+    );
+  }
+
+  return capped;
+}
+
 function parseLadderAnswers(o: Record<string, unknown>): PowLadderAnswers {
   return {
     q1_duurzaam_benutbare_mogelijkheden: coerceBoolean(o.q1_duurzaam_benutbare_mogelijkheden),
@@ -162,12 +195,19 @@ export function parsePowMeterContentResult(raw: unknown): PowMeterContentResult 
     }
   }
 
+  const rawVerwachting = coerceTredeNumber(o.verwachting_trede_nummer);
+  const verwachting_trede_nummer = capVerwachtingTrede(
+    huidige_trede_nummer,
+    rawVerwachting,
+    facts
+  );
+
   return {
     huidige_trede_nummer,
     ladder,
     facts,
     huidige_werkzame_uren: coerceString(o.huidige_werkzame_uren),
-    verwachting_trede_nummer: coerceTredeNumber(o.verwachting_trede_nummer),
+    verwachting_trede_nummer,
     verwachting_includes_spoor2_block: coerceBoolean(o.verwachting_includes_spoor2_block),
     verwachting_kern: coerceString(o.verwachting_kern),
     toelichting_kern: coerceString(o.toelichting_kern),
