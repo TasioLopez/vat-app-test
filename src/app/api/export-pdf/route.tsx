@@ -197,8 +197,9 @@ export async function GET(req: NextRequest) {
         content: `
         @page { size: A4; margin: 0; }
         html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-page { break-after: page; page-break-after: always; }
+        .print-page { width: 210mm; height: 297mm; margin: 0 !important; overflow: hidden; break-after: page; page-break-after: always; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
+        .print-page > * { width: 210mm !important; height: 297mm !important; max-height: 297mm !important; min-height: 297mm !important; }
         .tp-print-root, .vgr-print-root { margin: 0 !important; }
         .print\\:shadow-none { box-shadow: none !important; }
         .print\\:border-0 { border: 0 !important; }
@@ -363,8 +364,9 @@ export async function GET(req: NextRequest) {
       content: `
         @page { size: A4; margin: 0; }
         html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .print-page { break-after: page; page-break-after: always; }
+        .print-page { width: 210mm; height: 297mm; margin: 0 !important; overflow: hidden; break-after: page; page-break-after: always; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
+        .print-page > * { width: 210mm !important; height: 297mm !important; max-height: 297mm !important; min-height: 297mm !important; }
         .tp-print-root { margin: 0 !important; }
         .print\\:shadow-none { box-shadow: none !important; }
         .print\\:border-0 { border: 0 !important; }

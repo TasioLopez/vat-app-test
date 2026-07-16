@@ -229,11 +229,29 @@ html, body {
 }
 .print-page:last-child { page-break-after: auto; }
 
-/* Inline opening/closing quotes on first and last markdown block */
+/* Inline opening/closing quotes on first and last markdown block.
+ * Lists are special: ::before/::after on ul/ol sit on their own line after
+ * block-level li children, so move the marks onto the first/last li instead. */
 .markdown-inline-quotes > :first-child::before {
   content: "\201C";
 }
 .markdown-inline-quotes > :last-child::after {
+  content: "\201D";
+}
+.markdown-inline-quotes > ul:first-child::before,
+.markdown-inline-quotes > ol:first-child::before {
+  content: none;
+}
+.markdown-inline-quotes > ul:first-child > li:first-child::before,
+.markdown-inline-quotes > ol:first-child > li:first-child::before {
+  content: "\201C";
+}
+.markdown-inline-quotes > ul:last-child::after,
+.markdown-inline-quotes > ol:last-child::after {
+  content: none;
+}
+.markdown-inline-quotes > ul:last-child > li:last-child::after,
+.markdown-inline-quotes > ol:last-child > li:last-child::after {
   content: "\201D";
 }
 
@@ -254,6 +272,23 @@ html, body {
   /* Make sure your A4 components don't add borders/shadows when printing */
   .print\\:shadow-none { box-shadow: none !important; }
   .print\\:border-0 { border: 0 !important; }
+
+  /*
+   * Fill real A4 sheet size. Preview uses 794×1123px; Chromium PDF A4 is 210×297mm,
+   * so fixed-px pages leave a thin white strip (visible on the gold cover).
+   */
+  .print-page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 !important;
+    overflow: hidden;
+  }
+  .print-page > * {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    min-height: 297mm !important;
+  }
 }
 
 /* TP 2026 — uniform gold table borders (#c4b37b, 100% opacity) for preview + PDF export */

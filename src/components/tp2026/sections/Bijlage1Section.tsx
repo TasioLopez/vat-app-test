@@ -648,7 +648,7 @@ export function Bijlage1A4Pages({
             Voortgang en planning
           </div>
         </div>
-        <div className="shrink-0 space-y-1.5 text-[10pt] leading-snug text-neutral-900">
+        <div className="shrink-0 space-y-2 text-[10pt] leading-snug text-neutral-900">
           {normalized.map((phase, idx) => (
             <table key={idx} className={`${TP2026_HTML_TABLE_CLASS} bg-white`}>
               <colgroup>
