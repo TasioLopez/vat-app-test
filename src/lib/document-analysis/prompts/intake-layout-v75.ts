@@ -13,7 +13,7 @@ INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/
   • Linker: Aanmelddatum | Rechter: Startdatum
   • Linker: Datum FML/IZP | Rechter: Einddatum
   • Linker: Naam ☐ Arts ☐ Anios ☐ BA ☐ VA (volgende arts) | Rechter: Datum AD-rapport
-  • Onder "AD-rapport:" staat checkbox ☐ Concept (Juni V6) — aangevinkt = het AD-rapport is een concept
+  • Onder "AD-rapport:" staat checkbox ☐ Concept (Juni V6) — alleen ☒/☑ = concept; ☐ = niet-concept
   • Linker: OSV ☐ Arts ☐ Anios ☐ BA (onder supervisie van — superviserend arts/BA) | Rechter: Naam AD
 - Sectie 7 Arbeidsdeskundig rapport:
   • Naam arbeidsdeskundige

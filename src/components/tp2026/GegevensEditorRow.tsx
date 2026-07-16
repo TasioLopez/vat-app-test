@@ -70,7 +70,16 @@ export function GegevensEditorRow({
               key={key}
               field={field}
               value={data[key]}
-              onChange={(v) => updateField(key, v)}
+              onChange={(v) => {
+                if (key === 'has_ad_report' && v === true) {
+                  // Definitive AD present → clear concept so Ja is not overridden on shape/save.
+                  updateField('ad_report_concept', false);
+                }
+                if (key === 'ad_report_concept' && v === true) {
+                  updateField('has_ad_report', false);
+                }
+                updateField(key, v);
+              }}
               {...props}
             />
           );

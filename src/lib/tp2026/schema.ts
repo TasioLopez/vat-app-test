@@ -46,6 +46,7 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'intake_date', label: 'Datum intakegesprek', type: 'date' },
   { key: 'tp_creation_date', label: 'Datum opmaak trajectplan', type: 'date' },
   { key: 'has_ad_report', label: 'Arbeidsdeskundig rapport aanwezig', type: 'boolean' },
+  { key: 'ad_report_concept', label: 'AD-rapport is concept', type: 'boolean' },
   { key: 'ad_report_date', label: 'Datum AD rapportage', type: 'date' },
   { key: 'occupational_doctor_name', label: 'Arbeidsdeskundige', type: 'text' },
   { key: 'occupational_doctor_org', label: 'Bedrijfsarts', type: 'text' },

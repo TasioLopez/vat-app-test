@@ -10,6 +10,42 @@ export function isAdReportConcept(meta?: { ad_report_concept?: boolean | null })
   return meta?.ad_report_concept === true;
 }
 
+/**
+ * Deterministic Concept checkbox detection from intake plain text (Juni V6).
+ * Only returns true/false when a checkbox glyph/mark is adjacent to "Concept".
+ * Returns null when no clear checkbox state is found (caller may fall back to model).
+ */
+export function detectAdReportConceptFromText(text: string | null | undefined): boolean | null {
+  if (!text) return null;
+  const normalized = text.replace(/\u00a0/g, ' ');
+
+  // Checked: ☒ Concept / Concept ☒ / [x] Concept / Concept [x]
+  if (
+    /[☒☑✓✔]\s*Concept\b/i.test(normalized) ||
+    /\bConcept\s*[☒☑✓✔]/i.test(normalized) ||
+    /\[[xX]\]\s*Concept\b/.test(normalized) ||
+    /\bConcept\s*\[[xX]\]/.test(normalized) ||
+    /\([xX]\)\s*Concept\b/.test(normalized) ||
+    /\bConcept\s*\([xX]\)/.test(normalized)
+  ) {
+    return true;
+  }
+
+  // Unchecked: ☐ Concept / Concept ☐ / [ ] Concept
+  if (
+    /[☐□]\s*Concept\b/i.test(normalized) ||
+    /\bConcept\s*[☐□]/i.test(normalized) ||
+    /\[\s*\]\s*Concept\b/i.test(normalized) ||
+    /\bConcept\s*\[\s*\]/i.test(normalized) ||
+    /\(\s*\)\s*Concept\b/i.test(normalized) ||
+    /\bConcept\s*\(\s*\)/i.test(normalized)
+  ) {
+    return false;
+  }
+
+  return null;
+}
+
 /** Definitive AD report present at registration (not a concept). */
 export function hasDefinitiveAdReport(meta?: {
   has_ad_report?: boolean | null;

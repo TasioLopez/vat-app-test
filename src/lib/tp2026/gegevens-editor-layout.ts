@@ -56,7 +56,7 @@ export const GEGEVENS_EDITOR_SECTIONS: GegevensEditorSection[] = [
     rows: [
       { keys: ['first_sick_day', 'registration_date'] },
       { keys: ['intake_date', 'tp_creation_date'] },
-      { keys: ['has_ad_report'] },
+      { keys: ['has_ad_report', 'ad_report_concept'] },
       { keys: ['ad_report_date', 'fml_izp_lab_date'] },
       { keys: ['occupational_doctor_name', 'occupational_doctor_org'] },
     ],

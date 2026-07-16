@@ -4,6 +4,7 @@ import {
   adReportDateLabel,
   buildAdAdviesIntroPrefix,
   buildInleidingAdIntroPrefix,
+  detectAdReportConceptFromText,
   hasDefinitiveAdReport,
   hasIntakeAdNarrative,
   isAdReportConcept,
@@ -23,6 +24,33 @@ describe('normalizeAdReportConcept', () => {
     assert.equal(normalizeAdReportConcept(undefined), false);
     assert.equal(normalizeAdReportConcept(null), false);
     assert.equal(normalizeAdReportConcept(''), false);
+  });
+});
+
+describe('detectAdReportConceptFromText', () => {
+  it('detects unchecked Concept checkbox (Hippman-style)', () => {
+    const text = `
+     Naam ☒ Arts ☐ Anios ☐ BA ☐ VA: P. Mort Datum AD-
+rapport:
+ 27-6-2026                                               Concept ☐
+     OSV ☐ Arts ☐ Anios ☒ BA: K. Julien Naam AD:  S. Kowalski
+`;
+    assert.equal(detectAdReportConceptFromText(text), false);
+  });
+
+  it('detects checked Concept checkbox', () => {
+    assert.equal(detectAdReportConceptFromText('Datum AD-rapport: 1-2-2026  Concept ☒'), true);
+    assert.equal(detectAdReportConceptFromText('☒ Concept\nNaam AD: S. Kowalski'), true);
+    assert.equal(detectAdReportConceptFromText('Concept [x]'), true);
+  });
+
+  it('returns null when Concept word has no checkbox mark', () => {
+    assert.equal(
+      detectAdReportConceptFromText('In het concept arbeidsdeskundig rapport staat...'),
+      null
+    );
+    assert.equal(detectAdReportConceptFromText(''), null);
+    assert.equal(detectAdReportConceptFromText(null), null);
   });
 });
 

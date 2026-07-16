@@ -38,10 +38,15 @@ PERSOONSVELDEN:
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
 
-10. ad_report_concept — boolean: ALLEEN true wanneer het vakje ☐ Concept onder "AD-rapport:" in sectie 6 duidelijk is AANGEVINKT (Juni V6)
-   - Unchecked, leeg, of onduidelijk → false (NOOIT null)
+10. ad_report_concept — boolean: ALLEEN true wanneer het vakje naast "Concept" (onder/bij "Datum AD-rapport" in sectie 6) duidelijk is AANGEVINKT (Juni V6)
+   - Lees UITSLUITEND de checkbox-status naast het label "Concept":
+     • ☒ / ☑ / [x] naast Concept → true
+     • ☐ / □ / [ ] naast Concept → false
+   - Voorbeeld niet-concept (HIPPMAN-stijl): "Concept ☐" of "☐ Concept" → false
+   - Voorbeeld concept: "Concept ☒" of "☒ Concept" → true
+   - Unchecked, leeg, of onduidelijk → false (NOOIT null, NOOIT true bij twijfel)
    - Niet true wanneer alleen het woord "Concept" op het formulier staat zonder aangevinkt vakje
-   - Kan true zijn tegelijk met ingevulde "Datum AD-rapport" en sectie 7 AD-inhoud
+   - Een ingevulde "Datum AD-rapport" of sectie 7-inhoud maakt Concept NIET true
    - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage); default is niet-concept (false)
 
 HARDE REGELS:
