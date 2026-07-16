@@ -1,6 +1,7 @@
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 import { isAbsentText, normalizePersonName } from '@/lib/utils';
 import {
+  filterAllowedTransportTypes,
   normalizeEducationLevel,
   repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
@@ -116,9 +117,11 @@ export function mapAndValidateEmployeeDetails(
 
     if (mappedKey === 'transport_type') {
       if (Array.isArray(rawValue) && rawValue.length > 0) {
-        mappedData[mappedKey] = rawValue.map((v) => String(v).trim()).filter(Boolean);
+        const filtered = filterAllowedTransportTypes(rawValue);
+        if (filtered.length > 0) mappedData[mappedKey] = filtered;
       } else if (typeof rawValue === 'string' && rawValue.trim().length > 0) {
-        mappedData[mappedKey] = [rawValue.trim()];
+        const filtered = filterAllowedTransportTypes([rawValue]);
+        if (filtered.length > 0) mappedData[mappedKey] = filtered;
       }
       continue;
     }

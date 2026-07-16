@@ -504,7 +504,25 @@ export function repairEmployeeEducationFields(
   };
 }
 
-export const TRANSPORT_TYPE_OPTIONS = ['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'] as const;
+export const TRANSPORT_TYPE_OPTIONS = ['Auto', 'Fiets', 'OV', 'Lopend'] as const;
+
+const TRANSPORT_TYPE_SET = new Set<string>(TRANSPORT_TYPE_OPTIONS);
+
+/** Keep only intake-aligned vervoer values (drops Bromfiets/Motor and unknowns). */
+export function filterAllowedTransportTypes(values: unknown[]): string[] {
+  return values
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0 && TRANSPORT_TYPE_SET.has(v));
+}
+
+/** When intake was processed, transport_type must not be filled from other docs. */
+export function isIntakeLockedTransportField(
+  intakeProcessed: boolean,
+  key: string
+): boolean {
+  return intakeProcessed && key === 'transport_type';
+}
+
 
 export const DRIVERS_LICENSE_TYPE_OPTIONS = [
   { value: 'B', label: 'B (Auto)' },

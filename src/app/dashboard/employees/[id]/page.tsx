@@ -58,6 +58,7 @@ import {
 } from '@/lib/employee/field-review';
 import {
     EDUCATION_LEVEL_OPTIONS,
+    TRANSPORT_TYPE_OPTIONS,
     normalizeEducationLevel,
     repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
@@ -1635,7 +1636,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         Eigen vervoer
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV'].map((option) => {
+                        {TRANSPORT_TYPE_OPTIONS.map((option) => {
                             const selected = Array.isArray(employeeDetails?.transport_type) 
                                 ? employeeDetails.transport_type.includes(option)
                                 : false;

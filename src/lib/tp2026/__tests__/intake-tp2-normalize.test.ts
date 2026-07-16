@@ -98,3 +98,27 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
     assert.equal(result.osv_doctor_role, undefined);
   });
 });
+
+describe('normalizeTp2ExtractedData — ad_report_concept', () => {
+  it('always emits ad_report_concept, defaulting missing/null to false', () => {
+    assert.equal(normalizeTp2ExtractedData({}).ad_report_concept, false);
+    assert.equal(
+      normalizeTp2ExtractedData({ ad_report_concept: null }).ad_report_concept,
+      false
+    );
+    assert.equal(
+      normalizeTp2ExtractedData({ ad_report_concept: false }).ad_report_concept,
+      false
+    );
+    assert.equal(
+      normalizeTp2ExtractedData({ ad_report_concept: true }).ad_report_concept,
+      true
+    );
+  });
+
+  it('maps legacy intake_concept alias and drops it', () => {
+    const result = normalizeTp2ExtractedData({ intake_concept: true });
+    assert.equal(result.ad_report_concept, true);
+    assert.equal(result.intake_concept, undefined);
+  });
+});

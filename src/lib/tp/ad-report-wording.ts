@@ -1,9 +1,9 @@
 /** Wording helpers when the AD report is marked as a concept (Juni V6 checkbox). */
 
-export function normalizeAdReportConcept(value: unknown): boolean | undefined {
+/** Coerce concept flag; null/unknown/missing → false (only explicit true is concept). */
+export function normalizeAdReportConcept(value: unknown): boolean {
   if (value === true || value === 'true' || value === 1 || value === '1') return true;
-  if (value === false || value === 'false' || value === 0 || value === '0') return false;
-  return undefined;
+  return false;
 }
 
 export function isAdReportConcept(meta?: { ad_report_concept?: boolean | null }): boolean {

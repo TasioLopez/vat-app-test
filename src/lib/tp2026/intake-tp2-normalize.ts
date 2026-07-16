@@ -133,14 +133,9 @@ export function normalizeTp2ExtractedData(
     else delete out.occupational_doctor_name;
   }
 
-  const adReportConcept = normalizeAdReportConcept(
+  out.ad_report_concept = normalizeAdReportConcept(
     out.ad_report_concept ?? out.intake_concept
   );
-  if (adReportConcept !== undefined) {
-    out.ad_report_concept = adReportConcept;
-  } else {
-    delete out.ad_report_concept;
-  }
   delete out.intake_concept;
 
   delete out.doctor_role;

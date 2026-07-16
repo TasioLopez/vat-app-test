@@ -1,8 +1,9 @@
+import { TRANSPORT_TYPE_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
+
 export type EmployeeExtractionResult = Record<string, unknown>;
 
 const GENDER_ENUM = ['Man', 'Vrouw', null] as const;
 const DUTCH_LEVEL_ENUM = ['Goed', 'Gemiddeld', 'Niet goed', null] as const;
-const TRANSPORT_OPTIONS = ['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV', 'Lopend'] as const;
 const COMPUTER_SKILLS_ENUM = ['1', '2', '3', '4', '5', null] as const;
 
 function nullableString(description: string) {
@@ -38,7 +39,7 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
       description: 'Aangevinkte vervoersopties; lege array indien geen',
       items: {
         type: 'string',
-        enum: TRANSPORT_OPTIONS,
+        enum: TRANSPORT_TYPE_OPTIONS,
       },
     },
     drivers_license: nullableBoolean('Heeft rijbewijs'),

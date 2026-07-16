@@ -36,7 +36,9 @@ export const TP2_EXTRACTION_JSON_SCHEMA = {
       enum: OSV_ROLE_ENUM,
       description: 'Role checkbox for OSV row',
     },
-    ad_report_concept: nullableBoolean('True when Concept checkbox under AD-rapport is checked'),
+    ad_report_concept: nullableBoolean(
+      'True only when Concept checkbox under AD-rapport is clearly checked; otherwise false (default not concept)'
+    ),
   },
   required: [
     'intake_date',
@@ -70,6 +72,10 @@ export function parseTp2ExtractionResult(raw: unknown): Tp2ExtractionResult {
     if (value === null || value === undefined) continue;
     if (typeof value === 'string' && value.trim() === '') continue;
     out[key] = value;
+  }
+
+  if (!('ad_report_concept' in out)) {
+    out.ad_report_concept = false;
   }
 
   return out;

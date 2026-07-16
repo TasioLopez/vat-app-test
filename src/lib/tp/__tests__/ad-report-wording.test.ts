@@ -13,12 +13,16 @@ import {
 } from '@/lib/tp/ad-report-wording';
 
 describe('normalizeAdReportConcept', () => {
-  it('coerces truthy and falsy values', () => {
+  it('coerces truthy values to true and everything else to false', () => {
     assert.equal(normalizeAdReportConcept(true), true);
     assert.equal(normalizeAdReportConcept('true'), true);
+    assert.equal(normalizeAdReportConcept(1), true);
+    assert.equal(normalizeAdReportConcept('1'), true);
     assert.equal(normalizeAdReportConcept(false), false);
     assert.equal(normalizeAdReportConcept('false'), false);
-    assert.equal(normalizeAdReportConcept(undefined), undefined);
+    assert.equal(normalizeAdReportConcept(undefined), false);
+    assert.equal(normalizeAdReportConcept(null), false);
+    assert.equal(normalizeAdReportConcept(''), false);
   });
 });
 
@@ -27,6 +31,7 @@ describe('isAdReportConcept', () => {
     assert.equal(isAdReportConcept({ ad_report_concept: true }), true);
     assert.equal(isAdReportConcept({ ad_report_concept: false }), false);
     assert.equal(isAdReportConcept({}), false);
+    assert.equal(isAdReportConcept({ ad_report_concept: null }), false);
   });
 });
 

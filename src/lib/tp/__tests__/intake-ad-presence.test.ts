@@ -35,6 +35,22 @@ describe('resolveTp2HasAdReport', () => {
     assert.equal(withDateOnly.has_ad_report, true);
   });
 
+  it('sets has_ad_report true when AD date present and concept is false', () => {
+    const withDateOnly: Record<string, unknown> = {
+      ad_report_concept: false,
+      ad_report_date: '2026-02-02',
+    };
+    resolveTp2HasAdReport(withDateOnly, false);
+    assert.equal(withDateOnly.has_ad_report, true);
+    assert.equal(withDateOnly.ad_report_concept, false);
+  });
+
+  it('sets has_ad_report true when AD date present and concept missing', () => {
+    const withDate: Record<string, unknown> = { ad_report_date: '2026-02-02' };
+    resolveTp2HasAdReport(withDate, false);
+    assert.equal(withDate.has_ad_report, true);
+  });
+
   it('forces has_ad_report false when concept even with AD date', () => {
     const withDateOnly: Record<string, unknown> = {
       ad_report_concept: true,

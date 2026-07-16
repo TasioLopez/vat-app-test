@@ -31,6 +31,20 @@ describe('mapAndValidateEmployeeDetails', () => {
     assert.deepEqual(result.transport_type, ['Auto', 'OV']);
   });
 
+  it('filters invalid transport_type values and keeps allowed ones including Lopend', () => {
+    const result = mapAndValidateEmployeeDetails({
+      transport_type: ['Auto', 'Bromfiets', 'Motor', 'Lopend', 'Fiets'],
+    });
+    assert.deepEqual(result.transport_type, ['Auto', 'Lopend', 'Fiets']);
+  });
+
+  it('omits transport_type when only invalid values remain', () => {
+    const result = mapAndValidateEmployeeDetails({
+      transport_type: ['Bromfiets', 'Motor'],
+    });
+    assert.equal('transport_type' in result, false);
+  });
+
   it('coerces computer_skills number to string', () => {
     const result = mapAndValidateEmployeeDetails({ computer_skills: 3 });
     assert.equal(result.computer_skills, '3');

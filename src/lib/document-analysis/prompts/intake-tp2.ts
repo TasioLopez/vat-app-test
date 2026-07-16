@@ -39,9 +39,10 @@ PERSOONSVELDEN:
    - Formaat: "Naam, Organisatie" indien beide bekend
 
 10. ad_report_concept — boolean: ALLEEN true wanneer het vakje ☐ Concept onder "AD-rapport:" in sectie 6 duidelijk is AANGEVINKT (Juni V6)
+   - Unchecked, leeg, of onduidelijk → false (NOOIT null)
    - Niet true wanneer alleen het woord "Concept" op het formulier staat zonder aangevinkt vakje
    - Kan true zijn tegelijk met ingevulde "Datum AD-rapport" en sectie 7 AD-inhoud
-   - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage)
+   - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage); default is niet-concept (false)
 
 HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult

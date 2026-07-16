@@ -9,7 +9,7 @@ FOCUS ALLEEN OP sectie 17 "Algemene informatie" (Bijzonderheden) en bij V4-layou
 - Tabel "Werkervaring? Van-tot?"
 - Digitale vaardigheden / computervaardigheden
 - Rijbewijzen
-- Vervoer (Auto, Fiets, OV, …)
+- Vervoer ("Hoe verplaatst werknemer zich:" — Auto, Fiets, OV, Lopend)
 - Talen (G/R/O → Goed, Gemiddeld, Niet goed)
 
 OPLEIDINGEN (sectie 17):
@@ -26,7 +26,12 @@ WERKERVARING:
 - NOOIT sectie 2 functietitel (current_job) in work_experience
 
 VERVOER / RIJBEWIJS / TALEN / COMPUTER:
-- transport_type: array aangevinkte opties
+- transport_type: ALLEEN uit rij "Hoe verplaatst werknemer zich:" — array van duidelijk AANGEVINkte opties
+  - Toegestaan exact: "Auto", "Fiets", "OV", "Lopend"
+  - Alleen opnemen bij ☒/☑/X naast die label; lege ☐ = NIET opnemen
+  - NOOIT gokken of naburige unchecked boxes meenemen (bijv. alleen Auto aangevinkt → ["Auto"])
+  - Geen vinkjes → lege array []
+  - Negeer "Anders namelijk:" (geen free-text veld in deze pass); Bromfiets/Motor horen bij rijbewijs, NIET bij vervoer
 - drivers_license + drivers_license_type (bijv. ["B"])
 - dutch_speaking, dutch_writing, dutch_reading: "Goed", "Gemiddeld", "Niet goed"
 - has_computer: PC/laptop aangevinkt

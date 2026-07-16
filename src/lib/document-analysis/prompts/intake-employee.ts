@@ -24,7 +24,8 @@ Tekst:
 - other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:", of laat de key weg als er geen andere werkgevers zijn — NOOIT de tekst "null" invullen
 
 Vervoer:
-- transport_type: array van aangevinkte opties: "Auto", "Fiets", "Bromfiets", "Motor", "OV", "Lopend"
+- transport_type: array van aangevinkte opties uit "Hoe verplaatst werknemer zich:": "Auto", "Fiets", "OV", "Lopend"
+  - Alleen duidelijk aangevinkte boxes; geen gokken; Bromfiets/Motor horen bij rijbewijs
 - drivers_license: true/false — alleen als duidelijk; weglaten indien onduidelijk
 - drivers_license_type: array zoals ["B"] — weglaten indien geen rijbewijs
 

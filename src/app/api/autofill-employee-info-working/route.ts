@@ -32,6 +32,7 @@ import {
   isSpreekReportageDocType,
 } from '@/lib/documents/employee-doc-types';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
+import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-options';
 
 export const maxDuration = 120;
 
@@ -231,6 +232,9 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     const adResult = await processADReport(adDoc);
     Object.keys(adResult.mapped).forEach((key) => {
       const adValue = adResult.mapped[key];
+      if (isIntakeLockedTransportField(intakeProcessed, key)) {
+        return;
+      }
       if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
         return;
       }
@@ -256,6 +260,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log('📄 Processing FML/IZP (priority 3)...');
     const fmlResult = await processFMLIZP(fmlDoc);
     Object.keys(fmlResult.mapped).forEach((key) => {
+      if (isIntakeLockedTransportField(intakeProcessed, key)) return;
       if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
     });
     if (!intakeProcessed) {
@@ -285,6 +290,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     for (const extraDoc of extraDocs) {
       const extraResult = await processExtraDoc(extraDoc);
       Object.keys(extraResult.mapped).forEach((key) => {
+        if (isIntakeLockedTransportField(intakeProcessed, key)) return;
         if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
       });
       if (!intakeProcessed) {

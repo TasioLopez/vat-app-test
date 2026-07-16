@@ -21,6 +21,21 @@ describe('parseTp2ExtractionResult', () => {
     assert.equal('doctor_role' in result, false);
     assert.equal('tp_end_date' in result, false);
   });
+
+  it('defaults ad_report_concept to false when absent or null', () => {
+    assert.equal(parseTp2ExtractionResult({}).ad_report_concept, false);
+    assert.equal(
+      parseTp2ExtractionResult({ ad_report_concept: null }).ad_report_concept,
+      false
+    );
+  });
+
+  it('keeps explicit false for ad_report_concept', () => {
+    assert.equal(
+      parseTp2ExtractionResult({ ad_report_concept: false }).ad_report_concept,
+      false
+    );
+  });
 });
 
 describe('parseAdReportDateResult', () => {

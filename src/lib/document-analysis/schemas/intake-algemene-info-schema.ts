@@ -1,9 +1,8 @@
-import { EDUCATION_LEVEL_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
+import { EDUCATION_LEVEL_OPTIONS, TRANSPORT_TYPE_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
 
 export type IntakeAlgemeneInfoExtractionResult = Record<string, unknown>;
 
 const DUTCH_LEVEL_ENUM = ['Goed', 'Gemiddeld', 'Niet goed', null] as const;
-const TRANSPORT_OPTIONS = ['Auto', 'Fiets', 'Bromfiets', 'Motor', 'OV', 'Lopend'] as const;
 const COMPUTER_SKILLS_ENUM = ['1', '2', '3', '4', '5', null] as const;
 const EDUCATION_LEVEL_ENUM = [...EDUCATION_LEVEL_OPTIONS, null] as const;
 
@@ -28,7 +27,7 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     transport_type: {
       type: 'array',
       description: 'Aangevinkte vervoersopties sectie 17',
-      items: { type: 'string', enum: TRANSPORT_OPTIONS },
+      items: { type: 'string', enum: TRANSPORT_TYPE_OPTIONS },
     },
     drivers_license: nullableBoolean('Heeft rijbewijs'),
     drivers_license_type: {
