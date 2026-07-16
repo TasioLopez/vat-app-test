@@ -68,7 +68,7 @@ export function Spoor2SubsectionUnit({
         <SalmonSectionBar
           title={TP_SPOOR2_SECTION_TITLE}
           barColorClass="bg-[#df9180]"
-          className="mb-3 pl-6 pr-4"
+          className="mb-3"
         />
       ) : null}
       {trimmed || showSubsectionTitle || hasSubText ? (

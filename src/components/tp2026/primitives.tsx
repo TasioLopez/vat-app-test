@@ -109,6 +109,13 @@ export function FooterIdentity({
   );
 }
 
+/**
+ * Shared colored section-bar chrome: flush with content column (no -mx bleed),
+ * text inset matches beige boxes / Gegevens cells (`px-2.5`).
+ */
+export const TP2026_SECTION_BAR_CLASS =
+  'px-2.5 py-2.5 text-[15px] font-bold leading-tight text-white';
+
 /** Salmon full-width band (Onderdelen Spoor 2 begeleiding, inhoudsopgave). */
 export function SalmonSectionBar({
   title,
@@ -120,11 +127,7 @@ export function SalmonSectionBar({
   barColorClass?: string;
 }) {
   return (
-    <div
-      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white ${barColorClass} ${className}`}
-    >
-      {title}
-    </div>
+    <div className={`${TP2026_SECTION_BAR_CLASS} ${barColorClass} ${className}`}>{title}</div>
   );
 }
 
@@ -143,11 +146,7 @@ export function BasisToelichtingHeading({ label }: { label: string }) {
 /** Purple full-width band (Profiel werknemer, matches inhoudsopgave). */
 export function PurpleSectionBar({ title, className = '' }: { title: string; className?: string }) {
   return (
-    <div
-      className={`-mx-4 pl-6 pr-4 py-2.5 text-[15px] font-bold leading-tight text-white bg-[#5a257d] ${className}`}
-    >
-      {title}
-    </div>
+    <div className={`${TP2026_SECTION_BAR_CLASS} bg-[#5a257d] ${className}`}>{title}</div>
   );
 }
 
@@ -164,7 +163,7 @@ export function SectionBand({
 }) {
   return (
     <div
-      className={`mb-1 text-[12px] font-extrabold leading-tight text-[#6d2a96] ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
+      className={`mb-1 pl-2.5 text-[12px] font-extrabold leading-tight text-[#6d2a96] ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
     >
       {title}
     </div>

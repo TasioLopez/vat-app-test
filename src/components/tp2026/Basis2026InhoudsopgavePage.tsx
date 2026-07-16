@@ -6,6 +6,7 @@ import {
   A4Page,
   FooterIdentity,
   TP2026_A4_PAGE_CLASS,
+  TP2026_SECTION_BAR_CLASS,
   ValentineZLogoBulletRow,
 } from '@/components/tp2026/primitives';
 import { formatNLDate } from '@/lib/tp2026/schema';
@@ -32,11 +33,7 @@ function TocSectionBar({
   title: string;
 }) {
   return (
-    <div
-      className={`-mx-4 px-4 py-2.5 text-[15px] font-bold leading-tight text-white ${BAR_BG[variant]}`}
-    >
-      {title}
-    </div>
+    <div className={`${TP2026_SECTION_BAR_CLASS} ${BAR_BG[variant]}`}>{title}</div>
   );
 }
 
