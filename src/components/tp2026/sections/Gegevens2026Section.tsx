@@ -185,7 +185,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
         </div>
 
         <div className="mt-7">
-          <SectionBand title="Basisgegevens re-integratie werknemer" />
+          <SectionBand title="Loopbaanadviseur" />
           <TP2026FieldTable>
             <DataRow label="Opdrachtnemer" value="ValentineZ" />
             <DataRow label="Loopbaanadviseur" value={data.consultant_name || '—'} />
