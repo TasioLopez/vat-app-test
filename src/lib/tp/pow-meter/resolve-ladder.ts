@@ -55,27 +55,42 @@ export function resolveLadderFromFacts(
     setFalse(ladder, adjustments, 'q5_belastbaar_min_12u', 'not loadable at intake');
   }
 
-  if (facts.inactivity_or_limited_daily_structure) {
-    setFalse(ladder, adjustments, 'q3_regelmatige_sociale_participatie', 'inactivity/limited daily structure');
-  }
-  if (!facts.regular_social_participation_outside) {
-    setFalse(ladder, adjustments, 'q3_regelmatige_sociale_participatie', 'no regular social outside');
-  }
-
-  if (workSupportsDeliberateOutside(facts)) {
-    setTrue(
-      ladder,
-      adjustments,
-      'q2_minimaal_2x_buitenshuis',
-      'structured work activities (adapted/on-site) ≥2×/week'
-    );
+  // Q2: non-work deliberate outside (sport/club/social) OR adapted/on-site work (Spoor 1).
+  if (workSupportsDeliberateOutside(facts) || facts.outside_deliberate_min_2_per_week) {
+    const q2Reason = workSupportsDeliberateOutside(facts)
+      ? 'structured work activities (adapted/on-site) ≥2×/week'
+      : 'deliberate non-work outside ≥2×/week';
+    setTrue(ladder, adjustments, 'q2_minimaal_2x_buitenshuis', q2Reason);
   } else {
     if (facts.outside_functional_only) {
       setFalse(ladder, adjustments, 'q2_minimaal_2x_buitenshuis', 'outside functional only (strict Q2)');
     }
-    if (!facts.outside_deliberate_min_2_per_week) {
-      setFalse(ladder, adjustments, 'q2_minimaal_2x_buitenshuis', 'no deliberate outside ≥2×/week');
-    }
+    setFalse(ladder, adjustments, 'q2_minimaal_2x_buitenshuis', 'no deliberate outside ≥2×/week');
+  }
+
+  // Q3 STRICT (V10): structurele sociale activiteit BUITEN de woning.
+  // Werk / Spoor 1 / familiecontact / boodschappen tellen NIET als Q3.
+  if (facts.inactivity_or_limited_daily_structure) {
+    setFalse(ladder, adjustments, 'q3_regelmatige_sociale_participatie', 'inactivity/limited daily structure');
+  }
+  if (facts.outside_functional_only) {
+    setFalse(
+      ladder,
+      adjustments,
+      'q3_regelmatige_sociale_participatie',
+      'outside functional only (not social participation)'
+    );
+  }
+  if (!facts.outside_deliberate_min_2_per_week) {
+    setFalse(
+      ladder,
+      adjustments,
+      'q3_regelmatige_sociale_participatie',
+      'no deliberate non-work outside (work alone ≠ Q3)'
+    );
+  }
+  if (!facts.regular_social_participation_outside) {
+    setFalse(ladder, adjustments, 'q3_regelmatige_sociale_participatie', 'no regular social outside');
   }
 
   if (facts.current_work_hours_per_week === 0) {

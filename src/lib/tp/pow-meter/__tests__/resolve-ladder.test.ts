@@ -66,6 +66,16 @@ const williamsFacts: PowMeterFacts = {
   duurzaam_passend_min_65: false,
 };
 
+/**
+ * Live failure mode: model wrongly marks Q3 Ja (family/work as "social")
+ * while outside_deliberate stays false (no club/sport).
+ */
+const williamsOptimisticQ3Facts: PowMeterFacts = {
+  ...williamsFacts,
+  outside_functional_only: false,
+  regular_social_participation_outside: true,
+};
+
 describe('resolveLadderFromFacts', () => {
   it('Hulstaart: coerces optimistic model ladder to trede 1', () => {
     const { ladder, adjustments } = resolveLadderFromFacts(hulstaartFacts, allYesLadder());
@@ -96,6 +106,19 @@ describe('resolveLadderFromFacts', () => {
     assert.equal(ladder.q2_minimaal_2x_buitenshuis, true);
     assert.equal(ladder.q3_regelmatige_sociale_participatie, false);
     assert.equal(ladder.q5_belastbaar_min_12u, false);
+    assert.equal(computeTredeFromLadder(ladder), 2);
+  });
+
+  it('Williams: optimistic Q3 (work/family as social) still coerces to trede 2', () => {
+    const { ladder, adjustments } = resolveLadderFromFacts(
+      williamsOptimisticQ3Facts,
+      allYesLadder()
+    );
+    assert.ok(
+      adjustments.some((a) => a.includes('q3_regelmatige_sociale_participatie=false'))
+    );
+    assert.equal(ladder.q2_minimaal_2x_buitenshuis, true);
+    assert.equal(ladder.q3_regelmatige_sociale_participatie, false);
     assert.equal(computeTredeFromLadder(ladder), 2);
   });
 });
@@ -141,6 +164,21 @@ describe('parsePowMeterContentResult with facts', () => {
         'haar belastbaarheid laag is, zij circa 2 uur per week in aangepast werk verricht en geen regelmatige sociale participatie buiten huis heeft.',
     });
     assert.equal(result.huidige_trede_nummer, 2);
+    assert.equal(result.verwachting_trede_nummer, 3);
+  });
+
+  it('Williams optimistic Q3 payload still yields trede 2 (not 3)', () => {
+    const result = parsePowMeterContentResult({
+      ...williamsOptimisticQ3Facts,
+      ...allYesLadder(),
+      huidige_werkzame_uren: 'Werknemer werkt momenteel circa 2 uur per week in aangepast werk.',
+      verwachting_trede_nummer: 5,
+      verwachting_includes_spoor2_block: true,
+      verwachting_kern: 'Urenopbouw richting 12 tot 16 uur per week wordt verwacht.',
+      toelichting_kern: 'zij circa 2 uur per week werkt en haar belastbaarheid nog beperkt is.',
+    });
+    assert.equal(result.huidige_trede_nummer, 2);
+    assert.equal(result.ladder.q3_regelmatige_sociale_participatie, false);
     assert.equal(result.verwachting_trede_nummer, 3);
   });
 });

@@ -77,6 +77,7 @@ Geen holistische "voelt als trede X"-inschatting. Server berekent huidige trede 
 Vraag 1: Zijn er volgens de bedrijfsarts duurzaam benutbare mogelijkheden? Nee → Trede 1. Ja → verder.
 Vraag 2 (STRICT): Komt werknemer minimaal twee keer per week bewust buitenshuis (niet alleen zorgtaken/boodschappen/school)? Nee → Trede 1. Ja → verder.
 Vraag 3: Is sprake van regelmatige sociale participatie buitenshuis? Nee → Trede 2. Ja → verder.
+  (Strict: club/sport/vaste sociale afspraak buiten huis. Werk/Spoor 1/familiecontact thuis = Nee.)
 Vraag 4: Is werknemer gemotiveerd richting arbeid? Nee → Trede 3. Ja → verder.
 Vraag 5: Kan werknemer tijdens de intake ongeveer minimaal 12 uur per week belast worden? Nee → Trede 3. Ja → verder.
 Vraag 6: Verricht werknemer momenteel werkzaamheden? Nee → Trede 3. Ja → verder.
@@ -99,14 +100,15 @@ Q1 — Duurzaam benutbare mogelijkheden op INTAKE:
   FOUT: FML noemt theoretisch plafond → automatisch Ja terwijl intake "niet belastbaar" zegt.
 
 Q2 — Buitenshuis ≥2×/week (STRICT):
-  Ja: bewuste buitenactiviteiten (sociaal, sport, club, regelmatige ontmoetingen buiten) of structureel aangepast/on-site werk bij werkgever (Spoor 1).
+  Ja: bewuste buitenactiviteiten (sociaal, sport, club, regelmatige ontmoetingen buiten) OF structureel aangepast/on-site werk bij werkgever (Spoor 1).
   Nee: alleen functionele trips (school/gastouder, boodschappen, zorgafspraken) zonder werk buitenshuis, leeg intakeveld buitenshuis, inactiviteit.
   FOUT: "regelmatig contact met ouders" thuis tellen als buitenshuis; aangepast werk Cordaan negeren omdat ook boodschappen voorkomen.
 
 Q3 — Regelmatige sociale participatie BUITENSHUIS (STRICT):
-  Ja: herhaalde, structurele sociale activiteit buiten de woning.
-  Nee: sporadisch feestje, soms lunch buurvrouw, contact thuis/telefonisch, bank/TV-daginvulling.
-  FOUT: motivatie of familiecontact = Q3 Ja.
+  Ja: herhaalde, structurele sociale activiteit buiten de woning (club, sportvereniging, vaste sociale afspraak buiten huis).
+  Nee: sporadisch feestje, soms lunch buurvrouw, contact thuis/telefonisch, bank/TV-daginvulling, alleen boodschappen/afspraken.
+  FOUT: motivatie = Q3 Ja; familiecontact = Q3 Ja; aangepast werk / Spoor 1 / collega's op het werk = Q3 Ja.
+  Let op: werk telt voor Q2, NIET voor Q3.
 
 Q4 — Gemotiveerd richting arbeid:
   Ja: bereid/willens in principe (ook "eerst lichaam/revalidatie").
@@ -132,8 +134,14 @@ VOORBEELD A (pre-revalidatie, 0 uur, inactiviteit — patroon Hulstaart):
   NOOIT Trede 3 alleen vanwege 0 uur werk.
 
 VOORBEELD B (~1,5 uur aangepast Spoor 1 — patroon Melissa):
-  facts: 1,5 uur aangepast werk, gemotiveerd, regelmatig buitenshuis sociaal, FML max ~10 uur.
+  facts: 1,5 uur aangepast werk, gemotiveerd, regelmatig buitenshuis sociaal (club/sport), FML max ~10 uur.
   ladder: Q1–Q4 Ja, Q5=Nee (FML <12) → Trede 3.
+
+VOORBEELD C (~2 uur aangepast Spoor 1, geen sociaal buiten — patroon Williams):
+  facts: ~2 uur aangepast werk Cordaan, buitenshuis verder vooral functioneel (boodschappen/afspraken), familiecontact thuis, geen hobby's/club.
+  facts flags: outside_deliberate_min_2_per_week=false (werk telt NIET mee in dit fact), outside_functional_only=true of geen structureel sociaal buiten, regular_social_participation_outside=false.
+  ladder: Q1=Ja, Q2=Ja (via werk), Q3=Nee → Trede 2.
+  FOUT: werk of familiecontact als Q3 Ja → onterecht Trede 3.
 `.trim();
 
 export const DOCUMENT_SCOPE_HINT = `

@@ -86,17 +86,17 @@ export const POW_METER_FACTS_JSON_PROPERTIES = {
   outside_deliberate_min_2_per_week: {
     type: 'boolean',
     description:
-      'Strict Q2: true bij bewuste buitenactiviteiten ≥2×/week (sociaal, sport, club) of structureel aangepast/on-site werk. false bij alleen zorgtaken/boodschappen zonder werk buitenshuis.',
+      'Non-work deliberate outside ≥2×/week (sociaal, sport, club, vaste ontmoetingen buiten). false bij alleen zorgtaken/boodschappen/zorgafspraken. Zet NIET op true alleen vanwege aangepast/on-site werk — dat gaat via performs_work_activities.',
   },
   outside_functional_only: {
     type: 'boolean',
     description:
-      'true indien buitenshuis alleen functionele trips (school/gastouder, boodschappen, afspraken zorg) — telt niet als Q2 Ja. false wanneer ook structureel aangepast/on-site werk buitenshuis.',
+      'true indien buitenshuis (naast eventueel werk) alleen functionele trips (school/gastouder, boodschappen, afspraken zorg). Functionele trips tellen niet als Q3 sociale participatie.',
   },
   regular_social_participation_outside: {
     type: 'boolean',
     description:
-      'Strict Q3: true alleen bij herhaalde, structurele sociale participatie buitenshuis. false bij sporadisch/thuis contact.',
+      'Strict Q3: true alleen bij herhaalde, structurele sociale participatie BUITEN de woning (club/sport/vaste sociale afspraak). false bij familiecontact thuis/telefoon, sporadisch, of alleen werk/collega\'s. Werk ≠ Q3.',
   },
   motivated_toward_work: {
     type: 'boolean',

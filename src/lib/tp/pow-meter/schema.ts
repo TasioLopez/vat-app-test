@@ -37,10 +37,10 @@ export const POW_METER_CONTENT_JSON_SCHEMA = {
       'Vraag 1: duurzaam benutbare mogelijkheden op intake? Moet consistent zijn met facts. true=Ja, false=Nee.'
     ),
     q2_minimaal_2x_buitenshuis: ladderBooleanProperty(
-      'Vraag 2 (strict): bewuste buitenactiviteiten ≥2×/week? Zorgtaken/boodschappen alleen = false. Moet consistent zijn met outside_deliberate_min_2_per_week.'
+      'Vraag 2 (strict): bewuste buitenactiviteiten ≥2×/week OF aangepast/on-site werk? Zorgtaken/boodschappen alleen = false. Consistent met outside_deliberate_min_2_per_week OF performs_work_activities.'
     ),
     q3_regelmatige_sociale_participatie: ladderBooleanProperty(
-      'Vraag 3 (strict): regelmatige sociale participatie buitenshuis? Thuiscontact/sporadisch = false.'
+      'Vraag 3 (strict): regelmatige sociale participatie buitenshuis (club/sport/vaste afspraak)? Thuiscontact/familie/werk/Spoor 1 = false. Vereist outside_deliberate_min_2_per_week én regular_social_participation_outside.'
     ),
     q4_gemotiveerd_richting_arbeid: ladderBooleanProperty(
       'Vraag 4: gemotiveerd richting arbeid? Moet consistent zijn met motivated_toward_work.'
