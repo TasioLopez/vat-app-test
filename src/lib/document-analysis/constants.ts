@@ -10,8 +10,10 @@ export function getDocumentExtractionModel(): string {
 
 export function getDocumentExtractionReasoningEffort(): 'low' | 'medium' | 'high' | undefined {
   const raw = process.env.OPENAI_DOCUMENT_EXTRACTION_REASONING?.trim().toLowerCase();
+  if (raw === 'off' || raw === 'none' || raw === 'false') return undefined;
   if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
-  return undefined;
+  // Default medium: checkbox / form vision needs reasoning; override via env if needed.
+  return 'medium';
 }
 
 export function getDocumentExtractionPdfDetail(): PdfDetailLevel {

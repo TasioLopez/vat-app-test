@@ -103,7 +103,14 @@ export function mergeGegevensAutofill(
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(payload, key)) continue;
     const incoming = payload[key];
-    if (isEmptyGegevensField(key, incoming)) continue;
+    const incomingEmpty = isEmptyGegevensField(key, incoming);
+    if (incomingEmpty) {
+      // Overwrite may clear multiselects (e.g. transport_type corrected to []).
+      if (overwrite && Array.isArray(incoming)) {
+        next[key] = incoming;
+      }
+      continue;
+    }
     if (overwrite || isEmptyGegevensField(key, next[key])) {
       next[key] = incoming;
     }

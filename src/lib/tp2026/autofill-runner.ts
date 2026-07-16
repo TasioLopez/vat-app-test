@@ -139,7 +139,9 @@ async function runEmployeeAutofillStep(
       return { data: currentData, error: 'Geen werknemersgegevens gevonden in documenten' };
     }
 
-    let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS);
+    let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS, {
+      overwrite: true,
+    });
     const suggested = data.suggested_referent as SuggestedReferent | undefined;
     next = applySuggestedReferentToTpData(next, suggested);
 

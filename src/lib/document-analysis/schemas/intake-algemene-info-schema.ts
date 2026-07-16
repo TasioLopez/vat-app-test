@@ -6,12 +6,33 @@ const DUTCH_LEVEL_ENUM = ['Goed', 'Gemiddeld', 'Niet goed', null] as const;
 const COMPUTER_SKILLS_ENUM = ['1', '2', '3', '4', '5', null] as const;
 const EDUCATION_LEVEL_ENUM = [...EDUCATION_LEVEL_OPTIONS, null] as const;
 
+const TRANSPORT_CHECKBOX_KEYS = [
+  'transport_auto',
+  'transport_fiets',
+  'transport_ov',
+  'transport_lopend',
+] as const;
+
+const TRANSPORT_CHECKBOX_TO_LABEL: Record<(typeof TRANSPORT_CHECKBOX_KEYS)[number], string> = {
+  transport_auto: 'Auto',
+  transport_fiets: 'Fiets',
+  transport_ov: 'OV',
+  transport_lopend: 'Lopend',
+};
+
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
 }
 
 function nullableBoolean(description: string) {
   return { type: ['boolean', 'null'] as const, description };
+}
+
+function transportCheckbox(label: string) {
+  return {
+    type: 'boolean' as const,
+    description: `True ONLY if the checkbox next to "${label}" under "Hoe verplaatst werknemer zich" is visually filled (☒/☑/X). Empty ☐ = false. Never guess.`,
+  };
 }
 
 export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
@@ -24,11 +45,12 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     },
     education_name: nullableString('Richting/naam bij education_level; geen certificaten'),
     work_experience: nullableString('Komma-gescheiden functietitels; geen huidige functie'),
-    transport_type: {
-      type: 'array',
-      description: 'Aangevinkte vervoersopties sectie 17',
-      items: { type: 'string', enum: TRANSPORT_TYPE_OPTIONS },
-    },
+    // Per-box booleans force the model to evaluate each checkbox independently
+    // (free-form transport_type arrays frequently invent all options).
+    transport_auto: transportCheckbox('Auto'),
+    transport_fiets: transportCheckbox('Fiets'),
+    transport_ov: transportCheckbox('OV'),
+    transport_lopend: transportCheckbox('Lopend'),
     drivers_license: nullableBoolean('Heeft rijbewijs'),
     drivers_license_type: {
       type: 'array',
@@ -61,7 +83,10 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     'education_level',
     'education_name',
     'work_experience',
-    'transport_type',
+    'transport_auto',
+    'transport_fiets',
+    'transport_ov',
+    'transport_lopend',
     'drivers_license',
     'drivers_license_type',
     'dutch_speaking',
@@ -80,13 +105,40 @@ function isPresent(value: unknown): boolean {
   return true;
 }
 
+/** Map per-checkbox booleans → transport_type array in canonical order. */
+export function transportTypeFromCheckboxes(
+  raw: Record<string, unknown>
+): string[] {
+  const allowed = new Set<string>(TRANSPORT_TYPE_OPTIONS);
+  const out: string[] = [];
+  for (const key of TRANSPORT_CHECKBOX_KEYS) {
+    if (raw[key] === true) {
+      const label = TRANSPORT_CHECKBOX_TO_LABEL[key];
+      if (allowed.has(label)) out.push(label);
+    }
+  }
+  return out;
+}
+
 export function parseIntakeAlgemeneInfoExtractionResult(
   raw: unknown
 ): IntakeAlgemeneInfoExtractionResult {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const out: IntakeAlgemeneInfoExtractionResult = {};
+
+  // Prefer structured per-box booleans when present.
+  const hasCheckboxFields = TRANSPORT_CHECKBOX_KEYS.some((k) => k in o);
+  if (hasCheckboxFields) {
+    out.transport_type = transportTypeFromCheckboxes(o);
+  }
+
   for (const [key, value] of Object.entries(o)) {
-    if (key === 'transport_type' || key === 'drivers_license_type') {
+    if ((TRANSPORT_CHECKBOX_KEYS as readonly string[]).includes(key)) continue;
+    if (key === 'transport_type') {
+      if (!hasCheckboxFields && Array.isArray(value)) out[key] = value;
+      continue;
+    }
+    if (key === 'drivers_license_type') {
       if (Array.isArray(value)) out[key] = value;
       continue;
     }
@@ -96,4 +148,4 @@ export function parseIntakeAlgemeneInfoExtractionResult(
   return out;
 }
 
-export { EDUCATION_LEVEL_ENUM };
+export { EDUCATION_LEVEL_ENUM, TRANSPORT_CHECKBOX_KEYS };

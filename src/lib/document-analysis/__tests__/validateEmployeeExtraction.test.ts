@@ -60,6 +60,16 @@ describe('validateIntakeAlgemeneInfoExtraction', () => {
     );
     assert.equal(result.ok, false);
   });
+
+  it('accepts empty transport_type (no boxes checked)', () => {
+    const result = validateIntakeAlgemeneInfoExtraction({
+      education_level: 'MBO 4',
+      transport_type: [],
+      dutch_speaking: 'Goed',
+      computer_skills: '4',
+    });
+    assert.equal(result.ok, true);
+  });
 });
 
 describe('validateIntakeCoreExtraction', () => {

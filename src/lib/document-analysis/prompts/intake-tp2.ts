@@ -69,7 +69,7 @@ Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.
 `.trim();
 
 export const INTAKE_TP2_USER_MESSAGE =
-  'Analyseer dit intakeformulier en extract de trajectplan metadata velden.';
+  'Analyseer dit intakeformulier visueel. Voor ad_report_concept: bekijk ALLEEN of het Concept-vakje gevuld is (☒=true, ☐=false). Twijfel → false.';
 
 export const AD_TP2_DATE_PROMPT = `
 Extract ALLEEN ad_report_date (YYYY-MM-DD) uit dit arbeidsdeskundig rapport.

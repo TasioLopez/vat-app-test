@@ -52,6 +52,16 @@ rapport:
     assert.equal(detectAdReportConceptFromText(''), null);
     assert.equal(detectAdReportConceptFromText(null), null);
   });
+
+  it('prefers checkbox mark over narrative concept word', () => {
+    const text = `
+In het concept rapport staat advies.
+Datum AD-rapport: 27-6-2026
+Concept ☐
+Naam AD: S. Kowalski
+`;
+    assert.equal(detectAdReportConceptFromText(text), false);
+  });
 });
 
 describe('isAdReportConcept', () => {

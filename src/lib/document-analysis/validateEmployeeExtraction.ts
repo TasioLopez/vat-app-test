@@ -129,9 +129,8 @@ export function validateIntakeAlgemeneInfoExtraction(
   errors.push(...validateEducation(result.education_level, result.education_name));
   errors.push(...validateWorkExperience(result.work_experience, options?.currentJob));
 
-  if (!Array.isArray(result.transport_type) || result.transport_type.length === 0) {
-    errors.push('transport_type moet minimaal één aangevinkte vervoersoptie bevatten wanneer sectie 17 zichtbaar is');
-  }
+  // Empty transport_type is valid (no boxes checked). Do NOT require ≥1 option —
+  // that caused retry pressure and models inventing all checkboxes.
 
   if (!isPresent(result.dutch_speaking)) {
     errors.push('dutch_speaking ontbreekt (sectie 17 talen)');

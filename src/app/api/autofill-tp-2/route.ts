@@ -27,11 +27,6 @@ import {
 } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
 import { docsIncludeAdReport, resolveTp2HasAdReport } from '@/lib/tp/intake-ad-presence';
-import { detectAdReportConceptFromText } from '@/lib/tp/ad-report-wording';
-import {
-  bufferToPlainText,
-  detectDocumentKind,
-} from '@/lib/document-analysis/documentPlainText';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
 export const maxDuration = 120;
@@ -114,20 +109,6 @@ async function extractFromDocument<T extends Record<string, unknown>>(
   }
 }
 
-async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
-  const downloaded = await downloadDocumentBuffer(intakeDoc);
-  if (!downloaded) return null;
-
-  try {
-    const kind = detectDocumentKind(downloaded.path, intakeDoc.name);
-    const plainText = await bufferToPlainText(downloaded.buffer, kind);
-    return detectAdReportConceptFromText(plainText);
-  } catch (error) {
-    console.warn('⚠️ TP2 Concept checkbox text detection failed', error);
-    return null;
-  }
-}
-
 async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unknown>> {
   const intakeDoc = docs.find((d) => isIntakeDocumentType(d.type));
   const adDoc = docs.find((d) => isAdDocumentType(d.type));
@@ -144,15 +125,6 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
       instructions: INTAKE_TP2_PROMPT,
       userMessage: INTAKE_TP2_USER_MESSAGE,
     });
-
-    // Deterministic Concept ☐/☒ wins over model (prevents false-positive concept).
-    const conceptFromText = await resolveConceptFromIntakeText(intakeDoc);
-    if (conceptFromText !== null) {
-      console.log(`📋 TP2 Concept checkbox from text: ${conceptFromText}`);
-      merged.ad_report_concept = conceptFromText;
-    } else if (merged.ad_report_concept !== true) {
-      merged.ad_report_concept = false;
-    }
   } else {
     console.log('⚠️ No intake document found for TP2 extraction');
   }
