@@ -205,7 +205,7 @@ export function ValentineZLogoBulletRow({
 }) {
   return (
     <div className={`flex items-start gap-2 ${className}`}>
-      <span className="mt-0.5 shrink-0" aria-hidden>
+      <span className="flex h-[1lh] shrink-0 items-center" aria-hidden>
         <ValentineZLogoBullet eagerLoading={eagerLoading} />
       </span>
       <span className="min-w-0 flex-1">{children}</span>

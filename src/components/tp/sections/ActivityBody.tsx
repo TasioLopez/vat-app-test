@@ -13,8 +13,8 @@ export function ActivityBody({ bodyMain, subText, className = "" }: ActivityBody
     <div className={className}>
       <p className={`text-[12px] leading-relaxed text-neutral-900 ${hasSubText ? 'mb-2' : ''}`}>{bodyMain}</p>
       {hasSubText && (
-        <ValentineZLogoBulletRow className="mt-2">
-          <span className="text-[12px] leading-relaxed text-neutral-900">{subText!.trim()}</span>
+        <ValentineZLogoBulletRow className="mt-2 text-[12px] leading-tight text-neutral-900">
+          {subText!.trim()}
         </ValentineZLogoBulletRow>
       )}
     </div>
