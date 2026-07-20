@@ -16,6 +16,7 @@ import {
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
+import { readAutofillResponse } from '@/lib/autofill-response';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -125,13 +126,14 @@ async function runEmployeeAutofillStep(
     const res = await fetch(`/api/autofill-employee-info-working?employeeId=${ctx.employeeId}`, {
       signal: ctx.signal,
     });
-    const json = await res.json();
-    if (!res.ok) {
+    const parsed = await readAutofillResponse(res);
+    if (!parsed.ok) {
       return {
         data: currentData,
-        error: json.error || `HTTP ${res.status}`,
+        error: parsed.error,
       };
     }
+    const json = parsed.json;
 
     const details = (json.details || json.data?.details) as Record<string, unknown> | undefined;
     const data = json.data || json;
@@ -172,17 +174,25 @@ async function runTp2AutofillStep(
     const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
       signal: ctx.signal,
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
+    const parsed = await readAutofillResponse(res);
+    if (!parsed.ok) {
       return {
         data: currentData,
-        error: json.error || 'Gegevens traject autofill mislukt',
+        error: parsed.error,
       };
     }
-    if (!json.details || Object.keys(json.details).length === 0) {
+    const json = parsed.json;
+    if (!json.success) {
+      return {
+        data: currentData,
+        error: (typeof json.error === 'string' && json.error) || 'Gegevens traject autofill mislukt',
+      };
+    }
+    const details = json.details as Record<string, unknown> | undefined;
+    if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }
-    const next = mergeGegevensAutofill(currentData, json.details, GEGEVENS_TP2_KEYS, {
+    const next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
       overwrite: true,
     });
     return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };

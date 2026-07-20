@@ -33,22 +33,14 @@ function isLikelyWrongReferent(out: Record<string, unknown>): boolean {
   return fn.includes('arbeidsdeskundig') || fn.includes('bedrijfsarts');
 }
 
-function validateWorkExperience(
-  workExperience: unknown,
-  currentJob?: unknown
-): string[] {
+function validateWorkExperience(workExperience: unknown): string[] {
   const errors: string[] = [];
   if (!isPresent(workExperience)) return errors;
 
   const raw = String(workExperience).trim();
-  const current = currentJob != null ? String(currentJob).trim() : '';
 
   if (/heeft\s+ook\s+wel\s+andere\s+functies/i.test(raw)) {
     errors.push('work_experience mag geen narratieve tekst bevatten — alleen functietitels');
-  }
-
-  if (current && titleOverlapsCurrentJob(raw, current)) {
-    errors.push('work_experience mag de huidige functie (current_job) niet bevatten');
   }
 
   for (const part of raw.split(/[,;]+/)) {
@@ -57,12 +49,29 @@ function validateWorkExperience(
     if (/^\d+\+?\s*jaar$/i.test(title)) {
       errors.push('work_experience mag geen pure duur/jaar-waarden bevatten');
     }
-    if (current && titleOverlapsCurrentJob(title, current)) {
-      errors.push(`work_experience titel "${title}" overlapt met current_job`);
-    }
   }
 
   return errors;
+}
+
+/** Remove titles that overlap current_job (deterministic; avoids Pass B vision retries). */
+export function stripCurrentJobFromWorkExperience(
+  workExperience: unknown,
+  currentJob?: unknown
+): string | null {
+  if (!isPresent(workExperience)) return null;
+  const current = currentJob != null ? String(currentJob).trim() : '';
+  const parts = String(workExperience)
+    .split(/[,;]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const kept = current
+    ? parts.filter((title) => !titleOverlapsCurrentJob(title, current))
+    : parts;
+
+  if (kept.length === 0) return null;
+  return kept.join(', ');
 }
 
 function validateEducation(
@@ -122,23 +131,14 @@ export function validateIntakeCoreExtraction(
 
 export function validateIntakeAlgemeneInfoExtraction(
   result: Record<string, unknown>,
-  options?: { currentJob?: unknown }
+  _options?: { currentJob?: unknown }
 ): ValidationResult {
   const errors: string[] = [];
 
   errors.push(...validateEducation(result.education_level, result.education_name));
-  errors.push(...validateWorkExperience(result.work_experience, options?.currentJob));
-
-  // Empty transport_type is valid (no boxes checked). Do NOT require ≥1 option —
-  // that caused retry pressure and models inventing all checkboxes.
-
-  if (!isPresent(result.dutch_speaking)) {
-    errors.push('dutch_speaking ontbreekt (sectie 17 talen)');
-  }
-
-  if (!isPresent(result.computer_skills)) {
-    errors.push('computer_skills ontbreekt (sectie 17 computervaardigheden)');
-  }
+  // work_experience overlap with current_job is stripped post-parse — not a hard retry.
+  // Missing dutch_speaking / computer_skills → soft warnings via incomplete.ts.
+  errors.push(...validateWorkExperience(result.work_experience));
 
   return { ok: errors.length === 0, errors };
 }
@@ -148,7 +148,7 @@ export function validateMergedIntakeExtraction(
 ): ValidationResult {
   const errors: string[] = [];
 
-  errors.push(...validateWorkExperience(merged.work_experience, merged.current_job));
+  errors.push(...validateWorkExperience(merged.work_experience));
 
   const core = validateIntakeCoreExtraction(merged);
   const s17 = validateIntakeAlgemeneInfoExtraction(merged, { currentJob: merged.current_job });

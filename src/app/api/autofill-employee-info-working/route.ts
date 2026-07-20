@@ -33,8 +33,9 @@ import {
 } from '@/lib/documents/employee-doc-types';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-options';
+import { shouldSkipSecondaryDocsForWorkerProfile } from '@/lib/document-analysis/worker-profile-autofill';
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -220,6 +221,16 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
+  }
+
+  if (shouldSkipSecondaryDocsForWorkerProfile(intakeProcessed, results)) {
+    console.log(
+      '📋 Intake present — skipping AD/FML/extra for worker-profile autofill'
+    );
+    console.log(
+      `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
+    );
+    return { results, referent, intakeProcessed };
   }
 
   const adDoc = docs.find((d) => {

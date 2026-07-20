@@ -15,6 +15,7 @@ import {
 } from './schemas/intake-core-schema';
 import { runMultiPassExtraction } from './runStructuredExtraction';
 import {
+  stripCurrentJobFromWorkExperience,
   validateIntakeAlgemeneInfoExtraction,
   validateIntakeCoreExtraction,
 } from './validateEmployeeExtraction';
@@ -62,6 +63,15 @@ export async function extractIntakeEmployeeDetailsFromVision(
   });
 
   const level = merged.education_level;
+  const strippedWork = stripCurrentJobFromWorkExperience(
+    merged.work_experience,
+    merged.current_job
+  );
+  if (strippedWork != null) {
+    merged.work_experience = strippedWork;
+  } else {
+    delete merged.work_experience;
+  }
   const work = merged.work_experience;
   console.log(
     `✅ Intake pass B (sectie 17): education_level=${level ?? '—'}, work_experience=${work ? String(work).slice(0, 80) : '—'}`

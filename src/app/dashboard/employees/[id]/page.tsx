@@ -40,6 +40,7 @@ import {
     type AutofillProgressState,
 } from '@/components/ui/AutofillProgressOverlay';
 import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
+import { readAutofillResponse } from '@/lib/autofill-response';
 import { isAutofillAbortError } from '@/lib/tp2026/autofill-runner';
 import {
     applyEmployeeAutofillDetails,
@@ -758,11 +759,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
-            const json = await res.json();
-
-            if (!res.ok) {
-                throw new Error(json.error || `HTTP ${res.status}: ${res.statusText}`);
+            const parsed = await readAutofillResponse(res);
+            if (!parsed.ok) {
+                throw new Error(parsed.error);
             }
+            const json = parsed.json;
 
             if (abortController.signal.aborted || aiCancelRef.current) {
                 setEmployeeDetails(snapshot.employeeDetails);

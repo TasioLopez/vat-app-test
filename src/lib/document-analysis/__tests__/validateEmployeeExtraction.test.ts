@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  stripCurrentJobFromWorkExperience,
   validateIntakeAlgemeneInfoExtraction,
   validateIntakeCoreExtraction,
   validateMergedIntakeExtraction,
@@ -48,17 +49,24 @@ describe('validateIntakeAlgemeneInfoExtraction', () => {
     assert.ok(result.errors.some((e) => /narratieve/i.test(e)));
   });
 
-  it('rejects work_experience overlapping current_job', () => {
+  it('does not hard-fail on work_experience overlapping current_job', () => {
     const result = validateIntakeAlgemeneInfoExtraction(
       {
-        work_experience: 'Supervisor',
+        education_level: 'MBO 4',
+        work_experience: 'Supervisor, Transportplanner',
         transport_type: ['Auto'],
-        dutch_speaking: 'Goed',
-        computer_skills: '2',
       },
       { currentJob: 'Supervisor' }
     );
-    assert.equal(result.ok, false);
+    assert.equal(result.ok, true);
+  });
+
+  it('accepts missing dutch_speaking and computer_skills (soft warnings only)', () => {
+    const result = validateIntakeAlgemeneInfoExtraction({
+      education_level: 'MBO 4',
+      transport_type: ['Auto'],
+    });
+    assert.equal(result.ok, true);
   });
 
   it('accepts empty transport_type (no boxes checked)', () => {
@@ -69,6 +77,22 @@ describe('validateIntakeAlgemeneInfoExtraction', () => {
       computer_skills: '4',
     });
     assert.equal(result.ok, true);
+  });
+});
+
+describe('stripCurrentJobFromWorkExperience', () => {
+  it('strips overlapping current_job titles', () => {
+    assert.equal(
+      stripCurrentJobFromWorkExperience(
+        'Logistiek Coördinator, Transportplanner, Logistiek Medewerker',
+        'Logistiek Coördinator'
+      ),
+      'Transportplanner, Logistiek Medewerker'
+    );
+  });
+
+  it('returns null when only current_job remains', () => {
+    assert.equal(stripCurrentJobFromWorkExperience('Supervisor', 'Supervisor'), null);
   });
 });
 
@@ -92,7 +116,7 @@ describe('validateIntakeCoreExtraction', () => {
 });
 
 describe('validateMergedIntakeExtraction', () => {
-  it('validates cross-field work vs current_job', () => {
+  it('does not hard-fail solely on work vs current_job overlap', () => {
     const result = validateMergedIntakeExtraction({
       current_job: 'Supervisor',
       work_experience: 'Supervisor',
@@ -101,6 +125,6 @@ describe('validateMergedIntakeExtraction', () => {
       dutch_speaking: 'Goed',
       computer_skills: '2',
     });
-    assert.equal(result.ok, false);
+    assert.equal(result.ok, true);
   });
 });

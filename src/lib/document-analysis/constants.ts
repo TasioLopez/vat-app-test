@@ -1,6 +1,6 @@
 export const DEFAULT_DOCUMENT_EXTRACTION_MODEL = 'gpt-5.1-2025-11-13';
 export const MAX_DOCUMENT_UPLOAD_BYTES = 45 * 1024 * 1024;
-export const MAX_EXTRACTION_RETRIES = 2;
+export const MAX_EXTRACTION_RETRIES = 1;
 
 export type PdfDetailLevel = 'low' | 'high' | 'auto';
 

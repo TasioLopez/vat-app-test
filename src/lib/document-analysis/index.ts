@@ -37,7 +37,12 @@ export {
   validateIntakeCoreExtraction,
   validateIntakeAlgemeneInfoExtraction,
   validateMergedIntakeExtraction,
+  stripCurrentJobFromWorkExperience,
 } from './validateEmployeeExtraction';
+export {
+  shouldSkipSecondaryDocsForWorkerProfile,
+  hasMeaningfulIntakeMappedPayload,
+} from './worker-profile-autofill';
 export {
   INTAKE_CORE_JSON_SCHEMA,
   parseIntakeCoreExtractionResult,

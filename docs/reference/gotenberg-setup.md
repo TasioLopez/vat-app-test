@@ -61,7 +61,7 @@ GOTENBERG_URL=http://localhost:3000
 |---------|----------------|
 | `GOTENBERG_URL is not configured` | Env var missing on Vercel or locally |
 | `Documentconverter tijdelijk niet beschikbaar` | Fly machine down or `/health` failing |
-| Autofill timeout | Vercel function limit; routes use `maxDuration = 120` |
+| Autofill timeout | Vercel function limit; worker-profile autofill uses `maxDuration = 180` |
 | Empty autofill on DOCX | Gotenberg unreachable; check Fly logs: `fly logs` |
 
 ## Optional: API key (v2)
