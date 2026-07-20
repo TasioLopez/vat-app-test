@@ -60,7 +60,9 @@ export function detectDriversLicenseFromIntakeText(
   if (!sawAnyGlyph) return null;
 
   // Restore intake / options order
-  const order = new Map(DRIVERS_LICENSE_TYPE_VALUES.map((v, i) => [v, i]));
+  const order = new Map<string, number>(
+    DRIVERS_LICENSE_TYPE_VALUES.map((v, i) => [v, i])
+  );
   return [...new Set(found)].sort(
     (a, b) => (order.get(a) ?? 999) - (order.get(b) ?? 999)
   );
