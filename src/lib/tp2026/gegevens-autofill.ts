@@ -81,15 +81,13 @@ export function mergeRecordFillBlanks(
   return next;
 }
 
-export function getGegevensAutofillPlan(data: Record<string, unknown>): {
+export function getGegevensAutofillPlan(_data?: Record<string, unknown>): {
   runEmployee: boolean;
   runTp2: boolean;
 } {
-  const runEmployee = GEGEVENS_EMPLOYEE_KEYS.some((key) =>
-    isEmptyGegevensField(key, data[key])
-  );
-  const runTp2 = GEGEVENS_TP2_KEYS.some((key) => isEmptyGegevensField(key, data[key]));
-  return { runEmployee, runTp2 };
+  // Always re-run both endpoints on Stap 2 autofill (overwrite); skip-if-filled
+  // prevented TP2 from correcting wrong AD/concept flags.
+  return { runEmployee: true, runTp2: true };
 }
 
 export function mergeGegevensAutofill(

@@ -34,6 +34,11 @@ import {
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-options';
 import { shouldSkipSecondaryDocsForWorkerProfile } from '@/lib/document-analysis/worker-profile-autofill';
+import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
+import {
+  bufferToPlainText,
+  detectDocumentKind,
+} from '@/lib/document-analysis/documentPlainText';
 
 export const maxDuration = 180;
 
@@ -100,6 +105,14 @@ async function processIntakeForm(doc: DocRow): Promise<{
     const cleanedParsed = stripAssistantArtifactsFromRecord(raw);
     const referent = extractReferentFromRaw({ ...cleanedParsed, ...referentFields });
     const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
+
+    try {
+      const kind = detectDocumentKind(path, doc.name);
+      const plainText = await bufferToPlainText(buffer, kind);
+      applyIntakeCheckboxTextOverrides(mapped, plainText);
+    } catch (error) {
+      console.warn('⚠️ Intake checkbox text override failed', error);
+    }
 
     console.log(`✅ Intake form processing completed: ${Object.keys(mapped).length} fields`);
     return { mapped, referent };

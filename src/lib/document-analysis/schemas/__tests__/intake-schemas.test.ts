@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   INTAKE_ALGEMENE_INFO_JSON_SCHEMA,
+  driversLicenseTypeFromCheckboxes,
   parseIntakeAlgemeneInfoExtractionResult,
   transportTypeFromCheckboxes,
 } from '../intake-algemene-info-schema';
@@ -23,6 +24,14 @@ describe('INTAKE_ALGEMENE_INFO_JSON_SCHEMA', () => {
     assert.ok('transport_ov' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties);
     assert.ok('transport_lopend' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties);
     assert.equal('transport_type' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties, false);
+  });
+
+  it('uses per-checkbox license booleans instead of drivers_license_type array', () => {
+    assert.ok('license_b' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties);
+    assert.ok('license_be' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties);
+    assert.ok('license_code_95' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties);
+    assert.equal('drivers_license_type' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties, false);
+    assert.equal('drivers_license' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties, false);
   });
 });
 
@@ -49,6 +58,19 @@ describe('transportTypeFromCheckboxes', () => {
   });
 });
 
+describe('driversLicenseTypeFromCheckboxes', () => {
+  it('maps only true license boxes (Hippman B only)', () => {
+    assert.deepEqual(
+      driversLicenseTypeFromCheckboxes({
+        license_b: true,
+        license_be: false,
+        license_code_95: false,
+      }),
+      ['B']
+    );
+  });
+});
+
 describe('parseIntakeAlgemeneInfoExtractionResult', () => {
   it('builds transport_type from per-box booleans (Hippman-style Auto only)', () => {
     const result = parseIntakeAlgemeneInfoExtractionResult({
@@ -62,6 +84,30 @@ describe('parseIntakeAlgemeneInfoExtractionResult', () => {
     });
     assert.deepEqual(result.transport_type, ['Auto']);
     assert.equal('transport_auto' in result, false);
+  });
+
+  it('builds drivers_license_type and drivers_license from per-box booleans', () => {
+    const result = parseIntakeAlgemeneInfoExtractionResult({
+      license_b: true,
+      license_be: false,
+      license_code_95: false,
+      transport_auto: true,
+      transport_fiets: false,
+      transport_ov: false,
+      transport_lopend: false,
+    });
+    assert.deepEqual(result.drivers_license_type, ['B']);
+    assert.equal(result.drivers_license, true);
+    assert.equal('license_b' in result, false);
+  });
+
+  it('sets drivers_license false when no license boxes checked', () => {
+    const result = parseIntakeAlgemeneInfoExtractionResult({
+      license_b: false,
+      license_be: false,
+    });
+    assert.deepEqual(result.drivers_license_type, []);
+    assert.equal(result.drivers_license, false);
   });
 });
 

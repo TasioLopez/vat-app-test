@@ -31,10 +31,11 @@ WERKERVARING:
 - NOOIT sectie 2 functietitel (current_job) in work_experience
 
 RIJBEWIJS ≠ VERVOER (KRITIEK — vaak in hetzelfde kader):
-- Rijbewijzen: categorieën zoals "B - Personenauto", C, AM, … → drivers_license / drivers_license_type
+- Rijbewijzen: ELK vakje apart (license_b, license_be, license_code_95, …) — alleen true bij ☒/☑ naast die categorie
 - Vervoer: ALLEEN de rij met label "Hoe verplaatst werknemer zich:" met opties Auto | Fiets | OV | Lopend | Anders
-- "B - Personenauto" is een RIJBEWIJS, GEEN transport_auto
+- "B - Personenauto" is een RIJBEWIJS (license_b), GEEN transport_auto
 - transport_auto = true ALLEEN als het vakje naast het woord "Auto" op de Hoe-verplaatst-rij een X/vink heeft
+- Voorbeeld Hippman-stijl rijbewijs: ☒ B ☐ BE ☐ Code 95 → license_b true, license_be false, license_code_95 false
 
 VERVOER (rij "Hoe verplaatst werknemer zich:") — beoordeel ELK vakje apart:
 - transport_auto — true alleen bij gevuld Auto-vakje op die rij
@@ -45,6 +46,11 @@ VERVOER (rij "Hoe verplaatst werknemer zich:") — beoordeel ELK vakje apart:
 - NOOIT alle vier true tenzij alle vier vakjes echt gevuld zijn
 - Negeer "Anders namelijk:"; Bromfiets/Motor horen bij rijbewijs, niet bij vervoer
 
+RIJBEWIJS — beoordeel ELK vakje apart (geen array raden):
+- Alleen true wanneer het vakje naast die categorie duidelijk gevuld is
+- Unchecked ☐ = false; twijfel → false
+- Geen drivers_license / drivers_license_type velden meer — alleen de license_* booleans
+
 TALEN / COMPUTER:
 - dutch_speaking, dutch_writing, dutch_reading: "Goed", "Gemiddeld", "Niet goed"
 - has_computer: PC/laptop aangevinkt
@@ -53,7 +59,7 @@ TALEN / COMPUTER:
 Gebruik null voor ontbrekende niet-boolean velden.`;
 
 export const INTAKE_ALGEMENE_INFO_USER_MESSAGE =
-  'Extract sectie 17. Scheid rijbewijs van vervoer: lees "Hoe verplaatst werknemer zich:" apart (Auto/Fiets/OV/Lopend). Rijbewijs B telt niet als Auto.';
+  'Extract sectie 17. Scheid rijbewijs van vervoer: lees elk license_* vakje apart en "Hoe verplaatst werknemer zich:" apart (Auto/Fiets/OV/Lopend). Rijbewijs B telt niet als Auto.';
 
 export const INTAKE_TRANSPORT_CORRECTION_HINT =
   'transport_type is leeg — herlees ALLEEN de rij "Hoe verplaatst werknemer zich:" (niet het rijbewijzen-blok). Een ☒ bij Auto op die rij → transport_auto true. "B - Personenauto" is rijbewijs, geen vervoer.';

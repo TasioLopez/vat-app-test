@@ -524,21 +524,27 @@ export function isIntakeLockedTransportField(
 }
 
 
+/** Matches ValentineZ intakeformulier rijbewijzen block (Juni V6 / V7.5). */
 export const DRIVERS_LICENSE_TYPE_OPTIONS = [
-  { value: 'B', label: 'B (Auto)' },
-  { value: 'C', label: 'C (Vrachtwagen)' },
-  { value: 'C1', label: 'C1 (Middelgrote vrachtwagen)' },
-  { value: 'D', label: 'D (Bus)' },
-  { value: 'D1', label: 'D1 (Kleine bus)' },
-  { value: 'E', label: 'E (Aanhangwagen)' },
-  { value: 'A', label: 'A (Motor)' },
   { value: 'AM', label: 'AM (Bromfiets)' },
-  { value: 'A1', label: 'A1 (Motor beperkt)' },
-  { value: 'A2', label: 'A2 (Motor beperkt)' },
-  { value: 'BE', label: 'BE (Auto + Aanhangwagen)' },
-  { value: 'CE', label: 'CE (Vrachtwagen + Aanhangwagen)' },
-  { value: 'DE', label: 'DE (Bus + Aanhangwagen)' },
-  { value: 'T', label: 'T (Trekker)' },
+  { value: 'A1', label: 'A1 (Lichte motor)' },
+  { value: 'A2', label: 'A2 (Middelzware motor)' },
+  { value: 'A', label: 'A (Zware / onbeperkte motor)' },
+  { value: 'B', label: 'B (Personenauto)' },
+  { value: 'BE', label: 'BE (Personenauto met aanhanger)' },
+  { value: 'B+', label: 'B+ (Code 96)' },
+  { value: 'C1', label: 'C1 (Lichte vrachtwagen)' },
+  { value: 'C1E', label: 'C1E (Lichte vrachtwagen met aanhanger)' },
+  { value: 'C', label: 'C (Vrachtwagen)' },
+  { value: 'CE', label: 'CE (Vrachtwagen met aanhanger)' },
+  { value: 'D1', label: 'D1 (Kleine bus)' },
+  { value: 'D1E', label: 'D1E (Kleine bus met aanhanger)' },
+  { value: 'D', label: 'D (Bus)' },
+  { value: 'DE', label: 'DE (Bus met aanhanger)' },
+  { value: 'T', label: 'T (Tractor)' },
+  { value: 'Code 95', label: 'Code 95' },
+  // Legacy UI value still accepted for existing employee_details rows
+  { value: 'E', label: 'E (Aanhangwagen)' },
 ] as const;
 
 export const COMPUTER_SKILLS_OPTIONS = [

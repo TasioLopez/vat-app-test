@@ -44,6 +44,12 @@ export {
   hasMeaningfulIntakeMappedPayload,
 } from './worker-profile-autofill';
 export {
+  detectDriversLicenseFromIntakeText,
+  detectTransportFromIntakeText,
+  applyIntakeCheckboxTextOverrides,
+  filterAllowedDriversLicenseTypes,
+} from './intakeCheckboxText';
+export {
   INTAKE_CORE_JSON_SCHEMA,
   parseIntakeCoreExtractionResult,
 } from './schemas/intake-core-schema';

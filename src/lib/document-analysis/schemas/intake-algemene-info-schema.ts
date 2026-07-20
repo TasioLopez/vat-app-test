@@ -1,4 +1,9 @@
-import { EDUCATION_LEVEL_OPTIONS, TRANSPORT_TYPE_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
+import {
+  DRIVERS_LICENSE_TYPE_OPTIONS,
+  DRIVERS_LICENSE_TYPE_VALUES,
+  EDUCATION_LEVEL_OPTIONS,
+  TRANSPORT_TYPE_OPTIONS,
+} from '@/lib/tp2026/gegevens-field-options';
 
 export type IntakeAlgemeneInfoExtractionResult = Record<string, unknown>;
 
@@ -20,6 +25,26 @@ const TRANSPORT_CHECKBOX_TO_LABEL: Record<(typeof TRANSPORT_CHECKBOX_KEYS)[numbe
   transport_lopend: 'Lopend',
 };
 
+/** Schema field key + stored drivers_license_type value (intake order, excluding legacy E). */
+export const LICENSE_CHECKBOX_DEFS = DRIVERS_LICENSE_TYPE_OPTIONS.filter(
+  (o) => o.value !== 'E'
+).map((o) => ({
+  key: licenseSchemaKey(o.value),
+  value: o.value,
+  label: o.label,
+}));
+
+export const LICENSE_CHECKBOX_KEYS = LICENSE_CHECKBOX_DEFS.map((d) => d.key);
+
+function licenseSchemaKey(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/\+/g, '_plus')
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+  return `license_${slug}`;
+}
+
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
 }
@@ -34,6 +59,17 @@ function transportCheckbox(label: string) {
     description: `True ONLY if the checkbox next to "${label}" on the "Hoe verplaatst werknemer zich" row is filled (☒/☑/X). Not rijbewijs categories (B/C/AM). Empty ☐ = false.`,
   };
 }
+
+function licenseCheckbox(value: string, label: string) {
+  return {
+    type: 'boolean' as const,
+    description: `True ONLY if the checkbox next to rijbewijs "${value}" (${label}) is filled (☒/☑/X). Empty ☐ = false. Not vervoer Auto/Fiets.`,
+  };
+}
+
+const licenseCheckboxProperties = Object.fromEntries(
+  LICENSE_CHECKBOX_DEFS.map((d) => [d.key, licenseCheckbox(d.value, d.label)])
+);
 
 export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
   type: 'object',
@@ -51,12 +87,7 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     transport_fiets: transportCheckbox('Fiets'),
     transport_ov: transportCheckbox('OV'),
     transport_lopend: transportCheckbox('Lopend'),
-    drivers_license: nullableBoolean('Heeft rijbewijs'),
-    drivers_license_type: {
-      type: 'array',
-      description: 'Rijbewijscategorieën; lege array indien geen',
-      items: { type: 'string' },
-    },
+    ...licenseCheckboxProperties,
     dutch_speaking: {
       type: ['string', 'null'] as const,
       enum: DUTCH_LEVEL_ENUM,
@@ -87,8 +118,7 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     'transport_fiets',
     'transport_ov',
     'transport_lopend',
-    'drivers_license',
-    'drivers_license_type',
+    ...LICENSE_CHECKBOX_KEYS,
     'dutch_speaking',
     'dutch_writing',
     'dutch_reading',
@@ -106,15 +136,25 @@ function isPresent(value: unknown): boolean {
 }
 
 /** Map per-checkbox booleans → transport_type array in canonical order. */
-export function transportTypeFromCheckboxes(
-  raw: Record<string, unknown>
-): string[] {
+export function transportTypeFromCheckboxes(raw: Record<string, unknown>): string[] {
   const allowed = new Set<string>(TRANSPORT_TYPE_OPTIONS);
   const out: string[] = [];
   for (const key of TRANSPORT_CHECKBOX_KEYS) {
     if (raw[key] === true) {
       const label = TRANSPORT_CHECKBOX_TO_LABEL[key];
       if (allowed.has(label)) out.push(label);
+    }
+  }
+  return out;
+}
+
+/** Map per-checkbox license booleans → drivers_license_type array in intake order. */
+export function driversLicenseTypeFromCheckboxes(raw: Record<string, unknown>): string[] {
+  const allowed = new Set<string>(DRIVERS_LICENSE_TYPE_VALUES);
+  const out: string[] = [];
+  for (const def of LICENSE_CHECKBOX_DEFS) {
+    if (raw[def.key] === true && allowed.has(def.value)) {
+      out.push(def.value);
     }
   }
   return out;
@@ -127,19 +167,33 @@ export function parseIntakeAlgemeneInfoExtractionResult(
   const out: IntakeAlgemeneInfoExtractionResult = {};
 
   // Prefer structured per-box booleans when present.
-  const hasCheckboxFields = TRANSPORT_CHECKBOX_KEYS.some((k) => k in o);
-  if (hasCheckboxFields) {
+  const hasTransportCheckboxFields = TRANSPORT_CHECKBOX_KEYS.some((k) => k in o);
+  if (hasTransportCheckboxFields) {
     out.transport_type = transportTypeFromCheckboxes(o);
   }
 
+  const hasLicenseCheckboxFields = LICENSE_CHECKBOX_KEYS.some((k) => k in o);
+  if (hasLicenseCheckboxFields) {
+    const types = driversLicenseTypeFromCheckboxes(o);
+    out.drivers_license_type = types;
+    out.drivers_license = types.length > 0;
+  }
+
+  const licenseKeySet = new Set<string>(LICENSE_CHECKBOX_KEYS);
   for (const [key, value] of Object.entries(o)) {
-    if ((TRANSPORT_CHECKBOX_KEYS as readonly string[]).includes(key)) continue;
+    if ((TRANSPORT_CHECKBOX_KEYS as readonly string[]).includes(key as (typeof TRANSPORT_CHECKBOX_KEYS)[number])) {
+      continue;
+    }
+    if (licenseKeySet.has(key)) continue;
     if (key === 'transport_type') {
-      if (!hasCheckboxFields && Array.isArray(value)) out[key] = value;
+      if (!hasTransportCheckboxFields && Array.isArray(value)) out[key] = value;
       continue;
     }
     if (key === 'drivers_license_type') {
-      if (Array.isArray(value)) out[key] = value;
+      if (!hasLicenseCheckboxFields && Array.isArray(value)) out[key] = value;
+      continue;
+    }
+    if (key === 'drivers_license' && hasLicenseCheckboxFields) {
       continue;
     }
     if (!isPresent(value)) continue;
@@ -148,4 +202,4 @@ export function parseIntakeAlgemeneInfoExtractionResult(
   return out;
 }
 
-export { EDUCATION_LEVEL_ENUM, TRANSPORT_CHECKBOX_KEYS };
+export { EDUCATION_LEVEL_ENUM, TRANSPORT_CHECKBOX_KEYS, licenseSchemaKey };

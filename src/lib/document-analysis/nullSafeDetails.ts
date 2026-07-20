@@ -5,6 +5,7 @@ import {
   normalizeEducationLevel,
   repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
+import { filterAllowedDriversLicenseTypes } from '@/lib/document-analysis/intakeCheckboxText';
 
 const FIELD_MAPPING: Record<string, string> = {
   geslacht_werknemer: 'gender',
@@ -139,9 +140,13 @@ export function mapAndValidateEmployeeDetails(
 
     if (mappedKey === 'drivers_license_type') {
       if (Array.isArray(rawValue) && rawValue.length > 0) {
-        mappedData[mappedKey] = rawValue.map((v) => String(v).trim()).filter(Boolean);
+        const filtered = filterAllowedDriversLicenseTypes(rawValue);
+        if (filtered.length > 0) mappedData[mappedKey] = filtered;
       } else if (typeof rawValue === 'string' && rawValue.trim().length > 0) {
-        mappedData[mappedKey] = rawValue.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+        const filtered = filterAllowedDriversLicenseTypes(
+          rawValue.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+        );
+        if (filtered.length > 0) mappedData[mappedKey] = filtered;
       }
       continue;
     }
