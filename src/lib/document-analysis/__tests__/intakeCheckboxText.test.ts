@@ -75,19 +75,35 @@ describe('applyIntakeCheckboxTextOverrides', () => {
       drivers_license_type: ['B', 'BE', 'Code 95'],
       drivers_license: true,
     };
-    applyIntakeCheckboxTextOverrides(mapped, HIPPMAN_RIJBEWIJS_VERVOER);
+    const sources = applyIntakeCheckboxTextOverrides(mapped, HIPPMAN_RIJBEWIJS_VERVOER);
     assert.deepEqual(mapped.transport_type, ['Auto']);
     assert.deepEqual(mapped.drivers_license_type, ['B']);
     assert.equal(mapped.drivers_license, true);
+    assert.equal(sources.transportSource, 'text');
+    assert.equal(sources.licenseSource, 'text');
   });
 
-  it('leaves vision values when text is inconclusive', () => {
+  it('clears invented vision transport/license when text is inconclusive', () => {
     const mapped: Record<string, unknown> = {
-      transport_type: ['Auto', 'Fiets'],
+      transport_type: ['Auto', 'OV'],
       drivers_license_type: ['B', 'BE'],
+      drivers_license: true,
     };
-    applyIntakeCheckboxTextOverrides(mapped, 'geen checkboxes hier');
-    assert.deepEqual(mapped.transport_type, ['Auto', 'Fiets']);
-    assert.deepEqual(mapped.drivers_license_type, ['B', 'BE']);
+    const sources = applyIntakeCheckboxTextOverrides(mapped, 'geen checkboxes hier');
+    assert.equal('transport_type' in mapped, false);
+    assert.equal('drivers_license_type' in mapped, false);
+    assert.equal('drivers_license' in mapped, false);
+    assert.equal(sources.transportSource, 'cleared');
+    assert.equal(sources.licenseSource, 'cleared');
+  });
+
+  it('marks absent when text is empty', () => {
+    const mapped: Record<string, unknown> = {
+      transport_type: ['Auto', 'OV'],
+    };
+    const sources = applyIntakeCheckboxTextOverrides(mapped, '');
+    assert.equal('transport_type' in mapped, false);
+    assert.equal(sources.transportSource, 'absent');
+    assert.equal(sources.licenseSource, 'absent');
   });
 });

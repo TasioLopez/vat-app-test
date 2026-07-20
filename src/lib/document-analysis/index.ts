@@ -50,6 +50,13 @@ export {
   filterAllowedDriversLicenseTypes,
 } from './intakeCheckboxText';
 export {
+  bufferToPlainText,
+  detectDocumentKind,
+  extractPdfPlainTextWithGlyphFallback,
+  describeIntakePlainText,
+  hasCheckboxGlyphs,
+} from './documentPlainText';
+export {
   INTAKE_CORE_JSON_SCHEMA,
   parseIntakeCoreExtractionResult,
 } from './schemas/intake-core-schema';

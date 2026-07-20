@@ -108,23 +108,46 @@ export function detectTransportFromIntakeText(
 }
 
 /**
- * Overwrite transport_type / drivers_license_type when PDF text has clear checkbox marks.
+ * Overwrite transport / rijbewijs from PDF text when detectors can decide.
+ * When detectors return null, clear vision guesses so invented OV/BE cannot stick.
  * Mutates `mapped` in place.
  */
+export type CheckboxFieldSource = 'text' | 'cleared' | 'absent';
+
+export type IntakeCheckboxOverrideResult = {
+  transportSource: CheckboxFieldSource;
+  licenseSource: CheckboxFieldSource;
+};
+
 export function applyIntakeCheckboxTextOverrides(
   mapped: Record<string, unknown>,
   text: string | null | undefined
-): void {
+): IntakeCheckboxOverrideResult {
+  const hasText = Boolean(text && text.trim());
+
   const transport = detectTransportFromIntakeText(text);
+  let transportSource: CheckboxFieldSource;
   if (transport !== null) {
     mapped.transport_type = transport;
+    transportSource = 'text';
+  } else {
+    delete mapped.transport_type;
+    transportSource = hasText ? 'cleared' : 'absent';
   }
 
   const licenses = detectDriversLicenseFromIntakeText(text);
+  let licenseSource: CheckboxFieldSource;
   if (licenses !== null) {
     mapped.drivers_license_type = licenses;
     mapped.drivers_license = licenses.length > 0;
+    licenseSource = 'text';
+  } else {
+    delete mapped.drivers_license_type;
+    delete mapped.drivers_license;
+    licenseSource = hasText ? 'cleared' : 'absent';
   }
+
+  return { transportSource, licenseSource };
 }
 
 export function filterAllowedDriversLicenseTypes(values: unknown[]): string[] {

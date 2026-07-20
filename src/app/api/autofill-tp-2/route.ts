@@ -32,8 +32,8 @@ import {
   detectAdReportConceptFromText,
 } from '@/lib/tp/ad-report-wording';
 import {
-  bufferToPlainText,
-  detectDocumentKind,
+  describeIntakePlainText,
+  extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
@@ -122,9 +122,26 @@ async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean 
   if (!downloaded) return null;
 
   try {
-    const kind = detectDocumentKind(downloaded.path, intakeDoc.name);
-    const plainText = await bufferToPlainText(downloaded.buffer, kind);
-    return detectAdReportConceptFromText(plainText);
+    const fallbackName = intakeDoc.name || `${intakeDoc.type || 'document'}`;
+    const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
+      downloaded.buffer,
+      fallbackName || downloaded.path
+    );
+    if (wasConverted) {
+      console.log(`✅ TP2 intake normalized to PDF for Concept text (${analysisFilename})`);
+    }
+
+    const plainText = await extractPdfPlainTextWithGlyphFallback(pdfBuffer);
+    const meta = describeIntakePlainText(plainText);
+    console.log(
+      `📋 TP2 Concept plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
+    );
+
+    const detected = detectAdReportConceptFromText(plainText);
+    if (detected !== null) return detected;
+    // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
+    if (meta.hasConcept) return false;
+    return null;
   } catch (error) {
     console.warn('⚠️ TP2 Concept checkbox text detection failed', error);
     return null;

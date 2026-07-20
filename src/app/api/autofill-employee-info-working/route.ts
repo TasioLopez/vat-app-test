@@ -36,8 +36,8 @@ import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-option
 import { shouldSkipSecondaryDocsForWorkerProfile } from '@/lib/document-analysis/worker-profile-autofill';
 import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
 import {
-  bufferToPlainText,
-  detectDocumentKind,
+  describeIntakePlainText,
+  extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
 
 export const maxDuration = 180;
@@ -96,6 +96,14 @@ async function processIntakeForm(doc: DocRow): Promise<{
     const { buffer, path } = downloaded;
     const fallbackName = doc.name || `${doc.type || 'document'}`;
 
+    const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
+      buffer,
+      fallbackName || path
+    );
+    if (wasConverted) {
+      console.log(`✅ Intake normalized to PDF for text+vision (${analysisFilename})`);
+    }
+
     const { raw, referentFields } = await extractIntakeEmployeeDetailsFromVision(
       openai,
       buffer,
@@ -107,11 +115,20 @@ async function processIntakeForm(doc: DocRow): Promise<{
     const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
 
     try {
-      const kind = detectDocumentKind(path, doc.name);
-      const plainText = await bufferToPlainText(buffer, kind);
-      applyIntakeCheckboxTextOverrides(mapped, plainText);
+      const plainText = await extractPdfPlainTextWithGlyphFallback(pdfBuffer);
+      const meta = describeIntakePlainText(plainText);
+      console.log(
+        `📋 Intake plain text len=${meta.textLen} hoeVerplaatst=${meta.hasHoeVerplaatst} rijbewijs=${meta.hasRijbewijzen} glyphs=${meta.hasCheckboxGlyphs}`
+      );
+      const sources = applyIntakeCheckboxTextOverrides(mapped, plainText);
+      console.log(
+        `📋 Checkbox text override transport=${JSON.stringify(mapped.transport_type)} source=${sources.transportSource} license=${JSON.stringify(mapped.drivers_license_type)} source=${sources.licenseSource}`
+      );
     } catch (error) {
       console.warn('⚠️ Intake checkbox text override failed', error);
+      delete mapped.transport_type;
+      delete mapped.drivers_license_type;
+      delete mapped.drivers_license;
     }
 
     console.log(`✅ Intake form processing completed: ${Object.keys(mapped).length} fields`);
