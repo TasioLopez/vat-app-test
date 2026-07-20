@@ -16,7 +16,7 @@ import {
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
-import { readAutofillResponse } from '@/lib/autofill-response';
+import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -134,9 +134,7 @@ async function runEmployeeAutofillStep(
       };
     }
     const json = parsed.json;
-
-    const details = (json.details || json.data?.details) as Record<string, unknown> | undefined;
-    const data = json.data || json;
+    const { details, data } = getAutofillDetailsPayload(json);
     if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen werknemersgegevens gevonden in documenten' };
     }
@@ -152,8 +150,8 @@ async function runEmployeeAutofillStep(
       employeePersist: {
         rawDetails: details,
         meta: {
-          autofill_incomplete: data.autofill_incomplete,
-          autofill_warnings: data.autofill_warnings,
+          autofill_incomplete: data.autofill_incomplete as boolean | undefined,
+          autofill_warnings: data.autofill_warnings as { message?: string }[] | undefined,
         },
       },
     };
@@ -188,7 +186,7 @@ async function runTp2AutofillStep(
         error: (typeof json.error === 'string' && json.error) || 'Gegevens traject autofill mislukt',
       };
     }
-    const details = json.details as Record<string, unknown> | undefined;
+    const { details } = getAutofillDetailsPayload(json);
     if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }

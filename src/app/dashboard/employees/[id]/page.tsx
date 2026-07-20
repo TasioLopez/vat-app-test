@@ -40,7 +40,7 @@ import {
     type AutofillProgressState,
 } from '@/components/ui/AutofillProgressOverlay';
 import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
-import { readAutofillResponse } from '@/lib/autofill-response';
+import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
 import { isAutofillAbortError } from '@/lib/tp2026/autofill-runner';
 import {
     applyEmployeeAutofillDetails,
@@ -775,13 +775,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
-            const details = json.details || json.data?.details;
-            const data = json.data || json;
+            const { details, data } = getAutofillDetailsPayload(json);
             if (details && Object.keys(details).length > 0) {
-                const processedDetails = processEmployeeAutofillRawDetails(details as Record<string, unknown>);
+                const processedDetails = processEmployeeAutofillRawDetails(details);
                 const fields = listAutofilledEmployeeDetailKeys(processedDetails);
 
-                const suggested = data.suggested_referent;
+                const suggested = data.suggested_referent as
+                    | {
+                          first_name?: string;
+                          last_name?: string;
+                          referent_function?: string;
+                          phone?: string;
+                          email?: string;
+                          gender?: string;
+                      }
+                    | undefined;
                 if (suggested && (suggested.first_name || suggested.last_name)) {
                     setSuggestedReferent({
                         first_name: suggested.first_name || '',
@@ -792,7 +800,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         gender: suggested.gender,
                     });
                     setReferentExists(Boolean(data.referent_exists));
-                    setExistingReferentId(data.existing_referent_id ?? null);
+                    setExistingReferentId(
+                        typeof data.existing_referent_id === 'string'
+                            ? data.existing_referent_id
+                            : null
+                    );
                 } else {
                     setSuggestedReferent(null);
                     setReferentExists(false);
@@ -805,8 +817,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     employeeDetails,
                     processedDetails,
                     {
-                        autofill_incomplete: data.autofill_incomplete,
-                        autofill_warnings: data.autofill_warnings,
+                        autofill_incomplete: Boolean(data.autofill_incomplete),
+                        autofill_warnings: Array.isArray(data.autofill_warnings)
+                            ? (data.autofill_warnings as { message?: string }[])
+                            : undefined,
                     }
                 );
 

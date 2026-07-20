@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseAutofillResponseBody } from '@/lib/autofill-response';
+import {
+  getAutofillDetailsPayload,
+  parseAutofillResponseBody,
+} from '@/lib/autofill-response';
 
 describe('parseAutofillResponseBody', () => {
   it('parses successful JSON', () => {
@@ -43,5 +46,23 @@ describe('parseAutofillResponseBody', () => {
     if (!result.ok) {
       assert.equal(result.error, 'employeeId is verplicht');
     }
+  });
+});
+
+describe('getAutofillDetailsPayload', () => {
+  it('reads top-level details', () => {
+    const { details, data } = getAutofillDetailsPayload({
+      details: { transport_type: ['Auto'] },
+      autofill_incomplete: false,
+    });
+    assert.deepEqual(details, { transport_type: ['Auto'] });
+    assert.equal(data.autofill_incomplete, false);
+  });
+
+  it('reads nested data.details', () => {
+    const { details } = getAutofillDetailsPayload({
+      data: { details: { phone: '06' }, suggested_referent: { first_name: 'A' } },
+    });
+    assert.deepEqual(details, { phone: '06' });
   });
 });
