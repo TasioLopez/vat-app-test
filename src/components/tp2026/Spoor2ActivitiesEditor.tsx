@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TP_ACTIVITIES, {
   formatSpoor2NotitieLabel,
   isSpoor2NotitieEligible,
@@ -11,6 +11,8 @@ import TP_ACTIVITIES, {
 } from '@/lib/tp/tp_activities';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const NOTITIE_DEBOUNCE_MS = 400;
 
 function getSubTextOption(currentSub: string | null, templates: string[]): string {
   if (currentSub === null) return 'geen';
@@ -27,26 +29,91 @@ export function Spoor2ActivitiesEditor({
   onChange: (next: TPActivitySelection[]) => void;
 }) {
   const [editingSubTextForId, setEditingSubTextForId] = useState<string | null>(null);
+  const [draftSubText, setDraftSubText] = useState('');
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDraftRef = useRef<{ id: string; value: string } | null>(null);
 
   const selections = useMemo(() => resolveSpoor2Selections(tp3Activities), [tp3Activities]);
+  const selectionsRef = useRef(selections);
+  selectionsRef.current = selections;
 
-  const persist = (next: TPActivitySelection[]) => {
-    onChange(sanitizeSpoor2Selections(next));
-  };
+  const persist = useCallback(
+    (next: TPActivitySelection[]) => {
+      onChange(sanitizeSpoor2Selections(next));
+    },
+    [onChange]
+  );
 
   const getSubText = (id: string) => selections.find((s) => s.id === id)?.subText ?? null;
 
-  const setSubText = (id: string, value: string | null) => {
-    const next = selections.map((s) => (s.id === id ? { ...s, subText: value } : s));
-    persist(next);
+  const setSubText = useCallback(
+    (id: string, value: string | null) => {
+      const next = selectionsRef.current.map((s) => (s.id === id ? { ...s, subText: value } : s));
+      persist(next);
+    },
+    [persist]
+  );
+
+  const flushPendingDraft = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    const pending = pendingDraftRef.current;
+    if (!pending) return;
+    pendingDraftRef.current = null;
+    setSubText(pending.id, pending.value);
+  }, [setSubText]);
+
+  const scheduleSubText = useCallback(
+    (id: string, value: string) => {
+      setDraftSubText(value);
+      pendingDraftRef.current = { id, value };
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        const pending = pendingDraftRef.current;
+        if (!pending) return;
+        pendingDraftRef.current = null;
+        setSubText(pending.id, pending.value);
+      }, NOTITIE_DEBOUNCE_MS);
+    },
+    [setSubText]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      const pending = pendingDraftRef.current;
+      if (pending) {
+        pendingDraftRef.current = null;
+        const next = selectionsRef.current.map((s) =>
+          s.id === pending.id ? { ...s, subText: pending.value } : s
+        );
+        onChange(sanitizeSpoor2Selections(next));
+      }
+    };
+  }, [onChange]);
+
+  const openSubTextEditor = (id: string, initial: string) => {
+    flushPendingDraft();
+    setDraftSubText(initial);
+    setEditingSubTextForId(id);
+  };
+
+  const closeSubTextEditor = () => {
+    flushPendingDraft();
+    setEditingSubTextForId(null);
   };
 
   const toggleActivity = (id: string) => {
+    flushPendingDraft();
     const isSelected = selections.some((s) => s.id === id);
     const next = isSelected
       ? selections.filter((s) => s.id !== id)
       : [...selections, { id, subText: null }];
     persist(next);
+    if (isSelected && editingSubTextForId === id) setEditingSubTextForId(null);
     if (!isSelected) setEditingSubTextForId(null);
   };
 
@@ -58,6 +125,8 @@ export function Spoor2ActivitiesEditor({
         const canAddNotitie = checked && isSpoor2NotitieEligible(a.id) && templates.length === 3;
         const currentSub = getSubText(a.id);
         const subTextOption = getSubTextOption(currentSub, templates);
+        const isEditing = editingSubTextForId === a.id;
+        const previewSub = isEditing ? draftSubText : currentSub;
 
         return (
           <div
@@ -82,13 +151,23 @@ export function Spoor2ActivitiesEditor({
                 <Select
                   value={subTextOption}
                   onValueChange={(v) => {
-                    if (v === 'geen') setSubText(a.id, null);
-                    else if (v === 'sjabloon-1') setSubText(a.id, templates[0]);
-                    else if (v === 'sjabloon-2') setSubText(a.id, templates[1]);
-                    else if (v === 'sjabloon-3') setSubText(a.id, templates[2]);
-                    else if (v === 'custom') {
-                      setSubText(a.id, currentSub ?? '');
-                      setEditingSubTextForId(a.id);
+                    flushPendingDraft();
+                    if (v === 'geen') {
+                      setSubText(a.id, null);
+                      setEditingSubTextForId(null);
+                    } else if (v === 'sjabloon-1') {
+                      setSubText(a.id, templates[0]);
+                      setEditingSubTextForId(null);
+                    } else if (v === 'sjabloon-2') {
+                      setSubText(a.id, templates[1]);
+                      setEditingSubTextForId(null);
+                    } else if (v === 'sjabloon-3') {
+                      setSubText(a.id, templates[2]);
+                      setEditingSubTextForId(null);
+                    } else if (v === 'custom') {
+                      const initial = currentSub ?? '';
+                      setSubText(a.id, initial);
+                      openSubTextEditor(a.id, initial);
                     }
                   }}
                 >
@@ -103,21 +182,30 @@ export function Spoor2ActivitiesEditor({
                     <SelectItem value="custom">Aangepast</SelectItem>
                   </SelectContent>
                 </Select>
-                {currentSub != null && currentSub !== '' ? (
+                {(currentSub != null && currentSub !== '') || isEditing ? (
                   <>
-                    <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{currentSub}</div>
+                    <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {previewSub ?? ''}
+                    </div>
                     <button
                       type="button"
                       className="text-xs text-primary underline"
-                      onClick={() => setEditingSubTextForId(editingSubTextForId === a.id ? null : a.id)}
+                      onClick={() => {
+                        if (isEditing) {
+                          closeSubTextEditor();
+                        } else {
+                          openSubTextEditor(a.id, currentSub ?? '');
+                        }
+                      }}
                     >
-                      {editingSubTextForId === a.id ? 'Sluiten' : 'Bewerken'}
+                      {isEditing ? 'Sluiten' : 'Bewerken'}
                     </button>
-                    {editingSubTextForId === a.id ? (
+                    {isEditing ? (
                       <textarea
                         className="mt-1 min-h-[60px] w-full rounded border border-border bg-background px-2 py-1 text-sm"
-                        value={currentSub}
-                        onChange={(e) => setSubText(a.id, e.target.value)}
+                        value={draftSubText}
+                        onChange={(e) => scheduleSubText(a.id, e.target.value)}
+                        onBlur={flushPendingDraft}
                       />
                     ) : null}
                   </>

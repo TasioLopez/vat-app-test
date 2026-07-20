@@ -845,16 +845,21 @@ export function Basis2026A4Pages({
 }) {
   const { getSectionStartPage, setSectionPageCount } = useTP2026PageNumber();
   const baseline = useMemo(() => buildBasisBodyAtoms(data), [data]);
-  const [bodyAtoms, setBodyAtoms] = useState<BasisAtom[]>(baseline);
-  const [bodyPages, setBodyPages] = useState<number[][]>([]);
+  /** Atoms currently being measured / split (may differ from what is on screen). */
+  const [measureAtoms, setMeasureAtoms] = useState<BasisAtom[]>(baseline);
+  /** Last successfully packed snapshot — kept visible while remeasuring. */
+  const [displayAtoms, setDisplayAtoms] = useState<BasisAtom[]>(baseline);
+  const [displayPages, setDisplayPages] = useState<number[][]>([]);
   const [isPaginating, setIsPaginating] = useState(true);
   const readySentRef = useRef(false);
+  const paginationGenRef = useRef(0);
 
   useEffect(() => {
-    setBodyAtoms(baseline);
-    setBodyPages([]);
+    paginationGenRef.current += 1;
+    setMeasureAtoms(baseline);
     setIsPaginating(true);
     readySentRef.current = false;
+    // Keep displayAtoms/displayPages so the preview does not blank to "Pagineren...".
   }, [baseline]);
 
   const emitReady = useCallback(() => {
@@ -866,6 +871,7 @@ export function Basis2026A4Pages({
 
   const measureAndPaginate = useCallback(async () => {
     if (typeof document === 'undefined') return;
+    const gen = paginationGenRef.current;
 
     const fontsApi = document.fonts;
     if (fontsApi) {
@@ -874,19 +880,24 @@ export function Basis2026A4Pages({
     await preloadImages(BASIS_PRELOAD_IMG_SRC);
     await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
+    if (gen !== paginationGenRef.current) return;
+
+    const atoms = measureAtoms;
     const result = packPagesWithDomMeasure(
       data,
-      bodyAtoms,
+      atoms,
       (idx) => {
-        const split = trySplitAtom(bodyAtoms, idx);
+        const split = trySplitAtom(atoms, idx);
         if (split) {
-          setBodyAtoms(split);
+          setMeasureAtoms(split);
           return true;
         }
         return false;
       },
       printMode
     );
+
+    if (gen !== paginationGenRef.current) return;
 
     if (!result.ok && result.reason === 'split_retry') {
       return;
@@ -896,15 +907,17 @@ export function Basis2026A4Pages({
       console.warn(
         `Basis2026A4Pages: atom ${result.atomIndex} does not fit on one page and could not be split; using one atom per page.`
       );
-      setBodyPages(bodyAtoms.map((_, i) => [i]));
+      setDisplayAtoms(atoms);
+      setDisplayPages(atoms.map((_, i) => [i]));
       emitReady();
       return;
     }
 
     const packed = result.pages;
-    setBodyPages(packed.length ? packed : bodyAtoms.map((_, i) => [i]));
+    setDisplayAtoms(atoms);
+    setDisplayPages(packed.length ? packed : atoms.map((_, i) => [i]));
     emitReady();
-  }, [bodyAtoms, data, emitReady, printMode]);
+  }, [measureAtoms, data, emitReady, printMode]);
 
   useLayoutEffect(() => {
     void measureAndPaginate();
@@ -921,16 +934,16 @@ export function Basis2026A4Pages({
       <div key={key}>{node}</div>
     );
 
-  const pages = bodyPages;
   const basisStartPage = getSectionStartPage('basis');
 
   useEffect(() => {
     if (!isPaginating) {
-      setSectionPageCount('basis', 1 + bodyPages.length);
+      setSectionPageCount('basis', 1 + displayPages.length);
     }
-  }, [isPaginating, bodyPages.length, setSectionPageCount]);
+  }, [isPaginating, displayPages.length, setSectionPageCount]);
 
-  if (isPaginating) {
+  // Only blank on the initial pack when there is nothing to show yet.
+  if (isPaginating && displayPages.length === 0) {
     return (
       <div className="flex items-center justify-center p-8">
         <p className="text-muted-foreground">Pagineren...</p>
@@ -944,11 +957,11 @@ export function Basis2026A4Pages({
         <Basis2026InhoudsopgavePage data={data} pageNumber={basisStartPage} />,
         'basis-inhoud'
       )}
-      {pages.map((idxs, pi) =>
+      {displayPages.map((idxs, pi) =>
         wrap(
           <BasisBodyPage
             data={data}
-            atoms={idxs.map((i) => bodyAtoms[i]).filter(Boolean)}
+            atoms={idxs.map((i) => displayAtoms[i]).filter(Boolean)}
             pageNumber={basisStartPage + 1 + pi}
             printMode={printMode}
           />,
