@@ -23,7 +23,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  serverExternalPackages: ['pdf-parse'],
+  serverExternalPackages: ['pdf-parse', 'pdfjs-dist'],
   transpilePackages: ['@mdxeditor/editor'],
   eslint: {
     ignoreDuringBuilds: true,

@@ -20,13 +20,7 @@ export async function bufferToPlainText(buffer: Buffer, kind: DocumentKind): Pro
     }
   }
   if (kind === 'pdf') {
-    try {
-      const pdfParse = (await import('pdf-parse')).default;
-      const data = await pdfParse(buffer);
-      return typeof data?.text === 'string' ? data.text : '';
-    } catch {
-      return '';
-    }
+    return extractPdfPlainTextWithGlyphFallback(buffer);
   }
   return '';
 }
@@ -61,6 +55,17 @@ export function describeIntakePlainText(text: string): IntakePlainTextMeta {
   };
 }
 
+async function extractPdfTextWithPdfParse(buffer: Buffer): Promise<string> {
+  try {
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer);
+    return typeof data?.text === 'string' ? data.text : '';
+  } catch (error) {
+    console.warn('⚠️ pdf-parse text extraction failed', error);
+    return '';
+  }
+}
+
 async function extractPdfTextWithPdfJs(buffer: Buffer): Promise<string> {
   try {
     // Legacy build works in Next.js Node server routes without a worker file.
@@ -83,26 +88,36 @@ async function extractPdfTextWithPdfJs(buffer: Buffer): Promise<string> {
     }
     await doc.destroy();
     return parts.join('\n');
-  } catch {
+  } catch (error) {
+    console.warn('⚠️ pdfjs text extraction failed', error);
     return '';
   }
 }
 
 /**
  * Extract PDF plain text for checkbox detection.
- * Prefer pdf-parse; if checkbox glyphs are missing, retry with pdfjs-dist.
+ * Prefer pdfjs (preserves ☒/☐ on ValentineZ intakes); fall back to pdf-parse.
  */
 export async function extractPdfPlainTextWithGlyphFallback(
   pdfBuffer: Buffer
 ): Promise<string> {
-  const primary = await bufferToPlainText(pdfBuffer, 'pdf');
-  if (hasCheckboxGlyphs(primary)) return primary;
+  const pdfjsText = await extractPdfTextWithPdfJs(pdfBuffer);
+  if (hasCheckboxGlyphs(pdfjsText)) {
+    console.log(`📋 PDF text via pdfjs (glyphs) len=${pdfjsText.length}`);
+    return pdfjsText;
+  }
 
-  const fallback = await extractPdfTextWithPdfJs(pdfBuffer);
-  if (!fallback) return primary;
+  const parseText = await extractPdfTextWithPdfParse(pdfBuffer);
+  if (hasCheckboxGlyphs(parseText)) {
+    console.log(`📋 PDF text via pdf-parse (glyphs) len=${parseText.length}`);
+    return parseText;
+  }
 
-  if (hasCheckboxGlyphs(fallback)) return fallback;
-  // Prefer richer text even without glyphs (section markers still help Concept / clearing).
-  if (fallback.length > primary.length) return fallback;
-  return primary;
+  // Prefer whichever has more content for section markers even without glyphs.
+  const chosen =
+    pdfjsText.length >= parseText.length ? pdfjsText : parseText;
+  console.log(
+    `📋 PDF text without checkbox glyphs len=${chosen.length} pdfjs=${pdfjsText.length} parse=${parseText.length}`
+  );
+  return chosen;
 }
