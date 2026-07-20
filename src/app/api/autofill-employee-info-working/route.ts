@@ -86,6 +86,12 @@ async function downloadDocumentBuffer(
 async function processIntakeForm(doc: DocRow): Promise<{
   mapped: Record<string, unknown>;
   referent: Record<string, unknown>;
+  checkboxText?: {
+    textLen: number;
+    hasGlyphs: boolean;
+    transportSource: string;
+    licenseSource: string;
+  };
 }> {
   console.log(`📋 Processing intake form (vision): ${doc.type}`);
 
@@ -114,6 +120,15 @@ async function processIntakeForm(doc: DocRow): Promise<{
     const referent = extractReferentFromRaw({ ...cleanedParsed, ...referentFields });
     const mapped = mapAndValidateEmployeeDetails(cleanedParsed);
 
+    let checkboxText:
+      | {
+          textLen: number;
+          hasGlyphs: boolean;
+          transportSource: string;
+          licenseSource: string;
+        }
+      | undefined;
+
     try {
       const plainText = await extractPdfPlainTextWithGlyphFallback(pdfBuffer);
       const meta = describeIntakePlainText(plainText);
@@ -121,6 +136,12 @@ async function processIntakeForm(doc: DocRow): Promise<{
         `📋 Intake plain text len=${meta.textLen} hoeVerplaatst=${meta.hasHoeVerplaatst} rijbewijs=${meta.hasRijbewijzen} glyphs=${meta.hasCheckboxGlyphs}`
       );
       const sources = applyIntakeCheckboxTextOverrides(mapped, plainText);
+      checkboxText = {
+        textLen: meta.textLen,
+        hasGlyphs: meta.hasCheckboxGlyphs,
+        transportSource: sources.transportSource,
+        licenseSource: sources.licenseSource,
+      };
       console.log(
         `📋 Checkbox text override transport=${JSON.stringify(mapped.transport_type)} source=${sources.transportSource} license=${JSON.stringify(mapped.drivers_license_type)} source=${sources.licenseSource}`
       );
@@ -129,10 +150,16 @@ async function processIntakeForm(doc: DocRow): Promise<{
       delete mapped.transport_type;
       delete mapped.drivers_license_type;
       delete mapped.drivers_license;
+      checkboxText = {
+        textLen: 0,
+        hasGlyphs: false,
+        transportSource: 'absent',
+        licenseSource: 'absent',
+      };
     }
 
     console.log(`✅ Intake form processing completed: ${Object.keys(mapped).length} fields`);
-    return { mapped, referent };
+    return { mapped, referent, checkboxText };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     if (error instanceof GotenbergConversionError || isGotenbergConversionError(message)) {
@@ -233,12 +260,26 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   results: Record<string, unknown>;
   referent: Record<string, unknown>;
   intakeProcessed: boolean;
+  checkboxText?: {
+    textLen: number;
+    hasGlyphs: boolean;
+    transportSource: string;
+    licenseSource: string;
+  };
 }> {
   console.log('🚀 Processing documents separately with vision extraction...');
 
   const results: Record<string, unknown> = {};
   let referent: Record<string, unknown> = {};
   let intakeProcessed = false;
+  let checkboxText:
+    | {
+        textLen: number;
+        hasGlyphs: boolean;
+        transportSource: string;
+        licenseSource: string;
+      }
+    | undefined;
   const processedDocs: string[] = [];
 
   const intakeDoc = docs.find((d) => (d.type || '').toLowerCase().includes('intake'));
@@ -248,6 +289,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     const intakeResult = await processIntakeForm(intakeDoc);
     Object.assign(results, intakeResult.mapped);
     referent = intakeResult.referent;
+    checkboxText = intakeResult.checkboxText;
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
@@ -260,7 +302,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     console.log(
       `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
     );
-    return { results, referent, intakeProcessed };
+    return { results, referent, intakeProcessed, checkboxText };
   }
 
   const adDoc = docs.find((d) => {
@@ -346,7 +388,7 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
   );
 
-  return { results, referent, intakeProcessed };
+  return { results, referent, intakeProcessed, checkboxText };
 }
 
 export async function GET(req: NextRequest) {
@@ -379,7 +421,12 @@ export async function GET(req: NextRequest) {
 
     console.log('📄 Found documents:', docs.length);
 
-    const { results: details, referent, intakeProcessed } = await processDocumentsSeparately(docs);
+    const {
+      results: details,
+      referent,
+      intakeProcessed,
+      checkboxText,
+    } = await processDocumentsSeparately(docs);
 
     if (Object.keys(details).length === 0) {
       console.error('❌ No data extracted from documents');
@@ -475,6 +522,7 @@ export async function GET(req: NextRequest) {
         autofilled_fields: Object.keys(details),
         autofill_incomplete,
         autofill_warnings,
+        checkbox_text: checkboxText,
         suggested_referent: suggested_referent ?? undefined,
         referent_exists,
         existing_referent_id: existing_referent_id ?? undefined,
