@@ -16,12 +16,19 @@ const DOCTOR_ROLE_PREFIX: Record<DoctorRole, string> = {
   VA: 'Verzekeringsarts',
 };
 
+/** Expand intake checkbox abbreviations BA/VA to full Dutch titles in written text. */
+export function expandDoctorRoleAbbreviations(text: string): string {
+  return text
+    .replace(/\bVA\b/gi, 'Verzekeringsarts')
+    .replace(/\bBA\b/gi, 'Bedrijfsarts');
+}
+
 /** Format a doctor name with role prefix when not already prefixed. */
 export function formatDoctorWithRole(name: string, role?: DoctorRole | null): string {
-  const trimmed = name.trim();
+  const trimmed = expandDoctorRoleAbbreviations(name.trim()).replace(/\s+/g, ' ').trim();
   if (!trimmed) return '';
   if (/werkend onder supervisie van/i.test(trimmed)) {
-    return trimmed.replace(/\s+/g, ' ').trim();
+    return trimmed;
   }
   if (hasDoctorRolePrefix(trimmed)) return trimmed;
   if (role && DOCTOR_ROLE_PREFIX[role]) return `${DOCTOR_ROLE_PREFIX[role]} ${trimmed}`;
@@ -30,7 +37,7 @@ export function formatDoctorWithRole(name: string, role?: DoctorRole | null): st
 
 /**
  * Combine primary doctor + OSV supervisor into a supervisie phrase.
- * Preserves verbatim text when supervisie is already present.
+ * Preserves verbatim text when supervisie is already present (after BA/VA expansion).
  */
 export function buildSupervisiePhrase(
   primaryName: string,
@@ -41,7 +48,7 @@ export function buildSupervisiePhrase(
   const raw = primaryName.trim();
   if (!raw) return undefined;
   if (/werkend onder supervisie van/i.test(raw)) {
-    return raw.replace(/\s+/g, ' ').trim();
+    return expandDoctorRoleAbbreviations(raw.replace(/\s+/g, ' ').trim());
   }
 
   const osv = (osvName || '').trim();
@@ -77,7 +84,7 @@ export function extractDoctorRolePrefix(value: string): string | null {
 }
 
 export function cleanDoctorOrgRaw(raw: string): string {
-  let cleaned = raw.trim();
+  let cleaned = expandDoctorRoleAbbreviations(raw.trim());
   if (/werkend onder supervisie van/i.test(cleaned)) {
     return cleaned.replace(/\s+/g, ' ').trim();
   }
@@ -91,7 +98,7 @@ export function cleanDoctorOrgRaw(raw: string): string {
 }
 
 function formatSupervisiePart(part: string): string {
-  const trimmed = part.trim();
+  const trimmed = expandDoctorRoleAbbreviations(part.trim()).replace(/\s+/g, ' ').trim();
   if (!trimmed) return trimmed;
   if (hasDoctorRolePrefix(trimmed)) return trimmed;
   return `Arts ${trimmed}`;
@@ -146,8 +153,10 @@ export function enrichArtsOrgFromMeta(
   artsOrg: string | null | undefined,
   occupationalDoctorOrg: string | null | undefined
 ): string | null {
-  const arts = (artsOrg || '').trim();
-  const meta = (occupationalDoctorOrg || '').trim();
+  const arts = expandDoctorRoleAbbreviations((artsOrg || '').trim()).replace(/\s+/g, ' ').trim();
+  const meta = expandDoctorRoleAbbreviations((occupationalDoctorOrg || '').trim())
+    .replace(/\s+/g, ' ')
+    .trim();
 
   if (!arts) return meta || null;
 

@@ -1,6 +1,32 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildArtsPhrase, buildSupervisiePhrase, enrichArtsOrgFromMeta } from '../format-context';
+import {
+  buildArtsPhrase,
+  buildSupervisiePhrase,
+  enrichArtsOrgFromMeta,
+  expandDoctorRoleAbbreviations,
+  formatDoctorWithRole,
+} from '../format-context';
+
+describe('expandDoctorRoleAbbreviations', () => {
+  it('expands VA and BA at word boundaries', () => {
+    assert.equal(
+      expandDoctorRoleAbbreviations('VA P. Mort werkend onder supervisie van BA K. Julien'),
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+  });
+
+  it('does not alter full titles', () => {
+    assert.equal(
+      expandDoctorRoleAbbreviations('Verzekeringsarts A.J. Karim'),
+      'Verzekeringsarts A.J. Karim'
+    );
+    assert.equal(
+      expandDoctorRoleAbbreviations('Bedrijfsarts M. Montagne'),
+      'Bedrijfsarts M. Montagne'
+    );
+  });
+});
 
 describe('buildArtsPhrase', () => {
   it('preserves Verzekeringsarts prefix', () => {
@@ -14,6 +40,13 @@ describe('buildArtsPhrase', () => {
   it('preserves verbatim supervisie sentence', () => {
     const input = 'Arts L. Bollen werkend onder supervisie van arts T. de Haas';
     assert.equal(buildArtsPhrase(input), input);
+  });
+
+  it('expands BA/VA abbreviations in supervisie sentence', () => {
+    assert.equal(
+      buildArtsPhrase('VA P. Mort werkend onder supervisie van BA K. Julien'),
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
   });
 
   it('rebuilds comma-supervisie with role prefixes', () => {
@@ -35,6 +68,22 @@ describe('buildArtsPhrase', () => {
   });
 });
 
+describe('formatDoctorWithRole', () => {
+  it('does not double-prefix when name already has VA abbreviation', () => {
+    assert.equal(
+      formatDoctorWithRole('VA P. Mort', 'VA'),
+      'Verzekeringsarts P. Mort'
+    );
+  });
+
+  it('does not double-prefix when name already has BA abbreviation', () => {
+    assert.equal(
+      formatDoctorWithRole('BA K. Julien', 'BA'),
+      'Bedrijfsarts K. Julien'
+    );
+  });
+});
+
 describe('buildSupervisiePhrase', () => {
   it('combines Arts primary with BA supervisor (Melissa case)', () => {
     assert.equal(
@@ -50,6 +99,18 @@ describe('buildSupervisiePhrase', () => {
   it('preserves verbatim supervisie sentence', () => {
     const input = 'Arts L. Bollen werkend onder supervisie van arts T. de Haas';
     assert.equal(buildSupervisiePhrase(input, 'Arts', 'T. de Haas', 'Arts'), input);
+  });
+
+  it('expands BA/VA in verbatim supervisie sentence', () => {
+    assert.equal(
+      buildSupervisiePhrase(
+        'VA P. Mort werkend onder supervisie van BA K. Julien',
+        'VA',
+        'K. Julien',
+        'BA'
+      ),
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
   });
 });
 
@@ -91,5 +152,15 @@ describe('enrichArtsOrgFromMeta', () => {
 
   it('returns artsOrg when no meta prefix is available', () => {
     assert.equal(enrichArtsOrgFromMeta('Ankersmit', null), 'Ankersmit');
+  });
+
+  it('expands BA/VA when merging abbreviated meta supervisie', () => {
+    assert.equal(
+      enrichArtsOrgFromMeta(
+        'P. Mort',
+        'VA P. Mort werkend onder supervisie van BA K. Julien'
+      ),
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
   });
 });

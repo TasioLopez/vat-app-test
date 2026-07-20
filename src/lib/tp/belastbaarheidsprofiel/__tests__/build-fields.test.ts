@@ -172,6 +172,33 @@ describe('buildBelastbaarheidsprofielFields', () => {
     );
   });
 
+  it('expands BA/VA abbreviations in occupational_doctor_org intros (Hippman leak)', () => {
+    const hippmanCtx = {
+      meta: {
+        fml_izp_lab_date: '2026-06-09',
+        occupational_doctor_org:
+          'VA P. Mort werkend onder supervisie van BA K. Julien',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: null,
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(hippmanCtx, content);
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld door Verzekeringsarts P\. Mort werkend onder supervisie van Bedrijfsarts K\. Julien, beperkingen/
+    );
+    assert.match(
+      prognose_bedrijfsarts,
+      /door Verzekeringsarts P\. Mort werkend onder supervisie van Bedrijfsarts K\. Julien, staat onderstaande/
+    );
+    assert.doesNotMatch(prognose_bedrijfsarts, /\bVA\b/);
+    assert.doesNotMatch(prognose_bedrijfsarts, /\bBA\b/);
+  });
+
   it('uses default rubrieken when model returns empty list', () => {
     const content: BelastbaarheidsprofielContentResult = {
       rubrieken: [],

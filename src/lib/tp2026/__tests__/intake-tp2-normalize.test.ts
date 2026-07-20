@@ -43,10 +43,27 @@ describe('formatOccupationalDoctorOrg', () => {
     );
   });
 
-  it('keeps supervisie sentence verbatim', () => {
+  it('keeps supervisie sentence with full titles', () => {
     const text =
       'Arts L. Bollen werkend onder supervisie van arts T. de Haas';
     assert.equal(formatOccupationalDoctorOrg(text, 'Arts'), text);
+  });
+
+  it('expands BA/VA abbreviations in supervisie sentence', () => {
+    assert.equal(
+      formatOccupationalDoctorOrg(
+        'VA P. Mort werkend onder supervisie van BA K. Julien',
+        'VA'
+      ),
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+  });
+
+  it('does not double-prefix when name already has VA abbreviation', () => {
+    assert.equal(
+      formatOccupationalDoctorOrg('VA P. Mort', 'VA'),
+      'Verzekeringsarts P. Mort'
+    );
   });
 
   it('strips intern gebruik boilerplate', () => {
@@ -80,6 +97,18 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
     });
 
     assert.equal(result.occupational_doctor_org, supervisie);
+  });
+
+  it('expands BA/VA in verbatim supervisie occupational_doctor_org (Hippman leak)', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'VA P. Mort werkend onder supervisie van BA K. Julien',
+      doctor_role: 'VA',
+    });
+
+    assert.equal(
+      result.occupational_doctor_org,
+      'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
   });
 
   it('combines primary Arts and OSV BA into supervisie phrase (Melissa case)', () => {

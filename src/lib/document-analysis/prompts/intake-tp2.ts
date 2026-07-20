@@ -35,6 +35,8 @@ PERSOONSVELDEN:
    - osv_doctor_role — "Arts" | "Anios" | "BA" (welke OSV-checkbox is aangevinkt)
    - Wanneer osv_doctor_name is ingevuld: zet occupational_doctor_org op de gecombineerde supervisie-zin:
      "{primary} werkend onder supervisie van {supervisor}" (met role-prefixen, bijv. Arts + Bedrijfsarts)
+   - Schrijf NOOIT "BA" of "VA" als titelprefix in occupational_doctor_org; gebruik altijd de volle titel:
+     Arts | Anios | Bedrijfsarts | Verzekeringsarts (doctor_role/osv_doctor_role blijven wel "BA"/"VA")
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
 
@@ -53,6 +55,7 @@ HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult
 - Gebruik NOOIT een FML/IZP-datum voor aanmelding of intake
 - intake_date komt NOOIT uit sectie 6
+- In geschreven arts-namen (occupational_doctor_org) NOOIT afkortingen BA/VA als titel; altijd Bedrijfsarts/Verzekeringsarts
 
 Voorbeelden:
 - "Datum gesprek: 5 juni 2026" → intake_date: "2026-06-05"

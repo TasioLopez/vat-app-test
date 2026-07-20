@@ -2,6 +2,7 @@ import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   buildSupervisiePhrase,
+  expandDoctorRoleAbbreviations,
   extractDoctorRolePrefix,
   type DoctorRole,
 } from '@/lib/tp/format-context';
@@ -50,9 +51,9 @@ export function formatOccupationalDoctorOrg(
 ): string | undefined {
   if (!raw?.trim()) return undefined;
 
-  let cleaned = raw.trim();
+  let cleaned = expandDoctorRoleAbbreviations(raw.trim()).replace(/\s+/g, ' ').trim();
   if (/werkend onder supervisie van/i.test(cleaned)) {
-    return cleaned.replace(/\s+/g, ' ').trim();
+    return cleaned;
   }
 
   cleaned = cleaned.replace(/\s*-?\s*BIG\s*(nr\.?|nummer)?\s*[\d\s]+/gi, '');
