@@ -1,4 +1,4 @@
-/** Employee profile fields on step 2 filled by `/api/autofill-employee-info-working`. */
+/** Employee profile fields on step 2 filled by `/api/autofill-employee-info-chatlike` (freeform). */
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 import { isAbsentText } from '@/lib/utils';
 

@@ -81,7 +81,32 @@ export function isEducationCertification(value: string): boolean {
   const upper = trimmed.toUpperCase();
   if (/^V{1,2}CA(?:\s*[-–—]?\s*VOL)?(?:\s*\(\d{4}\))?$/.test(upper)) return true;
   if (/^(BHV|EHBO|HEFTRUCK|REACH\s*TRUCK|Heftruckcertificaat)\b/i.test(trimmed)) return true;
+  // Whole-value certificate phrases (not "contains" — specialization lists are split first)
+  if (/^LEAN\s*SIX\s*SIGMA\b/i.test(trimmed)) return true;
+  if (/^SIX\s*SIGMA\b/i.test(trimmed)) return true;
+  if (/\bLEAN\s*SIX\s*SIGMA\b/i.test(trimmed) && !/,/.test(trimmed)) return true;
+  if (/\b(GREEN|BLACK|YELLOW|WHITE)\s*BELT\b/i.test(trimmed) && !/,/.test(trimmed)) return true;
+  if (/^BHV\b/i.test(trimmed)) return true;
   return false;
+}
+
+/**
+ * Keep a single specialization for the highest completed schooling.
+ * Drops certificate tokens from comma/semicolon lists (e.g. "Manager …, BHV, Lean Six Sigma").
+ */
+export function sanitizeEducationName(name: string | null | undefined): string | undefined {
+  if (name == null) return undefined;
+  const trimmed = name.trim();
+  if (!trimmed) return undefined;
+
+  const parts = trimmed
+    .split(/[,;|/]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const kept = parts.filter((p) => !isEducationCertification(p));
+  if (kept.length === 0) return undefined;
+  // One specialization only — first non-certificate segment.
+  return kept[0];
 }
 
 function educationTextSearchPatterns(): { pattern: RegExp; canonical: string }[] {
@@ -487,9 +512,7 @@ export function repairEmployeeEducationFields(
   }
 
   let educationName = split.name;
-  if (educationName && isEducationCertification(educationName)) {
-    educationName = undefined;
-  }
+  educationName = sanitizeEducationName(educationName);
   if (
     educationName &&
     split.level &&

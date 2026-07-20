@@ -745,15 +745,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         setAiLoading(true);
         try {
-            const useChatlikePipeline =
+            const useLegacyPipeline =
                 typeof window !== 'undefined' &&
-                new URLSearchParams(window.location.search).get('pipeline') === 'chatlike';
-            const autofillApi = useChatlikePipeline
-                ? `/api/autofill-employee-info-chatlike?employeeId=${employeeId}`
-                : `/api/autofill-employee-info-working?employeeId=${employeeId}`;
-            if (useChatlikePipeline) {
-                showInfo('Chatlike pipeline', 'Autofill gebruikt alle documenten in één extractie (test).');
-            }
+                new URLSearchParams(window.location.search).get('pipeline') === 'legacy';
+            const autofillApi = useLegacyPipeline
+                ? `/api/autofill-employee-info-working?employeeId=${employeeId}`
+                : `/api/autofill-employee-info-chatlike?employeeId=${employeeId}`;
             const res = await fetch(autofillApi, {
                 signal: abortController.signal,
             });

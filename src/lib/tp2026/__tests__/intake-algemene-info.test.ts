@@ -61,9 +61,15 @@ describe('isEducationCertification', () => {
     assert.equal(isEducationCertification('VVCA'), true);
   });
 
+  it('detects BHV and Lean Six Sigma style certificates', () => {
+    assert.equal(isEducationCertification('BHV'), true);
+    assert.equal(isEducationCertification('Lean Six Sigma Green Belt (basis)'), true);
+  });
+
   it('does not flag schooling levels', () => {
     assert.equal(isEducationCertification('LHNO'), false);
     assert.equal(isEducationCertification('VMBO'), false);
+    assert.equal(isEducationCertification('Manager Transport & Logistiek'), false);
   });
 });
 

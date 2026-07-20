@@ -28,7 +28,10 @@ Antwoord ALLEEN met één JSON-object (geen markdown-uitleg eromheen). Keys:
 
 current_job, contract_hours (number), date_of_birth (YYYY-MM-DD), gender ("Man"|"Vrouw"),
 phone, work_experience (komma-gescheiden functietitels, niet current_job),
-education_level, education_name, other_employers,
+education_level (ÉÉN hoogste AFGERONDE basisopleiding: bijv. "MBO 4" — geen lijst, geen certificaten),
+education_name (ÉÉN richting/specialisatie bij die opleiding, bijv. "Manager Transport & Logistiek" —
+  GEEN certificaten zoals BHV, VCA, Lean Six Sigma, Green Belt; GEEN komma-lijst van cursussen),
+other_employers,
 transport_type (array: "Auto"|"Fiets"|"OV"|"Lopend" — alleen aangevinkt),
 drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
 dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Gemiddeld"|"Niet goed"),

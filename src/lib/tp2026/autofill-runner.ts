@@ -123,7 +123,7 @@ async function runEmployeeAutofillStep(
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    const res = await fetch(`/api/autofill-employee-info-working?employeeId=${ctx.employeeId}`, {
+    const res = await fetch(`/api/autofill-employee-info-chatlike?employeeId=${ctx.employeeId}`, {
       signal: ctx.signal,
     });
     const parsed = await readAutofillResponse(res);

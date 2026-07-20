@@ -180,6 +180,15 @@ describe('repairEmployeeEducationFields', () => {
     assert.equal(result.education_name, 'Facilitaire Dienstverlening');
   });
 
+  it('keeps only specialization and drops certificate list from education_name', () => {
+    const result = repairEmployeeEducationFields(
+      'MBO 4',
+      'Manager Transport & Logistiek, BHV, Lean Six Sigma Green Belt (basis)'
+    );
+    assert.equal(result.education_level, 'MBO 4');
+    assert.equal(result.education_name, 'Manager Transport & Logistiek');
+  });
+
   it('clears invalid level tokens', () => {
     assert.deepEqual(repairEmployeeEducationFields('geen', 'VMBO'), {});
     assert.deepEqual(repairEmployeeEducationFields('nee', undefined), {});
