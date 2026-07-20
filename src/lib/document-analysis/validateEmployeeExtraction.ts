@@ -3,6 +3,7 @@ import {
   isInvalidEducationLevelToken,
   normalizeEducationLevel,
 } from '@/lib/tp2026/gegevens-field-options';
+import { INTAKE_TRANSPORT_CORRECTION_HINT } from './prompts/intake-algemene-info-extraction';
 import type { ValidationResult } from './runStructuredExtraction';
 
 function isPresent(value: unknown): boolean {
@@ -139,6 +140,12 @@ export function validateIntakeAlgemeneInfoExtraction(
   // work_experience overlap with current_job is stripped post-parse — not a hard retry.
   // Missing dutch_speaking / computer_skills → soft warnings via incomplete.ts.
   errors.push(...validateWorkExperience(result.work_experience));
+
+  // Soft retry trigger: empty vervoer is often a misread of the Hoe-verplaatst row
+  // (confused with rijbewijs B). One correction pass via MAX_EXTRACTION_RETRIES.
+  if (!Array.isArray(result.transport_type) || result.transport_type.length === 0) {
+    errors.push(INTAKE_TRANSPORT_CORRECTION_HINT);
+  }
 
   return { ok: errors.length === 0, errors };
 }

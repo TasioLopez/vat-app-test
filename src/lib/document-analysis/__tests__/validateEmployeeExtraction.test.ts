@@ -69,14 +69,15 @@ describe('validateIntakeAlgemeneInfoExtraction', () => {
     assert.equal(result.ok, true);
   });
 
-  it('accepts empty transport_type (no boxes checked)', () => {
+  it('soft-fails empty transport_type to trigger one correction retry', () => {
     const result = validateIntakeAlgemeneInfoExtraction({
       education_level: 'MBO 4',
       transport_type: [],
       dutch_speaking: 'Goed',
       computer_skills: '4',
     });
-    assert.equal(result.ok, true);
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => /Hoe verplaatst/i.test(e)));
   });
 });
 

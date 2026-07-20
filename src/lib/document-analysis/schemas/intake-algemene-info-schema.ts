@@ -31,7 +31,7 @@ function nullableBoolean(description: string) {
 function transportCheckbox(label: string) {
   return {
     type: 'boolean' as const,
-    description: `True ONLY if the checkbox next to "${label}" under "Hoe verplaatst werknemer zich" is visually filled (☒/☑/X). Empty ☐ = false. Never guess.`,
+    description: `True ONLY if the checkbox next to "${label}" on the "Hoe verplaatst werknemer zich" row is filled (☒/☑/X). Not rijbewijs categories (B/C/AM). Empty ☐ = false.`,
   };
 }
 
