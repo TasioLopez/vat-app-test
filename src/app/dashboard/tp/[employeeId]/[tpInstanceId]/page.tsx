@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import LegacyTPBuilder from '@/components/tp/LegacyTPBuilder';
 import TP2026Builder from '@/components/tp2026/TP2026Builder';
 import { isTPLayoutKey } from '@/lib/tp/layout';
 
@@ -39,12 +38,9 @@ export default async function TPInstanceBuilderPage({ params }: { params: Promis
     notFound();
   }
 
-  if (instance.layout_key === 'tp_legacy') {
-    return <LegacyTPBuilder employeeId={employeeId} />;
-  }
-
+  // Legacy TP builder removed — only TP 2026 instances are editable.
   if (instance.layout_key !== 'tp_2026') {
-    redirect(`/dashboard/tp/${employeeId}`);
+    notFound();
   }
 
   return (

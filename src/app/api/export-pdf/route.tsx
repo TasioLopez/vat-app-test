@@ -6,7 +6,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { loadTPData } from "@/lib/tp/load";
 import { isTPLayoutKey, type TPLayoutKey } from "@/lib/tp/layout";
 import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
@@ -292,7 +291,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const layoutKey: TPLayoutKey = isTPLayoutKey(requestedLayout) ? requestedLayout : "tp_legacy";
+  const layoutKey: TPLayoutKey = isTPLayoutKey(requestedLayout) ? requestedLayout : "tp_2026";
 
   let resolvedLayout: TPLayoutKey = layoutKey;
   let snapshotData: Record<string, any> = {};
@@ -320,23 +319,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (resolvedLayout === "tp_legacy") {
-    snapshotData = await loadTPData(employeeId, {
-      preferredConsultantUserId: user.id,
-      supabase: ssr,
-    });
-  }
-
-  if (resolvedLayout === "tp_2026" && !tpInstanceId) {
-    return new Response(JSON.stringify({ error: "tpInstanceId is required for TP 2026 export" }), {
+  if (resolvedLayout !== "tp_2026") {
+    return new Response(JSON.stringify({ error: "Legacy TP export is no longer supported" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
 
-  const printUrl = resolvedLayout === "tp_2026"
-    ? `${base}/tp2026/print?tpInstanceId=${encodeURIComponent(tpInstanceId || "")}`
-    : `${base}/tp/print?employeeId=${encodeURIComponent(employeeId)}&pdf=1`;
+  if (!tpInstanceId) {
+    return new Response(JSON.stringify({ error: "tpInstanceId is required for TP export" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const printUrl = `${base}/tp2026/print?tpInstanceId=${encodeURIComponent(tpInstanceId)}`;
 
   let browser: any = null;
 

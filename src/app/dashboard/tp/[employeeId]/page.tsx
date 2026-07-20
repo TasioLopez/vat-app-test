@@ -1,9 +1,11 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useParams } from 'next/navigation';
-import LegacyTPBuilder from '@/components/tp/LegacyTPBuilder';
+type Params = {
+  employeeId: string;
+};
 
-export default function TPBuilderPage() {
-  const { employeeId } = useParams() as { employeeId: string };
-  return <LegacyTPBuilder employeeId={employeeId} />;
+/** Legacy TP builder (no instance id) removed — send users back to the employee page. */
+export default async function TPBuilderPage({ params }: { params: Promise<Params> }) {
+  const { employeeId } = await params;
+  redirect(`/dashboard/employees/${employeeId}`);
 }

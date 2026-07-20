@@ -136,7 +136,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
                   <div className="flex items-center gap-2">
                     <span>{r.title}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground">
-                      {r.layout_key === 'tp_2026' ? 'TP 2026' : 'TP (huidig)'}
+                      {r.layout_key === 'tp_2026' ? 'Trajectplan' : 'Trajectplan (oud)'}
                     </span>
                   </div>
                 </TableCell>

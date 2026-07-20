@@ -1,6 +1,6 @@
 /**
  * Resolve the referent (contact person) for an employee.
- * Used by TP load, inleiding autofill, and TPPreview.
+ * Used by inleiding autofill and related TP contact fields.
  * Referents only: no fallback to clients.referent_*.
  */
 

@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type ExportLayoutKey = 'tp_legacy' | 'tp_2026' | 'vgr';
+type ExportLayoutKey = 'tp_2026' | 'vgr';
 
 export function ExportButton({
   employeeId,
@@ -31,9 +31,8 @@ export function ExportButton({
     try {
       const tpInstanceId = tpInstanceIdProp || params.tpInstanceId || null;
       const vgrInstanceId = vgrInstanceIdProp || params.vgrInstanceId || null;
-      const layoutKey = layoutKeyProp || 'tp_legacy';
-      const filenamePrefix =
-        layoutKey === 'vgr' ? 'VGR' : layoutKey === 'tp_2026' ? 'TP-2026' : 'TP';
+      const layoutKey = layoutKeyProp || 'tp_2026';
+      const filenamePrefix = layoutKey === 'vgr' ? 'VGR' : 'TP';
       const filename = `${filenamePrefix}-${employeeId}.pdf`;
 
       const query = new URLSearchParams({
