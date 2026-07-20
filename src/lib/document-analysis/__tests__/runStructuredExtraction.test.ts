@@ -4,6 +4,7 @@ import {
   runStructuredFileExtraction,
   runMultiPassExtraction,
   runDocumentTextExtraction,
+  runStructuredMultiFileExtraction,
 } from '../runStructuredExtraction';
 
 function mockOpenAIFiles() {
@@ -255,5 +256,105 @@ describe('runDocumentTextExtraction', () => {
     assert.equal(text, 'Samenvatting intake');
     assert.equal(uploadedName, 'intake.pdf');
     assert.equal((globalThis.fetch as ReturnType<typeof mock.fn>).mock.calls.length, 1);
+  });
+});
+
+describe('runStructuredMultiFileExtraction', () => {
+  it('uploads all PDFs and sends N input_file contents in one responses.create', async () => {
+    const deletedIds: string[] = [];
+    let uploadCount = 0;
+    const createPayloads: unknown[] = [];
+
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: `file-${uploadCount}`, status: 'processed' };
+        }),
+        retrieve: mock.fn(async (id: string) => ({ id, status: 'processed' })),
+        delete: mock.fn(async (id: string) => {
+          deletedIds.push(id);
+        }),
+      },
+      responses: {
+        create: mock.fn(async (payload: unknown) => {
+          createPayloads.push(payload);
+          return {
+            output_text: JSON.stringify({
+              current_job: 'Logistiek Coördinator',
+              transport_type: ['Auto'],
+              dutch_speaking: 'Goed',
+              computer_skills: '4',
+            }),
+          };
+        }),
+      },
+    };
+
+    const result = await runStructuredMultiFileExtraction({
+      openai: openai as never,
+      files: [
+        { pdfBuffer: Buffer.from('%PDF-1'), analysisFilename: 'intake.pdf', label: 'intakeformulier' },
+        { pdfBuffer: Buffer.from('%PDF-2'), analysisFilename: 'ad.pdf', label: 'ad_rapportage' },
+        {
+          pdfBuffer: Buffer.from('%PDF-3'),
+          analysisFilename: 'spreek.pdf',
+          label: 'spreek_reportage',
+        },
+      ],
+      instructions: 'Extract',
+      userMessage: 'Analyze all',
+      schemaName: 'employee_extraction_chatlike',
+      schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+      parse: (raw) => raw as Record<string, unknown>,
+      model: 'gpt-test',
+      usePdfVision: true,
+      maxRetries: 0,
+    });
+
+    assert.equal(uploadCount, 3);
+    assert.equal(createPayloads.length, 1);
+    const payload = createPayloads[0] as {
+      input: { content: { type: string; file_id?: string; detail?: string }[] }[];
+    };
+    const fileContents = payload.input[0].content.filter((c) => c.type === 'input_file');
+    assert.equal(fileContents.length, 3);
+    assert.deepEqual(
+      fileContents.map((c) => c.file_id),
+      ['file-1', 'file-2', 'file-3']
+    );
+    assert.equal(fileContents[0]?.detail, 'high');
+    assert.deepEqual(result.transport_type, ['Auto']);
+    assert.equal(result.dutch_speaking, 'Goed');
+    assert.deepEqual(deletedIds.sort(), ['file-1', 'file-2', 'file-3']);
+  });
+
+  it('keeps best-effort answer when soft validate fails (maxRetries 0)', async () => {
+    const openai = {
+      files: mockOpenAIFiles(),
+      responses: {
+        create: mock.fn(async () => ({
+          output_text: '{"transport_type":[],"dutch_speaking":"Goed"}',
+        })),
+      },
+    };
+
+    const result = await runStructuredMultiFileExtraction({
+      openai: openai as never,
+      files: [{ pdfBuffer: Buffer.from('%PDF'), analysisFilename: 'a.pdf' }],
+      instructions: 'Extract',
+      userMessage: 'Analyze',
+      schemaName: 'test',
+      schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+      parse: (raw) => raw as Record<string, unknown>,
+      validate: (r) =>
+        Array.isArray(r.transport_type) && r.transport_type.length === 0
+          ? { ok: false, errors: ['empty transport'] }
+          : { ok: true, errors: [] },
+      maxRetries: 0,
+    });
+
+    assert.equal(result.dutch_speaking, 'Goed');
+    assert.deepEqual(result.transport_type, []);
   });
 });

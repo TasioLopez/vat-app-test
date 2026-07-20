@@ -22,17 +22,26 @@ export {
   isGotenbergConversionError,
   isGotenbergConfigError,
 } from './gotenberg-errors';
-export { extractIntakeEmployeeDetailsFromVision } from './extractIntakeEmployeeDetails';
 export {
   runStructuredFileExtraction,
   runMultiPassExtraction,
+  runStructuredMultiFileExtraction,
   runDocumentTextExtraction,
   type StructuredFileExtractionOptions,
+  type StructuredMultiFileExtractionOptions,
+  type MultiFilePdfInput,
   type DocumentTextExtractionOptions,
   type ValidationResult,
   type StructuredExtractionPass,
   type MultiPassExtractionOptions,
 } from './runStructuredExtraction';
+export { extractIntakeEmployeeDetailsFromVision } from './extractIntakeEmployeeDetails';
+export {
+  extractEmployeeDetailsChatlike,
+  buildChatlikeEmployeeDetailsFromRaw,
+  type ChatlikeDocInput,
+  type EmployeeChatlikeExtractionResult,
+} from './extractEmployeeDetailsChatlike';
 export {
   validateIntakeCoreExtraction,
   validateIntakeAlgemeneInfoExtraction,
@@ -102,6 +111,10 @@ export {
   INTAKE_EMPLOYEE_PROMPT,
   INTAKE_EMPLOYEE_USER_MESSAGE,
 } from './prompts/intake-employee';
+export {
+  EMPLOYEE_CHATLIKE_PROMPT,
+  EMPLOYEE_CHATLIKE_USER_MESSAGE,
+} from './prompts/employee-chatlike';
 export { AD_EMPLOYEE_PROMPT, AD_EMPLOYEE_USER_MESSAGE } from './prompts/ad-employee';
 export { FML_EMPLOYEE_PROMPT, FML_EMPLOYEE_USER_MESSAGE } from './prompts/fml-employee';
 export { EXTRA_EMPLOYEE_PROMPT, EXTRA_EMPLOYEE_USER_MESSAGE } from './prompts/extra-employee';

@@ -68,6 +68,29 @@ export type DocumentTextExtractionOptions = {
   model?: string;
 };
 
+export type MultiFilePdfInput = {
+  pdfBuffer: Buffer;
+  analysisFilename: string;
+  /** Optional label included in the user message (e.g. doc type). */
+  label?: string;
+};
+
+export type StructuredMultiFileExtractionOptions<T> = {
+  openai: OpenAI;
+  files: MultiFilePdfInput[];
+  instructions: string;
+  userMessage: string;
+  schemaName: string;
+  schema: Record<string, unknown>;
+  parse: (raw: unknown) => T;
+  model?: string;
+  usePdfVision?: boolean;
+  /** Soft validate: log failures only; never replace the answer (default 0 retries). */
+  validate?: (result: T) => ValidationResult;
+  maxRetries?: number;
+  logLabel?: string;
+};
+
 async function waitForOpenAIFileReady(openai: OpenAI, fileId: string): Promise<void> {
   const deadline = Date.now() + FILE_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -144,10 +167,10 @@ function buildPdfInputFileContent(
   return { ...base, detail: pdfDetail } as OpenAI.Responses.ResponseInputContent;
 }
 
-async function callStructuredExtraction<T>(
+async function callStructuredExtraction(
   openai: OpenAI,
   options: {
-    fileId: string;
+    fileIds: string[];
     instructions: string;
     userMessage: string;
     schemaName: string;
@@ -156,11 +179,13 @@ async function callStructuredExtraction<T>(
     usePdfVision: boolean;
   }
 ): Promise<unknown> {
-  const inputFile = buildPdfInputFileContent(options.fileId, options.usePdfVision);
+  const inputFiles = options.fileIds.map((fileId) =>
+    buildPdfInputFileContent(fileId, options.usePdfVision)
+  );
 
   const userContent: OpenAI.Responses.ResponseInputContent[] = [
     { type: 'input_text', text: options.userMessage },
-    inputFile,
+    ...inputFiles,
   ];
 
   const reasoningEffort = getDocumentExtractionReasoningEffort();
@@ -209,7 +234,7 @@ async function runPassWithValidation<T>(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const raw = await callStructuredExtraction(openai, {
-      fileId,
+      fileIds: [fileId],
       instructions: pass.instructions,
       userMessage,
       schemaName: pass.schemaName,
@@ -339,6 +364,92 @@ export async function runMultiPassExtraction(
     return merged;
   } finally {
     await deleteUploadedFile(openai, fileId);
+  }
+}
+
+/**
+ * One structured extraction over multiple PDFs (chat-like: all docs in one call).
+ * Soft validation only — default maxRetries 0 so a failed validate logs but keeps the answer.
+ */
+export async function runStructuredMultiFileExtraction<T>(
+  options: StructuredMultiFileExtractionOptions<T>
+): Promise<T> {
+  const {
+    openai,
+    files,
+    instructions,
+    userMessage,
+    schemaName,
+    schema,
+    parse,
+    model = getDocumentExtractionModel(),
+    usePdfVision = true,
+    validate,
+    maxRetries = 0,
+    logLabel,
+  } = options;
+
+  if (!files.length) {
+    throw new Error('runStructuredMultiFileExtraction requires at least one PDF');
+  }
+
+  const fileIds: string[] = [];
+
+  try {
+    for (const file of files) {
+      const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
+      fileIds.push(id);
+    }
+
+    const labels = files
+      .map((f, i) => f.label || f.analysisFilename || `document-${i + 1}`)
+      .join(', ');
+    let message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}`;
+
+    let lastParsed: T | null = null;
+    let lastErrors: string[] = [];
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const raw = await callStructuredExtraction(openai, {
+        fileIds,
+        instructions,
+        userMessage: message,
+        schemaName,
+        schema,
+        model,
+        usePdfVision,
+      });
+
+      const parsed = parse(raw);
+      lastParsed = parsed;
+
+      if (!validate) {
+        if (logLabel) console.log(`✅ ${logLabel} (attempt ${attempt + 1}, ${files.length} files)`);
+        return parsed;
+      }
+
+      const validation = validate(parsed);
+      if (validation.ok) {
+        if (logLabel) console.log(`✅ ${logLabel} (attempt ${attempt + 1}, ${files.length} files)`);
+        return parsed;
+      }
+
+      lastErrors = validation.errors;
+      console.log(
+        `⚠️ ${logLabel ?? schemaName} soft validation failed (attempt ${attempt + 1}): ${lastErrors.join('; ')}`
+      );
+      if (attempt < maxRetries) {
+        message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}\n\n${buildCorrectionMessage(lastErrors)}`;
+        continue;
+      }
+    }
+
+    console.log(
+      `⚠️ ${logLabel ?? schemaName} returning best effort after soft validation: ${lastErrors.join('; ')}`
+    );
+    return lastParsed as T;
+  } finally {
+    await Promise.all(fileIds.map((id) => deleteUploadedFile(openai, id)));
   }
 }
 
