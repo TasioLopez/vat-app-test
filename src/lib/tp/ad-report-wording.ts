@@ -46,6 +46,18 @@ export function detectAdReportConceptFromText(text: string | null | undefined): 
   return null;
 }
 
+/**
+ * Merge model `ad_report_concept` with deterministic text detection.
+ * Text true/false wins; when text is inconclusive, keep model true only if already true, else false.
+ */
+export function applyAdReportConceptFromText(
+  modelConcept: unknown,
+  conceptFromText: boolean | null
+): boolean {
+  if (conceptFromText !== null) return conceptFromText;
+  return modelConcept === true;
+}
+
 /** Definitive AD report present at registration (not a concept). */
 export function hasDefinitiveAdReport(meta?: {
   has_ad_report?: boolean | null;

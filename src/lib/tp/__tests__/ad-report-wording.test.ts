@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   adReportDateLabel,
+  applyAdReportConceptFromText,
   buildAdAdviesIntroPrefix,
   buildInleidingAdIntroPrefix,
   detectAdReportConceptFromText,
@@ -61,6 +62,30 @@ Concept ☐
 Naam AD: S. Kowalski
 `;
     assert.equal(detectAdReportConceptFromText(text), false);
+  });
+});
+
+describe('applyAdReportConceptFromText', () => {
+  it('overrides model true with unchecked Concept checkbox (Hippman regression)', () => {
+    const hippmanText = `
+     Naam ☒ Arts ☐ Anios ☐ BA ☐ VA: P. Mort Datum AD-
+rapport:
+ 27-6-2026                                               Concept ☐
+     OSV ☐ Arts ☐ Anios ☒ BA: K. Julien Naam AD:  S. Kowalski
+`;
+    const fromText = detectAdReportConceptFromText(hippmanText);
+    assert.equal(fromText, false);
+    assert.equal(applyAdReportConceptFromText(true, fromText), false);
+  });
+
+  it('uses text true when checkbox is checked', () => {
+    assert.equal(applyAdReportConceptFromText(false, true), true);
+  });
+
+  it('keeps model true only when text is inconclusive', () => {
+    assert.equal(applyAdReportConceptFromText(true, null), true);
+    assert.equal(applyAdReportConceptFromText(false, null), false);
+    assert.equal(applyAdReportConceptFromText(undefined, null), false);
   });
 });
 
