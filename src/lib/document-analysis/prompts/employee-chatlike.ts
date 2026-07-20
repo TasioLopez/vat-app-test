@@ -1,36 +1,45 @@
 import { INTAKE_LAYOUT_V75_HINT } from './intake-layout-v75';
 
 /**
- * Chat-like employee profile extract: all docs attached, intake preferred.
- * Soft schema (EMPLOYEE_EXTRACTION_JSON_SCHEMA) — no per-box license/transport booleans.
+ * True ChatGPT-style employee extract (freeform JSON, no strict schema).
+ * Intake is preferred; other docs fill gaps.
  */
-export const EMPLOYEE_CHATLIKE_PROMPT = `Je analyseert Nederlandse werknemersdocumenten om employee_details te vullen.
+export const EMPLOYEE_CHATLIKE_PROMPT = `Je bent een expert die Nederlandse werknemersdocumenten leest — net als in ChatGPT.
 
 DOCUMENTEN:
-- Alle geüploade PDF's horen bij dezelfde werknemer (intake, AD, FML/IZP, spreekuurrapportage, CV, extra, …).
-- Lees ze als geheel; gebruik checkboxes, tabellen en tekst.
+- Alle bijgevoegde PDF's horen bij dezelfde werknemer.
+- Er kan ook een blok "Intake PDF-tekst" in het bericht staan met ☒/☐ — gebruik dat voor checkboxes.
 
-BRONPRIORITEIT (belangrijk):
-1. Intakeformulier — primaire bron voor bijna alle werknemersprofiel-velden (functie, uren, geboortedatum, geslacht, telefoon, opleiding, werkervaring, vervoer, rijbewijs, talen, computer, referent/contactpersoon sectie 4).
-2. AD-rapport — alleen gebruiken om gaten te vullen of te bevestigen (functie, uren, opleiding, werkervaring, rijbewijs) wanneer het intake die info niet heeft.
-3. Spreekuurrapportage / FML/IZP / CV / overig — alleen aanvullen waar intake (en AD) niets geven.
+BRONPRIORITEIT:
+1. Intakeformulier (tekst + PDF) — primaire bron voor het werknemersprofiel.
+2. AD-rapport — alleen gaten vullen / bevestigen.
+3. Spreekuurrapportage, FML/IZP, CV, overig — alleen aanvullen waar intake niets geeft.
 
-Conflict: als intake iets duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV), volg het intake — niet "verbeteren" met andere documenten.
+Conflict: wat het intake duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV) wint.
 
 ${INTAKE_LAYOUT_V75_HINT}
 
-REGELS:
-- Rapporteer alleen wat aangevinkt of expliciet staat. Geen gokken.
-- Ontbrekend → null. NOOIT false/lege arrays/"1" verzinnen.
-- transport_type: alleen aangevinkte opties uit "Hoe verplaatst werknemer zich:" → "Auto","Fiets","OV","Lopend". Rijbewijs B ≠ Auto.
-- drivers_license_type: alleen aangevinkte categorieën (bijv. ["B"]); leeg laten als onduidelijk.
-- dutch_speaking/writing/reading: "Goed", "Gemiddeld", of "Niet goed".
-- computer_skills: "1"–"5" (1=Geen … 5=Expert) — aangevinkt niveau; has_computer bij PC/laptop.
-- referent_*: ALLEEN uit intake sectie 4 Aanmelding (contactpersoon werkgever), nooit bedrijfsarts/AD/werknemer-naam.
-- work_experience: functietitels komma-gescheiden; NIET current_job herhalen.
-- education_level: hoogste afgeronde schooling; geen certificaten (VCA/BHV) als level.
+TAAK:
+Vul het werknemersprofiel zo volledig mogelijk. Lees checkboxes (☒ = aan, ☐ = uit).
+Rijbewijs "B – Personenauto" is GEEN vervoer Auto — vervoer staat op "Hoe verplaatst werknemer zich:".
 
-Gebruik null voor velden die nergens betrouwbaar staan.`;
+ANTWOORD:
+Antwoord ALLEEN met één JSON-object (geen markdown-uitleg eromheen). Keys:
+
+current_job, contract_hours (number), date_of_birth (YYYY-MM-DD), gender ("Man"|"Vrouw"),
+phone, work_experience (komma-gescheiden functietitels, niet current_job),
+education_level, education_name, other_employers,
+transport_type (array: "Auto"|"Fiets"|"OV"|"Lopend" — alleen aangevinkt),
+drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
+dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Gemiddeld"|"Niet goed"),
+has_computer (boolean), computer_skills ("1"-"5": 1=Geen … 5=Expert),
+referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
+(referent_* ALLEEN uit intake sectie 4 contactpersoon werkgever).
+
+Vul wat je ziet. Laat een key weg alleen als die info echt ontbreekt — niet uit voorzichtigheid alles leeg laten als de checkboxes leesbaar zijn.`;
 
 export const EMPLOYEE_CHATLIKE_USER_MESSAGE =
-  'Extract employee_details uit alle bijgevoegde documenten. Prefer intake; vul gaten met AD/spreek/overig. Vervoer/rijbewijs/talen/computer/referent bij voorkeur uit intake.';
+  'Vul employee_details uit alle bijgevoegde documenten. Prefer intake. Geef één JSON-object met de gevraagde keys.';
+
+/** Max chars of intake plain text embedded in the user message. */
+export const CHATLIKE_INTAKE_TEXT_MAX_CHARS = 12000;

@@ -2,14 +2,16 @@ import type OpenAI from 'openai';
 import { isIntakeDocumentType } from './storage';
 import { normalizeForAnalysis } from './normalizeForAnalysis';
 import {
+  CHATLIKE_INTAKE_TEXT_MAX_CHARS,
   EMPLOYEE_CHATLIKE_PROMPT,
   EMPLOYEE_CHATLIKE_USER_MESSAGE,
 } from './prompts/employee-chatlike';
+import { runChatlikeMultiFileExtraction } from './runStructuredExtraction';
+import { extractPdfPlainTextWithGlyphFallback } from './documentPlainText';
 import {
-  EMPLOYEE_EXTRACTION_JSON_SCHEMA,
-  parseEmployeeExtractionResult,
-} from './schemas/employee-extraction-schema';
-import { runStructuredMultiFileExtraction } from './runStructuredExtraction';
+  flattenExtractionPayload,
+  parseJsonFromAssistant,
+} from './parseJsonResponse';
 import { stripCurrentJobFromWorkExperience } from './validateEmployeeExtraction';
 
 export type ChatlikeDocInput = {
@@ -23,6 +25,8 @@ export type EmployeeChatlikeExtractionResult = {
   referentFields: Record<string, unknown>;
   documentCount: number;
   documentLabels: string[];
+  mode: 'freeform';
+  intakeTextLen: number;
 };
 
 function docSortKey(docType: string | null | undefined): number {
@@ -41,8 +45,52 @@ function labelForDoc(doc: ChatlikeDocInput, index: number): string {
   return `${type}:${name}`;
 }
 
+function isIntakeDoc(docType: string | null | undefined): boolean {
+  const t = docType || '';
+  return isIntakeDocumentType(t) || t.toLowerCase().includes('intake');
+}
+
 /**
- * Map raw chatlike extraction to employee details + referent without checkbox clear-on-null.
+ * Prefer sectie-17 / checkbox regions; fall back to a head+tail slice of the full text.
+ */
+export function buildIntakeTextExcerptForChatlike(
+  fullText: string,
+  maxChars = CHATLIKE_INTAKE_TEXT_MAX_CHARS
+): string {
+  const text = fullText.replace(/\u00a0/g, ' ').trim();
+  if (!text) return '';
+
+  const markers = [
+    /Hoe verplaatst werknemer zich/i,
+    /Rijbewij/i,
+    /Computervaardigheden/i,
+    /Digitale vaardigheden/i,
+    /\bNederlands\b/i,
+    /\bTalen\b/i,
+  ];
+
+  let bestStart = -1;
+  for (const re of markers) {
+    const m = text.match(re);
+    if (m?.index != null && (bestStart < 0 || m.index < bestStart)) {
+      bestStart = m.index;
+    }
+  }
+
+  if (bestStart >= 0) {
+    const windowStart = Math.max(0, bestStart - 800);
+    const slice = text.slice(windowStart, windowStart + maxChars);
+    if (slice.length >= 200) return slice;
+  }
+
+  if (text.length <= maxChars) return text;
+  const head = Math.floor(maxChars * 0.45);
+  const tail = maxChars - head - 20;
+  return `${text.slice(0, head)}\n\n…\n\n${text.slice(-tail)}`;
+}
+
+/**
+ * Map freeform parsed JSON to employee details + referent (no checkbox clear-on-null).
  */
 export function buildChatlikeEmployeeDetailsFromRaw(
   raw: Record<string, unknown>
@@ -78,16 +126,28 @@ export function buildChatlikeEmployeeDetailsFromRaw(
   return { detailsRaw: merged, referentFields };
 }
 
+/** Parse freeform model output into a flat employee_details-ish record. */
+export function parseChatlikeEmployeeOutput(outputText: string): Record<string, unknown> {
+  const parsed = parseJsonFromAssistant(outputText);
+  return flattenExtractionPayload(parsed);
+}
+
 /**
- * Chat-like employee extract: upload all docs in one Responses call.
- * Intake is listed first and preferred in the prompt; no Pass B / clear-on-null.
+ * ChatGPT-style employee extract: all docs + intake text grounding, freeform JSON (no schema).
  */
 export async function extractEmployeeDetailsChatlike(
   openai: OpenAI,
   docs: ChatlikeDocInput[]
 ): Promise<EmployeeChatlikeExtractionResult> {
   if (!docs.length) {
-    return { raw: {}, referentFields: {}, documentCount: 0, documentLabels: [] };
+    return {
+      raw: {},
+      referentFields: {},
+      documentCount: 0,
+      documentLabels: [],
+      mode: 'freeform',
+      intakeTextLen: 0,
+    };
   }
 
   const sorted = [...docs].sort(
@@ -100,6 +160,7 @@ export async function extractEmployeeDetailsChatlike(
     label: string;
   }[] = [];
   const documentLabels: string[] = [];
+  let intakePdfBuffer: Buffer | null = null;
 
   for (let i = 0; i < sorted.length; i++) {
     const doc = sorted[i]!;
@@ -114,29 +175,46 @@ export async function extractEmployeeDetailsChatlike(
     }
     files.push({ pdfBuffer, analysisFilename, label });
     documentLabels.push(label);
+    if (!intakePdfBuffer && isIntakeDoc(doc.docType)) {
+      intakePdfBuffer = pdfBuffer;
+    }
+  }
+
+  let intakeTextLen = 0;
+  let intakeExcerpt = '';
+  if (intakePdfBuffer) {
+    const plain = await extractPdfPlainTextWithGlyphFallback(intakePdfBuffer);
+    intakeTextLen = plain.length;
+    intakeExcerpt = buildIntakeTextExcerptForChatlike(plain);
+    console.log(
+      `📋 Chatlike intake text len=${intakeTextLen} excerpt=${intakeExcerpt.length} glyphs=${/[☒☐☑]/.test(plain)}`
+    );
+  }
+
+  const labels = documentLabels.join(', ');
+  let userMessage = `${EMPLOYEE_CHATLIKE_USER_MESSAGE}\n\nGeüploade documenten (${files.length}): ${labels}`;
+  if (intakeExcerpt) {
+    userMessage += `\n\n--- Intake PDF-tekst (checkboxes / sectie 17 e.d.) ---\n${intakeExcerpt}\n--- Einde intake PDF-tekst ---`;
   }
 
   console.log(
-    `📋 Chatlike employee extract: ${files.length} file(s) — ${documentLabels.join(', ')}`
+    `📋 Chatlike freeform extract: ${files.length} file(s) — ${labels}`
   );
 
-  const parsed = await runStructuredMultiFileExtraction({
+  const outputText = await runChatlikeMultiFileExtraction({
     openai,
     files,
     instructions: EMPLOYEE_CHATLIKE_PROMPT,
-    userMessage: EMPLOYEE_CHATLIKE_USER_MESSAGE,
-    schemaName: 'employee_extraction_chatlike',
-    schema: EMPLOYEE_EXTRACTION_JSON_SCHEMA as Record<string, unknown>,
-    parse: parseEmployeeExtractionResult,
+    userMessage,
     usePdfVision: true,
-    maxRetries: 0,
-    logLabel: 'Employee chatlike (all docs)',
+    logLabel: 'Employee chatlike freeform',
   });
 
+  const parsed = parseChatlikeEmployeeOutput(outputText);
   const { detailsRaw, referentFields } = buildChatlikeEmployeeDetailsFromRaw(parsed);
 
   console.log(
-    `✅ Chatlike extract fields: ${Object.keys(detailsRaw).length} (docs=${files.length})`
+    `✅ Chatlike freeform fields: ${Object.keys(detailsRaw).length} (docs=${files.length}, intakeTextLen=${intakeTextLen})`
   );
 
   return {
@@ -144,5 +222,7 @@ export async function extractEmployeeDetailsChatlike(
     referentFields,
     documentCount: files.length,
     documentLabels,
+    mode: 'freeform',
+    intakeTextLen,
   };
 }

@@ -218,12 +218,14 @@ export async function GET(req: NextRequest) {
         autofill_incomplete,
         autofill_warnings,
         pipeline: 'chatlike',
+        mode: extraction.mode,
+        intake_text_len: extraction.intakeTextLen,
         document_labels: extraction.documentLabels,
         suggested_referent: suggested_referent ?? undefined,
         referent_exists,
         existing_referent_id: existing_referent_id ?? undefined,
       },
-      message: `Employee information successfully extracted from ${extraction.documentCount} documents using chatlike pipeline`,
+      message: `Employee information successfully extracted from ${extraction.documentCount} documents using chatlike freeform pipeline`,
     });
   } catch (error: unknown) {
     if (error instanceof GotenbergConversionError) {

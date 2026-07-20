@@ -5,6 +5,7 @@ import {
   runMultiPassExtraction,
   runDocumentTextExtraction,
   runStructuredMultiFileExtraction,
+  runChatlikeMultiFileExtraction,
 } from '../runStructuredExtraction';
 
 function mockOpenAIFiles() {
@@ -356,5 +357,61 @@ describe('runStructuredMultiFileExtraction', () => {
 
     assert.equal(result.dutch_speaking, 'Goed');
     assert.deepEqual(result.transport_type, []);
+  });
+});
+
+describe('runChatlikeMultiFileExtraction', () => {
+  it('uploads all PDFs without json_schema and returns freeform output_text', async () => {
+    const deletedIds: string[] = [];
+    let uploadCount = 0;
+    const createPayloads: unknown[] = [];
+
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: `file-${uploadCount}`, status: 'processed' };
+        }),
+        retrieve: mock.fn(async (id: string) => ({ id, status: 'processed' })),
+        delete: mock.fn(async (id: string) => {
+          deletedIds.push(id);
+        }),
+      },
+      responses: {
+        create: mock.fn(async (payload: unknown) => {
+          createPayloads.push(payload);
+          return {
+            output_text:
+              '{"current_job":"Logistiek Coördinator","transport_type":["Auto"],"dutch_speaking":"Goed","computer_skills":"4"}',
+          };
+        }),
+      },
+    };
+
+    const text = await runChatlikeMultiFileExtraction({
+      openai: openai as never,
+      files: [
+        { pdfBuffer: Buffer.from('%PDF-1'), analysisFilename: 'intake.pdf', label: 'intake' },
+        { pdfBuffer: Buffer.from('%PDF-2'), analysisFilename: 'ad.pdf', label: 'ad' },
+      ],
+      instructions: 'Extract like ChatGPT',
+      userMessage: 'Fill employee profile as JSON',
+      model: 'gpt-test',
+      usePdfVision: true,
+      logLabel: 'test freeform',
+    });
+
+    assert.equal(uploadCount, 2);
+    assert.equal(createPayloads.length, 1);
+    const payload = createPayloads[0] as {
+      text?: unknown;
+      input: { content: { type: string; file_id?: string; detail?: string }[] }[];
+    };
+    assert.equal(payload.text, undefined);
+    const fileContents = payload.input[0].content.filter((c) => c.type === 'input_file');
+    assert.equal(fileContents.length, 2);
+    assert.equal(fileContents[0]?.detail, 'high');
+    assert.match(text, /transport_type/);
+    assert.deepEqual(deletedIds.sort(), ['file-1', 'file-2']);
   });
 });

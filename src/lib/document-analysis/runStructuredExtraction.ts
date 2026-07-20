@@ -91,6 +91,16 @@ export type StructuredMultiFileExtractionOptions<T> = {
   logLabel?: string;
 };
 
+export type ChatlikeMultiFileExtractionOptions = {
+  openai: OpenAI;
+  files: MultiFilePdfInput[];
+  instructions: string;
+  userMessage: string;
+  model?: string;
+  usePdfVision?: boolean;
+  logLabel?: string;
+};
+
 async function waitForOpenAIFileReady(openai: OpenAI, fileId: string): Promise<void> {
   const deadline = Date.now() + FILE_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -448,6 +458,62 @@ export async function runStructuredMultiFileExtraction<T>(
       `⚠️ ${logLabel ?? schemaName} returning best effort after soft validation: ${lastErrors.join('; ')}`
     );
     return lastParsed as T;
+  } finally {
+    await Promise.all(fileIds.map((id) => deleteUploadedFile(openai, id)));
+  }
+}
+
+/**
+ * ChatGPT-style multi-PDF call: vision files + freeform text output (NO json_schema).
+ */
+export async function runChatlikeMultiFileExtraction(
+  options: ChatlikeMultiFileExtractionOptions
+): Promise<string> {
+  const {
+    openai,
+    files,
+    instructions,
+    userMessage,
+    model = getDocumentExtractionModel(),
+    usePdfVision = true,
+    logLabel,
+  } = options;
+
+  if (!files.length) {
+    throw new Error('runChatlikeMultiFileExtraction requires at least one PDF');
+  }
+
+  const fileIds: string[] = [];
+
+  try {
+    for (const file of files) {
+      const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
+      fileIds.push(id);
+    }
+
+    const inputFiles = fileIds.map((fileId) => buildPdfInputFileContent(fileId, usePdfVision));
+    const userContent: OpenAI.Responses.ResponseInputContent[] = [
+      { type: 'input_text', text: userMessage },
+      ...inputFiles,
+    ];
+
+    const reasoningEffort = getDocumentExtractionReasoningEffort();
+    const response = await openai.responses.create({
+      model,
+      instructions,
+      input: [{ role: 'user', content: userContent }],
+      ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
+    });
+
+    const outputText = response.output_text?.trim() ?? '';
+    if (!outputText) {
+      throw new Error('Empty response from model');
+    }
+
+    if (logLabel) {
+      console.log(`✅ ${logLabel} (${files.length} files, freeform, len=${outputText.length})`);
+    }
+    return outputText;
   } finally {
     await Promise.all(fileIds.map((id) => deleteUploadedFile(openai, id)));
   }

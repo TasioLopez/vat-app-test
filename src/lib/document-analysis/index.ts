@@ -26,9 +26,11 @@ export {
   runStructuredFileExtraction,
   runMultiPassExtraction,
   runStructuredMultiFileExtraction,
+  runChatlikeMultiFileExtraction,
   runDocumentTextExtraction,
   type StructuredFileExtractionOptions,
   type StructuredMultiFileExtractionOptions,
+  type ChatlikeMultiFileExtractionOptions,
   type MultiFilePdfInput,
   type DocumentTextExtractionOptions,
   type ValidationResult,
@@ -39,6 +41,8 @@ export { extractIntakeEmployeeDetailsFromVision } from './extractIntakeEmployeeD
 export {
   extractEmployeeDetailsChatlike,
   buildChatlikeEmployeeDetailsFromRaw,
+  buildIntakeTextExcerptForChatlike,
+  parseChatlikeEmployeeOutput,
   type ChatlikeDocInput,
   type EmployeeChatlikeExtractionResult,
 } from './extractEmployeeDetailsChatlike';
