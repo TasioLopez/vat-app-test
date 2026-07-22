@@ -192,7 +192,6 @@ function createTemplates(startDate: string, endDate: string): Record<'2-fases' |
           'Vacatures zoeken en beoordeling',
           'Wekelijks solliciteren',
           'Activering/ werkervaringsplaats',
-          'Wekelijks solliciteren vervolg',
           'Sollicitatiegesprek voorbereiden en presenteren',
           'Jobhunten',
           'Detachering onderzoeken',
@@ -258,14 +257,35 @@ function Bijlage1SortableActivityRow({
   );
 }
 
-function findPhaseIndexForActivity(phases: TP2026Bijlage1Phase[], activityName: string): number {
-  return phases.findIndex((phase) => phase.activities.some((a) => a.name === activityName));
+type PhaseActivityRef = { phaseIdx: number; actIdx: number };
+
+function phaseActivityId(phaseIdx: number, actIdx: number): string {
+  return `fase-${phaseIdx}-act-${actIdx}`;
 }
 
-function resolveDropPhaseIndex(overId: string, phases: TP2026Bijlage1Phase[]): number {
+function parsePhaseActivityId(id: string): PhaseActivityRef | null {
+  const match = /^fase-(\d+)-act-(\d+)$/.exec(id);
+  if (!match) return null;
+  return { phaseIdx: Number(match[1]), actIdx: Number(match[2]) };
+}
+
+function isPhaseContainerId(id: string): boolean {
+  return /^fase-\d+$/.test(id);
+}
+
+function resolveDropPhaseIndex(overId: string): number {
   if (overId === 'unassigned') return -1;
-  if (overId.startsWith('fase-')) return Number(overId.split('-')[1]);
-  return findPhaseIndexForActivity(phases, overId);
+  const activityRef = parsePhaseActivityId(overId);
+  if (activityRef) return activityRef.phaseIdx;
+  if (isPhaseContainerId(overId)) return Number(overId.slice('fase-'.length));
+  return -1;
+}
+
+function resolveDragLabel(dragId: string, phases: TP2026Bijlage1Phase[]): string {
+  const ref = parsePhaseActivityId(dragId);
+  if (!ref) return dragId;
+  const name = phases[ref.phaseIdx]?.activities[ref.actIdx]?.name;
+  return name?.trim() ? name : 'Activiteit';
 }
 
 export function Bijlage1Editor({
@@ -332,61 +352,85 @@ export function Bijlage1Editor({
     }));
   };
 
+  const addCustomActivity = (phaseIdx: number) => {
+    setActivePhaseIdx(phaseIdx);
+    updatePhase(phaseIdx, (phase) => ({
+      ...phase,
+      activities: [...phase.activities, { name: '', status: 'P' }],
+    }));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDragId(null);
     if (!over) return;
 
-    const activityName = String(active.id);
+    const activeId = String(active.id);
     const overId = String(over.id);
-    const fromPhaseIdx = findPhaseIndexForActivity(normalized, activityName);
-    const toPhaseIdx = resolveDropPhaseIndex(overId, normalized);
+    const activeRef = parsePhaseActivityId(activeId);
+    const overRef = parsePhaseActivityId(overId);
+    const toPhaseIdx = resolveDropPhaseIndex(overId);
 
     if (overId === 'unassigned') {
-      if (fromPhaseIdx === -1) return;
+      if (!activeRef) return;
       const next = normalized.map((phase, idx) =>
-        idx === fromPhaseIdx
-          ? { ...phase, activities: phase.activities.filter((a) => a.name !== activityName) }
+        idx === activeRef.phaseIdx
+          ? {
+              ...phase,
+              activities: phase.activities.filter((_, actIdx) => actIdx !== activeRef.actIdx),
+            }
           : phase
       );
       setPhases(next);
       return;
     }
 
-    if (fromPhaseIdx === toPhaseIdx && fromPhaseIdx !== -1) {
-      const items = [...normalized[fromPhaseIdx].activities];
-      const fromIndex = items.findIndex((a) => a.name === activityName);
-      const toIndex = items.findIndex((a) => a.name === overId);
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    if (activeRef && overRef && activeRef.phaseIdx === overRef.phaseIdx) {
+      if (activeRef.actIdx === overRef.actIdx) return;
+      const items = [...normalized[activeRef.phaseIdx].activities];
       const next = normalized.map((phase, idx) =>
-        idx === fromPhaseIdx ? { ...phase, activities: arrayMove(items, fromIndex, toIndex) } : phase
-      );
-      setPhases(next);
-      return;
-    }
-
-    if (fromPhaseIdx === -1 && toPhaseIdx !== -1) {
-      const next = normalized.map((phase, idx) =>
-        idx === toPhaseIdx
-          ? { ...phase, activities: [...phase.activities, { name: activityName, status: 'P' as const }] }
+        idx === activeRef.phaseIdx
+          ? { ...phase, activities: arrayMove(items, activeRef.actIdx, overRef.actIdx) }
           : phase
       );
       setPhases(next);
       return;
     }
 
-    if (fromPhaseIdx !== -1 && toPhaseIdx !== -1) {
-      const moved = normalized[fromPhaseIdx].activities.find((a) => a.name === activityName);
+    // Same phase, dropped on container — no-op
+    if (activeRef && toPhaseIdx === activeRef.phaseIdx && !overRef) return;
+
+    if (!activeRef && toPhaseIdx !== -1) {
+      const activityName = activeId;
+      const next = normalized.map((phase, idx) => {
+        if (idx !== toPhaseIdx) return phase;
+        const activities = [...phase.activities];
+        const newItem = { name: activityName, status: 'P' as const };
+        if (overRef) {
+          activities.splice(overRef.actIdx, 0, newItem);
+        } else {
+          activities.push(newItem);
+        }
+        return { ...phase, activities };
+      });
+      setPhases(next);
+      return;
+    }
+
+    if (activeRef && toPhaseIdx !== -1 && activeRef.phaseIdx !== toPhaseIdx) {
+      const moved = normalized[activeRef.phaseIdx]?.activities[activeRef.actIdx];
       if (!moved) return;
       const next = normalized.map((phase, idx) => {
-        if (idx === fromPhaseIdx) {
-          return { ...phase, activities: phase.activities.filter((a) => a.name !== activityName) };
+        if (idx === activeRef.phaseIdx) {
+          return {
+            ...phase,
+            activities: phase.activities.filter((_, actIdx) => actIdx !== activeRef.actIdx),
+          };
         }
         if (idx === toPhaseIdx) {
-          const overActivityIdx = phase.activities.findIndex((a) => a.name === overId);
           const activities = [...phase.activities];
-          if (overActivityIdx >= 0) {
-            activities.splice(overActivityIdx, 0, moved);
+          if (overRef) {
+            activities.splice(overRef.actIdx, 0, moved);
           } else {
             activities.push(moved);
           }
@@ -534,11 +578,13 @@ export function Bijlage1Editor({
                   className="mt-3 min-h-[40px] space-y-1 rounded-md border border-dashed border-border/60 p-1"
                 >
                   <SortableContext
-                    items={phase.activities.map((a) => a.name)}
+                    items={phase.activities.map((_, actIdx) => phaseActivityId(phaseIdx, actIdx))}
                     strategy={verticalListSortingStrategy}
                   >
-                    {phase.activities.map((activity, actIdx) => (
-                      <Bijlage1SortableActivityRow key={`${phaseIdx}-${activity.name}`} id={activity.name}>
+                    {phase.activities.map((activity, actIdx) => {
+                      const rowId = phaseActivityId(phaseIdx, actIdx);
+                      return (
+                      <Bijlage1SortableActivityRow key={rowId} id={rowId}>
                         {({ dragHandleProps }) => (
                           <div className="grid grid-cols-[auto_1fr_70px_56px] items-center gap-2">
                             <button
@@ -559,6 +605,7 @@ export function Bijlage1Editor({
                                   ),
                                 }))
                               }
+                              placeholder="Activiteit…"
                             />
                             <select
                               className="border border-border rounded px-2 py-1 text-sm"
@@ -596,8 +643,19 @@ export function Bijlage1Editor({
                           </div>
                         )}
                       </Bijlage1SortableActivityRow>
-                    ))}
+                      );
+                    })}
                   </SortableContext>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Activiteit toevoegen"
+                    onClick={() => addCustomActivity(phaseIdx)}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </Button>
                 </Bijlage1Droppable>
               </div>
             ))}
@@ -607,7 +665,9 @@ export function Bijlage1Editor({
 
       <DragOverlay>
         {activeDragId ? (
-          <div className="rounded border bg-white px-2 py-1 text-xs shadow-md">{activeDragId}</div>
+          <div className="rounded border bg-white px-2 py-1 text-xs shadow-md">
+            {resolveDragLabel(activeDragId, normalized)}
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>

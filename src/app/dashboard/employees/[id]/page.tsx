@@ -1055,16 +1055,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 isDirty={hasUnsavedChanges}
                 onSave={() => saveUnified({ silent: true })}
             />
-            <div>
+            <div className="flex items-center gap-1">
                 <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="mb-2 gap-1 text-gray-600"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-gray-600"
+                    aria-label="Terug naar werknemers"
                     onClick={() => guardedRouter.push('/dashboard/employees')}
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    Terug naar werknemers
                 </Button>
                 <h1 className="text-xl font-bold">Werknemer Details</h1>
             </div>
