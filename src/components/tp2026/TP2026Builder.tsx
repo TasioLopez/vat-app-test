@@ -582,7 +582,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           {sections.map((section, index) => (
             <div key={section.id} style={{ display: currentStep === index + 1 ? 'block' : 'none' }} className="h-full min-h-0">
               <div className="flex min-h-0 h-full gap-10 items-stretch overflow-hidden">
-                <div className="flex max-h-full w-[50%] min-h-0 flex-col space-y-3 overflow-y-auto pr-2">
+                <div className="flex max-h-full w-[50%] min-h-0 flex-col space-y-3 overflow-y-auto py-1 pl-1 pr-2">
                   {section.renderEditor()}
                 </div>
                 <TPPreviewWrapper>

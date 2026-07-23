@@ -262,8 +262,8 @@ function Basis2026SectionDetail({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex items-start justify-between gap-3 overflow-visible py-0.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 overflow-visible">
           <IconActionButton label="Terug naar secties" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" aria-hidden />
           </IconActionButton>
@@ -271,7 +271,7 @@ function Basis2026SectionDetail({
           <BasisSectionStatusBadge status={status} />
           {BASIS_SECTION_INFO[sectionId] ? <BasisSectionInfoButton sectionId={sectionId} /> : null}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 overflow-visible">
           {canAutofill ? (
             <IconActionButton label="Autofill" onClick={() => void onAutofillField!(sectionId)}>
               <Sparkles className="h-4 w-4" aria-hidden />
