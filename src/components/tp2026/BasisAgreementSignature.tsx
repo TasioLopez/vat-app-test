@@ -75,7 +75,7 @@ export function BasisSignatureBlock({
             <div className="min-h-2" aria-hidden />
             <div className="min-h-8" aria-hidden />
           </SignatureCell>
-          <SignatureCell title="Valentine Z">
+          <SignatureCell title="ValentineZ">
             <div>{advisorName}</div>
             <div className="min-h-2" aria-hidden />
             <div className="min-h-8" aria-hidden />

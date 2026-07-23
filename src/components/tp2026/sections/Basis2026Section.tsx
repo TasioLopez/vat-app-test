@@ -18,6 +18,7 @@ import {
   markBasisSectionValidated,
   type BasisSectionDisplayStatus,
 } from '@/lib/tp2026/basis-section-review';
+import { BASIS_SECTION_INFO } from '@/lib/tp2026/basis-section-info';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
@@ -31,33 +32,67 @@ import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadvise
 import { BasisValidationProgress } from '@/components/tp2026/BasisValidationProgress';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
 
-function PraktischeBelemmeringenInfoButton() {
+function BasisSectionInfoBody({ body }: { body: string }) {
   return (
-    <span className="group/info relative inline-flex">
-      <button
-        type="button"
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/35 text-[10px] font-bold leading-none text-muted-foreground transition-colors hover:border-[#6d2a96]/50 hover:bg-[#6d2a96]/5 hover:text-[#6d2a96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6d2a96]/40"
-        aria-label="Informatie over praktische belemmeringen"
-      >
-        i
-      </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute left-1/2 top-[calc(100%+6px)] z-50 hidden w-72 max-w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 rounded-md border border-border bg-white p-3 text-left text-xs font-normal leading-relaxed text-foreground shadow-md group-hover/info:block group-focus-within/info:block"
-      >
-        Hier kan, indien van toepassing, een toelichting worden opgenomen. Praktische belemmeringen zijn
-        factoren die het tweede spoortraject kunnen belemmeren of (negatief) kunnen beïnvloeden. Denk hierbij
-        aan mantelzorgverplichtingen voor een naast familielid of een vervoersbeperking die niet door de
-        bedrijfsarts is vermeld.{' '}
-        <strong>Let op dat dit AVG-proof wordt beschreven.</strong>
+    <div className="space-y-2">
+      {body.split(/\n\n+/).map((paragraph, index) => (
+        <p key={index} className="whitespace-pre-wrap">
+          {paragraph}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function BasisSectionInfoButton({ sectionId }: { sectionId: BasisEditorSectionId }) {
+  const info = BASIS_SECTION_INFO[sectionId];
+  const [open, setOpen] = useState(false);
+  if (!info) return null;
+
+  return (
+    <>
+      <span className="group/info relative inline-flex">
+        <button
+          type="button"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/35 text-[10px] font-bold leading-none text-muted-foreground transition-colors hover:border-[#6d2a96]/50 hover:bg-[#6d2a96]/5 hover:text-[#6d2a96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6d2a96]/40"
+          aria-label={`Informatie over ${info.title}`}
+          onClick={(event) => {
+            event.preventDefault();
+            setOpen(true);
+          }}
+        >
+          i
+        </button>
+        <span
+          role="tooltip"
+          className="pointer-events-auto absolute left-1/2 top-[calc(100%+6px)] z-50 hidden max-h-48 w-72 max-w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 overflow-y-auto rounded-md border border-border bg-white p-3 text-left text-xs font-normal leading-relaxed text-foreground shadow-md group-hover/info:block group-focus-within/info:block"
+        >
+          <BasisSectionInfoBody body={info.body} />
+        </span>
       </span>
-    </span>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{info.title}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[min(70vh,32rem)] overflow-y-auto pr-1 text-sm leading-relaxed text-foreground">
+            <BasisSectionInfoBody body={info.body} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -199,7 +234,7 @@ function Basis2026SectionDetail({
           </IconActionButton>
           <h2 className="text-sm font-semibold text-foreground">{section.label}</h2>
           <BasisSectionStatusBadge status={status} />
-          {sectionId === 'praktische_belemmeringen' ? <PraktischeBelemmeringenInfoButton /> : null}
+          {BASIS_SECTION_INFO[sectionId] ? <BasisSectionInfoButton sectionId={sectionId} /> : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {canAutofill ? (
