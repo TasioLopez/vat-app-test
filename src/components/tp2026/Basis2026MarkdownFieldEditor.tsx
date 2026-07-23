@@ -19,6 +19,7 @@ import {
   toolbarPlugin,
   UndoRedo,
 } from '@mdxeditor/editor';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 type Props = {
   markdown: string;
@@ -29,6 +30,7 @@ type Props = {
 
 /**
  * Rich markdown editor for TP 2026 basis fields (no image upload; matches preview semantics).
+ * Local Lexical state updates immediately; parent sync is debounced.
  */
 export function Basis2026MarkdownFieldEditor({
   markdown,
@@ -38,17 +40,21 @@ export function Basis2026MarkdownFieldEditor({
 }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null);
   const lastEmitted = useRef(markdown);
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: markdown,
+    onSync: onChange,
+  });
 
   useEffect(() => {
-    if (markdown !== lastEmitted.current) {
-      editorRef.current?.setMarkdown(markdown);
-      lastEmitted.current = markdown;
+    if (draft !== lastEmitted.current) {
+      editorRef.current?.setMarkdown(draft);
+      lastEmitted.current = draft;
     }
-  }, [markdown]);
+  }, [draft]);
 
   const handleChange = (md: string) => {
     lastEmitted.current = md;
-    onChange(md);
+    setDraft(md);
   };
 
   const plugins = useMemo(
@@ -81,7 +87,7 @@ export function Basis2026MarkdownFieldEditor({
     <div className="overflow-hidden rounded-md border border-[#b8985c] bg-white">
       <MDXEditor
         ref={editorRef}
-        markdown={markdown}
+        markdown={draft}
         onChange={handleChange}
         plugins={plugins}
         suppressHtmlProcessing

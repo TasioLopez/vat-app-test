@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
@@ -253,18 +253,20 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     [tpData, updateField]
   );
 
+  const previewData = useDeferredValue(tpData);
+
   const sections = [
     {
       id: 1,
       title: '01 Voorblad',
       renderEditor: () => <Cover2026Editor data={tpData} updateField={updateField} />,
-      renderPreview: () => <Cover2026A4 data={tpData} />,
+      renderPreview: () => <Cover2026A4 data={previewData} />,
     },
     {
       id: 2,
       title: '02 Gegevens',
       renderEditor: () => <Gegevens2026Editor data={tpData} updateField={updateField} />,
-      renderPreview: () => <Gegevens2026A4Pages data={tpData} />,
+      renderPreview: () => <Gegevens2026A4Pages data={previewData} />,
     },
     {
       id: 3,
@@ -272,7 +274,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       renderEditor: () => (
         <Basis2026Editor data={tpData} updateField={updateBasisField} onAutofillField={autofillBasisField} />
       ),
-      renderPreview: () => <Basis2026A4Pages data={tpData} />,
+      renderPreview: () => (
+        <Basis2026A4Pages data={previewData} paginationEnabled={currentStep === 3} />
+      ),
     },
     {
       id: 4,
@@ -285,7 +289,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           planEndDate={tpData.tp_end_date}
         />
       ),
-      renderPreview: () => <Bijlage1A4Pages data={tpData} phases={tpData.bijlage1_phases || []} />,
+      renderPreview: () => (
+        <Bijlage1A4Pages data={previewData} phases={previewData.bijlage1_phases || []} />
+      ),
     },
   ];
 
@@ -600,7 +606,7 @@ function HiddenBasisPageMeasure({ data }: { data: Record<string, any> }) {
       className="sr-only pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden"
       aria-hidden
     >
-      <Basis2026A4Pages data={data} />
+      <Basis2026A4Pages data={data} paginationEnabled />
     </div>
   );
 }

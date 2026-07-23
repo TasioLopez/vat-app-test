@@ -6,12 +6,12 @@ import {
   buildPowMeterStorage,
   parsePowInschaling,
   parsePowToelichting,
-  updatePowMeterToelichting,
   type PowInschalingData,
 } from '@/lib/tp/pow-meter/build-fields';
 import { TP2026_VISIE_PLAATSBARHEID_TITLE } from '@/lib/tp2026/basis-profiel-field-order';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 const TEXTAREA_CLASS =
   'w-full min-h-[72px] rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -27,16 +27,20 @@ export function PowInschalingEditor({
   raw: string;
   onChange: (next: string) => void;
 }) {
-  const parsed = parsePowInschaling(raw) ?? emptyInschaling();
-  const toelichting = parsePowToelichting(raw);
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: raw,
+    onSync: onChange,
+  });
+  const parsed = parsePowInschaling(draft) ?? emptyInschaling();
+  const toelichting = parsePowToelichting(draft);
 
   const updateField = (key: keyof PowInschalingData, value: string) => {
     const next: PowInschalingData = { ...parsed, [key]: value };
-    onChange(buildPowMeterStorage(next, toelichting));
+    setDraft(buildPowMeterStorage(next, toelichting));
   };
 
   const updateToelichting = (value: string) => {
-    onChange(updatePowMeterToelichting(raw, value));
+    setDraft(buildPowMeterStorage(parsed, value));
   };
 
   return (
@@ -98,7 +102,7 @@ export function PowInschalingEditor({
         <div>
           <p className="mb-1 text-xs font-medium text-muted-foreground">Voorbeeldweergave</p>
           <div className="rounded-md border border-[#b8985c]/40 bg-[#f3efe4] px-3 py-2">
-            <PowInschalingTable raw={raw} />
+            <PowInschalingTable raw={draft} />
           </div>
         </div>
       )}

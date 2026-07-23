@@ -7,6 +7,7 @@ import {
 } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
 import { FUNCTIE_FOOTER } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 const TEXTAREA_CLASS =
   'w-full min-h-[72px] rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
@@ -18,10 +19,14 @@ export function VisieLoopbaanadviseurEditor({
   raw: string;
   onChange: (next: string) => void;
 }) {
-  const parsed = parseVisieLoopbaanadviseur(String(raw ?? ''));
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: String(raw ?? ''),
+    onSync: onChange,
+  });
+  const parsed = parseVisieLoopbaanadviseur(draft);
 
   const update = (patch: Partial<typeof parsed>) => {
-    onChange(buildVisieLoopbaanadviseurBlock({ ...parsed, ...patch }));
+    setDraft(buildVisieLoopbaanadviseurBlock({ ...parsed, ...patch }));
   };
 
   const previewRaw = buildVisieLoopbaanadviseurBlock(parsed);

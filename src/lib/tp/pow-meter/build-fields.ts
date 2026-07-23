@@ -456,9 +456,14 @@ export function buildPowInschalingBlock(data: PowInschalingData): string {
   return `${INSCHALING_DELIMITER}\n${json}`;
 }
 
+/** Strip structural newlines from delimiter joins without eating typing spaces. */
+function stripStructuralNewlines(value: string): string {
+  return String(value || '').replace(/^\n+/, '').replace(/\n+$/, '');
+}
+
 export function buildPowToelichtingBlock(toelichting: string): string {
-  const text = String(toelichting || '').trim();
-  if (!text) return '';
+  const text = String(toelichting || '');
+  if (!text.trim()) return '';
   return `${TOELICHTING_POW_DELIMITER}\n${text}`;
 }
 
@@ -486,9 +491,10 @@ export function parsePowInschaling(raw: string): PowInschalingData | null {
     try {
       const parsed = JSON.parse(block) as Record<string, unknown>;
       return {
-        huidige_trede: String(parsed.huidige_trede ?? '').trim(),
-        werkzame_uren: String(parsed.werkzame_uren ?? '').trim(),
-        verwachting: String(parsed.verwachting ?? '').trim(),
+        // Preserve typing spaces — do not trim field bodies.
+        huidige_trede: String(parsed.huidige_trede ?? ''),
+        werkzame_uren: String(parsed.werkzame_uren ?? ''),
+        verwachting: String(parsed.verwachting ?? ''),
       };
     } catch {
       return null;
@@ -499,11 +505,11 @@ export function parsePowInschaling(raw: string): PowInschalingData | null {
 }
 
 export function parsePowToelichting(raw: string): string {
-  const text = String(raw || '').trim();
-  if (!text) return '';
+  const text = String(raw || '');
+  if (!text.trim()) return '';
 
   if (text.includes(TOELICHTING_POW_DELIMITER)) {
-    return text.split(TOELICHTING_POW_DELIMITER)[1]?.trim() ?? '';
+    return stripStructuralNewlines(text.split(TOELICHTING_POW_DELIMITER)[1] ?? '');
   }
 
   if (!text.includes(INSCHALING_DELIMITER)) {
@@ -515,9 +521,9 @@ export function parsePowToelichting(raw: string): string {
 
 export function updatePowMeterToelichting(raw: string, toelichting: string): string {
   const inschaling = parsePowInschaling(raw);
-  const nextToelichting = String(toelichting || '').trim();
+  const nextToelichting = String(toelichting || '');
   if (!inschaling) {
-    return nextToelichting ? buildPowToelichtingBlock(nextToelichting) : String(raw || '').trim();
+    return nextToelichting.trim() ? buildPowToelichtingBlock(nextToelichting) : String(raw || '');
   }
   return buildPowMeterStorage(inschaling, nextToelichting);
 }

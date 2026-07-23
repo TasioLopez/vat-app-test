@@ -10,6 +10,7 @@ import {
   normalizeEducationLevel,
 } from '@/lib/tp2026/gegevens-field-options';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 export type FieldControlLayout = 'stack' | 'row';
 
@@ -291,12 +292,12 @@ export default function FieldControl({
         layout="stack"
         className={className}
         control={
-          <Textarea
+          <DebouncedTextarea
             value={value || ''}
             disabled={disabled}
             rows={multilineMinRows}
             className="min-h-[80px] resize-y"
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
           />
         }
       />
@@ -309,13 +310,66 @@ export default function FieldControl({
       layout={layout}
       className={className}
       control={
-        <Input
+        <DebouncedInput
           className="w-full"
           value={value || ''}
           disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
         />
       }
+    />
+  );
+}
+
+function DebouncedTextarea({
+  value,
+  onChange,
+  disabled,
+  rows,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  rows: number;
+  className?: string;
+}) {
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: value,
+    onSync: onChange,
+  });
+  return (
+    <Textarea
+      value={draft}
+      disabled={disabled}
+      rows={rows}
+      className={className}
+      onChange={(e) => setDraft(e.target.value)}
+    />
+  );
+}
+
+function DebouncedInput({
+  value,
+  onChange,
+  disabled,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: value,
+    onSync: onChange,
+  });
+  return (
+    <Input
+      className={className}
+      value={draft}
+      disabled={disabled}
+      onChange={(e) => setDraft(e.target.value)}
     />
   );
 }

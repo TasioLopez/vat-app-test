@@ -76,22 +76,28 @@ export type ParsedAdAdvies = {
   citaat: string;
 };
 
+function stripStructuralNewlines(value: string): string {
+  return String(value || '').replace(/^\n+/, '').replace(/\n+$/, '');
+}
+
 export function parseAdAdvies(raw: string): ParsedAdAdvies {
-  const text = String(raw || '').trim();
-  if (!text) return { intro: '', citaat: '' };
+  const text = String(raw || '');
+  if (!text.trim()) return { intro: '', citaat: '' };
 
   if (text.includes(ADVIES_DELIMITER)) {
     const [intro, citaat] = text.split(ADVIES_DELIMITER);
-    return { intro: intro.trim(), citaat: (citaat ?? '').trim() };
+    return {
+      intro: stripStructuralNewlines(intro),
+      citaat: stripStructuralNewlines(citaat ?? ''),
+    };
   }
 
   return { intro: text, citaat: '' };
 }
 
 export function buildAdAdviesBlock(intro: string, citaat: string): string {
-  const introTrim = intro.trim();
-  const citaatTrim = citaat.trim();
-  if (!citaatTrim) return introTrim;
-  if (!introTrim) return `${ADVIES_DELIMITER}\n${citaatTrim}`;
-  return `${introTrim}\n\n${ADVIES_DELIMITER}\n${citaatTrim}`;
+  // Preserve typing spaces; only omit empty blocks via trim checks.
+  if (!citaat.trim()) return intro;
+  if (!intro.trim()) return `${ADVIES_DELIMITER}\n${citaat}`;
+  return `${intro}\n\n${ADVIES_DELIMITER}\n${citaat}`;
 }

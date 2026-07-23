@@ -218,6 +218,20 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
     assert.ok(rebuilt.includes(TOELICHTING_DELIMITER));
     assert.ok(rebuilt.includes(legacy));
   });
+
+  it('preserves trailing and internal spaces in visie round-trip', () => {
+    const draft = {
+      toelichting: 'toelichting ',
+      functiesIntro: 'intro  tekst ',
+      functieBullets: '• Functie – toelichting ',
+      footer: FUNCTIE_FOOTER,
+    };
+    const block = buildVisieLoopbaanadviseurBlock(draft);
+    const parsed = parseVisieLoopbaanadviseur(block);
+    assert.equal(parsed.toelichting, draft.toelichting);
+    assert.equal(parsed.functiesIntro, draft.functiesIntro);
+    assert.equal(parsed.functieBullets, draft.functieBullets);
+  });
 });
 
 describe('parseVisieLoopbaanadviseurContentResult', () => {

@@ -11,10 +11,12 @@ import {
   countWords,
   hasToelichtingOpener,
   hasVerwachtingOpener,
+  buildPowMeterStorage,
   parsePowInschaling,
   parsePowToelichting,
   stripForbiddenToelichtingPhrases,
   truncateToWordLimitOnSentenceBoundary,
+  updatePowMeterToelichting,
 } from '../build-fields';
 import {
   INSCHALING_DELIMITER,
@@ -230,6 +232,25 @@ describe('buildPowMeterFields V10', () => {
     assert.ok(parsed);
     assert.match(parsed!.huidige_trede, /trede 1/);
     assert.ok(hasVerwachtingOpener(parsed!.verwachting));
+  });
+
+  it('preserves trailing and internal spaces in inschaling and toelichting round-trip', () => {
+    const inschaling = {
+      huidige_trede: 'trede 2 ',
+      werkzame_uren: 'geen  uren ',
+      verwachting: 'opbouw ',
+    };
+    const toelichting = 'toelichting kern ';
+    const stored = buildPowMeterStorage(inschaling, toelichting);
+    const parsed = parsePowInschaling(stored);
+    assert.ok(parsed);
+    assert.equal(parsed!.huidige_trede, 'trede 2 ');
+    assert.equal(parsed!.werkzame_uren, 'geen  uren ');
+    assert.equal(parsed!.verwachting, 'opbouw ');
+    assert.equal(parsePowToelichting(stored), 'toelichting kern ');
+
+    const updated = updatePowMeterToelichting(stored, 'nieuwe toelichting ');
+    assert.equal(parsePowToelichting(updated), 'nieuwe toelichting ');
   });
 
   it('exposes expected table row labels', () => {

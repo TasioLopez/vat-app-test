@@ -254,11 +254,15 @@ function findAdDelimiterIndex(text: string): { index: number; delimiter: string 
   return null;
 }
 
+function stripStructuralNewlines(value: string): string {
+  return String(value || '').replace(/^\n+/, '').replace(/\n+$/, '');
+}
+
 export function stripInleidingSubQuoteWrapping(quote: string): string {
-  // Preserve markdown styling; only strip surrounding quote marks.
-  let q = quote.trim();
-  if (q.startsWith('"') && q.endsWith('"')) {
-    q = q.slice(1, -1).trim();
+  // Preserve typing spaces and markdown styling; only strip surrounding quote marks.
+  let q = stripStructuralNewlines(quote);
+  if (q.startsWith('"') && q.endsWith('"') && q.length >= 2) {
+    q = q.slice(1, -1);
   }
   return q;
 }
@@ -269,8 +273,8 @@ export type ParsedInleidingSub = {
 };
 
 export function parseInleidingSub(raw: string): ParsedInleidingSub {
-  const text = String(raw || '').trim();
-  if (!text) return { intro: '', quote: '' };
+  const text = String(raw || '');
+  if (!text.trim()) return { intro: '', quote: '' };
 
   if (text.includes('N.B.:') && text.includes(INLEIDING_SUB_NB_PATTERN)) {
     return { intro: text, quote: '' };
@@ -278,7 +282,7 @@ export function parseInleidingSub(raw: string): ParsedInleidingSub {
 
   const match = findAdDelimiterIndex(text);
   if (match) {
-    const intro = text.slice(0, match.index + match.delimiter.length).trim();
+    const intro = stripStructuralNewlines(text.slice(0, match.index + match.delimiter.length));
     const quote = stripInleidingSubQuoteWrapping(text.slice(match.index + match.delimiter.length));
     return { intro, quote };
   }
@@ -287,11 +291,10 @@ export function parseInleidingSub(raw: string): ParsedInleidingSub {
 }
 
 export function buildInleidingSubBlock(intro: string, quote: string): string {
-  const introTrim = intro.trim();
-  const quoteTrim = quote.trim();
-  if (!quoteTrim) return introTrim;
-  if (!introTrim) return quoteTrim;
-  return `${introTrim}\n\n${quoteTrim}`;
+  // Preserve typing spaces; only omit empty blocks via trim checks.
+  if (!quote.trim()) return intro;
+  if (!intro.trim()) return quote;
+  return `${intro}\n\n${quote}`;
 }
 
 export function buildInleidingFields(

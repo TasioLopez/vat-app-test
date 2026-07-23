@@ -234,6 +234,15 @@ describe('parseBelastbaarheidsprofiel / buildBelastbaarheidsprofielBlock', () =>
     });
     assert.equal(buildBelastbaarheidsprofielBlock(raw, ''), raw);
   });
+
+  it('preserves trailing and internal spaces in belastbaarheidsprofiel round-trip', () => {
+    const limitations = 'beperkingen  tekst ';
+    const quote = 'prognose citaat ';
+    const block = buildBelastbaarheidsprofielBlock(limitations, quote);
+    const parsed = parseBelastbaarheidsprofiel(block);
+    assert.equal(parsed.limitationsBlock, limitations);
+    assert.equal(parsed.prognoseQuote, quote);
+  });
 });
 
 describe('mergeBelastbaarheidsprofielContent', () => {

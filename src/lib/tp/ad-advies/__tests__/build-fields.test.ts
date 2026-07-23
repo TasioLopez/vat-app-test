@@ -99,6 +99,15 @@ describe('buildAdAdviesFields', () => {
     assert.equal(parsed.citaat, citaat);
   });
 
+  it('preserves trailing and internal spaces in AD advies round-trip', () => {
+    const intro = 'Intro tekst ';
+    const citaat = 'citaat  met  spaties ';
+    const block = buildAdAdviesBlock(intro, citaat);
+    const parsed = parseAdAdvies(block);
+    assert.equal(parsed.intro, intro);
+    assert.equal(parsed.citaat, citaat);
+  });
+
   it('parseAdAdvies legacy text without delimiter', () => {
     const legacy = 'Oude vrije tekst zonder delimiter.';
     const parsed = parseAdAdvies(legacy);

@@ -7,6 +7,7 @@ import {
 } from '@/lib/tp/inleiding/build-fields';
 import { ConfirmToEditBlock, TEXTAREA_CLASS } from '@/components/tp/ConfirmToEditBlock';
 import { InleidingSubQuotePreview } from '@/components/tp/InleidingSubBlock';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 export function InleidingSubEditor({
   raw,
@@ -16,29 +17,33 @@ export function InleidingSubEditor({
   adReportConcept?: boolean;
   onChange: (next: string) => void;
 }) {
-  const text = String(raw ?? '').trim();
-  if (!text) return null;
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: String(raw ?? ''),
+    onSync: onChange,
+  });
 
-  const { intro, quote } = parseInleidingSub(text);
-  const isNbOnly = text.includes('N.B.:') && intro === text && !quote;
+  if (!draft.trim()) return null;
+
+  const { intro, quote } = parseInleidingSub(draft);
+  const isNbOnly = draft.includes('N.B.:') && intro === draft && !quote;
 
   if (isNbOnly) {
     return (
       <div className="mt-3">
         <p className="mb-1 text-xs font-medium text-muted-foreground">AD-toelichting (automatisch)</p>
         <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
-          <span className="text-sm text-neutral-900">{text}</span>
+          <span className="text-sm text-neutral-900">{draft}</span>
         </div>
       </div>
     );
   }
 
   const updateIntro = (value: string) => {
-    onChange(buildInleidingSubBlock(value, quote));
+    setDraft(buildInleidingSubBlock(value, quote));
   };
 
   const updateQuote = (value: string) => {
-    onChange(buildInleidingSubBlock(intro, value));
+    setDraft(buildInleidingSubBlock(intro, value));
   };
 
   return (

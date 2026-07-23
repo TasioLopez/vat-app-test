@@ -5,6 +5,7 @@ import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
 import { buildAdAdviesBlock, parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { ConfirmToEditBlock, TEXTAREA_CLASS } from '@/components/tp/ConfirmToEditBlock';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 export function AdviesPassendeArbeidEditor({
   raw,
@@ -15,26 +16,29 @@ export function AdviesPassendeArbeidEditor({
   hasAdReport?: boolean | null;
   onChange: (next: string) => void;
 }) {
-  const text = String(raw ?? '').trim();
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: String(raw ?? ''),
+    onSync: onChange,
+  });
 
-  if (hasAdReport === false || text.startsWith('N.B.')) {
+  if (hasAdReport === false || draft.trimStart().startsWith('N.B.')) {
     return (
       <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
         <span className="text-sm font-bold text-neutral-900">
-          {text || ADVIES_NB_NO_REPORT}
+          {draft.trim() || ADVIES_NB_NO_REPORT}
         </span>
       </div>
     );
   }
 
-  const { intro, citaat } = parseAdAdvies(text);
+  const { intro, citaat } = parseAdAdvies(draft);
 
   const updateIntro = (value: string) => {
-    onChange(buildAdAdviesBlock(value, citaat));
+    setDraft(buildAdAdviesBlock(value, citaat));
   };
 
   const updateCitaat = (value: string) => {
-    onChange(buildAdAdviesBlock(intro, value));
+    setDraft(buildAdAdviesBlock(intro, value));
   };
 
   const previewRaw = buildAdAdviesBlock(intro, citaat);

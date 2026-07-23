@@ -8,6 +8,7 @@ import {
 } from '@/lib/tp/belastbaarheidsprofiel/build-fields';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { ConfirmToEditBlock } from '@/components/tp/ConfirmToEditBlock';
+import { useDebouncedSync } from '@/hooks/useDebouncedSync';
 
 const Basis2026MarkdownFieldEditor = dynamic(
   () =>
@@ -32,14 +33,18 @@ export function BelastbaarheidsprofielEditor({
   raw: string;
   onChange: (next: string) => void;
 }) {
-  const { limitationsBlock, prognoseQuote } = parseBelastbaarheidsprofiel(String(raw ?? ''));
+  const { value: draft, setDraft } = useDebouncedSync({
+    external: String(raw ?? ''),
+    onSync: onChange,
+  });
+  const { limitationsBlock, prognoseQuote } = parseBelastbaarheidsprofiel(draft);
 
   const updateLimitations = (value: string) => {
-    onChange(buildBelastbaarheidsprofielBlock(value, prognoseQuote));
+    setDraft(buildBelastbaarheidsprofielBlock(value, prognoseQuote));
   };
 
   const updatePrognoseQuote = (value: string) => {
-    onChange(buildBelastbaarheidsprofielBlock(limitationsBlock, value));
+    setDraft(buildBelastbaarheidsprofielBlock(limitationsBlock, value));
   };
 
   return (

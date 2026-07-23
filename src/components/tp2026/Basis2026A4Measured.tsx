@@ -838,10 +838,13 @@ export function Basis2026A4Pages({
   data,
   printMode = false,
   onPaginationReady,
+  paginationEnabled = true,
 }: {
   data: Record<string, any>;
   printMode?: boolean;
   onPaginationReady?: () => void;
+  /** When false, skip DOM remasure (keep last snapshot). Print always measures. */
+  paginationEnabled?: boolean;
 }) {
   const { getSectionStartPage, setSectionPageCount } = useTP2026PageNumber();
   const baseline = useMemo(() => buildBasisBodyAtoms(data), [data]);
@@ -854,13 +857,16 @@ export function Basis2026A4Pages({
   const readySentRef = useRef(false);
   const paginationGenRef = useRef(0);
 
+  const shouldMeasure = printMode || paginationEnabled;
+
   useEffect(() => {
+    if (!shouldMeasure) return;
     paginationGenRef.current += 1;
     setMeasureAtoms(baseline);
     setIsPaginating(true);
     readySentRef.current = false;
     // Keep displayAtoms/displayPages so the preview does not blank to "Pagineren...".
-  }, [baseline]);
+  }, [baseline, shouldMeasure]);
 
   const emitReady = useCallback(() => {
     if (readySentRef.current) return;
@@ -920,10 +926,32 @@ export function Basis2026A4Pages({
   }, [measureAtoms, data, emitReady, printMode]);
 
   useLayoutEffect(() => {
-    void measureAndPaginate();
-    const t = window.setTimeout(() => void measureAndPaginate(), 120);
-    return () => window.clearTimeout(t);
-  }, [measureAndPaginate]);
+    if (!shouldMeasure) return;
+
+    // Print: measure immediately. Live preview: debounce so typing is not blocked.
+    const delayMs = printMode ? 0 : 350;
+    let cancelled = false;
+
+    const run = () => {
+      if (cancelled) return;
+      void measureAndPaginate();
+    };
+
+    if (delayMs === 0) {
+      run();
+      const t = window.setTimeout(run, 120);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(t);
+      };
+    }
+
+    const t = window.setTimeout(run, delayMs);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [measureAndPaginate, shouldMeasure, printMode]);
 
   const wrap = (node: React.ReactNode, key: React.Key) =>
     printMode ? (

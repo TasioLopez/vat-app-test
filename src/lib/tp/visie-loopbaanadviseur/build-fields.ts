@@ -129,43 +129,47 @@ export type ParsedVisieLoopbaanadviseur = {
   footer: string;
 };
 
-function splitFunctiesBody(body: string): { intro: string; bullets: string; footer: string } {
-  const trimmed = body.trim();
-  if (!trimmed) return { intro: '', bullets: '', footer: '' };
+function stripStructuralNewlines(value: string): string {
+  return String(value || '').replace(/^\n+/, '').replace(/\n+$/, '');
+}
 
-  let footerIdx = trimmed.indexOf(FUNCTIE_FOOTER);
+function splitFunctiesBody(body: string): { intro: string; bullets: string; footer: string } {
+  const normalized = stripStructuralNewlines(body);
+  if (!normalized.trim()) return { intro: '', bullets: '', footer: '' };
+
+  let footerIdx = normalized.indexOf(FUNCTIE_FOOTER);
   if (footerIdx === -1) {
     const footerMarker = FUNCTIE_FOOTER.replace(/^\*/, '').slice(0, 40);
-    footerIdx = trimmed.indexOf(footerMarker);
+    footerIdx = normalized.indexOf(footerMarker);
   }
   if (footerIdx === -1) {
-    const lines = trimmed.split('\n');
+    const lines = normalized.split('\n');
     const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
-    if (bulletStart <= 0) return { intro: trimmed, bullets: '', footer: '' };
+    if (bulletStart <= 0) return { intro: normalized, bullets: '', footer: '' };
     return {
-      intro: lines.slice(0, bulletStart).join('\n').trim(),
-      bullets: lines.slice(bulletStart).join('\n').trim(),
+      intro: stripStructuralNewlines(lines.slice(0, bulletStart).join('\n')),
+      bullets: stripStructuralNewlines(lines.slice(bulletStart).join('\n')),
       footer: '',
     };
   }
 
-  const beforeFooter = trimmed.slice(0, footerIdx).trim();
-  const footer = trimmed.slice(footerIdx).trim();
+  const beforeFooter = stripStructuralNewlines(normalized.slice(0, footerIdx));
+  const footer = stripStructuralNewlines(normalized.slice(footerIdx));
   const lines = beforeFooter.split('\n');
   const bulletStart = lines.findIndex((l) => /^[•☑✓\-]/.test(l.trim()));
   if (bulletStart <= 0) {
     return { intro: beforeFooter, bullets: '', footer };
   }
   return {
-    intro: lines.slice(0, bulletStart).join('\n').trim(),
-    bullets: lines.slice(bulletStart).join('\n').trim(),
+    intro: stripStructuralNewlines(lines.slice(0, bulletStart).join('\n')),
+    bullets: stripStructuralNewlines(lines.slice(bulletStart).join('\n')),
     footer,
   };
 }
 
 export function parseVisieLoopbaanadviseur(raw: string): ParsedVisieLoopbaanadviseur {
-  const text = String(raw ?? '').trim();
-  if (!text) {
+  const text = String(raw ?? '');
+  if (!text.trim()) {
     return { toelichting: '', functiesIntro: '', functieBullets: '', footer: FUNCTIE_FOOTER };
   }
 
@@ -178,7 +182,7 @@ export function parseVisieLoopbaanadviseur(raw: string): ParsedVisieLoopbaanadvi
   const { intro, bullets, footer } = splitFunctiesBody(functiesBody);
 
   return {
-    toelichting: toelichtingBody.trim(),
+    toelichting: stripStructuralNewlines(toelichtingBody),
     functiesIntro: intro,
     functieBullets: bullets,
     footer: footer || FUNCTIE_FOOTER,
@@ -186,14 +190,14 @@ export function parseVisieLoopbaanadviseur(raw: string): ParsedVisieLoopbaanadvi
 }
 
 export function buildVisieLoopbaanadviseurBlock(parsed: ParsedVisieLoopbaanadviseur): string {
-  const toelichting = parsed.toelichting.trim();
-  const functiesIntro = parsed.functiesIntro.trim();
-  const functieBullets = parsed.functieBullets.trim();
-  const footer = (parsed.footer || FUNCTIE_FOOTER).trim();
+  const toelichting = parsed.toelichting;
+  const functiesIntro = parsed.functiesIntro;
+  const functieBullets = parsed.functieBullets;
+  const footer = parsed.footer || FUNCTIE_FOOTER;
 
-  if (!toelichting && !functiesIntro && !functieBullets) return '';
+  if (!toelichting.trim() && !functiesIntro.trim() && !functieBullets.trim()) return '';
 
-  if (!functiesIntro && !functieBullets) {
+  if (!functiesIntro.trim() && !functieBullets.trim()) {
     return [TOELICHTING_DELIMITER, toelichting].join('\n\n');
   }
 

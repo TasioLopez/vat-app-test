@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   buildAdSubBlock,
   buildInleidingFields,
+  buildInleidingSubBlock,
+  parseInleidingSub,
   type InleidingBuildContext,
 } from '../build-fields';
 import { AD_INTRO_SUFFIX, INLEIDING_GEEN_AD, isAdSubBlock } from '../constants';
@@ -260,6 +262,20 @@ describe('buildAdSubBlock', () => {
     const block = buildAdSubBlock('dhr. X', '15 januari 2026', 'Citaat tekst.');
     assert.match(block, /op 15 januari 2026 staat het volgende advies/);
     assert.ok(block.endsWith('Citaat tekst.'));
+  });
+});
+
+describe('parseInleidingSub / buildInleidingSubBlock', () => {
+  it('preserves trailing and internal spaces in round-trip', () => {
+    const intro = `Intro  tekst ${AD_INTRO_SUFFIX}`;
+    const quote = 'citaat  met spaties ';
+    const block = buildInleidingSubBlock(intro, quote);
+    const parsed = parseInleidingSub(block);
+    assert.equal(parsed.intro, intro);
+    assert.equal(parsed.quote, quote);
+
+    const introOnly = 'alleen intro ';
+    assert.equal(parseInleidingSub(buildInleidingSubBlock(introOnly, '')).intro, introOnly);
   });
 });
 

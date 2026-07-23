@@ -93,15 +93,19 @@ export type ParsedBelastbaarheidsprofiel = {
   prognoseQuote: string;
 };
 
+function stripStructuralNewlines(value: string): string {
+  return String(value || '').replace(/^\n+/, '').replace(/\n+$/, '');
+}
+
 export function parseBelastbaarheidsprofiel(raw: string): ParsedBelastbaarheidsprofiel {
-  const text = String(raw || '').trim();
-  if (!text) return { limitationsBlock: '', prognoseQuote: '' };
+  const text = String(raw || '');
+  if (!text.trim()) return { limitationsBlock: '', prognoseQuote: '' };
 
   if (text.includes(PROGNOSE_DELIMITER)) {
     const [limitationsBlock, prognoseQuote] = text.split(PROGNOSE_DELIMITER);
     return {
-      limitationsBlock: limitationsBlock.trim(),
-      prognoseQuote: (prognoseQuote ?? '').trim(),
+      limitationsBlock: stripStructuralNewlines(limitationsBlock),
+      prognoseQuote: stripStructuralNewlines(prognoseQuote ?? ''),
     };
   }
 
@@ -112,9 +116,8 @@ export function buildBelastbaarheidsprofielBlock(
   limitationsBlock: string,
   prognoseQuote: string
 ): string {
-  const limitationsTrim = limitationsBlock.trim();
-  const quoteTrim = prognoseQuote.trim();
-  if (!quoteTrim) return limitationsTrim;
-  if (!limitationsTrim) return `${PROGNOSE_DELIMITER}\n${quoteTrim}`;
-  return `${limitationsTrim}\n\n${PROGNOSE_DELIMITER}\n${quoteTrim}`;
+  // Preserve typing spaces; only omit empty blocks via trim checks.
+  if (!prognoseQuote.trim()) return limitationsBlock;
+  if (!limitationsBlock.trim()) return `${PROGNOSE_DELIMITER}\n${prognoseQuote}`;
+  return `${limitationsBlock}\n\n${PROGNOSE_DELIMITER}\n${prognoseQuote}`;
 }
