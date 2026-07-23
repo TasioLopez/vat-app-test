@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import {
     AutofillProgressOverlay,
     type AutofillProgressState,
@@ -78,6 +79,7 @@ type Employee = {
     email: string;
     client_id: string;
     referent_id?: string | null;
+    owner_id?: string | null;
 };
 
 type EditableEmployeePayload = Pick<Employee, 'first_name' | 'last_name' | 'email' | 'client_id' | 'referent_id'>;
@@ -247,6 +249,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [clients, setClients] = useState<Client[]>([]);
     const [clientName, setClientName] = useState<string>('');
     const [userRole, setUserRole] = useState<string>('');
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiCancelling, setAiCancelling] = useState(false);
@@ -460,6 +463,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const fetchUserRole = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+            setCurrentUserId(user.id);
             const { data, error } = await supabase
                 .from('users')
                 .select('role')
@@ -1119,6 +1123,26 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </Select>
                                     </div>
                                 ) : null}
+                                <div className="space-y-1">
+                                    <label className="text-sm text-gray-600">Dossier-eigenaar</label>
+                                    <OrgUserSelect
+                                        supabase={supabase}
+                                        value={employee.owner_id}
+                                        currentUserId={currentUserId}
+                                        allowNone
+                                        noneLabel="— Geen eigenaar —"
+                                        placeholder="Selecteer eigenaar"
+                                        onChange={async (ownerId) => {
+                                            setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
+                                            const { error } = await supabase
+                                                .from('employees')
+                                                .update({ owner_id: ownerId })
+                                                .eq('id', employeeId);
+                                            if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
+                                            else showSuccess('Dossier-eigenaar bijgewerkt.');
+                                        }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex flex-col gap-3 w-2/5">

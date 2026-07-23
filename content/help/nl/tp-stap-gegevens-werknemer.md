@@ -46,16 +46,20 @@ Trajectplan Bouwer, stap 2 van 5 (`/dashboard/tp/{werknemer-id}`). De sectie hee
 - Identiteit en contact (e-mail, adres).
 - Datums (geboorte, ziekmelding, intake, registratie, traject).
 - Opleiding, werkervaring, rijbewijs, vervoer, computervaardigheden.
+- **Loopbaanadviseur**: kies een collega of klik **Gebruik mijn gegevens**. Naam, telefoon en e-mail verschijnen op het trajectplan. Handmatig overschrijven kan voor uitzonderingen.
 
 ## Veelvoorkomende problemen
 
 - Autofill vult niet alles: vul handmatig aan.
 - Validatiefout bij datum: gebruik de datumkiezer.
 - Wijzigingen weg: sla op voor navigatie.
+- Verkeerde adviseur op het document: wijzig de Loopbaanadviseur-sectie in Gegevens (zelfde document, geen kopie nodig).
 
 ## Tips
 
 > Werk de werknemerkaart eerst bij buiten de bouwer om dubbel werk te voorkomen.
+>
+> De dossier-eigenaar van de werknemer en de loopbaanadviseur op het TP zijn apart: de eigenaar filtert de lijst; de adviseur staat op het document.
 
 ## Zie ook
 

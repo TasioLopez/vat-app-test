@@ -456,6 +456,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          owner_id: string | null
         }
         Insert: {
           client_id?: string | null
@@ -465,6 +466,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          owner_id?: string | null
         }
         Update: {
           client_id?: string | null
@@ -474,6 +476,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          owner_id?: string | null
         }
         Relationships: [
           {
@@ -481,6 +484,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1341,6 +1351,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      list_org_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          first_name: string | null
+          last_name: string | null
+          email: string
+          phone: string | null
+          role: string
+          status: string | null
+        }[]
+      }
       help_unread_ticket_count_admin: {
         Args: Record<PropertyKey, never>
         Returns: number

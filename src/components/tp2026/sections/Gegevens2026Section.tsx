@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { GEGEVENS_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
@@ -25,12 +25,20 @@ import {
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
-import { formatPhoneForDisplay } from '@/lib/phone/format-dutch-display';
+import { formatPhoneForDisplay, normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
+import { Button } from '@/components/ui/button';
+import { OrgUserSelect } from '@/components/users/OrgUserSelect';
+import { supabase } from '@/lib/supabase/client';
+import {
+  fetchOrgDirectory,
+  formatOrgUserDisplayName,
+  type OrgDirectoryUser,
+} from '@/lib/users/org-directory';
 
 const GEGEVENS_LEGENDA_ITEMS: [string, string][] = [
   ['AO', 'Arbeidsdeskundig onderzoek'],
@@ -114,6 +122,56 @@ export function Gegevens2026Editor({
   data: Record<string, any>;
   updateField: (key: string, value: any) => void;
 }) {
+  const [orgUsers, setOrgUsers] = useState<OrgDirectoryUser[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<OrgDirectoryUser | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (user?.id) setCurrentUserId(user.id);
+      const list = await fetchOrgDirectory(supabase);
+      if (cancelled) return;
+      setOrgUsers(list);
+      if (user?.id) {
+        setCurrentUser(list.find((u) => u.id === user.id) ?? null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const applyConsultantFromUser = (user: OrgDirectoryUser | null, userId: string | null) => {
+    if (!user && !userId) {
+      updateField('consultant_user_id', null);
+      return;
+    }
+    if (user) {
+      updateField('consultant_user_id', user.id);
+      updateField('consultant_name', formatOrgUserDisplayName(user));
+      updateField('consultant_phone', normalizePhoneForStorage(user.phone) ?? '');
+      updateField('consultant_email', (user.email || '').trim());
+      return;
+    }
+    updateField('consultant_user_id', userId);
+  };
+
+  const updateConsultantField = (key: string, value: unknown) => {
+    updateField(key, value);
+    if (
+      key === 'consultant_name' ||
+      key === 'consultant_phone' ||
+      key === 'consultant_email'
+    ) {
+      updateField('consultant_user_id', null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <GegevensContextCard data={data} />
@@ -131,8 +189,58 @@ export function Gegevens2026Editor({
                 <p className="text-xs text-muted-foreground">Wijzig op het werknemersprofiel</p>
               </>
             ) : null}
+            {section.id === 'adviseur' ? (
+              <div className="space-y-3">
+                <div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">
+                    Kies collega
+                  </div>
+                  <OrgUserSelect
+                    supabase={supabase}
+                    users={orgUsers}
+                    value={
+                      typeof data.consultant_user_id === 'string'
+                        ? data.consultant_user_id
+                        : null
+                    }
+                    currentUserId={currentUserId}
+                    placeholder="Selecteer loopbaanadviseur"
+                    onChange={(userId, user) => applyConsultantFromUser(user, userId)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!currentUser && !currentUserId}
+                  onClick={() => {
+                    if (currentUser) {
+                      applyConsultantFromUser(currentUser, currentUser.id);
+                      return;
+                    }
+                    if (!currentUserId) return;
+                    void supabase
+                      .from('users')
+                      .select('id, first_name, last_name, email, phone, role, status')
+                      .eq('id', currentUserId)
+                      .maybeSingle()
+                      .then(({ data: me }) => {
+                        if (!me) return;
+                        applyConsultantFromUser(me as OrgDirectoryUser, me.id);
+                      });
+                  }}
+                >
+                  Gebruik mijn gegevens
+                </Button>
+              </div>
+            ) : null}
             {section.rows.map((row, i) => (
-              <GegevensEditorRow key={`${section.id}-${i}`} row={row} data={data} updateField={updateField} />
+              <GegevensEditorRow
+                key={`${section.id}-${i}`}
+                row={row}
+                data={data}
+                updateField={section.id === 'adviseur' ? updateConsultantField : updateField}
+              />
             ))}
           </div>
         </GegevensEditorSection>

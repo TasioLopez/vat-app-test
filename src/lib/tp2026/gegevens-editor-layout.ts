@@ -5,6 +5,7 @@ import {
   CalendarRange,
   ClipboardList,
   UserCircle,
+  UserRound,
 } from 'lucide-react';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026GegevensFields } from '@/lib/tp2026/schema';
@@ -68,6 +69,15 @@ export const GEGEVENS_EDITOR_SECTIONS: GegevensEditorSection[] = [
     rows: [
       { keys: ['client_referent_name'] },
       { keys: ['client_referent_phone', 'client_referent_email'] },
+    ],
+  },
+  {
+    id: 'adviseur',
+    title: 'Loopbaanadviseur',
+    icon: UserRound,
+    rows: [
+      { keys: ['consultant_name'] },
+      { keys: ['consultant_phone', 'consultant_email'] },
     ],
   },
   {

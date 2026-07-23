@@ -349,6 +349,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;
+          if (user?.id) next.consultant_user_id = user.id;
         }
         if (!String(next.consultant_phone || '').trim() && appUserPhone) {
           next.consultant_phone = appUserPhone;

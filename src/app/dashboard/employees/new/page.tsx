@@ -81,6 +81,7 @@ export default function NewEmployeePage() {
                     last_name: normalizePersonName(form.last_name) ?? '',
                     email: form.email || null,
                     client_id: form.client_id || null,
+                    owner_id: user.id,
                 },
             ])
             .select();

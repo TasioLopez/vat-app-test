@@ -22,24 +22,53 @@ import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OrgUserSelect } from '@/components/users/OrgUserSelect';
+import {
+  fetchOrgDirectory,
+  formatOrgUserDisplayName,
+  orgUsersById,
+  type OrgDirectoryUser,
+} from '@/lib/users/org-directory';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
 };
-type User = Database['public']['Tables']['users']['Row'];
 
-type SortField = 'name' | 'email' | 'client' | 'created_at';
+type SortField = 'name' | 'email' | 'client' | 'created_at' | 'owner';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'cards';
+type OwnerFilterMode = 'mine' | 'all' | 'colleague' | 'unassigned';
+
+const OWNER_FILTER_STORAGE_KEY = 'werknemers.ownerFilter';
+
+function readStoredOwnerFilter(): { mode: OwnerFilterMode; colleagueId: string | null } {
+  if (typeof window === 'undefined') return { mode: 'mine', colleagueId: null };
+  try {
+    const raw = localStorage.getItem(OWNER_FILTER_STORAGE_KEY);
+    if (!raw) return { mode: 'mine', colleagueId: null };
+    const parsed = JSON.parse(raw) as { mode?: OwnerFilterMode; colleagueId?: string | null };
+    const mode = parsed.mode;
+    if (mode === 'mine' || mode === 'all' || mode === 'colleague' || mode === 'unassigned') {
+      return { mode, colleagueId: parsed.colleagueId ?? null };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { mode: 'mine', colleagueId: null };
+}
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [orgUsers, setOrgUsers] = useState<OrgDirectoryUser[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState<string>('all');
+  const [ownerFilterMode, setOwnerFilterMode] = useState<OwnerFilterMode>('mine');
+  const [colleagueUserId, setColleagueUserId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -47,15 +76,34 @@ export default function EmployeesPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const stored = readStoredOwnerFilter();
+    setOwnerFilterMode(stored.mode);
+    setColleagueUserId(stored.colleagueId);
     fetchEmployees();
     fetchClients();
+    void fetchOrgDirectory(supabase).then(setOrgUsers);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        OWNER_FILTER_STORAGE_KEY,
+        JSON.stringify({ mode: ownerFilterMode, colleagueId: colleagueUserId })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [ownerFilterMode, colleagueUserId]);
+
+  const ownerById = useMemo(() => orgUsersById(orgUsers), [orgUsers]);
 
   const fetchEmployees = async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+
+    setCurrentUserId(user.id);
 
     const { data: userData } = await supabase
       .from('users')
@@ -83,6 +131,12 @@ export default function EmployeesPage() {
     if (!error && data) {
       setClients(data);
     }
+  };
+
+  const ownerDisplayName = (ownerId: string | null | undefined) => {
+    if (!ownerId) return '—';
+    const u = ownerById.get(ownerId);
+    return u ? formatOrgUserDisplayName(u) : '—';
   };
 
   const handleDelete = async () => {
@@ -148,16 +202,23 @@ export default function EmployeesPage() {
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
     let filtered = employees.filter((emp) => {
-      // Search filter
       const matchesSearch = searchQuery === '' || 
         `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.clients?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Client filter
       const matchesClient = selectedClient === 'all' || emp.client_id === selectedClient;
 
-      return matchesSearch && matchesClient;
+      let matchesOwner = true;
+      if (ownerFilterMode === 'mine') {
+        matchesOwner = !!currentUserId && emp.owner_id === currentUserId;
+      } else if (ownerFilterMode === 'colleague') {
+        matchesOwner = !!colleagueUserId && emp.owner_id === colleagueUserId;
+      } else if (ownerFilterMode === 'unassigned') {
+        matchesOwner = !emp.owner_id;
+      }
+
+      return matchesSearch && matchesClient && matchesOwner;
     });
 
     // Sort
@@ -178,6 +239,10 @@ export default function EmployeesPage() {
           aValue = a.clients?.name?.toLowerCase() || '';
           bValue = b.clients?.name?.toLowerCase() || '';
           break;
+        case 'owner':
+          aValue = ownerDisplayName(a.owner_id).toLowerCase();
+          bValue = ownerDisplayName(b.owner_id).toLowerCase();
+          break;
         case 'created_at':
           aValue = new Date(a.created_at || 0).getTime();
           bValue = new Date(b.created_at || 0).getTime();
@@ -192,7 +257,17 @@ export default function EmployeesPage() {
     });
 
     return filtered;
-  }, [employees, searchQuery, selectedClient, sortField, sortDirection]);
+  }, [
+    employees,
+    searchQuery,
+    selectedClient,
+    ownerFilterMode,
+    colleagueUserId,
+    currentUserId,
+    sortField,
+    sortDirection,
+    ownerById,
+  ]);
 
   const groupedByClient = useMemo(() => {
     return filteredAndSortedEmployees.reduce<Record<string, Employee[]>>((acc, emp) => {
@@ -252,6 +327,33 @@ export default function EmployeesPage() {
               </Select>
             </div>
           )}
+
+          {/* Owner filter */}
+          <Select
+            value={ownerFilterMode}
+            onValueChange={(v) => setOwnerFilterMode(v as OwnerFilterMode)}
+          >
+            <SelectTrigger className={cn(SELECT_CLASS, 'w-full sm:w-48')}>
+              <SelectValue placeholder="Eigenaar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mine">Mijn dossiers</SelectItem>
+              <SelectItem value="all">Alle</SelectItem>
+              <SelectItem value="colleague">Collega</SelectItem>
+              <SelectItem value="unassigned">Zonder eigenaar</SelectItem>
+            </SelectContent>
+          </Select>
+          {ownerFilterMode === 'colleague' ? (
+            <OrgUserSelect
+              supabase={supabase}
+              users={orgUsers}
+              value={colleagueUserId}
+              currentUserId={currentUserId}
+              placeholder="Kies collega"
+              className="w-full sm:w-56"
+              onChange={(id) => setColleagueUserId(id)}
+            />
+          ) : null}
         </div>
 
         {/* View Toggle */}
@@ -281,7 +383,7 @@ export default function EmployeesPage() {
       {filteredAndSortedEmployees.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-lg text-gray-500">
-            {searchQuery || selectedClient !== 'all' 
+            {searchQuery || selectedClient !== 'all' || ownerFilterMode !== 'all'
               ? 'Geen werknemers gevonden die overeenkomen met uw filters.' 
               : 'Geen werknemers om te tonen.'}
           </p>
@@ -309,6 +411,12 @@ export default function EmployeesPage() {
               >
                 Werkgever <SortIcon field="client" />
               </TableHead>
+              <TableHead
+                className="cursor-pointer hover:bg-purple-100/50"
+                onClick={() => handleSort('owner')}
+              >
+                Eigenaar <SortIcon field="owner" />
+              </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-purple-100/50"
                 onClick={() => handleSort('created_at')}
@@ -330,6 +438,7 @@ export default function EmployeesPage() {
                 </TableCell>
                 <TableCell>{employee.email}</TableCell>
                 <TableCell>{employee.clients?.name || '—'}</TableCell>
+                <TableCell>{ownerDisplayName(employee.owner_id)}</TableCell>
                 <TableCell>
                   {employee.created_at 
                     ? new Date(employee.created_at).toLocaleDateString('nl-NL')
@@ -384,6 +493,9 @@ export default function EmployeesPage() {
                           {employee.first_name} {employee.last_name}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">{employee.email}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Eigenaar: {ownerDisplayName(employee.owner_id)}
+                        </p>
                       </div>
                       <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                         <Button
