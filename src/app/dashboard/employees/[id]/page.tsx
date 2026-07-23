@@ -1077,12 +1077,140 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-col bg-white p-4 rounded shadow flex-1 space-y-4 w-2/5">
                         <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
-                        <div className="flex justify-between">
-                            <div className="flex-col space-y-2 w-3/5 pr-2">
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Voornaam" value={employee.first_name || ''} onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })} />
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="Achternaam" value={employee.last_name || ''} onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })} />
-                                <input className="w-full border border-gray-500/30 p-2 rounded" placeholder="E-mail" value={employee.email || ''} onChange={(e) => setEmployee({ ...employee, email: e.target.value })} />
-                                <Select value={employee.client_id || undefined} onValueChange={(v) => { setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null }); fetchClient(v); if (v) fetchReferents(v); else setReferents([]); }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
+                            <input
+                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                placeholder="Voornaam"
+                                value={employee.first_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('gender')}
+                                canValidate={canValidateField('gender')}
+                                validateLabel="Valideer geslacht"
+                            >
+                                <Select
+                                    value={employeeDetails?.gender || undefined}
+                                    onValueChange={(v) => handleDetailChange('gender', v)}
+                                >
+                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
+                                        <SelectValue placeholder="Geslacht selecteren" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Man">Man</SelectItem>
+                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                        <SelectItem value="Anders">Anders</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
+
+                            <input
+                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                placeholder="Achternaam"
+                                value={employee.last_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('phone')}
+                                canValidate={canValidateField('phone')}
+                                validateLabel="Valideer telefoon"
+                            >
+                                <input
+                                    className={cn(fieldClass('phone'), 'pr-10')}
+                                    placeholder="Telefoon"
+                                    value={employeeDetails?.phone || ''}
+                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
+                                />
+                            </ValidatableField>
+
+                            <input
+                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                placeholder="E-mail"
+                                value={employee.email || ''}
+                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('date_of_birth')}
+                                canValidate={canValidateField('date_of_birth')}
+                                validateLabel="Valideer geboortedatum"
+                            >
+                                <input
+                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
+                                    type="date"
+                                    value={employeeDetails?.date_of_birth || ''}
+                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
+                                />
+                            </ValidatableField>
+
+                            <div
+                                className={cn(
+                                    'grid gap-2 min-w-0',
+                                    employee.client_id ? 'grid-cols-2' : 'grid-cols-1'
+                                )}
+                            >
+                                <div className="space-y-1 min-w-0">
+                                    <label className="text-sm text-gray-600">Dossier-eigenaar</label>
+                                    <OrgUserSelect
+                                        supabase={supabase}
+                                        value={employee.owner_id}
+                                        currentUserId={currentUserId}
+                                        allowNone
+                                        noneLabel="— Geen eigenaar —"
+                                        placeholder="Selecteer eigenaar"
+                                        onChange={async (ownerId) => {
+                                            setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
+                                            const { error } = await supabase
+                                                .from('employees')
+                                                .update({ owner_id: ownerId })
+                                                .eq('id', employeeId);
+                                            if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
+                                            else showSuccess('Dossier-eigenaar bijgewerkt.');
+                                        }}
+                                    />
+                                </div>
+                                {employee.client_id ? (
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-sm text-gray-600">Contactpersoon</label>
+                                        <Select
+                                            value={employee.referent_id ?? '__none__'}
+                                            onValueChange={async (v) => {
+                                                const refId = v === '__none__' ? null : v;
+                                                setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
+                                                const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
+                                                if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
+                                                else {
+                                                    setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
+                                                    showSuccess('Contactpersoon bijgewerkt.');
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className={SELECT_CLASS}>
+                                                <SelectValue placeholder="— Geen / Default —" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__none__">— Geen / Default —</SelectItem>
+                                                {referents.map((r) => (
+                                                    <SelectItem key={r.id} value={r.id}>
+                                                        {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
+                                                        {r.referent_function ? ` (${r.referent_function})` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                ) : null}
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-sm text-gray-600">Werkgever</label>
+                                <Select
+                                    value={employee.client_id || undefined}
+                                    onValueChange={(v) => {
+                                        setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null });
+                                        fetchClient(v);
+                                        if (v) fetchReferents(v);
+                                        else setReferents([]);
+                                    }}
+                                >
                                     <SelectTrigger className={SELECT_CLASS}>
                                         <SelectValue placeholder="Selecteer werkgever" />
                                     </SelectTrigger>
@@ -1092,110 +1220,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <div
-                                    className={cn(
-                                        'grid gap-2',
-                                        employee.client_id ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
-                                    )}
-                                >
-                                    <div className="space-y-1 min-w-0">
-                                        <label className="text-sm text-gray-600">Dossier-eigenaar</label>
-                                        <OrgUserSelect
-                                            supabase={supabase}
-                                            value={employee.owner_id}
-                                            currentUserId={currentUserId}
-                                            allowNone
-                                            noneLabel="— Geen eigenaar —"
-                                            placeholder="Selecteer eigenaar"
-                                            onChange={async (ownerId) => {
-                                                setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
-                                                const { error } = await supabase
-                                                    .from('employees')
-                                                    .update({ owner_id: ownerId })
-                                                    .eq('id', employeeId);
-                                                if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
-                                                else showSuccess('Dossier-eigenaar bijgewerkt.');
-                                            }}
-                                        />
-                                    </div>
-                                    {employee.client_id ? (
-                                        <div className="space-y-1 min-w-0">
-                                            <label className="text-sm text-gray-600">Contactpersoon</label>
-                                            <Select
-                                                value={employee.referent_id ?? '__none__'}
-                                                onValueChange={async (v) => {
-                                                    const refId = v === '__none__' ? null : v;
-                                                    setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
-                                                    const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
-                                                    if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
-                                                    else {
-                                                        setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
-                                                        showSuccess('Contactpersoon bijgewerkt.');
-                                                    }
-                                                }}
-                                            >
-                                                <SelectTrigger className={SELECT_CLASS}>
-                                                    <SelectValue placeholder="— Geen / Default —" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">— Geen / Default —</SelectItem>
-                                                    {referents.map((r) => (
-                                                        <SelectItem key={r.id} value={r.id}>
-                                                            {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
-                                                            {r.referent_function ? ` (${r.referent_function})` : ''}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3 w-2/5">
-                                <ValidatableField
-                                    onValidate={() => validateField('gender')}
-                                    canValidate={canValidateField('gender')}
-                                    validateLabel="Valideer geslacht"
-                                >
-                                    <Select
-                                        value={employeeDetails?.gender || undefined}
-                                        onValueChange={(v) => handleDetailChange('gender', v)}
-                                    >
-                                        <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
-                                            <SelectValue placeholder="Geslacht selecteren" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Man">Man</SelectItem>
-                                            <SelectItem value="Vrouw">Vrouw</SelectItem>
-                                            <SelectItem value="Anders">Anders</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </ValidatableField>
-                                <ValidatableField
-                                    onValidate={() => validateField('phone')}
-                                    canValidate={canValidateField('phone')}
-                                    validateLabel="Valideer telefoon"
-                                >
-                                    <input
-                                        className={cn(fieldClass('phone'), 'pr-10')}
-                                        placeholder="Telefoon"
-                                        value={employeeDetails?.phone || ''}
-                                        onChange={(e) => handleDetailChange('phone', e.target.value)}
-                                    />
-                                </ValidatableField>
-                                <ValidatableField
-                                    onValidate={() => validateField('date_of_birth')}
-                                    canValidate={canValidateField('date_of_birth')}
-                                    validateLabel="Valideer geboortedatum"
-                                >
-                                    <input
-                                        className={cn(fieldClass('date_of_birth'), 'pr-10')}
-                                        type="date"
-                                        value={employeeDetails?.date_of_birth || ''}
-                                        onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
-                                    />
-                                </ValidatableField>
                             </div>
                         </div>
                     </div>
