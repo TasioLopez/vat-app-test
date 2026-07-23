@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { TP2026BasisFields } from '@/lib/tp2026/schema';
@@ -58,31 +58,66 @@ function BasisSectionInfoBody({ body }: { body: string }) {
 
 function BasisSectionInfoButton({ sectionId }: { sectionId: BasisEditorSectionId }) {
   const info = BASIS_SECTION_INFO[sectionId];
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
   if (!info) return null;
+
+  const showTooltip = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setTooltipOpen(true);
+  };
+
+  const scheduleHideTooltip = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => setTooltipOpen(false), 250);
+  };
 
   return (
     <>
-      <span className="group/info relative inline-flex">
+      <span
+        className="relative inline-flex"
+        onMouseEnter={showTooltip}
+        onMouseLeave={scheduleHideTooltip}
+      >
         <button
           type="button"
           className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/35 text-[10px] font-bold leading-none text-muted-foreground transition-colors hover:border-[#6d2a96]/50 hover:bg-[#6d2a96]/5 hover:text-[#6d2a96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6d2a96]/40"
           aria-label={`Informatie over ${info.title}`}
+          aria-expanded={tooltipOpen || dialogOpen}
+          onFocus={showTooltip}
+          onBlur={scheduleHideTooltip}
           onClick={(event) => {
             event.preventDefault();
-            setOpen(true);
+            setDialogOpen(true);
+            setTooltipOpen(false);
           }}
         >
           i
         </button>
-        <span
-          role="tooltip"
-          className="pointer-events-auto absolute left-1/2 top-[calc(100%+6px)] z-50 hidden max-h-48 w-72 max-w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 overflow-y-auto rounded-md border border-border bg-white p-3 text-left text-xs font-normal leading-relaxed text-foreground shadow-md group-hover/info:block group-focus-within/info:block"
-        >
-          <BasisSectionInfoBody body={info.body} />
-        </span>
+        {tooltipOpen && !dialogOpen ? (
+          <span
+            role="tooltip"
+            className="absolute left-1/2 top-full z-50 w-72 max-w-[min(18rem,calc(100vw-3rem))] -translate-x-1/2 pt-1.5 text-left text-xs font-normal leading-relaxed text-foreground"
+          >
+            {/* pt-1.5 keeps a hover bridge so the pointer can reach the panel without closing it */}
+            <span className="block max-h-48 overflow-y-auto rounded-md border border-border bg-white p-3 shadow-md">
+              <BasisSectionInfoBody body={info.body} />
+            </span>
+          </span>
+        ) : null}
       </span>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{info.title}</DialogTitle>
