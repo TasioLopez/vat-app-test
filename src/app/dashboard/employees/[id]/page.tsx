@@ -1092,56 +1092,63 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {employee.client_id ? (
-                                    <div className="space-y-1">
-                                        <label className="text-sm text-gray-600">Contactpersoon</label>
-                                        <Select
-                                            value={employee.referent_id ?? '__none__'}
-                                            onValueChange={async (v) => {
-                                                const refId = v === '__none__' ? null : v;
-                                                setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
-                                                const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
-                                                if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
-                                                else {
-                                                    setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
-                                                    showSuccess('Contactpersoon bijgewerkt.');
-                                                }
+                                <div
+                                    className={cn(
+                                        'grid gap-2',
+                                        employee.client_id ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+                                    )}
+                                >
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-sm text-gray-600">Dossier-eigenaar</label>
+                                        <OrgUserSelect
+                                            supabase={supabase}
+                                            value={employee.owner_id}
+                                            currentUserId={currentUserId}
+                                            allowNone
+                                            noneLabel="— Geen eigenaar —"
+                                            placeholder="Selecteer eigenaar"
+                                            onChange={async (ownerId) => {
+                                                setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
+                                                const { error } = await supabase
+                                                    .from('employees')
+                                                    .update({ owner_id: ownerId })
+                                                    .eq('id', employeeId);
+                                                if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
+                                                else showSuccess('Dossier-eigenaar bijgewerkt.');
                                             }}
-                                        >
-                                            <SelectTrigger className={SELECT_CLASS}>
-                                                <SelectValue placeholder="— Geen / Default —" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="__none__">— Geen / Default —</SelectItem>
-                                                {referents.map((r) => (
-                                                    <SelectItem key={r.id} value={r.id}>
-                                                        {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
-                                                        {r.referent_function ? ` (${r.referent_function})` : ''}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        />
                                     </div>
-                                ) : null}
-                                <div className="space-y-1">
-                                    <label className="text-sm text-gray-600">Dossier-eigenaar</label>
-                                    <OrgUserSelect
-                                        supabase={supabase}
-                                        value={employee.owner_id}
-                                        currentUserId={currentUserId}
-                                        allowNone
-                                        noneLabel="— Geen eigenaar —"
-                                        placeholder="Selecteer eigenaar"
-                                        onChange={async (ownerId) => {
-                                            setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
-                                            const { error } = await supabase
-                                                .from('employees')
-                                                .update({ owner_id: ownerId })
-                                                .eq('id', employeeId);
-                                            if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
-                                            else showSuccess('Dossier-eigenaar bijgewerkt.');
-                                        }}
-                                    />
+                                    {employee.client_id ? (
+                                        <div className="space-y-1 min-w-0">
+                                            <label className="text-sm text-gray-600">Contactpersoon</label>
+                                            <Select
+                                                value={employee.referent_id ?? '__none__'}
+                                                onValueChange={async (v) => {
+                                                    const refId = v === '__none__' ? null : v;
+                                                    setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
+                                                    const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
+                                                    if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
+                                                    else {
+                                                        setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
+                                                        showSuccess('Contactpersoon bijgewerkt.');
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className={SELECT_CLASS}>
+                                                    <SelectValue placeholder="— Geen / Default —" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">— Geen / Default —</SelectItem>
+                                                    {referents.map((r) => (
+                                                        <SelectItem key={r.id} value={r.id}>
+                                                            {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
+                                                            {r.referent_function ? ` (${r.referent_function})` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
 
