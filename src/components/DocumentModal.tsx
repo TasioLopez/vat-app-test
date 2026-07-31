@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { supabase } from '@/lib/supabase/client';
 import { X, Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import type { Database } from '@/types/supabase';
 
@@ -27,6 +26,7 @@ export default function DocumentModal({
 }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [opening, setOpening] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [dragActive, setDragActive] = useState(false);
@@ -180,11 +180,32 @@ export default function DocumentModal({
         onDeleted();
     };
 
+    const openExistingDocument = async () => {
+        if (!existingDoc?.url || opening || uploading) return;
 
-    const getDownloadUrl = () => {
-        if (!existingDoc?.url) return null;
-        const { data } = supabase.storage.from('documents').getPublicUrl(existingDoc.url);
-        return data.publicUrl;
+        setOpening(true);
+        setError(null);
+        setStatus('Opening document...');
+
+        try {
+            const res = await fetch('/api/storage/sign-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: existingDoc.url }),
+            });
+            const data = await res.json();
+            if (!res.ok || typeof data?.url !== 'string') {
+                throw new Error(data?.error || 'Failed to open document');
+            }
+            window.open(data.url, '_blank', 'noopener,noreferrer');
+            setStatus(null);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Failed to open document';
+            setError(message);
+            setStatus(null);
+        } finally {
+            setOpening(false);
+        }
     };
 
     return typeof window !== 'undefined'
@@ -200,7 +221,7 @@ export default function DocumentModal({
                     <button
                         className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={onClose}
-                        disabled={uploading}
+                        disabled={uploading || opening}
                         aria-label="Close"
                     >
                         <X />
@@ -211,14 +232,14 @@ export default function DocumentModal({
                     {existingDoc ? (
                         <div className="mb-4">
                             <p className="text-sm mb-1 text-gray-700">Current file:</p>
-                            <a
-                                href={getDownloadUrl() || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 underline break-all"
+                            <button
+                                type="button"
+                                onClick={openExistingDocument}
+                                disabled={opening || uploading}
+                                className="text-left text-blue-600 underline break-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {existingDoc.name}
-                            </a>
+                                {opening ? 'Opening…' : existingDoc.name}
+                            </button>
                         </div>
                     ) : (
                         <p className="mb-4 text-sm text-gray-600">No file uploaded yet.</p>
@@ -293,7 +314,7 @@ export default function DocumentModal({
                     <button
                         onClick={handleDelete}
                         className="mt-4 text-sm text-red-600 underline hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!existingDoc || uploading}
+                        disabled={!existingDoc || uploading || opening}
                     >
                         Delete Document
                     </button>

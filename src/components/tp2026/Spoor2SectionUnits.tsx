@@ -7,7 +7,7 @@ import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
 
 export const TP_SPOOR2_COLOR_SALMON = '#df9180';
-export const TP_SPOOR2_COLOR_HEADING = '#64b6a6';
+export const TP_SPOOR2_COLOR_HEADING = '#171717';
 export const TP_SPOOR2_COLOR_BODY_BG = '#f3efe4';
 
 export const SPOOR2_BOX_CLASS = `bg-[#f3efe4] p-2.5 text-neutral-900`;

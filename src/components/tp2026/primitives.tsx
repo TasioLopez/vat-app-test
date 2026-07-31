@@ -131,10 +131,10 @@ export function SalmonSectionBar({
   );
 }
 
-/** Teal subsection title (legacy helper; Spoor 2 uses Spoor2SectionUnits). */
+/** In-box subsection title (legacy helper; Spoor 2 uses Spoor2SectionUnits). */
 export function TealSubsectionTitle({ title, className = '' }: { title: string; className?: string }) {
   return (
-    <div className={`mb-1 text-[12px] font-bold leading-tight text-[#64b6a6] ${className}`}>{title}</div>
+    <div className={`${TP_BASIS_TOELICHTING_CLASS} ${className}`}>{title}</div>
   );
 }
 

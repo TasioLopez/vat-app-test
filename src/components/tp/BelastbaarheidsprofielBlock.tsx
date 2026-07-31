@@ -5,8 +5,7 @@ import { PROGNOSE_DELIMITER } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
-
-const TEAL_BOLD_CLASS = 'text-[12px] font-bold leading-tight text-[#64b6a6]';
+import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 
 function splitBeforeRubrieken(text: string): { intro: string; rest: string } {
   const bulletIdx = text.search(/\n•\s/);
@@ -63,11 +62,11 @@ export function BelastbaarheidsprofielBlock({
 
   return (
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      {intro ? <p className={TEAL_BOLD_CLASS}>{intro}</p> : null}
+      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{intro}</p> : null}
       {bullets ? (
         <div className="my-3">{renderTextWithLogoBullets(bullets, false, true)}</div>
       ) : null}
-      {spreekuurIntro ? <p className={`${TEAL_BOLD_CLASS} mt-3`}>{spreekuurIntro}</p> : null}
+      {spreekuurIntro ? <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{spreekuurIntro}</p> : null}
       {quote ? (
         <div className="mt-4">
           <BasisToelichtingHeading label="Prognose:" />

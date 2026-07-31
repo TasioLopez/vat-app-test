@@ -37,7 +37,7 @@ export function InleidingSubBlock({
     return (
       <div className={className}>
         <strong>{patchedIntro}</strong>
-        <div className="mt-4 italic">
+        <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
         </div>
       </div>
