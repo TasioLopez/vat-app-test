@@ -16,4 +16,4 @@ export const WETTELIJKE_KADERS = `• Het doel van het intakegesprek;
 
 export const NB_DEFAULT_GEEN_AD = `NB: in het kader van de algemene verordening gegevensbescherming (AVG) worden in deze rapportage geen medische termen en diagnoses vermeld. Voor meer informatie over ons privacyreglement en het klachtenreglement verwijzen wij u naar onze website.`;
 
-export const VISIE_LOOPBAANADVISEUR_BASIS = `${TOELICHTING_DELIMITER}\n${TOELICHTING_ONBEKEND}\n\n${FUNCTIES_DELIMITER}\n${AD_FUNCTIES_INTRO}\n\n• **En soortgelijk**\n\n${FUNCTIE_FOOTER}`;
+export const VISIE_LOOPBAANADVISEUR_BASIS = `${TOELICHTING_DELIMITER}\n${TOELICHTING_ONBEKEND}\n\n${FUNCTIES_DELIMITER}\n${AD_FUNCTIES_INTRO}\n\n${FUNCTIE_FOOTER}`;

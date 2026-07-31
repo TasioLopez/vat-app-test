@@ -9,7 +9,6 @@ import {
 import {
   AD_FUNCTIES_INTRO,
   FUNCTIE_FOOTER,
-  FUNCTIES_DELIMITER,
   NO_AD_BELASTBAARHEID_INTRO,
   NO_AD_NO_BELASTBAARHEID_INTRO,
   TOELICHTING_DELIMITER,
@@ -20,6 +19,7 @@ import {
   filterVisieLoopbaanadviseurDocs,
   getVisieLoopbaanadviseurDocCategory,
 } from '../generate';
+import { parseFunctieLine } from '../parse-functie-line';
 import type { VisieLoopbaanadviseurContentResult } from '../schema';
 
 const baseCtx = {
@@ -48,7 +48,6 @@ const sampleFuncties: VisieLoopbaanadviseurContentResult = {
       naam: 'Cliëntadministrateur',
       toelichting: 'Past bij haar ervaring binnen de zorg.',
     },
-    { naam: 'En soortgelijk', toelichting: '' },
   ],
 };
 
@@ -104,23 +103,26 @@ describe('detectDocumentScenario', () => {
 });
 
 describe('buildFunctiesIntro', () => {
-  it('maps three V10 scenarios to exact intro texts', () => {
+  it('maps three V10 scenarios to exact intro texts with footnote asterisk', () => {
     assert.equal(buildFunctiesIntro('ad'), AD_FUNCTIES_INTRO);
+    assert.ok(AD_FUNCTIES_INTRO.endsWith('functies*:'));
     assert.equal(buildFunctiesIntro('belastbaarheid_only'), NO_AD_BELASTBAARHEID_INTRO);
+    assert.ok(NO_AD_BELASTBAARHEID_INTRO.endsWith('functies*:'));
     assert.equal(buildFunctiesIntro('intake_only'), NO_AD_NO_BELASTBAARHEID_INTRO);
+    assert.ok(NO_AD_NO_BELASTBAARHEID_INTRO.endsWith('functies*:'));
   });
 });
 
 describe('buildVisieLoopbaanadviseurFields V10', () => {
-  it('uses AD intro for ad scenario', () => {
+  it('uses AD intro for ad scenario with colon separators', () => {
     const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
       baseCtx,
       sampleFuncties,
       'ad'
     );
     assert.ok(visie_loopbaanadviseur.includes(AD_FUNCTIES_INTRO));
-    assert.match(visie_loopbaanadviseur, /• Medewerker uitkeringsadministratie –/);
-    assert.match(visie_loopbaanadviseur, /• En soortgelijk/);
+    assert.match(visie_loopbaanadviseur, /• Medewerker uitkeringsadministratie:/);
+    assert.ok(!visie_loopbaanadviseur.includes('En soortgelijk'));
     assert.ok(visie_loopbaanadviseur.includes(FUNCTIE_FOOTER));
   });
 
@@ -154,18 +156,22 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
     assert.ok(visie_loopbaanadviseur.includes(TOELICHTING_VROUW));
   });
 
-  it('forces fourth function to En soortgelijk without toelichting', () => {
+  it('omits En soortgelijk and keeps only three concrete functies', () => {
     const content: VisieLoopbaanadviseurContentResult = {
       functies: [
         { naam: 'Functie A', toelichting: 'Passend.' },
         { naam: 'Functie B', toelichting: 'Passend.' },
         { naam: 'Functie C', toelichting: 'Passend.' },
-        { naam: 'Verkeerde vierde', toelichting: 'Niet toegestaan.' },
+        { naam: 'En soortgelijk', toelichting: '' },
+        { naam: 'Functie D', toelichting: 'Te veel.' },
       ],
     };
     const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(baseCtx, content, 'ad');
-    assert.match(visie_loopbaanadviseur, /• En soortgelijk\n/);
-    assert.ok(!visie_loopbaanadviseur.includes('Verkeerde vierde'));
+    assert.ok(!visie_loopbaanadviseur.includes('En soortgelijk'));
+    assert.ok(!visie_loopbaanadviseur.includes('Functie D'));
+    assert.match(visie_loopbaanadviseur, /• Functie A: Passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie B: Passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie C: Passend\./);
   });
 });
 
@@ -201,7 +207,7 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
     assert.equal(rebuilt, visie_loopbaanadviseur);
     assert.ok(parsed.toelichting.includes(TOELICHTING_VROUW));
     assert.equal(parsed.functiesIntro, AD_FUNCTIES_INTRO);
-    assert.match(parsed.functieBullets, /• Medewerker uitkeringsadministratie –/);
+    assert.match(parsed.functieBullets, /• Medewerker uitkeringsadministratie:/);
     assert.equal(parsed.footer, FUNCTIE_FOOTER);
   });
 
@@ -223,7 +229,7 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
     const draft = {
       toelichting: 'toelichting ',
       functiesIntro: 'intro  tekst ',
-      functieBullets: '• Functie – toelichting ',
+      functieBullets: '• Functie: toelichting ',
       footer: FUNCTIE_FOOTER,
     };
     const block = buildVisieLoopbaanadviseurBlock(draft);
@@ -235,7 +241,7 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
 });
 
 describe('parseVisieLoopbaanadviseurContentResult', () => {
-  it('parses functies-only schema', async () => {
+  it('parses three functies and drops En soortgelijk', async () => {
     const { parseVisieLoopbaanadviseurContentResult } = await import('../schema');
     const result = parseVisieLoopbaanadviseurContentResult({
       functies: [
@@ -245,7 +251,37 @@ describe('parseVisieLoopbaanadviseurContentResult', () => {
         { naam: 'En soortgelijk', toelichting: '' },
       ],
     });
-    assert.equal(result.functies.length, 4);
-    assert.equal(result.functies[3].naam, 'En soortgelijk');
+    assert.equal(result.functies.length, 3);
+    assert.equal(result.functies[2].naam, 'C');
+  });
+});
+
+describe('parseFunctieLine', () => {
+  it('keeps hyphen inside title when splitting on colon', () => {
+    const parsed = parseFunctieLine(
+      '• Supply chain - data medewerker: Benut haar ERP-ervaring.'
+    );
+    assert.deepEqual(parsed, {
+      title: 'Supply chain - data medewerker',
+      description: 'Benut haar ERP-ervaring.',
+    });
+  });
+
+  it('parses legacy spaced en-dash without splitting ASCII hyphens in the title', () => {
+    const parsed = parseFunctieLine(
+      '• Supply chain - data medewerker – Benut haar ERP-ervaring.'
+    );
+    assert.deepEqual(parsed, {
+      title: 'Supply chain - data medewerker',
+      description: 'Benut haar ERP-ervaring.',
+    });
+  });
+
+  it('parses bold-wrapped title with colon', () => {
+    const parsed = parseFunctieLine('• **Planner logistiek**: Past bij ervaring.');
+    assert.deepEqual(parsed, {
+      title: 'Planner logistiek',
+      description: 'Past bij ervaring.',
+    });
   });
 });

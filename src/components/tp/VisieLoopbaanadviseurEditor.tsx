@@ -55,14 +55,14 @@ export function VisieLoopbaanadviseurEditor({
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-[#64b6a6]">
-          Functies (4 regels)
+          Functies (3 regels)
         </label>
         <textarea
           className={TEXTAREA_CLASS}
           value={parsed.functieBullets}
           onChange={(e) => update({ functieBullets: e.target.value })}
           rows={6}
-          placeholder="• Functienaam – toelichting"
+          placeholder="• Functienaam: toelichting"
         />
       </div>
       <div>

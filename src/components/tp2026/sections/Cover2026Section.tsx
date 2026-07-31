@@ -10,6 +10,7 @@ import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
+import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
 import { formatEmployeeName } from '@/lib/utils';
 import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 
@@ -75,9 +76,22 @@ export function Cover2026Editor({
 }) {
   return (
     <div className="space-y-3">
-      {TP2026CoverFields.map((field: TP2026FieldDef) => (
-        <FieldControl key={field.key} field={field} value={data[field.key]} onChange={(v) => updateField(field.key, v)} />
-      ))}
+      {TP2026CoverFields.map((field: TP2026FieldDef) =>
+        field.key === 'document_employer_name' ? (
+          <DocumentEmployerNameField
+            key={field.key}
+            data={data}
+            updateField={updateField}
+          />
+        ) : (
+          <FieldControl
+            key={field.key}
+            field={field}
+            value={data[field.key]}
+            onChange={(v) => updateField(field.key, v)}
+          />
+        )
+      )}
     </div>
   );
 }

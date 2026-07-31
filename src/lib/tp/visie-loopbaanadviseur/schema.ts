@@ -14,12 +14,11 @@ const functieSchema = {
   properties: {
     naam: {
       type: 'string' as const,
-      description: 'Functienaam op de Nederlandse arbeidsmarkt; distinct from other three',
+      description: 'Functienaam op de Nederlandse arbeidsmarkt; distinct from other two',
     },
     toelichting: {
       type: 'string' as const,
-      description:
-        'Max one sentence why passend within belastbaarheid. Empty string for fourth item En soortgelijk',
+      description: 'Max one sentence why passend within belastbaarheid',
     },
   },
   required: ['naam', 'toelichting'] as const,
@@ -31,10 +30,11 @@ export const VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA = {
   properties: {
     functies: {
       type: 'array',
-      description: `Exactly four functions. Fourth must be "${EN_SOORTGELIJK}" with empty toelichting. No AD synonyms. Conservative belastbaarheid check.`,
+      description:
+        'Exactly three concrete functions. No AD synonyms. Conservative belastbaarheid check. Do not include "En soortgelijk".',
       items: functieSchema,
-      minItems: 4,
-      maxItems: 4,
+      minItems: 3,
+      maxItems: 3,
     },
   },
   required: ['functies'],
@@ -50,9 +50,11 @@ function coerceFuncties(value: unknown): VisieLoopbaanFunctie[] {
       const naam = String(o.naam ?? '').trim();
       const toelichting = String(o.toelichting ?? '').trim();
       if (!naam) return null;
+      if (naam.toLowerCase() === EN_SOORTGELIJK.toLowerCase()) return null;
       return { naam, toelichting };
     })
-    .filter((f): f is VisieLoopbaanFunctie => f != null);
+    .filter((f): f is VisieLoopbaanFunctie => f != null)
+    .slice(0, 3);
 }
 
 export function parseVisieLoopbaanadviseurContentResult(

@@ -90,12 +90,22 @@ export function stripTPProfileFields(data: Record<string, unknown>): Record<stri
   return next;
 }
 
-/** Canonical werkgever display name from in-memory TP data. */
-export function getWerkgeverName(data: Record<string, unknown>): string {
+/** Live profile werkgever name only (ignores document override). */
+export function getProfileWerkgeverName(data: Record<string, unknown>): string {
   const clientName = String(data.client_name ?? '').trim();
   if (clientName) return formatOrganizationDisplayName(clientName);
   const employerName = String(data.employer_name ?? '').trim();
   return formatOrganizationDisplayName(employerName);
+}
+
+/**
+ * Canonical werkgever display name from in-memory TP data.
+ * Prefers document-only `document_employer_name` when set.
+ */
+export function getWerkgeverName(data: Record<string, unknown>): string {
+  const override = String(data.document_employer_name ?? '').trim();
+  if (override) return formatOrganizationDisplayName(override);
+  return getProfileWerkgeverName(data);
 }
 
 /** Push resolved profile-linked fields into TP context via updateField. */

@@ -5,7 +5,10 @@ import {
   calculateAge,
   hasValidOpening,
   sanitizeFragment,
+  stripChronologySentences,
   stripCitations,
+  stripSmartphoneWhenPcPresent,
+  stripSoftTraitSentences,
   stripSourceReferenceSentences,
   type PersoonlijkProfielBuildContext,
 } from '../build-fields';
@@ -17,7 +20,7 @@ const baseCtx: PersoonlijkProfielBuildContext = {
 };
 
 describe('buildPersoonlijkProfielFields', () => {
-  it('joins three alinea paragraphs with double newlines', () => {
+  it('joins alinea_1 and alinea_2 and always drops alinea_3', () => {
     const content: PersoonlijkProfielContentResult = {
       alinea_1:
         'Werknemer is een 58-jarige vrouw met circa vijf jaar werkervaring als huishoudelijk ondersteuner. Werknemer heeft de mavo afgerond.',
@@ -28,10 +31,10 @@ describe('buildPersoonlijkProfielFields', () => {
 
     const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
     const parts = persoonlijk_profiel.split('\n\n');
-    assert.equal(parts.length, 3);
+    assert.equal(parts.length, 2);
     assert.match(parts[0], /58-jarige vrouw/);
     assert.match(parts[1], /rijbewijs B/);
-    assert.match(parts[2], /nauwkeurig/);
+    assert.doesNotMatch(persoonlijk_profiel, /nauwkeurig/);
   });
 
   it('returns two paragraphs when alinea_3 is null', () => {
@@ -96,6 +99,99 @@ describe('buildPersoonlijkProfielFields', () => {
     assert.match(persoonlijk_profiel, /Supervisor/);
     assert.match(persoonlijk_profiel, /rijbewijs B/);
   });
+
+  it('strips chronology sentences from alinea_1', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1:
+        'Werknemer is een 32-jarige vrouw met circa twaalf jaar werkervaring als logistiek coördinator, transportplanner en logistiek medewerker. Werknemer is sinds 2022 werkzaam als logistiek coördinator. Daarvoor heeft zij tussen 2018 en 2022 gewerkt als transportplanner. Werknemer heeft de opleiding MBO 4 Manager Transport & Logistiek afgerond.',
+      alinea_2: null,
+      alinea_3: null,
+    };
+
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
+    assert.doesNotMatch(persoonlijk_profiel, /sinds 2022/i);
+    assert.doesNotMatch(persoonlijk_profiel, /tussen 2018 en 2022/i);
+    assert.match(persoonlijk_profiel, /32-jarige vrouw/);
+    assert.match(persoonlijk_profiel, /MBO 4/);
+  });
+
+  it('strips soft motivation and judgment sentences', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1:
+        'Werknemer is een 42-jarige vrouw met werkervaring als Senior Docent Economie. Werknemer wordt omschreven als soms te aardig en te lief.',
+      alinea_2: 'Werknemer wordt omschreven als erg gemotiveerd. Werknemer beschikt over rijbewijs B.',
+      alinea_3: null,
+    };
+
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
+    assert.doesNotMatch(persoonlijk_profiel, /omschreven als/i);
+    assert.doesNotMatch(persoonlijk_profiel, /gemotiveerd/i);
+    assert.doesNotMatch(persoonlijk_profiel, /te aardig/i);
+    assert.match(persoonlijk_profiel, /Senior Docent Economie/);
+    assert.match(persoonlijk_profiel, /rijbewijs B/);
+  });
+
+  it('removes smartphone when PC or laptop is also present', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1: 'Werknemer is een 32-jarige vrouw met circa twaalf jaar werkervaring als logistiek coördinator.',
+      alinea_2:
+        'Werknemer beschikt over een pc of laptop, maakt gebruik van een smartphone, heeft geavanceerde computervaardigheden en beschikt over goede typvaardigheden.',
+      alinea_3: null,
+    };
+
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
+    assert.doesNotMatch(persoonlijk_profiel, /smartphone/i);
+    assert.match(persoonlijk_profiel, /pc of laptop/i);
+    assert.match(persoonlijk_profiel, /typvaardigheden/i);
+  });
+
+  it('keeps smartphone when no PC or laptop is mentioned', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1: 'Werknemer is een 40-jarige man met vijf jaar werkervaring als magazijnmedewerker.',
+      alinea_2: 'Werknemer beschikt over een smartphone en heeft basis computervaardigheden.',
+      alinea_3: null,
+    };
+
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content);
+    assert.match(persoonlijk_profiel, /smartphone/i);
+  });
+});
+
+describe('stripChronologySentences', () => {
+  it('drops sentences with year ranges and sinds', () => {
+    const input =
+      'Werknemer heeft ervaring als planner. Werknemer is sinds 2022 werkzaam als coördinator. Werknemer heeft mbo afgerond.';
+    const result = stripChronologySentences(input);
+    assert.doesNotMatch(result, /sinds 2022/i);
+    assert.match(result, /ervaring als planner/);
+    assert.match(result, /mbo afgerond/);
+  });
+});
+
+describe('stripSoftTraitSentences', () => {
+  it('drops soft judgment sentences', () => {
+    const input =
+      'Werknemer heeft hbo afgerond. Werknemer wordt omschreven als te aardig. Werknemer beschikt over rijbewijs B.';
+    const result = stripSoftTraitSentences(input);
+    assert.doesNotMatch(result, /omschreven/i);
+    assert.match(result, /hbo afgerond/);
+    assert.match(result, /rijbewijs B/);
+  });
+});
+
+describe('stripSmartphoneWhenPcPresent', () => {
+  it('strips smartphone clause when pc is present', () => {
+    const input =
+      'Werknemer beschikt over een pc of laptop, maakt gebruik van een smartphone, en heeft goede typvaardigheden.';
+    const result = stripSmartphoneWhenPcPresent(input);
+    assert.doesNotMatch(result, /smartphone/i);
+    assert.match(result, /pc of laptop/i);
+  });
+
+  it('keeps smartphone when no pc or laptop', () => {
+    const input = 'Werknemer beschikt over een smartphone.';
+    assert.match(stripSmartphoneWhenPcPresent(input), /smartphone/i);
+  });
 });
 
 describe('stripSourceReferenceSentences', () => {
@@ -152,12 +248,12 @@ describe('stripCitations', () => {
 });
 
 describe('parsePersoonlijkProfielContentResult', () => {
-  it('coerces empty strings to null', async () => {
+  it('coerces empty strings to null and always nulls alinea_3', async () => {
     const { parsePersoonlijkProfielContentResult } = await import('../schema');
     const result = parsePersoonlijkProfielContentResult({
       alinea_1: '  ',
       alinea_2: 'Tekst',
-      alinea_3: '',
+      alinea_3: 'Werknemer wordt omschreven als nauwkeurig.',
     });
     assert.equal(result.alinea_1, null);
     assert.equal(result.alinea_2, 'Tekst');

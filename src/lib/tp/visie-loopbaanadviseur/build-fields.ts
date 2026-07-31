@@ -68,14 +68,11 @@ function countSentences(text: string): number {
 }
 
 function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
-  const functies = content.functies;
-  if (functies.length !== 4) {
-    console.warn(`⚠️ Visie loopbaanadviseur: verwacht 4 functies, gevonden ${functies.length}`);
-  }
-
-  const fourth = functies[3]?.naam?.trim().toLowerCase();
-  if (fourth && fourth !== EN_SOORTGELIJK.toLowerCase()) {
-    console.warn('⚠️ Visie loopbaanadviseur: vierde functie moet "En soortgelijk" zijn');
+  const functies = content.functies.filter(
+    (f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase()
+  );
+  if (functies.length !== 3) {
+    console.warn(`⚠️ Visie loopbaanadviseur: verwacht 3 functies, gevonden ${functies.length}`);
   }
 
   const names = functies.map((f) => f.naam.trim().toLowerCase()).filter(Boolean);
@@ -92,24 +89,19 @@ function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
 }
 
 function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): string {
-  const functies = content.functies.slice(0, 4);
-  while (functies.length < 4) {
-    functies.push({ naam: EN_SOORTGELIJK, toelichting: '' });
-  }
-
-  if (functies[3]) {
-    functies[3] = { naam: EN_SOORTGELIJK, toelichting: '' };
-  }
+  const functies = content.functies
+    .filter((f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase())
+    .slice(0, 3);
 
   return functies
     .map((f) => {
       const naam = f.naam.trim();
       const toel = stripCitations(f.toelichting.trim());
-      if (naam.toLowerCase() === EN_SOORTGELIJK.toLowerCase() || !toel) {
-        return `• ${naam || EN_SOORTGELIJK}`;
-      }
-      return `• ${naam} – ${toel}`;
+      if (!naam) return null;
+      if (!toel) return `• ${naam}`;
+      return `• ${naam}: ${toel}`;
     })
+    .filter(Boolean)
     .join('\n');
 }
 

@@ -31,6 +31,7 @@ import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
 import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
+import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
 import { Button } from '@/components/ui/button';
 import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import { supabase } from '@/lib/supabase/client';
@@ -179,15 +180,11 @@ export function Gegevens2026Editor({
         <GegevensEditorSection key={section.id} title={section.title} icon={section.icon}>
           <div className="space-y-4">
             {section.id === 'opdrachtgever' ? (
-              <>
-                <div>
-                  <div className="mb-1 text-xs font-medium text-muted-foreground">Werkgever</div>
-                  <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-foreground">
-                    {getWerkgeverName(data) || '—'}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">Wijzig op het werknemersprofiel</p>
-              </>
+              <DocumentEmployerNameField
+                data={data}
+                updateField={updateField}
+                label="Werkgever"
+              />
             ) : null}
             {section.id === 'adviseur' ? (
               <div className="space-y-3">

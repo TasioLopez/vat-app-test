@@ -18,15 +18,15 @@ export const TOELICHTING_ONBEKEND =
 
 /** V10 situation 1 — AD document present. */
 export const AD_FUNCTIES_INTRO =
-  'Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies:';
+  'Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:';
 
 /** V10 situation 2 — no AD, FML or IZP present. */
 export const NO_AD_BELASTBAARHEID_INTRO =
-  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport. Op basis van het belastbaarheidsprofiel en het intakegesprek denkt de loopbaanadviseur aan onderstaande functies:';
+  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport. Op basis van het belastbaarheidsprofiel en het intakegesprek denkt de loopbaanadviseur aan onderstaande functies*:';
 
 /** V10 situation 3 — no AD, no FML, no IZP. */
 export const NO_AD_NO_BELASTBAARHEID_INTRO =
-  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport en/of belastbaarheidsprofiel. Op basis van het intakegesprek denkt de loopbaanadviseur aan onderstaande functies:';
+  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport en/of belastbaarheidsprofiel. Op basis van het intakegesprek denkt de loopbaanadviseur aan onderstaande functies*:';
 
 export const FUNCTIE_FOOTER =
   '*Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/ IZP/ LAB.';
@@ -66,7 +66,7 @@ Stap 3 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren
 Stap 4 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook de structured list ad_uitsluiting_functies in context.
 Stap 5 — Arbeidsmarkttoets: regulier, Nederlandse arbeidsmarkt, voldoende vacatures, realistisch bemiddelbaar, maximaal circa zes maanden scholing.
 Stap 6 — Praktijktoets: functies waarin regelmatig langdurig staan/lopen, productietempo, assemblage, productiewerk, kwaliteitscontrole, zwaar tillen, veel bukken/traplopen/reiken of structurele fysieke belasting: afwijzen. Bij twijfel afwijzen.
-Stap 7 — Onderlinge controle: exact vier functies. De drie concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet drie herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering.
+Stap 7 — Onderlinge controle: exact drie functies. De drie concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet drie herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering.
 Stap 8 — Eindcontrole: volledig passend binnen belastbaarheid, aansluitend bij profiel en zoekprofiel, niet door AD genoemd, geen synoniemen, regulier en kansrijk.
 `.trim();
 
@@ -99,7 +99,7 @@ export const PRAKTIJKTOETS_AVOID = [
 export const EINDCONTROLE_CHECKLIST = `
 - Juiste vaste toelichting (systeem)
 - Juiste inleidende zin functies (systeem)
-- Exact vier functies + vierde "En soortgelijk"
+- Exact drie functies
 - Maximaal één zin toelichting per functie
 - Geen AD-titels of synoniemen (inclusief ad_uitsluiting_functies)
 - Drie suggesties = verschillende roltypen (niet drie near-clones)

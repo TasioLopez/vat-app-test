@@ -216,7 +216,7 @@ export function buildRepairFeedbackMessage(
     'REPARATIE — vorige functiesuggesties voldeden niet aan de kwaliteitseisen.',
     `Problemen: ${issues.join(' | ')}`,
     names ? `Afgewezen namen: ${names}` : '',
-    'Lever opnieuw exact vier functies (drie concrete + "En soortgelijk").',
+    'Lever opnieuw exact drie functies.',
     'Eisen: drie duidelijk verschillende roltypen; geen AD-overlap/synoniemen; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid; geen onrealistische functies.',
   ]
     .filter(Boolean)

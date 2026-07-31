@@ -37,4 +37,20 @@ describe('persist-draft profile-linked fields', () => {
     assert.equal('client_referent_name' in shaped, false);
     assert.equal(shaped.tp_end_date, '2027-01-01');
   });
+
+  it('retains document_employer_name in shaped data_json before persist', () => {
+    const shaped = stripTPProfileFields(
+      ensureTP2026Shape({
+        client_name: 'Employer BV',
+        employer_name: 'Employer BV',
+        document_employer_name: 'Employer',
+        tp_end_date: '2027-01-01',
+      })
+    );
+
+    assert.equal('client_name' in shaped, false);
+    assert.equal('employer_name' in shaped, false);
+    assert.equal(shaped.document_employer_name, 'Employer');
+    assert.equal(shaped.tp_end_date, '2027-01-01');
+  });
 });

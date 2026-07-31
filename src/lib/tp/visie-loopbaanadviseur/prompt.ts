@@ -3,7 +3,6 @@ import {
   AD_SYNONYM_EXAMPLES,
   DOCUMENT_SCOPE_HINT,
   EINDCONTROLE_CHECKLIST,
-  EN_SOORTGELIJK,
   PRAKTIJKTOETS_AVOID,
   SELECTION_PROCESS_V10,
   SOURCE_HIERARCHY_V10,
@@ -11,7 +10,7 @@ import {
 
 /**
  * Visie loopbaanadviseur V10 masterprompt — instructions in code (not uploaded as PDF).
- * Model generates four functies only; server builds toelichting, intro, and footer.
+ * Model generates three functies only; server builds toelichting, intro, and footer.
  */
 export const VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT = `
 ROL
@@ -47,10 +46,10 @@ CONTEXT
 - ad_uitsluiting_functies: gestructureerde uitsluitingslijst — titels/synoniemen hierin NOOIT opnieuw noemen
 
 OUTPUT (model levert alleen functies)
-Selecteer exact vier functies:
+Selecteer exact drie functies:
 - Drie concrete functienamen op de Nederlandse arbeidsmarkt
-- Vierde functie: exact "${EN_SOORTGELIJK}" met lege toelichting
-- Per functie (1–3): maximaal één zin toelichting waarom passend binnen belastbaarheid
+- Geen "En soortgelijk" of vergelijkbare filler-regels
+- Per functie: maximaal één zin toelichting waarom passend binnen belastbaarheid
 - Drie verschillende roltypen (bijv. contactgericht vs planning/organisatie vs specialistisch/intern) — geen drie near-clones van admin/backoffice
 - Per toelichting een ander passendheidsargument; geen herhaling van dezelfde prikkelarm/lage druk-formulering
 - Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport of ad_uitsluiting_functies
@@ -60,7 +59,7 @@ EINDCONTROLE
 ${EINDCONTROLE_CHECKLIST}
 
 JSON OUTPUT
-Lever exact: functies (array van 4 objecten met naam en toelichting).
+Lever exact: functies (array van 3 objecten met naam en toelichting).
 Geen sectiekop "Visie loopbaanadviseur". Geen extra velden.
 `.trim();
 

@@ -134,11 +134,10 @@ Op basis van de eerder genoemde beperkingen en vaardigheden kunnen de volgende f
 Let op: als er geen FML beschikbaar is, dan moet onderstaande zin worden aangepast naar:
 Op basis van het persoonlijke profiel van de werknemer kan worden gesteld dat hij/zij over voldoende opleiding en werkervaring beschikt om geplaatst te worden op de huidige arbeidsmarkt. De loopbaanadviseur kan op dit moment echter geen volledig beeld geven van de plaatsbaarheid, aangezien het belastbaarheidsprofiel nog niet beschikbaar is. Zodra dit profiel beschikbaar is, zal de visie op mogelijk passende functies worden aangepast in de voortgangsrapportage.
 
-Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies:
+Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:
 • Functie + korte toelichting
 • Functie + korte toelichting
 • Functie + korte toelichting
-• En soortgelijk*
 
 *Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.`,
   },

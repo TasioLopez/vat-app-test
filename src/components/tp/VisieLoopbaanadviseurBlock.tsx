@@ -6,6 +6,7 @@ import {
   TOELICHTING_DELIMITER,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
+import { parseFunctieLine } from '@/lib/tp/visie-loopbaanadviseur/parse-functie-line';
 import { BasisToelichtingHeading, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
@@ -13,28 +14,6 @@ import {
   formatBasisFootnoteDisplay,
   TP_BASIS_DISCLAIMER_CLASS,
 } from '@/lib/tp2026/basis-document-layout';
-
-function parseFunctieLine(line: string): { title: string; description: string } | null {
-  const content = line.trim().replace(/^[•☑✓\-]\s*/, '');
-  if (!content) return null;
-
-  const boldDash = content.match(/^\*\*(.+?)\*\*\s*[–—-]\s*(.+)$/);
-  if (boldDash) {
-    return { title: boldDash[1].trim(), description: boldDash[2].trim() };
-  }
-
-  const plainDash = content.match(/^(.+?)\s*[–—-]\s*(.+)$/);
-  if (plainDash) {
-    return { title: plainDash[1].trim(), description: plainDash[2].trim() };
-  }
-
-  const boldOnly = content.match(/^\*\*(.+?)\*\*$/);
-  if (boldOnly) {
-    return { title: boldOnly[1].trim(), description: '' };
-  }
-
-  return { title: content, description: '' };
-}
 
 function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
   const lines = bullets.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -50,7 +29,7 @@ function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
             <span className="font-bold">{parsed.title}</span>
             {parsed.description ? (
               <>
-                {' – '}
+                {': '}
                 <span className="font-normal">{formatInlineText(parsed.description)}</span>
               </>
             ) : null}

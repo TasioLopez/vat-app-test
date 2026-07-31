@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyTPProfileContext,
+  getProfileWerkgeverName,
   getWerkgeverName,
   stripTPProfileFields,
   TP_PROFILE_LINKED_KEYS,
@@ -33,6 +34,15 @@ describe('applyTPProfileContext', () => {
     assert.equal(result.client_referent_name, 'New Contact');
     assert.equal(result.inleiding, 'TP-owned content');
   });
+
+  it('preserves document_employer_name when applying profile context', () => {
+    const result = applyTPProfileContext(
+      { document_employer_name: 'Short Name', client_name: 'Old' },
+      { client_name: 'New Employer BV', employer_name: 'New Employer BV' }
+    );
+    assert.equal(result.document_employer_name, 'Short Name');
+    assert.equal(result.client_name, 'New Employer BV');
+  });
 });
 
 describe('stripTPProfileFields', () => {
@@ -56,9 +66,44 @@ describe('stripTPProfileFields', () => {
     }
     assert.equal(result.tp_start_date, '2026-01-01');
   });
+
+  it('keeps document_employer_name while stripping profile werkgever keys', () => {
+    const result = stripTPProfileFields({
+      client_name: 'Employer BV',
+      employer_name: 'Employer BV',
+      document_employer_name: 'Employer',
+      tp_start_date: '2026-01-01',
+    });
+
+    assert.equal('client_name' in result, false);
+    assert.equal('employer_name' in result, false);
+    assert.equal(result.document_employer_name, 'Employer');
+    assert.equal(result.tp_start_date, '2026-01-01');
+  });
 });
 
 describe('getWerkgeverName', () => {
+  it('prefers document_employer_name over profile names', () => {
+    assert.equal(
+      getWerkgeverName({
+        document_employer_name: 'Short Name',
+        client_name: 'Cordaan Holding BV',
+        employer_name: 'Other',
+      }),
+      'Short Name'
+    );
+  });
+
+  it('falls back to profile when document_employer_name is empty', () => {
+    assert.equal(
+      getWerkgeverName({
+        document_employer_name: '   ',
+        client_name: 'Cordaan',
+      }),
+      'Cordaan'
+    );
+  });
+
   it('prefers client_name over employer_name', () => {
     assert.equal(
       getWerkgeverName({ client_name: 'Cordaan', employer_name: 'Other' }),
@@ -85,6 +130,18 @@ describe('getWerkgeverName', () => {
     assert.equal(
       getWerkgeverName({ client_name: 'cordaan BV' }),
       'Cordaan BV'
+    );
+  });
+});
+
+describe('getProfileWerkgeverName', () => {
+  it('ignores document_employer_name', () => {
+    assert.equal(
+      getProfileWerkgeverName({
+        document_employer_name: 'Short',
+        client_name: 'Cordaan Holding BV',
+      }),
+      'Cordaan Holding BV'
     );
   });
 });

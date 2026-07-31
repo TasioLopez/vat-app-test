@@ -46,6 +46,7 @@ export {
   type VisieLoopbaanadviseurContentResult,
   type VisieLoopbaanFunctie,
 } from './schema';
+export { parseFunctieLine } from './parse-functie-line';
 export {
   VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
   buildVisieLoopbaanadviseurContextMessage,

@@ -33,7 +33,12 @@ export const TP2026CoverFields: TP2026FieldDef[] = [
   { key: 'first_name', label: 'Voornaam', type: 'text' },
   { key: 'last_name', label: 'Achternaam', type: 'text' },
   { key: 'tp_creation_date', label: 'Datum rapportage', type: 'date' },
-  { key: 'client_name', label: 'Opdrachtgever', type: 'readonly' },
+  {
+    key: 'document_employer_name',
+    label: 'Opdrachtgever',
+    type: 'text',
+    placeholder: 'Naam werkgever op dit trajectplan',
+  },
 ];
 
 export const TP2026GegevensFields: TP2026FieldDef[] = [

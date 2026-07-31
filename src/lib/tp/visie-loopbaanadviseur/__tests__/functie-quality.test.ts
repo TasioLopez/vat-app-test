@@ -65,7 +65,6 @@ describe('assessFunctieQuality', () => {
           toelichting:
             'Documentatie in een prikkelarme omgeving zonder hoge tempo of deadlines.',
         },
-        { naam: 'En soortgelijk', toelichting: '' },
       ],
     };
 
@@ -89,7 +88,6 @@ describe('assessFunctieQuality', () => {
           naam: 'Documentcontroleur luchtvaartdossiers',
           toelichting: 'Vraagt nauwkeurigheid en digitale vaardigheden zonder fysieke piekbelasting.',
         },
-        { naam: 'En soortgelijk', toelichting: '' },
       ],
     };
 
@@ -112,7 +110,6 @@ describe('assessFunctieQuality', () => {
           naam: 'Documentcontroleur dossiers',
           toelichting: 'Past bij nauwkeurige digitale vaardigheden.',
         },
-        { naam: 'En soortgelijk', toelichting: '' },
       ],
     };
 
