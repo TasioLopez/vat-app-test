@@ -60,7 +60,7 @@ export function Basis2026MarkdownBody({
   return (
     <div
       className={cn(
-        'max-w-none text-neutral-900',
+        'tp-body-prose max-w-none text-neutral-900',
         withInlineQuotes && 'markdown-inline-quotes'
       )}
     >

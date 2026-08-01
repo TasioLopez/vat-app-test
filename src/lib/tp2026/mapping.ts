@@ -196,6 +196,8 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   normalizePowMeterLegacyFields(next);
 
+  next.text_justified = next.text_justified === true;
+
   return next;
 }
 

@@ -12,12 +12,14 @@ export function ExportButton({
   vgrInstanceId: vgrInstanceIdProp,
   layoutKey: layoutKeyProp,
   variant = 'default',
+  onBeforeExport,
 }: {
   employeeId: string;
   tpInstanceId?: string;
   vgrInstanceId?: string;
   layoutKey?: ExportLayoutKey;
   variant?: 'default' | 'icon';
+  onBeforeExport?: () => Promise<void>;
 }) {
   const params = useParams() as { tpInstanceId?: string; vgrInstanceId?: string };
   const [busy, setBusy] = useState(false);
@@ -29,15 +31,18 @@ export function ExportButton({
     setSavedMsg(null);
 
     try {
+      if (onBeforeExport) {
+        await onBeforeExport();
+      }
+
       const tpInstanceId = tpInstanceIdProp || params.tpInstanceId || null;
       const vgrInstanceId = vgrInstanceIdProp || params.vgrInstanceId || null;
       const layoutKey = layoutKeyProp || 'tp_2026';
-      const filenamePrefix = layoutKey === 'vgr' ? 'VGR' : 'TP';
-      const filename = `${filenamePrefix}-${employeeId}.pdf`;
+      const fallbackFilename =
+        layoutKey === 'vgr' ? 'Voortgangsrapportage.pdf' : 'Trajectplan tweede spoor begeleiding.pdf';
 
       const query = new URLSearchParams({
         employeeId,
-        filename,
         mode: 'json',
       });
       if (tpInstanceId) query.set('tpInstanceId', tpInstanceId);
@@ -56,6 +61,10 @@ export function ExportButton({
       }
 
       const signedUrl: string = data.signedUrl;
+      const filename: string =
+        typeof data.filename === 'string' && data.filename.trim()
+          ? data.filename
+          : fallbackFilename;
 
       try {
         const a = document.createElement('a');

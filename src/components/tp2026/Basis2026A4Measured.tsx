@@ -540,7 +540,7 @@ function TextBlockBody({
 
   if (variant === 'logo') {
     return (
-      <div className="text-[12px] leading-relaxed text-neutral-900">
+      <div className="tp-body-prose text-[12px] leading-relaxed text-neutral-900">
         {renderTextWithLogoBullets(trimmed, fieldKey === 'plaats', true)}
       </div>
     );

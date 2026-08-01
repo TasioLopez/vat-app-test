@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
-import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
+import { AlignJustify, AlignLeft, Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
+import { cn } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
   buildAutofillSteps,
@@ -254,6 +255,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   );
 
   const previewData = useDeferredValue(tpData);
+  const textJustified = tpData.text_justified === true;
 
   const sections = [
     {
@@ -537,11 +539,33 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
             >
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className={cn('h-8 w-8', textJustified && 'border-[#6d2a96] bg-[#6d2a96]/10 text-[#6d2a96]')}
+              onClick={() => updateField('text_justified', !textJustified)}
+              aria-pressed={textJustified}
+              aria-label={
+                textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'
+              }
+              title={textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'}
+            >
+              {textJustified ? (
+                <AlignJustify className="h-4 w-4" aria-hidden />
+              ) : (
+                <AlignLeft className="h-4 w-4" aria-hidden />
+              )}
+            </Button>
             <ExportButton
               employeeId={employeeId}
               tpInstanceId={tpInstanceId}
               layoutKey="tp_2026"
               variant="icon"
+              onBeforeExport={async () => {
+                if (!isDirty) return;
+                await persistForGuard();
+              }}
             />
             <AutofillScopeDropdown
               variant="icon"
@@ -586,7 +610,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
                   {section.renderEditor()}
                 </div>
                 <TPPreviewWrapper>
-                  <div className="space-y-8">{section.renderPreview()}</div>
+                  <div className={cn('space-y-8', textJustified && 'tp-text-justified')}>
+                    {section.renderPreview()}
+                  </div>
                 </TPPreviewWrapper>
               </div>
             </div>

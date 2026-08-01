@@ -15,6 +15,13 @@ import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
 import { verifyEmployeeAccess } from "@/lib/auth/api-auth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/auth/rate-limit";
+import {
+  buildTpDownloadFilename,
+  buildVgrDownloadFilename,
+  contentDispositionAttachment,
+  resolveExportNameParts,
+  sanitizeDownloadFilename,
+} from "@/lib/tp/export-filename";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,7 +94,6 @@ async function launchBrowser() {
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams;
   const employeeId = search.get("employeeId");
-  const filename = (search.get("filename") || "TP.pdf").replace(/[^\w.\-]/g, "_");
   const mode = search.get("mode") || "json";
   const tpInstanceId = search.get("tpInstanceId");
   const vgrInstanceId = search.get("vgrInstanceId");
@@ -135,6 +141,12 @@ export async function GET(req: NextRequest) {
     return rateLimitResponse(rate.retryAfterSec);
   }
 
+  const { data: employeeProfile } = await ssr
+    .from("employees")
+    .select("first_name, last_name, gender")
+    .eq("id", employeeId)
+    .maybeSingle();
+
   const base = getBaseUrl(req);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
@@ -169,6 +181,10 @@ export async function GET(req: NextRequest) {
 
     const resolvedVgrLayout = vgrInstance.layout_key as VGRLayoutKey;
     const snapshotData = ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>);
+    const vgrNameParts = resolveExportNameParts(employeeProfile, snapshotData);
+    const filename = sanitizeDownloadFilename(
+      buildVgrDownloadFilename(vgrNameParts.first_name, vgrNameParts.last_name, vgrNameParts.gender)
+    );
     const printUrl = `${base}/vgr/print?vgrInstanceId=${encodeURIComponent(vgrInstanceId)}`;
     const pathKey = `documents/${employeeId}/vgr-final-${Date.now()}.pdf`;
 
@@ -272,7 +288,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": contentDispositionAttachment(filename),
           "Cache-Control": "no-store",
         },
       });
@@ -332,6 +348,11 @@ export async function GET(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  const tpNameParts = resolveExportNameParts(employeeProfile, snapshotData);
+  const filename = sanitizeDownloadFilename(
+    buildTpDownloadFilename(tpNameParts.first_name, tpNameParts.last_name, tpNameParts.gender)
+  );
 
   const printUrl = `${base}/tp2026/print?tpInstanceId=${encodeURIComponent(tpInstanceId)}`;
 
@@ -441,7 +462,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": contentDispositionAttachment(filename),
         "Cache-Control": "no-store",
       },
     });

@@ -27,7 +27,11 @@ export function InleidingSubBlock({
   if (!text) return null;
 
   if (text.includes('N.B.:') && text.includes(NB_PATTERN)) {
-    return <p className={className}>{text}</p>;
+    return (
+      <div className="tp-body-prose">
+        <p className={className}>{text}</p>
+      </div>
+    );
   }
 
   const { intro, quote } = parseInleidingSub(text);
@@ -35,7 +39,7 @@ export function InleidingSubBlock({
 
   if (quote) {
     return (
-      <div className={className}>
+      <div className={`tp-body-prose ${className}`.trim()}>
         <strong>{patchedIntro}</strong>
         <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
@@ -46,13 +50,17 @@ export function InleidingSubBlock({
 
   if (patchedIntro !== text.trim()) {
     return (
-      <div className={className}>
+      <div className={`tp-body-prose ${className}`.trim()}>
         <strong>{patchedIntro}</strong>
       </div>
     );
   }
 
-  return <p className={className}>{text}</p>;
+  return (
+    <div className="tp-body-prose">
+      <p className={className}>{text}</p>
+    </div>
+  );
 }
 
 /** Renders only the quoted portion of inleiding_sub (for ConfirmToEditBlock preview). */

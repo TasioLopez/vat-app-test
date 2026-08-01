@@ -87,6 +87,12 @@ body {
   overflow: hidden;
 }
 
+/* TP 2026: optional justified body prose (preview + print) */
+.tp-text-justified .tp-body-prose p,
+.tp-text-justified .tp-body-prose li {
+  text-align: justify;
+}
+
 .page-content {
   font-size: 12px;
   font-family: sans-serif;

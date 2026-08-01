@@ -61,7 +61,7 @@ export function BelastbaarheidsprofielBlock({
   const quote = prognoseBlock.trim();
 
   return (
-    <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
+    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{intro}</p> : null}
       {bullets ? (
         <div className="my-3">{renderTextWithLogoBullets(bullets, false, true)}</div>

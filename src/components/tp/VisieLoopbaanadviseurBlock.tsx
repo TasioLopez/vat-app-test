@@ -63,7 +63,7 @@ export function VisieLoopbaanadviseurBlock({
   const { toelichting, functiesIntro, functieBullets, footer } = parseVisieLoopbaanadviseur(text);
 
   return (
-    <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
+    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       <p className="mb-4">{toelichting}</p>
 
       {functiesIntro || functieBullets || footer ? (
