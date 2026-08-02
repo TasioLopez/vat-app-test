@@ -42,6 +42,7 @@ werknemer_doel_toelichting
 
 ad_quote
 - Letterlijk citaat uit AD-rapport of intake sectie 7 "Quote advies spoor 2" (conclusie/advies over 2e spoor).
+- Neem NOOIT het label zelf op ("Quote advies spoor 2", "Quote advies spoor 2 (inleiding)", of de trailing ":") — alleen de adviestekst na de dubbele punt, ook als er geen spatie na ":" staat.
 - Invullen wanneer definitief AD aanwezig is (context.has_ad_report true en geen concept), OF wanneer context.ad_report_concept true is (concept AD — quote uit intake, geen definitief rapport).
 - Null wanneer geen AD-inhoud in documenten en geen concept-flag.
 

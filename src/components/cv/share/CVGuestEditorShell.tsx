@@ -6,6 +6,8 @@ import {
   Upload,
   Crop,
   Trash2,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +23,7 @@ import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
 import { ExportCVShareButton } from '@/components/cv/share/ExportCVShareButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
+import { CV_FONT_OPTIONS, coerceCvFontId } from '@/lib/cv/font-options';
 import { uiLabel } from '@/lib/cv/section-labels';
 import type { CvTemplateKey } from '@/types/cv';
 import { cn } from '@/lib/utils';
@@ -50,9 +53,15 @@ export default function CVGuestEditorShell({ shareToken, employeeLabel }: Props)
     setActiveLocale,
     payload,
     layout,
+    layoutOptions,
+    setFontFamily,
     updateOptions,
     updatePersonal,
     photoDisplayUrl,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useCV();
 
   const photoFileRef = useRef<HTMLInputElement>(null);
@@ -129,7 +138,7 @@ export default function CVGuestEditorShell({ shareToken, employeeLabel }: Props)
   };
 
   return (
-    <div className="min-h-full shrink-0 bg-gray-100 pb-24 print:bg-white print:pb-0">
+    <div className="min-h-full shrink-0 bg-gray-100 pb-24 print:bg-white print:pb-0" data-cv-editor>
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -196,7 +205,51 @@ export default function CVGuestEditorShell({ shareToken, employeeLabel }: Props)
             <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
 
             <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                disabled={!canUndo}
+                onClick={undo}
+                aria-label="Ongedaan maken"
+                title="Ongedaan maken (Ctrl+Z)"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                disabled={!canRedo}
+                onClick={redo}
+                aria-label="Opnieuw"
+                title="Opnieuw (Ctrl+Y)"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
               <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
+              <Select
+                value={coerceCvFontId(layoutOptions.fontFamily)}
+                onValueChange={setFontFamily}
+              >
+                <SelectTrigger className="h-8 w-[8.5rem] shrink-0 text-xs" aria-label="Lettertype">
+                  <SelectValue placeholder="Lettertype" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CV_FONT_OPTIONS.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      <span style={{ fontFamily: f.css }}>{f.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <input
                 ref={photoFileRef}
                 type="file"

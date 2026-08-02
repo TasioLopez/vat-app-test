@@ -121,24 +121,33 @@ Geef ALLEEN het volledige Engelse CvModel als JSON.`;
 }
 
 export function cvComposeUserPrompt(input: {
-  mode: 'fill' | 'polish';
+  mode: 'autofill' | 'redo' | 'fill' | 'polish';
   current: CvModel;
   seeded: CvModel;
   employee: unknown;
   details: unknown;
   facts: CvFacts;
 }): string {
+  const mode = input.mode === 'fill' ? 'autofill' : input.mode === 'polish' ? 'autofill' : input.mode;
+
   const modeInstruction =
-    input.mode === 'fill'
-      ? 'Modus: VULLEN. Vul dunne/lege secties agressiever aan op basis van facts + seed, maar verzin geen harde feiten.'
-      : 'Modus: POLISH. Herschrijf voor hogere kwaliteit en volledigheid, met behoud van feitelijke kern.';
+    mode === 'redo'
+      ? `Modus: CV HERBOUWEN (redo).
+Bouw het gestructureerde CV opnieuw op, met als HOOFDBRON de geüploade CV-document(en) (facts.byKind.cv / experience/education/skills uit CV-docs).
+Gebruik intake/AD/VGR/overige docs, employee en seed ALLEEN om ontbrekende velden aan te vullen.
+Doel: het CV dat in de documenten staat zo volledig en netjes mogelijk weergeven — geen verzonnen hard feiten.
+Vervang dunne secties waar CV-docs sterkere inhoud hebben.`
+      : `Modus: AUTOFILL.
+Vul dunne/lege secties aan op basis van ALLE beschikbare document-facts + employee/details + seed.
+Behoud bestaande sterke inhoud waar die al goed is; verzin geen harde feiten.
+Gebruik het volledige feitenpakket (alle doc kinds in evidence).`;
 
   return `${modeInstruction}
 
 Brondata:
 - Employee: ${JSON.stringify(input.employee)}
 - Employee details: ${JSON.stringify(input.details)}
-- Geanalyseerde document-facts: ${JSON.stringify(input.facts)}
+- Geanalyseerde document-facts (inclusief evidence/docNames): ${JSON.stringify(input.facts)}
 - Seedmodel: ${JSON.stringify(input.seeded)}
 - Huidige CV: ${JSON.stringify(input.current)}
 

@@ -4,6 +4,7 @@ import {
   buildAdAdviesIntroPrefix,
   isAdReportConcept,
 } from '@/lib/tp/ad-report-wording';
+import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import { ADVIES_DELIMITER, ADVIES_INTRO_SUFFIX } from './constants';
 import type { AdAdviesContentResult } from './schema';
 
@@ -61,7 +62,9 @@ export function buildAdAdviesFields(
   const auteur = resolveAuteur(content, ctx);
   const datum = resolveDatum(content, ctx);
   const intro = buildAdAdviesIntro(auteur, datum, isAdReportConcept(ctx.meta));
-  const citaat = content.advies_citaat ? stripCitations(content.advies_citaat) : '';
+  const citaat = content.advies_citaat
+    ? stripLeadingIntakeQuoteLabels(stripCitations(content.advies_citaat))
+    : '';
 
   const parts = [intro];
   if (citaat) {
@@ -88,7 +91,7 @@ export function parseAdAdvies(raw: string): ParsedAdAdvies {
     const [intro, citaat] = text.split(ADVIES_DELIMITER);
     return {
       intro: stripStructuralNewlines(intro),
-      citaat: stripStructuralNewlines(citaat ?? ''),
+      citaat: stripLeadingIntakeQuoteLabels(stripStructuralNewlines(citaat ?? '')),
     };
   }
 

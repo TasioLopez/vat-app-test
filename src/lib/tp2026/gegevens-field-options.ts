@@ -1,6 +1,6 @@
 /** Shared option lists for Gegevens / employee profile fields. */
 
-import { isAbsentText } from '@/lib/utils';
+import { formatComputerSkills, isAbsentText } from '@/lib/utils';
 
 export const EDUCATION_LEVEL_OPTIONS = [
   'Praktijkonderwijs',
@@ -571,13 +571,48 @@ export const DRIVERS_LICENSE_TYPE_OPTIONS = [
 ] as const;
 
 export const COMPUTER_SKILLS_OPTIONS = [
-  { value: '1', label: '1 - Geen' },
-  { value: '2', label: '2 - Basis (e-mail, browsen)' },
-  { value: '3', label: '3 - Gemiddeld (Word, Excel)' },
-  { value: '4', label: "4 - Geavanceerd (meerdere programma's)" },
-  { value: '5', label: '5 - Expert (IT-gerelateerde vaardigheden)' },
+  { value: '1', label: 'Geen', defaultDescription: '' },
+  { value: '2', label: 'Basis', defaultDescription: 'e-mail, browsen' },
+  { value: '3', label: 'Gemiddeld', defaultDescription: 'Word, Excel' },
+  { value: '4', label: 'Geavanceerd', defaultDescription: "meerdere programma's" },
+  { value: '5', label: 'Expert', defaultDescription: 'IT-gerelateerde vaardigheden' },
 ] as const;
 
-export const DUTCH_LANGUAGE_OPTIONS = ['Goed', 'Matig', 'Onvoldoende'] as const;
+export function getComputerSkillsDefaultDescription(
+  level: string | number | null | undefined
+): string {
+  const key = String(level ?? '').trim();
+  const opt = COMPUTER_SKILLS_OPTIONS.find((o) => o.value === key);
+  return opt?.defaultDescription ?? '';
+}
+
+export function getComputerSkillsLabel(level: string | number | null | undefined): string {
+  const key = String(level ?? '').trim();
+  const opt = COMPUTER_SKILLS_OPTIONS.find((o) => o.value === key);
+  return opt?.label ?? '';
+}
+
+/** Reset description on level change only when empty or still the previous default. */
+export function nextComputerSkillsDescriptionOnLevelChange(
+  previousLevel: string | null | undefined,
+  nextLevel: string,
+  currentDescription: string | null | undefined
+): string {
+  const current = String(currentDescription ?? '').trim();
+  const prevDefault = getComputerSkillsDefaultDescription(previousLevel);
+  if (!current || current === prevDefault) {
+    return getComputerSkillsDefaultDescription(nextLevel);
+  }
+  return current;
+}
+
+export function formatComputerSkillsDisplay(
+  level: string | number | null | undefined,
+  description?: string | null
+): string {
+  return formatComputerSkills(level, description);
+}
+
+export const DUTCH_LANGUAGE_OPTIONS = ['Goed', 'Voldoende', 'Matig', 'Geen'] as const;
 
 export const DRIVERS_LICENSE_TYPE_VALUES = DRIVERS_LICENSE_TYPE_OPTIONS.map((o) => o.value);

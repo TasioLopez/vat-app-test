@@ -5,6 +5,7 @@ import {
   hasDefinitiveAdReport,
   isAdReportConcept,
 } from '@/lib/tp/ad-report-wording';
+import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import {
   AD_INTRO_SUFFIX,
   AD_INTRO_SUFFIX_LEGACY,
@@ -264,7 +265,7 @@ export function stripInleidingSubQuoteWrapping(quote: string): string {
   if (q.startsWith('"') && q.endsWith('"') && q.length >= 2) {
     q = q.slice(1, -1);
   }
-  return q;
+  return stripLeadingIntakeQuoteLabels(q);
 }
 
 export type ParsedInleidingSub = {
@@ -312,8 +313,9 @@ export function buildInleidingFields(
 
   const hasDefinitiveAd = hasDefinitiveAdReport(ctx.meta);
   const isConceptAd = isAdReportConcept(ctx.meta);
-  const quote =
-    coerceText(content.ad_quote) || coerceText(ctx.meta.advies_ad_passende_arbeid);
+  const quote = stripLeadingIntakeQuoteLabels(
+    coerceText(content.ad_quote) || coerceText(ctx.meta.advies_ad_passende_arbeid)
+  );
   const hasConceptAdQuote = isConceptAd && Boolean(quote);
 
   if (!hasDefinitiveAd && !hasConceptAdQuote) {

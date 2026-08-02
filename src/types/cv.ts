@@ -146,6 +146,8 @@ export type CvSidebarPosition = 'left' | 'right';
 
 export type CvLayoutOptions = {
   sidebarPosition?: CvSidebarPosition;
+  /** Curated font id from CV_FONT_OPTIONS (e.g. montserrat, georgia) */
+  fontFamily?: string;
 };
 
 export type CvDocumentPayload = {

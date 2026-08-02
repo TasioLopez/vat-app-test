@@ -255,6 +255,17 @@ describe('buildInleidingFields', () => {
     const { inleiding_sub } = buildInleidingFields(ctx, content);
     assert.match(inleiding_sub, /Advies uit meta veld/);
   });
+
+  it('strips leaked Quote advies spoor 2 label from ad_quote in inleiding_sub', () => {
+    const content = {
+      ...baseContent,
+      ad_quote:
+        'Quote advies spoor 2 (inleiding):Blijf de re-integratiemogelijkheden binnen spoor 1 monitoren.',
+    };
+    const { inleiding_sub } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding_sub, /Blijf de re-integratiemogelijkheden/);
+    assert.doesNotMatch(inleiding_sub, /Quote advies spoor 2/);
+  });
 });
 
 describe('buildAdSubBlock', () => {
@@ -276,6 +287,16 @@ describe('parseInleidingSub / buildInleidingSubBlock', () => {
 
     const introOnly = 'alleen intro ';
     assert.equal(parseInleidingSub(buildInleidingSubBlock(introOnly, '')).intro, introOnly);
+  });
+
+  it('strips leaked intake label from stored inleiding_sub quote', () => {
+    const intro = `Intro ${AD_INTRO_SUFFIX}`;
+    const block = buildInleidingSubBlock(
+      intro,
+      'Quote advies spoor 2 (inleiding):Blijf monitoren binnen spoor 1.'
+    );
+    const parsed = parseInleidingSub(block);
+    assert.equal(parsed.quote, 'Blijf monitoren binnen spoor 1.');
   });
 });
 

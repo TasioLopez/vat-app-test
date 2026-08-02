@@ -23,6 +23,7 @@ export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'dutch_reading',
   'has_computer',
   'computer_skills',
+  'computer_skills_description',
   'contract_hours',
   'other_employers',
   'field_review_status',
@@ -47,6 +48,7 @@ export type EmployeeDetailsPersist = {
   dutch_reading?: string;
   has_computer?: boolean;
   computer_skills?: string;
+  computer_skills_description?: string;
   contract_hours?: number;
   other_employers?: string;
   field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;

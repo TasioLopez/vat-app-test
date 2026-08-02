@@ -1,5 +1,5 @@
 /** Default model — override with OPENAI_VISIE_WERKNEMER_MODEL. */
-export const DEFAULT_VISIE_WERKNEMER_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_VISIE_WERKNEMER_MODEL = 'gpt-5.6-sol';
 
 /** Target length per synthesized paragraph (reference TP / UWV style). */
 export const MAX_WORDS_ALINEA_1 = 100;

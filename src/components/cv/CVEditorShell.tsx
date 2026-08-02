@@ -8,11 +8,12 @@ import {
   Send,
   Check,
   Sparkles,
-  Wand2,
   Upload,
   Crop,
   Trash2,
   X,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
 import { ExportCVButton } from '@/components/cv/ExportCVButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
+import { CV_FONT_OPTIONS, coerceCvFontId } from '@/lib/cv/font-options';
 import { uiLabel } from '@/lib/cv/section-labels';
 import { getActiveCvModel, normalizeCvModel } from '@/lib/cv/normalize';
 import type { CvLocale, CvModel, CvTemplateKey } from '@/types/cv';
@@ -65,9 +67,15 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     setActiveLocale,
     payload,
     layout,
+    layoutOptions,
+    setFontFamily,
     updateOptions,
     updatePersonal,
     photoDisplayUrl,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useCV();
 
   const photoFileRef = useRef<HTMLInputElement>(null);
@@ -75,6 +83,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiMode, setAiMode] = useState<'autofill' | 'redo'>('autofill');
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [aiPreview, setAiPreview] = useState<CvModel | null>(null);
   const [aiPreviewLocale, setAiPreviewLocale] = useState<CvLocale>('nl');
@@ -121,7 +130,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     }
   };
 
-  const runAi = async (mode: 'fill' | 'polish' | 'generate_en') => {
+  const runAi = async (mode: 'autofill' | 'redo' | 'generate_en') => {
     setAiBusy(true);
     setAiError(null);
     try {
@@ -231,7 +240,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
   };
 
   return (
-    <div className="min-h-full shrink-0 bg-gray-100 pb-24 print:bg-white print:pb-0">
+    <div className="min-h-full shrink-0 bg-gray-100 pb-24 print:bg-white print:pb-0" data-cv-editor>
       <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -309,27 +318,56 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             <div className="flex shrink-0 items-center gap-1">
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 size="icon"
                 className="h-8 w-8 shrink-0"
-                disabled={aiBusy}
-                onClick={() => runAi('fill')}
-                aria-label={uiLabel(activeLocale, 'aiFill')}
-                title={uiLabel(activeLocale, 'aiFill')}
+                disabled={!canUndo}
+                onClick={undo}
+                aria-label="Ongedaan maken"
+                title="Ongedaan maken (Ctrl+Z)"
               >
-                <Sparkles className="h-4 w-4" />
+                <Undo2 className="h-4 w-4" />
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 size="icon"
                 className="h-8 w-8 shrink-0"
-                disabled={aiBusy}
-                onClick={() => runAi('polish')}
-                aria-label={uiLabel(activeLocale, 'aiPolish')}
-                title={uiLabel(activeLocale, 'aiPolish')}
+                disabled={!canRedo}
+                onClick={redo}
+                aria-label="Opnieuw"
+                title="Opnieuw (Ctrl+Y)"
               >
-                <Wand2 className="h-4 w-4" />
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
+
+            <div className="flex shrink-0 items-center gap-1">
+              <Select
+                value={aiMode}
+                onValueChange={(v) => setAiMode(v === 'redo' ? 'redo' : 'autofill')}
+              >
+                <SelectTrigger className="h-8 w-[11.5rem] shrink-0 text-xs" aria-label="AI-modus">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="autofill">{uiLabel(activeLocale, 'aiAutofill')}</SelectItem>
+                  <SelectItem value="redo">{uiLabel(activeLocale, 'aiRedo')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-8 shrink-0 gap-1 text-xs"
+                disabled={aiBusy}
+                onClick={() => runAi(aiMode)}
+                title={uiLabel(activeLocale, 'aiRun')}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {uiLabel(activeLocale, 'aiRun')}
               </Button>
               <Button
                 type="button"
@@ -356,6 +394,21 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
 
             <div className="flex shrink-0 items-center gap-1">
               <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
+              <Select
+                value={coerceCvFontId(layoutOptions.fontFamily)}
+                onValueChange={setFontFamily}
+              >
+                <SelectTrigger className="h-8 w-[8.5rem] shrink-0 text-xs" aria-label="Lettertype">
+                  <SelectValue placeholder="Lettertype" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CV_FONT_OPTIONS.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      <span style={{ fontFamily: f.css }}>{f.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <input
                 ref={photoFileRef}
                 type="file"

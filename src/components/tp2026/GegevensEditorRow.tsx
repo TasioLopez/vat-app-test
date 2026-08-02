@@ -2,6 +2,7 @@
 
 import { GegevensSubsectionTitle } from '@/components/tp2026/GegevensEditorSection';
 import FieldControl from '@/components/tp2026/FieldControl';
+import { ComputerSkillsField } from '@/components/tp2026/ComputerSkillsField';
 import {
   getGegevensFieldDef,
   type GegevensEditorRow,
@@ -64,6 +65,18 @@ export function GegevensEditorRow({
               ? { ...fieldDef, label: adReportDateLabel(isAdReportConcept(data)) }
               : fieldDef;
           const props = resolveFieldProps(field);
+
+          if (key === 'computer_skills') {
+            return (
+              <ComputerSkillsField
+                key={key}
+                field={field}
+                level={data.computer_skills}
+                description={data.computer_skills_description}
+                updateField={updateField}
+              />
+            );
+          }
 
           return (
             <FieldControl

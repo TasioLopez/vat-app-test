@@ -20,6 +20,7 @@ export type EmployeeDetailFieldKey =
   | 'dutch_reading'
   | 'has_computer'
   | 'computer_skills'
+  | 'computer_skills_description'
   | 'contract_hours'
   | 'other_employers';
 
@@ -39,6 +40,7 @@ export const EMPLOYEE_DETAIL_FIELD_KEYS: EmployeeDetailFieldKey[] = [
   'dutch_reading',
   'has_computer',
   'computer_skills',
+  'computer_skills_description',
   'contract_hours',
   'other_employers',
 ];
@@ -59,6 +61,7 @@ const FIELD_KEY_SET = new Set<string>([
   'dutch_reading',
   'has_computer',
   'computer_skills',
+  'computer_skills_description',
   'contract_hours',
   'other_employers',
 ]);

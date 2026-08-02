@@ -1,9 +1,12 @@
-import { TRANSPORT_TYPE_OPTIONS } from '@/lib/tp2026/gegevens-field-options';
+import {
+  DUTCH_LANGUAGE_OPTIONS,
+  TRANSPORT_TYPE_OPTIONS,
+} from '@/lib/tp2026/gegevens-field-options';
 
 export type EmployeeExtractionResult = Record<string, unknown>;
 
 const GENDER_ENUM = ['Man', 'Vrouw', null] as const;
-const DUTCH_LEVEL_ENUM = ['Goed', 'Gemiddeld', 'Niet goed', null] as const;
+const DUTCH_LEVEL_ENUM = [...DUTCH_LANGUAGE_OPTIONS, null] as const;
 const COMPUTER_SKILLS_ENUM = ['1', '2', '3', '4', '5', null] as const;
 
 function nullableString(description: string) {
@@ -51,7 +54,7 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
     dutch_speaking: {
       type: ['string', 'null'] as const,
       enum: DUTCH_LEVEL_ENUM,
-      description: 'Nederlands spreken: Goed, Gemiddeld of Niet goed',
+      description: 'Nederlands spreken: Goed, Voldoende, Matig of Geen',
     },
     dutch_writing: {
       type: ['string', 'null'] as const,
@@ -69,6 +72,9 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
       enum: COMPUTER_SKILLS_ENUM,
       description: 'Computervaardigheid 1-5',
     },
+    computer_skills_description: nullableString(
+      'Parenthetical / aanvullende programma\'s bij computervaardigheden (bijv. SAP ERP, WMS)'
+    ),
     referent_first_name: nullableString('Voornaam contactpersoon werkgever (sectie 4)'),
     referent_last_name: nullableString('Achternaam contactpersoon werkgever (sectie 4)'),
     referent_function: nullableString('Functietitel contactpersoon (sectie 4)'),
@@ -94,6 +100,7 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
     'dutch_reading',
     'has_computer',
     'computer_skills',
+    'computer_skills_description',
     'referent_first_name',
     'referent_last_name',
     'referent_function',

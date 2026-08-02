@@ -1,5 +1,5 @@
 /** Default model — override with OPENAI_ZOEKPROFIEL_MODEL. */
-export const DEFAULT_ZOEKPROFIEL_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_ZOEKPROFIEL_MODEL = 'gpt-5.6-sol';
 
 /** Zoekprofiel V2 — total word count (both paragraphs combined). */
 export const MIN_WORDS_TOTAL = 150;

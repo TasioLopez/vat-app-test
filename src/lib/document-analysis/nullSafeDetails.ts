@@ -30,6 +30,7 @@ const VALID_EMPLOYEE_DETAILS_FIELDS = new Set([
   'dutch_reading',
   'has_computer',
   'computer_skills',
+  'computer_skills_description',
   'contract_hours',
   'other_employers',
   'gender',
@@ -49,11 +50,26 @@ function normalizeDutchLevel(value: unknown): string | undefined {
   const s = String(value).trim();
   const lower = s.toLowerCase();
   if (lower === 'g' || lower === 'goed') return 'Goed';
-  if (lower === 'r' || lower === 'redelijk' || lower === 'gemiddeld') return 'Gemiddeld';
-  if (lower === 'o' || lower === 'onvoldoende' || lower === 's' || lower === 'slecht' || lower === 'niet goed') {
-    return 'Niet goed';
+  if (
+    lower === 'r' ||
+    lower === 'redelijk' ||
+    lower === 'gemiddeld' ||
+    lower === 'voldoende'
+  ) {
+    return 'Voldoende';
   }
-  if (s === 'Goed' || s === 'Gemiddeld' || s === 'Niet goed') return s;
+  if (
+    lower === 'o' ||
+    lower === 'onvoldoende' ||
+    lower === 's' ||
+    lower === 'slecht' ||
+    lower === 'niet goed' ||
+    lower === 'matig'
+  ) {
+    return 'Matig';
+  }
+  if (lower === 'geen') return 'Geen';
+  if (s === 'Goed' || s === 'Voldoende' || s === 'Matig' || s === 'Geen') return s;
   return undefined;
 }
 
@@ -170,6 +186,13 @@ export function mapAndValidateEmployeeDetails(
     if (mappedKey === 'computer_skills') {
       const n = typeof rawValue === 'number' ? rawValue : parseInt(String(rawValue), 10);
       if (!isNaN(n) && n >= 1 && n <= 5) mappedData[mappedKey] = String(n);
+      continue;
+    }
+
+    if (mappedKey === 'computer_skills_description') {
+      if (isPresent(rawValue)) {
+        mappedData[mappedKey] = String(rawValue).trim();
+      }
       continue;
     }
 

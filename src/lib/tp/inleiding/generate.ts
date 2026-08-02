@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import type { ReferentRow } from '@/lib/referents';
+import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import {
   buildInleidingFields,
   stripCitations,
@@ -176,7 +177,7 @@ export async function generateInleidingContent(
     const parsed = JSON.parse(outputText) as unknown;
     const content = parseInleidingContentResult(parsed);
     if (content.ad_quote) {
-      content.ad_quote = stripCitations(content.ad_quote);
+      content.ad_quote = stripLeadingIntakeQuoteLabels(stripCitations(content.ad_quote));
     }
     return content;
   } finally {

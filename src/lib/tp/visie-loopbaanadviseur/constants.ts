@@ -31,7 +31,7 @@ export const NO_AD_NO_BELASTBAARHEID_INTRO =
 export const FUNCTIE_FOOTER =
   '*Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/ IZP/ LAB.';
 
-export const DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL = 'gpt-5.6-sol';
 
 export const GENERATION_FALLBACK =
   '[Visie van loopbaanadviseur — AI generatie mislukt, handmatig invullen vereist]';

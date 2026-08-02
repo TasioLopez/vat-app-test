@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSupabase } from '@/lib/cv-share/auth-client';
 import { verifyCvDocumentAccess } from '@/lib/cv/verifyCvAccess';
 import {
-  getActiveShareForCv,
-  revokeActiveSharesForCv,
+  getActiveShareForCvOrChildren,
+  revokeActiveSharesForParentAndChildren,
   shareExpiresAt,
 } from '@/lib/cv-share/access';
 import { generateShareToken, hashShareToken } from '@/lib/cv-share/tokens';
 import { normalizeEmail } from '@/lib/cv-share/normalize-email';
 import { sendCvShareEmail } from '@/lib/cv-share/email';
 import { getBaseUrl } from '@/lib/cv-share/base-url';
+import { createShareChildCv } from '@/lib/cv/clone-share-child';
+import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'CV not found or access denied' }, { status: 403 });
   }
 
-  const share = await getActiveShareForCv(supabase, cvId, employeeId);
+  const share = await getActiveShareForCvOrChildren(supabase, cvId, employeeId);
   if (!share) {
     return NextResponse.json({ active: false });
   }
@@ -47,6 +49,7 @@ export async function GET(req: NextRequest) {
       lastAccessedAt: share.last_accessed_at,
       lastSavedAt: share.last_saved_at,
       createdAt: share.created_at,
+      childCvId: share.childCvId ?? share.cv_document_id,
     },
   });
 }
@@ -108,16 +111,31 @@ export async function POST(req: NextRequest) {
   const employeeName =
     [emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'werknemer';
 
-  await revokeActiveSharesForCv(cvId);
+  await revokeActiveSharesForParentAndChildren(cvId, employeeId);
+
+  let childCvId: string;
+  let childTitle: string;
+  try {
+    const child = await createShareChildCv(supabaseAdmin, {
+      parentCvId: cvId,
+      employeeId,
+      createdBy: user.id,
+    });
+    childCvId = child.childCvId;
+    childTitle = child.title;
+  } catch (cloneErr) {
+    console.error('cv-share clone', cloneErr);
+    return NextResponse.json({ error: 'Delen mislukt (kopie aanmaken)' }, { status: 500 });
+  }
 
   const rawToken = generateShareToken();
   const expiresAt = shareExpiresAt();
   const expiresAtIso = expiresAt.toISOString();
 
-  const { data: share, error: insertErr } = await supabase
+  const { data: share, error: insertErr } = await supabaseAdmin
     .from('cv_share_links')
     .insert({
-      cv_document_id: cvId,
+      cv_document_id: childCvId,
       employee_id: employeeId,
       token_hash: hashShareToken(rawToken),
       recipient_email: recipientEmail,
@@ -130,14 +148,9 @@ export async function POST(req: NextRequest) {
 
   if (insertErr || !share) {
     console.error('cv-share insert', insertErr);
+    await supabaseAdmin.from('cv_documents').delete().eq('id', childCvId).eq('employee_id', employeeId);
     return NextResponse.json({ error: 'Delen mislukt' }, { status: 500 });
   }
-
-  await supabase
-    .from('cv_documents')
-    .update({ status: 'shared_for_review' })
-    .eq('id', cvId)
-    .eq('employee_id', employeeId);
 
   const base = getBaseUrl(req);
   const shareUrl = `${base}/cv/share/${rawToken}`;
@@ -153,7 +166,12 @@ export async function POST(req: NextRequest) {
     });
   } catch (emailErr) {
     console.error('cv-share email', emailErr);
-    await supabase.from('cv_share_links').update({ revoked_at: new Date().toISOString() }).eq('id', share.id);
+    await supabaseAdmin.from('cv_share_links').update({ revoked_at: new Date().toISOString() }).eq('id', share.id);
+    await supabaseAdmin
+      .from('cv_documents')
+      .update({ status: 'draft' })
+      .eq('id', childCvId)
+      .eq('employee_id', employeeId);
     return NextResponse.json(
       { error: 'E-mail versturen mislukt. Controleer SMTP-instellingen.' },
       { status: 500 }
@@ -165,5 +183,7 @@ export async function POST(req: NextRequest) {
     shareUrl,
     expiresAt: expiresAtIso,
     recipientEmail,
+    childCvId,
+    childTitle,
   });
 }

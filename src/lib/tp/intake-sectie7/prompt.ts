@@ -22,12 +22,14 @@ VELDEN:
 
 3. quote_advies_spoor2 — EXACT letterlijk de adviestekst onder "Quote advies spoor 2" / "Quote advies spoor 2 (inleiding)"
    - Neem de adviesparagraaf over 2e spoor / passende arbeid
+   - Neem NOOIT het label zelf op ("Quote advies spoor 2", "Quote advies spoor 2 (inleiding)", of de trailing ":"), ook als er geen spatie na ":" staat
    - Sluit labels zoals "Spoor 2 traject" uit als het alleen een kop is; neem wel de adviesparagraaf zelf
    - Neem NOOIT "Quote passende functies" op in dit veld
    - Null als niet gevonden
 
 4. quote_passende_functies — EXACT letterlijk de volledige tekst onder "Quote passende functies"
    - Inclusief inleidende zin (bijv. "Ik denk aan eventuele functies zoals:") en alle bullets/regels
+   - Neem NOOIT het label zelf op ("Quote passende functies" of de trailing ":"), ook als er geen spatie na ":" staat
    - Neem NOOIT "Quote advies spoor 2" op in dit veld
    - Null als niet gevonden
 

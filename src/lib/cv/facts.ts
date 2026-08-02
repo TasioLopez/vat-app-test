@@ -42,6 +42,8 @@ export type CvFacts = {
     docsProcessed: number;
     docsWithText: number;
     byKind: Record<CvDocKind, number>;
+    /** Document names that contributed text (for prompt context) */
+    docNames?: string[];
   };
 };
 
@@ -60,6 +62,7 @@ export function emptyCvFacts(): CvFacts {
       docsProcessed: 0,
       docsWithText: 0,
       byKind: { cv: 0, intake: 0, ad: 0, vgr: 0, other: 0 },
+      docNames: [],
     },
   };
 }

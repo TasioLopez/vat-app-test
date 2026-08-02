@@ -10,7 +10,7 @@ FOCUS ALLEEN OP sectie 17 "Algemene informatie" (Bijzonderheden) en bij V4-layou
 - Digitale vaardigheden / computervaardigheden
 - Rijbewijzen (aparte categorieën: B, C, AM, …)
 - Vervoer — aparte rij "Hoe verplaatst werknemer zich:" (Auto, Fiets, OV, Lopend)
-- Talen (G/R/O → Goed, Gemiddeld, Niet goed)
+- Talen (G/R/O → Goed, Voldoende, Matig; geen vakje → Geen)
 
 BELANGRIJK — VISUEEL LEZEN:
 - Bekijk de PDF-pagina's als afbeelding. Lees elk vakje apart.
@@ -52,9 +52,10 @@ RIJBEWIJS — beoordeel ELK vakje apart (geen array raden):
 - Geen drivers_license / drivers_license_type velden meer — alleen de license_* booleans
 
 TALEN / COMPUTER:
-- dutch_speaking, dutch_writing, dutch_reading: "Goed", "Gemiddeld", "Niet goed"
+- dutch_speaking, dutch_writing, dutch_reading: "Goed", "Voldoende", "Matig", "Geen" (G/R/O; geen vakje → Geen)
 - has_computer: PC/laptop aangevinkt
 - computer_skills: "1" t/m "5" (aangevinkt niveau)
+- computer_skills_description: haakjestekst bij niveau en/of "Aanvullende programma's" (null indien leeg)
 
 Gebruik null voor ontbrekende niet-boolean velden.`;
 

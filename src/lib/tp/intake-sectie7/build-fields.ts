@@ -1,3 +1,4 @@
+import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import { EN_SOORTGELIJK } from './constants';
 import type { IntakeSectie7Content, IntakeSectie7FunctieCategorie } from './schema';
 
@@ -16,10 +17,10 @@ export function sanitizeIntakeSectie7Content(content: IntakeSectie7Content): Int
     ad_auteur: content.ad_auteur ? stripCitations(content.ad_auteur) : null,
     ad_datum_iso: content.ad_datum_iso,
     quote_advies_spoor2: content.quote_advies_spoor2
-      ? stripCitations(content.quote_advies_spoor2)
+      ? stripLeadingIntakeQuoteLabels(stripCitations(content.quote_advies_spoor2))
       : null,
     quote_passende_functies: content.quote_passende_functies
-      ? stripCitations(content.quote_passende_functies)
+      ? stripLeadingIntakeQuoteLabels(stripCitations(content.quote_passende_functies))
       : null,
     functie_categorien: content.functie_categorien.map((c) => ({
       naam: stripCitations(c.naam),

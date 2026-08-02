@@ -1,5 +1,5 @@
 /** Default model — override with OPENAI_SOCIALE_ACHTERGROND_MODEL. */
-export const DEFAULT_SOCIALE_ACHTERGROND_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_SOCIALE_ACHTERGROND_MODEL = 'gpt-5.6-sol';
 
 /** Target length per synthesized paragraph (reference TP style). */
 export const MAX_WORDS_PER_ALINEA = 50;

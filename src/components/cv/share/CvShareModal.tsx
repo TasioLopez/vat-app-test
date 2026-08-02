@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +24,7 @@ type Props = {
   recipientEmail: string | null;
   isDirty: boolean;
   onSaveFirst?: () => Promise<void>;
-  onShared?: () => void;
+  onShared?: (info?: { childCvId?: string }) => void;
 };
 
 export default function CvShareModal({
@@ -43,6 +44,7 @@ export default function CvShareModal({
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [childCvId, setChildCvId] = useState<string | null>(null);
 
   const handleShare = async () => {
     if (!recipientEmail || !confirmed) return;
@@ -64,7 +66,8 @@ export default function CvShareModal({
       }
       setShareUrl(json.shareUrl);
       setExpiresAt(json.expiresAt);
-      onShared?.();
+      setChildCvId(typeof json.childCvId === 'string' ? json.childCvId : null);
+      onShared?.({ childCvId: typeof json.childCvId === 'string' ? json.childCvId : undefined });
     } catch {
       setError('Delen mislukt');
     } finally {
@@ -79,6 +82,7 @@ export default function CvShareModal({
       setError(null);
       setShareUrl(null);
       setExpiresAt(null);
+      setChildCvId(null);
     }
     onOpenChange(next);
   };
@@ -110,7 +114,8 @@ export default function CvShareModal({
         {shareUrl ? (
           <div className="space-y-4">
             <p className="text-sm text-emerald-700">
-              Het CV is gedeeld en er is een e-mail verstuurd naar {recipientEmail}.
+              Er is een kopie gedeeld en een e-mail verstuurd naar {recipientEmail}. Uw originele
+              CV blijft ongewijzigd.
             </p>
             {expiryLabel ? (
               <p className="text-xs text-gray-500">De link is geldig tot {expiryLabel}.</p>
@@ -124,7 +129,14 @@ export default function CvShareModal({
                 </Button>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
+              {childCvId ? (
+                <Button type="button" variant="outline" asChild>
+                  <Link href={`/dashboard/cv/${employeeId}/${childCvId}`} onClick={() => handleClose(false)}>
+                    Open gedeelde kopie
+                  </Link>
+                </Button>
+              ) : null}
               <Button type="button" onClick={() => handleClose(false)}>
                 Sluiten
               </Button>
@@ -158,8 +170,8 @@ export default function CvShareModal({
                   />
                 </div>
                 <p className="text-xs text-gray-500">
-                  De werknemer ontvangt een link die 30 dagen geldig is. Wijzigingen worden
-                  direct opgeslagen in dit CV.
+                  De werknemer ontvangt een link die 30 dagen geldig is. Er wordt een aparte kopie
+                  aangemaakt; wijzigingen van de werknemer raken uw originele CV niet.
                 </p>
                 <div className="flex items-start gap-2">
                   <input

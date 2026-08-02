@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSupabase } from '@/lib/cv-share/auth-client';
 import { verifyCvDocumentAccess } from '@/lib/cv/verifyCvAccess';
+import { revokeActiveSharesForParentAndChildren } from '@/lib/cv-share/access';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -62,23 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'CV not found or access denied' }, { status: 403 });
   }
 
-  const now = new Date().toISOString();
-  const { error: updErr } = await supabase
-    .from('cv_share_links')
-    .update({ revoked_at: now })
-    .eq('cv_document_id', cvId)
-    .eq('employee_id', employeeId)
-    .is('revoked_at', null);
-
-  if (updErr) {
-    return NextResponse.json({ error: 'Intrekken mislukt' }, { status: 500 });
-  }
-
-  await supabaseAdmin
-    .from('cv_documents')
-    .update({ status: 'draft' })
-    .eq('id', cvId)
-    .eq('employee_id', employeeId);
+  await revokeActiveSharesForParentAndChildren(cvId, employeeId);
 
   return NextResponse.json({ success: true });
 }

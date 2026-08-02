@@ -33,6 +33,7 @@ const MARKDOWN_LABEL_MAP: Record<string, string> = {
   dutch_reading: 'dutch_reading',
   has_computer: 'has_computer',
   computer_skills: 'computer_skills',
+  computer_skills_description: 'computer_skills_description',
   referent_first_name: 'referent_first_name',
   referent_last_name: 'referent_last_name',
   referent_function: 'referent_function',

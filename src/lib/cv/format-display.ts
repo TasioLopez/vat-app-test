@@ -12,25 +12,33 @@ const COMPUTER_SKILLS_EN: Record<string, string> = {
 const DUTCH_LEVEL_NL: Record<string, string> = {
   '1': 'Geen',
   '2': 'Matig',
-  '3': 'Gemiddeld',
+  '3': 'Voldoende',
   '4': 'Goed',
   '5': 'Zeer goed',
   goed: 'Goed',
+  voldoende: 'Voldoende',
   matig: 'Matig',
-  onvoldoende: 'Onvoldoende',
-  'niet goed': 'Niet goed',
+  geen: 'Geen',
+  // Legacy aliases → current labels
+  gemiddeld: 'Voldoende',
+  onvoldoende: 'Matig',
+  'niet goed': 'Matig',
 };
 
 const DUTCH_LEVEL_EN: Record<string, string> = {
   '1': 'None',
   '2': 'Moderate',
-  '3': 'Average',
+  '3': 'Sufficient',
   '4': 'Good',
   '5': 'Very good',
   goed: 'Good',
+  voldoende: 'Sufficient',
   matig: 'Moderate',
-  onvoldoende: 'Insufficient',
-  'niet goed': 'Not good',
+  geen: 'None',
+  // Legacy aliases → current labels
+  gemiddeld: 'Sufficient',
+  onvoldoende: 'Moderate',
+  'niet goed': 'Moderate',
 };
 
 const KIND_NL: Record<string, string> = {
@@ -54,17 +62,32 @@ function normalizeLevelKey(value: string): string {
   return trimmed.toLowerCase();
 }
 
+const COMPUTER_SKILLS_EN_TITLE: Record<string, string> = {
+  '1': 'None',
+  '2': 'Basic',
+  '3': 'Intermediate',
+  '4': 'Advanced',
+  '5': 'Expert',
+};
+
 /** Format computer skills for CV display (NL or EN). */
 export function formatCvComputerSkills(
   skillLevel: string | number | null | undefined,
-  locale: CvLocale = 'nl'
+  locale: CvLocale = 'nl',
+  description?: string | null
 ): string {
   if (!skillLevel) return '—';
   const level = String(skillLevel).trim();
   if (locale === 'en') {
+    const custom = String(description ?? '').trim();
+    if (custom) {
+      const title = COMPUTER_SKILLS_EN_TITLE[level];
+      if (!title) return formatComputerSkills(skillLevel, custom);
+      return `${title} (${custom})`;
+    }
     return COMPUTER_SKILLS_EN[level] ?? formatComputerSkills(skillLevel);
   }
-  return formatComputerSkills(skillLevel);
+  return formatComputerSkills(skillLevel, description);
 }
 
 /** Normalize a Dutch language proficiency value to a display label. */

@@ -14,12 +14,14 @@ function levelFromGlyphTriple(glyphs: string[]): string | null {
   if (glyphs.length < 3) return null;
   const [g, r, o] = glyphs;
   if (CHECKED.test(g!) && UNCHECKED.test(r!) && UNCHECKED.test(o!)) return 'Goed';
-  if (UNCHECKED.test(g!) && CHECKED.test(r!) && UNCHECKED.test(o!)) return 'Gemiddeld';
-  if (UNCHECKED.test(g!) && UNCHECKED.test(r!) && CHECKED.test(o!)) return 'Niet goed';
+  if (UNCHECKED.test(g!) && CHECKED.test(r!) && UNCHECKED.test(o!)) return 'Voldoende';
+  if (UNCHECKED.test(g!) && UNCHECKED.test(r!) && CHECKED.test(o!)) return 'Matig';
   // Single checked mark without requiring others unchecked
   if (CHECKED.test(g!)) return 'Goed';
-  if (CHECKED.test(r!)) return 'Gemiddeld';
-  if (CHECKED.test(o!)) return 'Niet goed';
+  if (CHECKED.test(r!)) return 'Voldoende';
+  if (CHECKED.test(o!)) return 'Matig';
+  // All three unchecked → Geen
+  if (UNCHECKED.test(g!) && UNCHECKED.test(r!) && UNCHECKED.test(o!)) return 'Geen';
   return null;
 }
 
@@ -62,10 +64,18 @@ export function detectDutchLevelsFromIntakeText(
  */
 export function detectComputerFromIntakeText(
   text: string | null | undefined
-): { has_computer?: boolean; computer_skills?: string } | null {
+): {
+  has_computer?: boolean;
+  computer_skills?: string;
+  computer_skills_description?: string;
+} | null {
   if (!text) return null;
   const normalized = normalizeIntakeText(text);
-  const out: { has_computer?: boolean; computer_skills?: string } = {};
+  const out: {
+    has_computer?: boolean;
+    computer_skills?: string;
+    computer_skills_description?: string;
+  } = {};
 
   if (/[☒☑✓✔]\s*Werknemer beschikt over een PC/i.test(normalized)) {
     out.has_computer = true;
@@ -76,21 +86,42 @@ export function detectComputerFromIntakeText(
   // Prefer Computervaardigheden section to avoid Typvaardigheden "Goed/Expert"
   const skillsBlock =
     normalized.match(
-      /Computervaardigheden\s*([\s\S]{0,500}?)(?=Typvaardigheden\b|Rijbewijzen\b|Hoe verplaatst\b|$)/i
+      /Computervaardigheden\s*([\s\S]{0,800}?)(?=Typvaardigheden\b|Rijbewijzen\b|Hoe verplaatst\b|$)/i
     )?.[1] ?? normalized;
 
-  const skillRules: { re: RegExp; value: string }[] = [
-    { re: /[☒☑✓✔]\s*Expert\s*\(/i, value: '5' },
-    { re: /[☒☑✓✔]\s*Geavanceerd\b/i, value: '4' },
-    { re: /[☒☑✓✔]\s*Gemiddeld\s*\(/i, value: '3' },
-    { re: /[☒☑✓✔]\s*Basis\b/i, value: '2' },
+  const skillRules: { re: RegExp; value: string; parenRe?: RegExp }[] = [
+    { re: /[☒☑✓✔]\s*Expert\b/i, value: '5', parenRe: /[☒☑✓✔]\s*Expert\s*\(([^)]+)\)/i },
+    {
+      re: /[☒☑✓✔]\s*Geavanceerd\b/i,
+      value: '4',
+      parenRe: /[☒☑✓✔]\s*Geavanceerd\s*\(([^)]+)\)/i,
+    },
+    {
+      re: /[☒☑✓✔]\s*Gemiddeld\b/i,
+      value: '3',
+      parenRe: /[☒☑✓✔]\s*Gemiddeld\s*\(([^)]+)\)/i,
+    },
+    { re: /[☒☑✓✔]\s*Basis\b/i, value: '2', parenRe: /[☒☑✓✔]\s*Basis\s*\(([^)]+)\)/i },
     { re: /[☒☑✓✔]\s*Geen\b/i, value: '1' },
   ];
   for (const rule of skillRules) {
     if (rule.re.test(skillsBlock)) {
       out.computer_skills = rule.value;
+      if (rule.parenRe) {
+        const paren = skillsBlock.match(rule.parenRe)?.[1]?.trim();
+        if (paren) out.computer_skills_description = paren;
+      }
       break;
     }
+  }
+
+  const aanvullend = skillsBlock.match(
+    /Aanvullende programma'?s?\s*:?\s*([^\n☐□☒☑✓✔]+)/i
+  )?.[1]
+    ?.replace(/\s+/g, ' ')
+    .trim();
+  if (aanvullend && !/^n\.?v\.?t\.?$/i.test(aanvullend) && aanvullend.length > 1) {
+    out.computer_skills_description = aanvullend;
   }
 
   return Object.keys(out).length > 0 ? out : null;
@@ -154,6 +185,10 @@ export function fillEmployeeDetailsFromIntakeText(
     if (computer.computer_skills) {
       mapped.computer_skills = computer.computer_skills;
       filled.push('computer_skills');
+    }
+    if (computer.computer_skills_description) {
+      mapped.computer_skills_description = computer.computer_skills_description;
+      filled.push('computer_skills_description');
     }
   }
 

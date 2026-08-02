@@ -49,6 +49,37 @@ export async function revokeActiveSharesForCv(cvDocumentId: string): Promise<voi
     .is('revoked_at', null);
 }
 
+/** Revoke active share links on this CV and on any child copies of this parent. */
+export async function revokeActiveSharesForParentAndChildren(
+  parentCvId: string,
+  employeeId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  await revokeActiveSharesForCv(parentCvId);
+
+  const { data: children } = await supabaseAdmin
+    .from('cv_documents')
+    .select('id')
+    .eq('parent_cv_id', parentCvId)
+    .eq('employee_id', employeeId);
+
+  const childIds = (children ?? []).map((c) => c.id as string);
+  if (childIds.length === 0) return;
+
+  await supabaseAdmin
+    .from('cv_share_links')
+    .update({ revoked_at: now })
+    .in('cv_document_id', childIds)
+    .is('revoked_at', null);
+
+  await supabaseAdmin
+    .from('cv_documents')
+    .update({ status: 'draft' })
+    .in('id', childIds)
+    .eq('employee_id', employeeId)
+    .eq('status', 'shared_for_review');
+}
+
 export async function getActiveShareForCv(
   supabase: SupabaseClient,
   cvDocumentId: string,
@@ -66,6 +97,34 @@ export async function getActiveShareForCv(
   if (error || !data) return null;
   if (!isShareLinkActive(data)) return null;
   return data;
+}
+
+/**
+ * Active share for a CV id: direct link on this document, or on a child copy
+ * when viewing the parent.
+ */
+export async function getActiveShareForCvOrChildren(
+  supabase: SupabaseClient,
+  cvDocumentId: string,
+  employeeId: string
+): Promise<(CvShareLinkRow & { childCvId?: string }) | null> {
+  const direct = await getActiveShareForCv(supabase, cvDocumentId, employeeId);
+  if (direct) return direct;
+
+  const { data: children } = await supabase
+    .from('cv_documents')
+    .select('id')
+    .eq('parent_cv_id', cvDocumentId)
+    .eq('employee_id', employeeId)
+    .order('created_at', { ascending: false });
+
+  for (const child of children ?? []) {
+    const share = await getActiveShareForCv(supabase, child.id as string, employeeId);
+    if (share) {
+      return { ...share, childCvId: child.id as string };
+    }
+  }
+  return null;
 }
 
 export type GuestAccessContext = {

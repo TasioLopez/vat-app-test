@@ -1,5 +1,5 @@
 /** Default model — override with OPENAI_PERSOONLIJK_PROFIEL_MODEL. */
-export const DEFAULT_PERSOONLIJK_PROFIEL_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_PERSOONLIJK_PROFIEL_MODEL = 'gpt-5.6-sol';
 
 /** Target length per paragraph (UWV reference style). */
 export const MAX_WORDS_ALINEA_1 = 110;

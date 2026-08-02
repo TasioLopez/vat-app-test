@@ -29,7 +29,7 @@ type DocRow = {
   uploaded_at: string | null;
 };
 
-const MAX_DOC_TEXT_CHARS = 14_000;
+const MAX_DOC_TEXT_CHARS = 18_000;
 
 function extractStoragePath(url: string): string | null {
   const m = url.match(/\/object\/(?:public|sign)\/documents\/(.+)$/);
@@ -236,6 +236,7 @@ export async function analyzeCvFactsForEmployee(
 
   const rows = docs as DocRow[];
   const extractedByDoc: Array<{ kind: CvDocKind; facts: Omit<CvFacts, 'evidence'> }> = [];
+  const docNames: string[] = [];
 
   for (const doc of rows) {
     if (isSpreekReportageDocType(doc.type)) continue;
@@ -257,6 +258,8 @@ export async function analyzeCvFactsForEmployee(
     text = text.replace(/\s+/g, ' ').trim();
     if (!text) continue;
     base.evidence.docsWithText += 1;
+    const label = [doc.type, doc.name].filter(Boolean).join(': ') || path;
+    docNames.push(label);
 
     if (text.length > MAX_DOC_TEXT_CHARS) {
       text = `${text.slice(0, MAX_DOC_TEXT_CHARS)}…`;
@@ -269,6 +272,6 @@ export async function analyzeCvFactsForEmployee(
   const merged = mergeFactsByPriority(extractedByDoc);
   return {
     ...merged,
-    evidence: base.evidence,
+    evidence: { ...base.evidence, docNames },
   };
 }

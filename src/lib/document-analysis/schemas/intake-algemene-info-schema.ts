@@ -1,13 +1,14 @@
 import {
   DRIVERS_LICENSE_TYPE_OPTIONS,
   DRIVERS_LICENSE_TYPE_VALUES,
+  DUTCH_LANGUAGE_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
   TRANSPORT_TYPE_OPTIONS,
 } from '@/lib/tp2026/gegevens-field-options';
 
 export type IntakeAlgemeneInfoExtractionResult = Record<string, unknown>;
 
-const DUTCH_LEVEL_ENUM = ['Goed', 'Gemiddeld', 'Niet goed', null] as const;
+const DUTCH_LEVEL_ENUM = [...DUTCH_LANGUAGE_OPTIONS, null] as const;
 const COMPUTER_SKILLS_ENUM = ['1', '2', '3', '4', '5', null] as const;
 const EDUCATION_LEVEL_ENUM = [...EDUCATION_LEVEL_OPTIONS, null] as const;
 
@@ -109,6 +110,9 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
       enum: COMPUTER_SKILLS_ENUM,
       description: 'Computervaardigheid 1-5',
     },
+    computer_skills_description: nullableString(
+      'Aanvullende programma\'s / parenthetical bij aangevinkt computerniveau'
+    ),
   },
   required: [
     'education_level',
@@ -124,6 +128,7 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     'dutch_reading',
     'has_computer',
     'computer_skills',
+    'computer_skills_description',
   ],
   additionalProperties: false,
 } as const;

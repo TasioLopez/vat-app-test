@@ -50,15 +50,26 @@ describe('mapAndValidateEmployeeDetails', () => {
     assert.equal(result.computer_skills, '3');
   });
 
-  it('maps dutch O level to Niet goed', () => {
+  it('maps dutch G/R/O and legacy aliases to 4-level scale', () => {
     const result = mapAndValidateEmployeeDetails({
       dutch_speaking: 'O',
       dutch_writing: 'onvoldoende',
       dutch_reading: 'G',
     });
-    assert.equal(result.dutch_speaking, 'Niet goed');
-    assert.equal(result.dutch_writing, 'Niet goed');
+    assert.equal(result.dutch_speaking, 'Matig');
+    assert.equal(result.dutch_writing, 'Matig');
     assert.equal(result.dutch_reading, 'Goed');
+  });
+
+  it('maps dutch R/Gemiddeld to Voldoende and Geen', () => {
+    const result = mapAndValidateEmployeeDetails({
+      dutch_speaking: 'R',
+      dutch_writing: 'Gemiddeld',
+      dutch_reading: 'geen',
+    });
+    assert.equal(result.dutch_speaking, 'Voldoende');
+    assert.equal(result.dutch_writing, 'Voldoende');
+    assert.equal(result.dutch_reading, 'Geen');
   });
 
   it('skips referent fields from employee details', () => {

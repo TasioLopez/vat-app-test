@@ -359,27 +359,37 @@ export function formatTransportation(
   return 'Geen';
 }
 
+const COMPUTER_SKILLS_LABELS: Record<string, string> = {
+  '1': 'Geen',
+  '2': 'Basis',
+  '3': 'Gemiddeld',
+  '4': 'Geavanceerd',
+  '5': 'Expert',
+};
+
+const COMPUTER_SKILLS_DEFAULT_DESCRIPTIONS: Record<string, string> = {
+  '1': '',
+  '2': 'e-mail, browsen',
+  '3': 'Word, Excel',
+  '4': "meerdere programma's",
+  '5': 'IT-gerelateerde vaardigheden',
+};
+
 /**
- * Formats computer skills level to descriptive text
- * 
- * @param skillLevel - Skill level (1-5 or string)
- * @returns Formatted skill description
+ * Formats computer skills level (+ optional parenthetical description) for display.
  */
 export function formatComputerSkills(
-  skillLevel: string | number | null | undefined
+  skillLevel: string | number | null | undefined,
+  description?: string | null
 ): string {
-  if (!skillLevel) return "—";
-  
-  const level = String(skillLevel);
-  const skillMap: Record<string, string> = {
-    '1': 'Geen',
-    '2': 'Basis (e-mail, browsen)',
-    '3': 'Gemiddeld (Word, Excel)',
-    '4': 'Geavanceerd (meerdere programma\'s)',
-    '5': 'Expert (IT-gerelateerde vaardigheden)'
-  };
-
-  return skillMap[level] || level;
+  if (skillLevel == null || String(skillLevel).trim() === '') return '—';
+  const level = String(skillLevel).trim();
+  const label = COMPUTER_SKILLS_LABELS[level];
+  if (!label) return level;
+  const desc =
+    String(description ?? '').trim() || COMPUTER_SKILLS_DEFAULT_DESCRIPTIONS[level] || '';
+  if (!desc) return label;
+  return `${label} (${desc})`;
 }
 
 /**

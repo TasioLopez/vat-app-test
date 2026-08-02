@@ -33,6 +33,13 @@ describe('INTAKE_ALGEMENE_INFO_JSON_SCHEMA', () => {
     assert.equal('drivers_license_type' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties, false);
     assert.equal('drivers_license' in INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties, false);
   });
+
+  it('uses 4-level Dutch language enum', () => {
+    const speaking = INTAKE_ALGEMENE_INFO_JSON_SCHEMA.properties.dutch_speaking as {
+      enum: readonly (string | null)[];
+    };
+    assert.deepEqual(speaking.enum, ['Goed', 'Voldoende', 'Matig', 'Geen', null]);
+  });
 });
 
 describe('transportTypeFromCheckboxes', () => {

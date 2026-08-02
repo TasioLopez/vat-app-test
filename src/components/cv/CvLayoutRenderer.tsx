@@ -6,6 +6,7 @@ import CvTwoColumnEditable from '@/components/cv/CvTwoColumnEditable';
 import CvSectionRenderer from '@/components/cv/sections/CvSectionRenderer';
 import { useCV } from '@/context/CVContext';
 import CVA4Canvas from '@/components/cv/CVA4Canvas';
+import { cvFontCss } from '@/lib/cv/font-options';
 import { getCvTheme } from '@/lib/cv/theme-config';
 import type { CvLayoutSection } from '@/types/cv';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,7 @@ export default function CvLayoutRenderer() {
   const accent = accentColor;
   const showPhoto = cvData.options?.includePhotoInCv === true;
   const sidebarPosition = layoutOptions.sidebarPosition ?? 'left';
+  const fontCss = cvFontCss(layoutOptions.fontFamily);
 
   const sidebarHasPhotoFirst = (children: CvLayoutSection[]) => {
     const photo = children.find((c) => c.type === 'photo');
@@ -26,13 +28,16 @@ export default function CvLayoutRenderer() {
     <CvTwoColumnEditable section={section} accent={accent} showPhoto={showPhoto} />
   );
 
+  const rootStyle = {
+    '--cv-accent': accent,
+    '--cv-font': fontCss,
+    fontFamily: 'var(--cv-font)',
+  } as React.CSSProperties;
+
   if (!readOnly) {
     return (
-      <CVA4Canvas className="overflow-visible">
-        <div
-          className={cn(theme.rootClass, 'w-full flex-col')}
-          style={{ '--cv-accent': accent } as React.CSSProperties}
-        >
+      <CVA4Canvas>
+        <div className={cn(theme.rootClass, 'w-full flex-col')} style={rootStyle}>
           <CvEditableColumnFlow
             sections={layout}
             parentId={null}
@@ -49,10 +54,7 @@ export default function CvLayoutRenderer() {
 
   return (
     <CVA4Canvas>
-      <div
-        className={cn(theme.rootClass, 'w-full')}
-        style={{ '--cv-accent': accent } as React.CSSProperties}
-      >
+      <div className={cn(theme.rootClass, 'w-full')} style={rootStyle}>
         {layout.map((section) => {
           if (section.layout === 'two_column' && section.children?.length) {
             const sidebar = section.children.find((c) => c.layout === 'sidebar');

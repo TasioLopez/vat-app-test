@@ -15,6 +15,17 @@ describe('formatCvComputerSkills', () => {
   it('formats numeric level in EN', () => {
     assert.match(formatCvComputerSkills('3', 'en'), /Intermediate/);
   });
+
+  it('uses custom description when provided', () => {
+    assert.equal(
+      formatCvComputerSkills('4', 'nl', 'SAP ERP, WMS'),
+      'Geavanceerd (SAP ERP, WMS)'
+    );
+    assert.equal(
+      formatCvComputerSkills('4', 'en', 'SAP ERP, WMS'),
+      'Advanced (SAP ERP, WMS)'
+    );
+  });
 });
 
 describe('coerceSkillBulletText', () => {
@@ -29,6 +40,21 @@ describe('formatCvDutchLanguageLevels', () => {
     assert.ok(level);
     assert.match(level!, /spreek: Goed/);
     assert.match(level!, /schrijf: Matig/);
+  });
+
+  it('formats Voldoende and Geen', () => {
+    const level = formatCvDutchLanguageLevels('Voldoende', 'Geen', 'Goed');
+    assert.ok(level);
+    assert.match(level!, /spreek: Voldoende/);
+    assert.match(level!, /schrijf: Geen/);
+  });
+
+  it('maps legacy Gemiddeld/Niet goed to Voldoende/Matig', () => {
+    const level = formatCvDutchLanguageLevels('Gemiddeld', 'Niet goed', 'Onvoldoende');
+    assert.ok(level);
+    assert.match(level!, /spreek: Voldoende/);
+    assert.match(level!, /schrijf: Matig/);
+    assert.match(level!, /lees: Matig/);
   });
 });
 

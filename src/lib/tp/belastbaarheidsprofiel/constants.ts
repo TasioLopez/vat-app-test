@@ -10,7 +10,7 @@ export const STANDARD_RUBRIEKEN = [
   'Werktijden',
 ] as const;
 
-export const DEFAULT_BELASTBAARHEID_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_BELASTBAARHEID_MODEL = 'gpt-5.6-sol';
 
 export const FML_INTRO_TEMPLATE =
   'Werknemer heeft, in overeenstemming met de Functionele Mogelijkheden Lijst (FML) van {datum}, opgesteld door {artsPhrase}, beperkingen in de volgende rubrieken:';

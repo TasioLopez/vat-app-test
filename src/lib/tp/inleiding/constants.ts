@@ -33,7 +33,7 @@ export function isAdSubBlock(text: string): boolean {
   return text.includes(AD_INTRO_SUFFIX) || text.includes(AD_INTRO_SUFFIX_LEGACY);
 }
 
-/** Default model — override with OPENAI_INLEIDING_MODEL (e.g. gpt-5.1-2025-11-13). */
-export const DEFAULT_INLEIDING_MODEL = 'gpt-5.1-2025-11-13';
+/** Default model — override with OPENAI_INLEIDING_MODEL (e.g. gpt-5.6-sol). */
+export const DEFAULT_INLEIDING_MODEL = 'gpt-5.6-sol';
 
 /** Optional: OPENAI_INLEIDING_REASONING = low | medium | high */

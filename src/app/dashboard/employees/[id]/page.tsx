@@ -29,6 +29,11 @@ import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
+import {
+    COMPUTER_SKILLS_OPTIONS,
+    getComputerSkillsDefaultDescription,
+    nextComputerSkillsDescriptionOnLevelChange,
+} from '@/lib/tp2026/gegevens-field-options';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,6 +64,7 @@ import {
   type EmployeeFieldReviewStatus,
 } from '@/lib/employee/field-review';
 import {
+    DUTCH_LANGUAGE_OPTIONS,
     EDUCATION_LEVEL_OPTIONS,
     TRANSPORT_TYPE_OPTIONS,
     normalizeEducationLevel,
@@ -111,6 +117,7 @@ type EmployeeDetails = {
     dutch_reading?: string;
     has_computer?: boolean;
     computer_skills?: string;
+    computer_skills_description?: string;
     contract_hours?: number;
     other_employers?: string;
     autofilled_fields?: string[];
@@ -156,6 +163,7 @@ const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'dutch_reading',
     'has_computer',
     'computer_skills',
+    'computer_skills_description',
     'contract_hours',
     'other_employers',
     'autofilled_fields',
@@ -506,6 +514,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 [field]: value,
                 employee_id: employeeId,
             };
+
+            if (field === 'computer_skills' && typeof value === 'string') {
+                next.computer_skills_description = nextComputerSkillsDescriptionOnLevelChange(
+                    prev.computer_skills,
+                    value,
+                    prev.computer_skills_description
+                );
+            }
 
             // Only apply validation lifecycle for actual validate-able fields.
             if (!EMPLOYEE_DETAIL_FIELD_KEYS.includes(field as EmployeeDetailFieldKey)) {
@@ -1729,9 +1745,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         <SelectValue placeholder="Selecteer..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                        <SelectItem value="Goed">Goed</SelectItem>
+                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
+                                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </ValidatableField>
@@ -1749,9 +1765,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         <SelectValue placeholder="Selecteer..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                        <SelectItem value="Goed">Goed</SelectItem>
+                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
+                                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </ValidatableField>
@@ -1769,9 +1785,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         <SelectValue placeholder="Selecteer..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Niet goed">Niet goed</SelectItem>
-                                        <SelectItem value="Gemiddeld">Gemiddeld</SelectItem>
-                                        <SelectItem value="Goed">Goed</SelectItem>
+                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
+                                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </ValidatableField>
@@ -1790,18 +1806,51 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         canValidate={canValidateField('computer_skills')}
                         validateLabel="Valideer computervaardigheden"
                     >
-                        <Select value={employeeDetails?.computer_skills || undefined} onValueChange={(v) => handleDetailChange('computer_skills', v)}>
-                            <SelectTrigger className={cn(selectFieldClass('computer_skills'), 'pr-10')}>
-                                <SelectValue placeholder="Selecteer computervaardigheden" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="1">1 - Geen</SelectItem>
-                                <SelectItem value="2">2 - Basis (e-mail, browsen)</SelectItem>
-                                <SelectItem value="3">3 - Gemiddeld (Word, Excel)</SelectItem>
-                                <SelectItem value="4">4 - Geavanceerd (meerdere programma's)</SelectItem>
-                                <SelectItem value="5">5 - Expert (IT-gerelateerde vaardigheden)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <Select
+                                value={employeeDetails?.computer_skills || undefined}
+                                onValueChange={(v) => handleDetailChange('computer_skills', v)}
+                            >
+                                <SelectTrigger className={cn(selectFieldClass('computer_skills'), 'pr-10 sm:w-44')}>
+                                    <SelectValue placeholder="Niveau" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {COMPUTER_SKILLS_OPTIONS.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                            {opt.value} - {opt.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {employeeDetails?.computer_skills &&
+                            employeeDetails.computer_skills !== '1' ? (
+                                <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-700">
+                                    <span className="shrink-0 text-muted-foreground">(</span>
+                                    <Input
+                                        className={cn(
+                                            selectFieldClass('computer_skills_description'),
+                                            'min-w-0 flex-1'
+                                        )}
+                                        value={
+                                            employeeDetails.computer_skills_description ??
+                                            getComputerSkillsDefaultDescription(
+                                                employeeDetails.computer_skills
+                                            )
+                                        }
+                                        onChange={(e) =>
+                                            handleDetailChange(
+                                                'computer_skills_description',
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder={getComputerSkillsDefaultDescription(
+                                            employeeDetails.computer_skills
+                                        )}
+                                    />
+                                    <span className="shrink-0 text-muted-foreground">)</span>
+                                </div>
+                            ) : null}
+                        </div>
                     </ValidatableField>
                 </div>
 

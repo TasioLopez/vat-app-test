@@ -30,11 +30,13 @@ Vervoer:
 - drivers_license_type: array zoals ["B"] — weglaten indien geen rijbewijs
 
 Talen (Nederlands, G/R/O):
-- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Gemiddeld", of "Niet goed" (O = Onvoldoende → "Niet goed")
+- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen"
+  (G → "Goed", R → "Voldoende", O → "Matig", geen vakje aangevinkt → "Geen")
 
 Computer:
 - has_computer: true/false (PC/Laptop aangevinkt)
 - computer_skills: string "1" t/m "5" (1=Geen, 2=Basis, 3=Gemiddeld, 4=Geavanceerd, 5=Expert) — het AANGEVINKTE niveau
+- computer_skills_description: tekst uit haakjes bij dat niveau en/of "Aanvullende programma's" (bijv. SAP, WMS); null indien leeg
 
 SECTIE 4 — AANMELDING (ENIGE BRON voor referent_*):
 Lees ALLEEN deze velden in sectie 4 "Aanmelding":

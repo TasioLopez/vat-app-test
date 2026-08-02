@@ -125,4 +125,29 @@ describe('buildAdAdviesFields', () => {
     const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
     assert.doesNotMatch(advies_ad_passende_arbeid, new RegExp(CALVIN_SPOOR2_ADVIES));
   });
+
+  it('strips leaked Quote passende functies label from advies_citaat', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'M. Schalk',
+      ad_datum_iso: '2026-07-14',
+      advies_citaat:
+        'Quote passende functies: Quote passende functies: - toezichthouder parkeergarage\n- enquêteur',
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
+    const parsed = parseAdAdvies(advies_ad_passende_arbeid);
+    assert.equal(parsed.citaat, '- toezichthouder parkeergarage\n- enquêteur');
+    assert.doesNotMatch(parsed.citaat, /Quote passende functies/);
+  });
+
+  it('parseAdAdvies strips leaked label from stored citaat', () => {
+    const intro =
+      'In het arbeidsdeskundigrapport, opgesteld door M. Schalk, op 14 juli 2026 staat het volgende advies over passende arbeid:';
+    const block = buildAdAdviesBlock(
+      intro,
+      'Quote passende functies:- toezichthouder parkeergarage'
+    );
+    const parsed = parseAdAdvies(block);
+    assert.equal(parsed.citaat, '- toezichthouder parkeergarage');
+  });
 });

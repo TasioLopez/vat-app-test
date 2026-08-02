@@ -255,7 +255,10 @@ export default function FieldControl({
     const isComputerSkills = field.key === 'computer_skills';
     const isEducationLevel = field.key === 'education_level';
     const selectOptions = isComputerSkills
-      ? COMPUTER_SKILLS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
+      ? COMPUTER_SKILLS_OPTIONS.map((o) => ({
+          value: o.value,
+          label: `${o.value} - ${o.label}`,
+        }))
       : field.options.map((opt) => ({ value: opt, label: opt }));
 
     const selectValue = isEducationLevel

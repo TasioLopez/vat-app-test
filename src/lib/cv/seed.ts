@@ -23,6 +23,7 @@ type DetailsRow = {
   education_name?: string | null;
   other_employers?: string | null;
   computer_skills?: string | null;
+  computer_skills_description?: string | null;
   dutch_speaking?: string | null;
   dutch_writing?: string | null;
   dutch_reading?: string | null;
@@ -171,16 +172,19 @@ function seedSkills(_details: DetailsRow): CvListItem[] {
 
 function seedDigitalSkills(details: DetailsRow): string | undefined {
   const raw = details.computer_skills?.trim();
+  const description = details.computer_skills_description;
   if (!raw) return undefined;
   if (/^[1-5]$/.test(raw)) {
-    return formatCvComputerSkills(raw);
+    return formatCvComputerSkills(raw, 'nl', description);
   }
   const parts = splitList(raw);
   if (parts.length === 1 && /^[1-5]$/.test(parts[0])) {
-    return formatCvComputerSkills(parts[0]);
+    return formatCvComputerSkills(parts[0], 'nl', description);
   }
   if (parts.length > 0) {
-    return parts.map((p) => (/^[1-5]$/.test(p) ? formatCvComputerSkills(p) : p)).join(', ');
+    return parts
+      .map((p) => (/^[1-5]$/.test(p) ? formatCvComputerSkills(p, 'nl', description) : p))
+      .join(', ');
   }
   return undefined;
 }
@@ -242,7 +246,11 @@ function seedProfile(employee: EmployeeRow, details: DetailsRow): string {
   const name = [employee.first_name, employee.last_name].filter(Boolean).join(' ');
   const job = details.current_job?.trim();
   const skillsHint = details.computer_skills?.trim()
-    ? formatCvComputerSkills(details.computer_skills)
+    ? formatCvComputerSkills(
+        details.computer_skills,
+        'nl',
+        details.computer_skills_description
+      )
     : '';
   if (!name && !job && !skillsHint) return '';
 

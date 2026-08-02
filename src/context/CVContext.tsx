@@ -7,6 +7,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { supabase } from '@/lib/supabase/client';
@@ -19,6 +20,7 @@ import {
   updateLayoutSection,
 } from '@/lib/cv/layout-utils';
 import { applyTemplateLayout } from '@/lib/cv/layout-presets';
+import { coerceCvFontId } from '@/lib/cv/font-options';
 import { getActiveCvModel } from '@/lib/cv/normalize';
 import type {
   CvDocumentPayload,
@@ -33,6 +35,15 @@ import type {
 } from '@/types/cv';
 import { emptyCvModel, newCvId } from '@/types/cv';
 import { updateCvDocument } from '@/lib/cv/service';
+
+type CvHistorySnapshot = {
+  title: string;
+  templateKey: CvTemplateKey;
+  accentColor: string;
+  payload: CvDocumentPayload;
+};
+
+type HistoryOpts = { debounce?: boolean };
 
 export type CVContextValue = {
   employeeId: string;
@@ -50,6 +61,7 @@ export type CVContextValue = {
   layout: CvLayoutSection[];
   layoutOptions: CvLayoutOptions;
   setSidebarPosition: (position: CvSidebarPosition) => void;
+  setFontFamily: (fontId: string) => void;
   updatePersonal: (patch: Partial<CvModel['personal']>) => void;
   setProfile: (v: string) => void;
   setExtra: (v: string) => void;
@@ -87,6 +99,10 @@ export type CVContextValue = {
   updateLayoutSection: (sectionId: string, patch: Partial<CvLayoutSection>) => void;
   photoDisplayUrl: string | null;
   updateOptions: (patch: Partial<NonNullable<CvModel['options']>>) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   isDirty: boolean;
   markSaved: () => void;
   save: (options?: { version?: boolean }) => Promise<void>;
@@ -145,6 +161,23 @@ export function CVProvider({
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialUpdatedAt ?? null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [histVer, setHistVer] = useState(0);
+
+  const stateRef = useRef<CvHistorySnapshot>({
+    title: initialTitle,
+    templateKey: initialTemplateKey,
+    accentColor: initialAccentColor,
+    payload: initialPayload,
+  });
+  const pastRef = useRef<CvHistorySnapshot[]>([]);
+  const futureRef = useRef<CvHistorySnapshot[]>([]);
+  const skipHistoryRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstOpenRef = useRef(false);
+
+  useEffect(() => {
+    stateRef.current = { title, templateKey, accentColor, payload };
+  }, [title, templateKey, accentColor, payload]);
 
   const activeLocale = printLocale ?? payload.activeLocale;
   const cvData = useMemo(() => {
@@ -165,6 +198,20 @@ export function CVProvider({
     setPhotoDisplayUrl(initialPhotoSignedUrl ?? null);
     setIsDirty(false);
     setLastSavedAt(initialUpdatedAt ?? null);
+    pastRef.current = [];
+    futureRef.current = [];
+    burstOpenRef.current = false;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    stateRef.current = {
+      title: initialTitle,
+      templateKey: initialTemplateKey,
+      accentColor: initialAccentColor,
+      payload: initialPayload,
+    };
+    setHistVer((v) => v + 1);
   }, [
     cvId,
     initialTitle,
@@ -206,19 +253,51 @@ export function CVProvider({
   const markDirty = useCallback(() => setIsDirty(true), []);
   const markSaved = useCallback(() => setIsDirty(false), []);
 
+  const recordHistory = useCallback(
+    (opts?: HistoryOpts) => {
+      if (skipHistoryRef.current || readOnly) return;
+
+      const push = () => {
+        pastRef.current.push(structuredClone(stateRef.current));
+        if (pastRef.current.length > 50) pastRef.current.shift();
+        futureRef.current = [];
+        setHistVer((v) => v + 1);
+      };
+
+      if (opts?.debounce) {
+        if (!burstOpenRef.current) {
+          push();
+          burstOpenRef.current = true;
+        }
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          burstOpenRef.current = false;
+          debounceTimerRef.current = null;
+        }, 350);
+        return;
+      }
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        burstOpenRef.current = false;
+      }
+      push();
+    },
+    [readOnly]
+  );
+
   const updatePayload = useCallback(
-    (up: (prev: CvDocumentPayload) => CvDocumentPayload) => {
-      setPayloadInternal((prev) => {
-        const next = up(prev);
-        return next;
-      });
+    (up: (prev: CvDocumentPayload) => CvDocumentPayload, opts?: HistoryOpts) => {
+      recordHistory(opts);
+      setPayloadInternal((prev) => up(prev));
       markDirty();
     },
-    [markDirty]
+    [markDirty, recordHistory]
   );
 
   const updateActiveModel = useCallback(
-    (up: (prev: CvModel) => CvModel) => {
+    (up: (prev: CvModel) => CvModel, opts?: HistoryOpts) => {
       updatePayload((prev) => {
         const locale = prev.activeLocale;
         const current = locale === 'en' && prev.content.en ? prev.content.en : prev.content.nl;
@@ -227,39 +306,42 @@ export function CVProvider({
           return { ...prev, content: { ...prev.content, en: updated } };
         }
         return { ...prev, content: { ...prev.content, nl: updated } };
-      });
+      }, opts);
     },
     [updatePayload]
   );
 
   const setTitle = useCallback(
     (t: string) => {
+      recordHistory({ debounce: true });
       setTitleState(t);
       markDirty();
     },
-    [markDirty]
+    [markDirty, recordHistory]
   );
 
   const setTemplateKey = useCallback(
     (k: CvTemplateKey, options?: { resetLayout?: boolean }) => {
+      recordHistory();
       setTemplateKeyState(k);
       if (options?.resetLayout) {
-        updatePayload((prev) => ({
+        setPayloadInternal((prev) => ({
           ...prev,
           layout: applyTemplateLayout(k, prev.layout),
         }));
       }
       markDirty();
     },
-    [markDirty, updatePayload]
+    [markDirty, recordHistory]
   );
 
   const setAccentColor = useCallback(
     (c: string) => {
+      recordHistory();
       setAccentColorState(c);
       markDirty();
     },
-    [markDirty]
+    [markDirty, recordHistory]
   );
 
   const setActiveLocale = useCallback(
@@ -277,7 +359,10 @@ export function CVProvider({
 
   const updatePersonal = useCallback(
     (patch: Partial<CvModel['personal']>) => {
-      updateActiveModel((prev) => ({ ...prev, personal: { ...prev.personal, ...patch } }));
+      updateActiveModel(
+        (prev) => ({ ...prev, personal: { ...prev.personal, ...patch } }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -302,18 +387,87 @@ export function CVProvider({
     [updatePayload]
   );
 
+  const setFontFamily = useCallback(
+    (fontId: string) => {
+      const id = coerceCvFontId(fontId);
+      updatePayload((prev) => ({
+        ...prev,
+        layoutOptions: { ...(prev.layoutOptions ?? {}), fontFamily: id },
+      }));
+    },
+    [updatePayload]
+  );
+
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(structuredClone(stateRef.current));
+    skipHistoryRef.current = true;
+    setTitleState(prev.title);
+    setTemplateKeyState(prev.templateKey);
+    setAccentColorState(prev.accentColor);
+    setPayloadInternal(prev.payload);
+    stateRef.current = prev;
+    markDirty();
+    skipHistoryRef.current = false;
+    setHistVer((v) => v + 1);
+  }, [markDirty]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push(structuredClone(stateRef.current));
+    skipHistoryRef.current = true;
+    setTitleState(next.title);
+    setTemplateKeyState(next.templateKey);
+    setAccentColorState(next.accentColor);
+    setPayloadInternal(next.payload);
+    stateRef.current = next;
+    markDirty();
+    skipHistoryRef.current = false;
+    setHistVer((v) => v + 1);
+  }, [markDirty]);
+
+  const canUndo = histVer >= 0 && pastRef.current.length > 0;
+  const canRedo = histVer >= 0 && futureRef.current.length > 0;
+
+  useEffect(() => {
+    if (readOnly) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest?.('[role="dialog"]') && !target.closest?.('[data-cv-editor]')) {
+        return;
+      }
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [readOnly, undo, redo]);
+
   const setProfile = useCallback(
-    (v: string) => updateActiveModel((prev) => ({ ...prev, profile: v })),
+    (v: string) => updateActiveModel((prev) => ({ ...prev, profile: v }), { debounce: true }),
     [updateActiveModel]
   );
 
   const setExtra = useCallback(
-    (v: string) => updateActiveModel((prev) => ({ ...prev, extra: v })),
+    (v: string) => updateActiveModel((prev) => ({ ...prev, extra: v }), { debounce: true }),
     [updateActiveModel]
   );
 
   const setDigitalSkills = useCallback(
-    (v: string) => updateActiveModel((prev) => ({ ...prev, digitalSkills: v })),
+    (v: string) =>
+      updateActiveModel((prev) => ({ ...prev, digitalSkills: v }), { debounce: true }),
     [updateActiveModel]
   );
 
@@ -326,10 +480,13 @@ export function CVProvider({
 
   const updateExperience = useCallback(
     (id: string, patch: Partial<CvModel['experience'][0]>) => {
-      updateActiveModel((prev) => ({
-        ...prev,
-        experience: prev.experience.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-      }));
+      updateActiveModel(
+        (prev) => ({
+          ...prev,
+          experience: prev.experience.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -363,10 +520,13 @@ export function CVProvider({
 
   const updateEducation = useCallback(
     (id: string, patch: Partial<CvModel['education'][0]>) => {
-      updateActiveModel((prev) => ({
-        ...prev,
-        education: prev.education.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-      }));
+      updateActiveModel(
+        (prev) => ({
+          ...prev,
+          education: prev.education.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -400,10 +560,13 @@ export function CVProvider({
 
   const updateSkill = useCallback(
     (id: string, text: string) => {
-      updateActiveModel((prev) => ({
-        ...prev,
-        skills: prev.skills.map((x) => (x.id === id ? { ...x, text } : x)),
-      }));
+      updateActiveModel(
+        (prev) => ({
+          ...prev,
+          skills: prev.skills.map((x) => (x.id === id ? { ...x, text } : x)),
+        }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -437,10 +600,13 @@ export function CVProvider({
 
   const updateLanguage = useCallback(
     (id: string, patch: Partial<CvModel['languages'][0]>) => {
-      updateActiveModel((prev) => ({
-        ...prev,
-        languages: prev.languages.map((x) => (x.id === id ? { ...x, ...patch } : x)),
-      }));
+      updateActiveModel(
+        (prev) => ({
+          ...prev,
+          languages: prev.languages.map((x) => (x.id === id ? { ...x, ...patch } : x)),
+        }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -474,10 +640,13 @@ export function CVProvider({
 
   const updateInterest = useCallback(
     (id: string, text: string) => {
-      updateActiveModel((prev) => ({
-        ...prev,
-        interests: prev.interests.map((x) => (x.id === id ? { ...x, text } : x)),
-      }));
+      updateActiveModel(
+        (prev) => ({
+          ...prev,
+          interests: prev.interests.map((x) => (x.id === id ? { ...x, text } : x)),
+        }),
+        { debounce: true }
+      );
     },
     [updateActiveModel]
   );
@@ -654,6 +823,7 @@ export function CVProvider({
       layout: payload.layout,
       layoutOptions: payload.layoutOptions ?? { sidebarPosition: 'left' },
       setSidebarPosition,
+      setFontFamily,
       updatePersonal,
       setProfile,
       setExtra,
@@ -687,6 +857,10 @@ export function CVProvider({
       updateLayoutSection: handleUpdateLayoutSection,
       photoDisplayUrl,
       updateOptions,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       isDirty,
       markSaved,
       save,
@@ -711,6 +885,7 @@ export function CVProvider({
       setActiveLocale,
       cvData,
       setSidebarPosition,
+      setFontFamily,
       updatePersonal,
       setProfile,
       setExtra,
@@ -744,6 +919,10 @@ export function CVProvider({
       handleUpdateLayoutSection,
       photoDisplayUrl,
       updateOptions,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       isDirty,
       markSaved,
       save,

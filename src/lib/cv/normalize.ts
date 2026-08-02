@@ -108,7 +108,12 @@ function normalizeLayoutOptions(raw: unknown): CvLayoutOptions | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Record<string, unknown>;
   const sidebarPosition = normalizeSidebarPosition(o.sidebarPosition);
-  return { sidebarPosition };
+  const fontFamily =
+    typeof o.fontFamily === 'string' && o.fontFamily.trim() ? o.fontFamily.trim() : undefined;
+  return {
+    sidebarPosition,
+    ...(fontFamily ? { fontFamily } : {}),
+  };
 }
 
 /** Client/server safe normalization for JSON from DB → v2 payload. */

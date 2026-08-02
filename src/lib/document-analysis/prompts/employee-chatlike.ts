@@ -34,8 +34,9 @@ education_name (ÉÉN richting/specialisatie bij die opleiding, bijv. "Manager T
 other_employers,
 transport_type (array: "Auto"|"Fiets"|"OV"|"Lopend" — alleen aangevinkt),
 drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
-dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Gemiddeld"|"Niet goed"),
+dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Voldoende"|"Matig"|"Geen"),
 has_computer (boolean), computer_skills ("1"-"5": 1=Geen … 5=Expert),
+computer_skills_description (tekst tussen haakjes bij niveau en/of "Aanvullende programma's", bijv. "SAP ERP, WMS"),
 referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
 (referent_* ALLEEN uit intake sectie 4 contactpersoon werkgever).
 

@@ -12,6 +12,8 @@ export type CvDocumentListItem = {
   accent_color: string;
   updated_at: string;
   created_at: string;
+  status: string;
+  parent_cv_id: string | null;
 };
 
 /**
@@ -20,7 +22,9 @@ export type CvDocumentListItem = {
 export async function listCvDocuments(supabase: SupabaseClient, employeeId: string) {
   const { data, error } = await supabase
     .from('cv_documents')
-    .select('id, employee_id, title, template_key, accent_color, updated_at, created_at')
+    .select(
+      'id, employee_id, title, template_key, accent_color, updated_at, created_at, status, parent_cv_id'
+    )
     .eq('employee_id', employeeId)
     .order('updated_at', { ascending: false });
 

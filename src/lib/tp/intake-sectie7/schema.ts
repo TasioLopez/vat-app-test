@@ -44,10 +44,10 @@ export const INTAKE_SECTIE7_JSON_SCHEMA = {
       'Datum AD-rapport from Sectie 6 in YYYY-MM-DD. Null if not found.'
     ),
     quote_advies_spoor2: nullableStringProperty(
-      'EXACT verbatim advice paragraph from Sectie 7 Quote advies spoor 2. Exclude Quote passende functies. Null if not found.'
+      'EXACT verbatim advice paragraph from Sectie 7 Quote advies spoor 2. Exclude the field label itself (even when no space after ":") and exclude Quote passende functies. Null if not found.'
     ),
     quote_passende_functies: nullableStringProperty(
-      'EXACT verbatim full text block from Sectie 7 Quote passende functies including intro sentence and all bullets/lines. Exclude Quote advies spoor 2. Null if not found.'
+      'EXACT verbatim full text block from Sectie 7 Quote passende functies including intro sentence and all bullets/lines. Exclude the field label itself (even when no space after ":") and exclude Quote advies spoor 2. Null if not found.'
     ),
     functie_categorien: {
       type: 'array',

@@ -19,6 +19,7 @@ export const GEGEVENS_EMPLOYEE_KEYS = [
   'dutch_reading',
   'has_computer',
   'computer_skills',
+  'computer_skills_description',
   'contract_hours',
   'other_employers',
 ] as const;

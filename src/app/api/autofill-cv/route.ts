@@ -64,7 +64,15 @@ export async function GET(req: NextRequest) {
   const cvId = req.nextUrl.searchParams.get('cvId');
   const modeParam = req.nextUrl.searchParams.get('mode');
   const mode =
-    modeParam === 'polish' ? 'polish' : modeParam === 'generate_en' ? 'generate_en' : 'fill';
+    modeParam === 'generate_en'
+      ? 'generate_en'
+      : modeParam === 'redo'
+        ? 'redo'
+        : modeParam === 'polish'
+          ? 'autofill'
+          : modeParam === 'fill' || modeParam === 'autofill'
+            ? 'autofill'
+            : 'autofill';
   const locale: CvLocale = req.nextUrl.searchParams.get('locale') === 'en' ? 'en' : 'nl';
 
   if (!employeeId || !cvId) {
@@ -165,7 +173,7 @@ export async function GET(req: NextRequest) {
         {
           role: 'user',
           content: cvComposeUserPrompt({
-            mode,
+            mode: mode === 'redo' ? 'redo' : 'autofill',
             current,
             seeded,
             employee,
@@ -174,7 +182,7 @@ export async function GET(req: NextRequest) {
           }),
         },
       ],
-      temperature: mode === 'fill' ? 0.5 : 0.35,
+      temperature: mode === 'redo' ? 0.4 : 0.5,
     });
 
     const rawComposed = compose.choices[0]?.message?.content;

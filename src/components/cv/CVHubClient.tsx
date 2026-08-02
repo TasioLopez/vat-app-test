@@ -99,7 +99,19 @@ export default function CVHubClient({
                 href={`/dashboard/cv/${employeeId}/${row.id}`}
                 className="min-w-0 flex-1 font-medium text-gray-900 hover:text-sky-700"
               >
-                {row.title}
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {row.title}
+                  {row.parent_cv_id ? (
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                      Gedeelde kopie
+                    </span>
+                  ) : null}
+                  {row.status === 'shared_for_review' ? (
+                    <span className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800">
+                      In review
+                    </span>
+                  ) : null}
+                </span>
                 <span className="ml-2 text-xs font-normal text-gray-500">
                   {new Date(row.updated_at).toLocaleString('nl-NL')}
                 </span>

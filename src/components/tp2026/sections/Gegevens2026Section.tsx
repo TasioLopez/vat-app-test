@@ -313,7 +313,10 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
 function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
   const vervoertekst = formatTransportation(null, data.transport_type);
   const rijbewijs = formatDriversLicense(data.drivers_license, data.drivers_license_type);
-  const pcVaardigheden = formatComputerSkills(data.computer_skills);
+  const pcVaardigheden = formatComputerSkills(
+    data.computer_skills,
+    data.computer_skills_description
+  );
   return (
     <A4Page className={TP2026_A4_PAGE_CLASS}>
       <A4LogoHeader />

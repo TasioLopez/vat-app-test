@@ -5,6 +5,7 @@ import {
   hasIntakeAdviesQuote,
   hasIntakeFunctieCategories,
   hasIntakePassendeFunctiesQuote,
+  sanitizeIntakeSectie7Content,
 } from '../build-fields';
 import type { IntakeSectie7Content } from '../schema';
 
@@ -48,6 +49,29 @@ describe('buildFunctiesFromIntakeCategories', () => {
     assert.equal(functies.length, 4);
     assert.equal(functies[2].naam, 'En soortgelijk');
     assert.equal(functies[3].naam, 'En soortgelijk');
+  });
+});
+
+describe('sanitizeIntakeSectie7Content', () => {
+  it('strips leaked quote labels from advies and passende functies', () => {
+    const content: IntakeSectie7Content = {
+      ad_auteur: 'S. Kowalski',
+      ad_datum_iso: '2026-07-14',
+      quote_advies_spoor2:
+        'Quote advies spoor 2 (inleiding):Blijf de re-integratiemogelijkheden binnen spoor 1 monitoren.',
+      quote_passende_functies:
+        'Quote passende functies: Quote passende functies: - toezichthouder parkeergarage\n- enquêteur',
+      functie_categorien: [],
+    };
+
+    const sanitized = sanitizeIntakeSectie7Content(content);
+    assert.equal(
+      sanitized.quote_advies_spoor2,
+      'Blijf de re-integratiemogelijkheden binnen spoor 1 monitoren.'
+    );
+    assert.equal(sanitized.quote_passende_functies, '- toezichthouder parkeergarage\n- enquêteur');
+    assert.doesNotMatch(sanitized.quote_advies_spoor2!, /Quote advies spoor 2/);
+    assert.doesNotMatch(sanitized.quote_passende_functies!, /Quote passende functies/);
   });
 });
 

@@ -57,7 +57,7 @@ export const INLEIDING_CONTENT_JSON_SCHEMA = {
     ad_quote: {
       type: ['string', 'null'],
       description:
-        'Literal quote from AD report conclusion/advice about 2e spoor; null when no AD document.',
+        'Literal quote from AD report or intake Sectie 7 Quote advies spoor 2 about 2e spoor. Exclude the field label itself (even when no space after ":"). Null when no AD document.',
     },
     extra_aanmelder: {
       type: ['object', 'null'],

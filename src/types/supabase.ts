@@ -192,6 +192,7 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          parent_cv_id: string | null
         }
         Insert: {
           id?: string
@@ -204,6 +205,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          parent_cv_id?: string | null
         }
         Update: {
           id?: string
@@ -216,6 +218,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          parent_cv_id?: string | null
         }
         Relationships: [
           {
@@ -223,6 +226,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cv_documents_parent_cv_id_fkey"
+            columns: ["parent_cv_id"]
+            isOneToOne: false
+            referencedRelation: "cv_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -326,6 +336,7 @@ export type Database = {
           field_content_hash: Json
           field_review_status: Json
           computer_skills: string | null
+          computer_skills_description: string | null
           contract_hours: number | null
           created_at: string | null
           current_job: string | null
@@ -353,6 +364,7 @@ export type Database = {
           field_content_hash?: Json
           field_review_status?: Json
           computer_skills?: string | null
+          computer_skills_description?: string | null
           contract_hours?: number | null
           created_at?: string | null
           current_job?: string | null
@@ -380,6 +392,7 @@ export type Database = {
           field_content_hash?: Json
           field_review_status?: Json
           computer_skills?: string | null
+          computer_skills_description?: string | null
           contract_hours?: number | null
           created_at?: string | null
           current_job?: string | null

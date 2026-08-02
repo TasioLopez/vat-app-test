@@ -1,4 +1,4 @@
-export const DEFAULT_INTAKE_SECTIE7_MODEL = 'gpt-5.1-2025-11-13';
+export const DEFAULT_INTAKE_SECTIE7_MODEL = 'gpt-5.6-sol';
 
 export const INTAKE_DOC_VARIANTS = ['intakeformulier', 'intake-formulier', 'intake'] as const;
 
