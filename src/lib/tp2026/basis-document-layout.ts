@@ -5,7 +5,7 @@ import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 export const TP_BASIS_BODY_BOX_CLASS = 'bg-[#f3efe4] p-2.5 text-neutral-900';
 
 export const TP_BASIS_TOELICHTING_CLASS =
-  'mb-1.5 text-[12px] font-normal leading-tight text-neutral-900';
+  'mb-1.5 text-[12px] font-bold leading-tight text-neutral-900';
 
 export const TP_BASIS_DISCLAIMER_CLASS =
   'text-[10px] leading-relaxed text-[#6d2a96]';
