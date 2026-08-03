@@ -87,6 +87,31 @@ describe('buildAdAdviesFields', () => {
     assert.match(advies_ad_passende_arbeid, /In het concept arbeidsdeskundigrapport,/);
   });
 
+  it('assembles concept AD with intake Quote passende functies (not geen-AD N.B.)', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'S. Kowalski',
+      ad_datum_iso: '2026-07-14',
+      advies_citaat:
+        '- toezichthouder parkeergarage\n- enquêteur / telefonisch marktonderzoeker',
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(
+      {
+        meta: {
+          has_ad_report: false,
+          ad_report_concept: true,
+          ad_report_date: '2026-07-14',
+          occupational_doctor_name: 'S. Kowalski',
+        },
+      },
+      content
+    );
+
+    assert.match(advies_ad_passende_arbeid, /In het concept arbeidsdeskundigrapport,/);
+    assert.match(advies_ad_passende_arbeid, /toezichthouder parkeergarage/);
+    assert.doesNotMatch(advies_ad_passende_arbeid, /nog geen AD-rapport/);
+  });
+
   it('parseAdAdvies and buildAdAdviesBlock round-trip', () => {
     const intro =
       'In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:';

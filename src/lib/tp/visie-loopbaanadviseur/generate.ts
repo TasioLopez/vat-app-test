@@ -2,6 +2,7 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import { hasIntakeAdNarrative } from '@/lib/tp/ad-report-wording';
 import {
   buildVisieLoopbaanadviseurFields,
   type VisieLoopbaanadviseurBuildContext,
@@ -89,15 +90,25 @@ export function hasIntakeDoc(docs: EmployeeDoc[]): boolean {
   return docs.some((d) => getVisieLoopbaanadviseurDocCategory(d.type) === 'intake');
 }
 
-export function detectDocumentScenario(docs: EmployeeDoc[]): DocumentScenario {
+export function detectDocumentScenario(
+  docs: EmployeeDoc[],
+  meta?: VisieLoopbaanadviseurBuildContext['meta'] | null
+): DocumentScenario {
   const categories = new Set(
     filterVisieLoopbaanadviseurDocs(docs)
       .map((d) => getVisieLoopbaanadviseurDocCategory(d.type))
       .filter((c): c is DocCategory => c != null)
   );
 
-  if (categories.has('ad')) return 'ad';
-  if (categories.has('belastbaarheid')) return 'belastbaarheid_only';
+  const hasAdDoc = categories.has('ad');
+  const hasAd = hasIntakeAdNarrative(meta ?? undefined) || hasAdDoc;
+  const hasFuncties = extractAdExclusionPhrases(meta?.advies_ad_passende_arbeid).length > 0;
+  const hasBelastbaarheid = categories.has('belastbaarheid');
+
+  if (hasAd) {
+    return hasFuncties ? 'ad_with_functies' : 'ad_no_functies';
+  }
+  if (hasBelastbaarheid) return 'belastbaarheid_only';
   return 'intake_only';
 }
 
@@ -273,7 +284,7 @@ export async function generateVisieLoopbaanadviseur(
   ctx: VisieLoopbaanadviseurBuildContext,
   docs: EmployeeDoc[]
 ): Promise<VisieLoopbaanadviseurFields> {
-  const scenario = detectDocumentScenario(docs);
+  const scenario = detectDocumentScenario(docs, ctx.meta);
   const content = await generateVisieLoopbaanadviseurContent(openai, supabase, ctx, docs);
   return buildVisieLoopbaanadviseurFields(ctx, content, scenario);
 }

@@ -213,8 +213,13 @@ function getProfielFieldFallback(
   fieldKey: TP2026ProfielWerknemerFieldKey,
   data: Record<string, any>
 ): string {
-  if (fieldKey === 'advies_ad_passende_arbeid' && data.has_ad_report === false) {
-    return 'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
+  if (fieldKey === 'advies_ad_passende_arbeid') {
+    // Concept AD still has AD narrative; only show geen-AD N.B. when neither definitive nor concept.
+    const hasNarrative =
+      data.ad_report_concept === true || data.has_ad_report === true;
+    if (!hasNarrative) {
+      return 'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
+    }
   }
   return '';
 }

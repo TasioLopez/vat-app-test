@@ -5,7 +5,11 @@ export const FUNCTIES_DELIMITER = '<<<FUNCTIES>>>';
 export const TOELICHTING_SUBHEADING = 'Toelichting';
 export const FUNCTIES_SUBHEADING = 'Mogelijk passende functies';
 
-export type DocumentScenario = 'ad' | 'belastbaarheid_only' | 'intake_only';
+export type DocumentScenario =
+  | 'ad_with_functies'
+  | 'ad_no_functies'
+  | 'belastbaarheid_only'
+  | 'intake_only';
 
 export const TOELICHTING_MAN =
   'Gezien de opleiding, werkervaring en de vastgestelde medische beperkingen acht ValentineZ de kansen van de werknemer op de vrije arbeidsmarkt op dit moment "voldoende". Mocht de belastbaarheid van de werknemer in de toekomst verbeteren, dan zullen ook zijn kansen op de arbeidsmarkt toenemen. In dat geval kunnen andere functies worden onderzocht als mogelijke opties voor passend werk.';
@@ -16,17 +20,21 @@ export const TOELICHTING_VROUW =
 export const TOELICHTING_ONBEKEND =
   'Gezien de opleiding, werkervaring en de vastgestelde medische beperkingen acht ValentineZ de kansen van de werknemer op de vrije arbeidsmarkt op dit moment "voldoende". Mocht de belastbaarheid van de werknemer in de toekomst verbeteren, dan zullen ook de kansen van de werknemer op de arbeidsmarkt toenemen. In dat geval kunnen andere functies worden onderzocht als mogelijke opties voor passend werk.';
 
-/** V10 situation 1 — AD document present. */
+/** AD present with named functions — footnote asterisk links to FUNCTIE_FOOTER. */
 export const AD_FUNCTIES_INTRO =
   'Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:';
 
-/** V10 situation 2 — no AD, FML or IZP present. */
-export const NO_AD_BELASTBAARHEID_INTRO =
-  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport. Op basis van het belastbaarheidsprofiel en het intakegesprek denkt de loopbaanadviseur aan onderstaande functies*:';
+/** AD present but no named functions in advies. */
+export const AD_NO_FUNCTIES_INTRO =
+  'In het arbeidsdeskundig rapport zijn geen passende functies benoemd. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van het belastbaarheidsprofiel en de informatie uit het intakegesprek.';
 
-/** V10 situation 3 — no AD, no FML, no IZP. */
+/** No AD narrative, FML/IZP/LAB present. */
+export const NO_AD_BELASTBAARHEID_INTRO =
+  'Er is geen arbeidsdeskundig rapport beschikbaar. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van het belastbaarheidsprofiel en de informatie uit het intakegesprek.';
+
+/** No AD narrative and no belastbaarheidsprofiel. */
 export const NO_AD_NO_BELASTBAARHEID_INTRO =
-  'Ten tijde van het opstellen van het trajectplan was ValentineZ niet in het bezit van een arbeidsdeskundig rapport en/of belastbaarheidsprofiel. Op basis van het intakegesprek denkt de loopbaanadviseur aan onderstaande functies*:';
+  'Er zijn geen arbeidsdeskundig rapport en belastbaarheidsprofiel beschikbaar. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van de informatie uit het intakegesprek.';
 
 export const FUNCTIE_FOOTER =
   '*Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/ IZP/ LAB.';

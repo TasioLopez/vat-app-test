@@ -8,6 +8,7 @@ import {
   GENERATION_FALLBACK,
   parseAdAdvies,
 } from '@/lib/tp/ad-advies';
+import { hasIntakeAdNarrative } from '@/lib/tp/ad-report-wording';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     const ctx = { meta: meta ?? {} };
+    const hasAdNarrative = hasIntakeAdNarrative(meta ?? undefined);
     let advies_ad_passende_arbeid: string;
 
     try {
@@ -49,13 +51,12 @@ export async function GET(req: NextRequest) {
       const { citaat } = parseAdAdvies(advies_ad_passende_arbeid);
 
       if (!citaat.trim()) {
-        advies_ad_passende_arbeid =
-          meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : '';
+        // Geen-AD N.B. only when there is neither definitive nor concept AD narrative.
+        advies_ad_passende_arbeid = hasAdNarrative ? '' : ADVIES_NB_NO_REPORT;
       }
     } catch (error) {
       console.error('❌ AD advies generation failed:', error);
-      advies_ad_passende_arbeid =
-        meta?.has_ad_report === false ? ADVIES_NB_NO_REPORT : GENERATION_FALLBACK;
+      advies_ad_passende_arbeid = hasAdNarrative ? GENERATION_FALLBACK : ADVIES_NB_NO_REPORT;
     }
 
     if (!advies_ad_passende_arbeid.trim()) {

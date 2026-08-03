@@ -9,8 +9,8 @@ ${INTAKE_LAYOUT_V75_HINT}
 
 BRONREGELS (KRITIEK):
 - Gebruik ALLEEN het intakeformulier — NOOIT een AD-rapport PDF als bron
-- Als checkbox **Concept** onder AD-rapport in sectie 6 is aangevinkt (Juni V6): return null/leeg voor alle sectie 7 AD-velden
-- Als context.meta.has_ad_report false is: return null/leeg voor alle sectie 7 AD-velden
+- Als checkbox **Concept** onder AD-rapport in sectie 6 is aangevinkt (Juni V6) OF context.meta.ad_report_concept true is: extraheer Sectie 7 quotes/auteur/datum WEL uit het intakeformulier (quotes staan daar). Verzin niets uit een definitief AD-PDF.
+- Als context.meta.has_ad_report false is ÉN context.meta.ad_report_concept niet true is: return null/leeg voor alle sectie 7 AD-velden
 - EXACT letterlijk overnemen — geen parafrase, geen samenvatting, geen herschrijving
 - Geen markdown, geen labels toevoegen, geen aanhalingstekens toevoegen
 
