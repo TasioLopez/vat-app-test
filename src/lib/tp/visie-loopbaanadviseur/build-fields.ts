@@ -6,6 +6,8 @@ import {
 import {
   AD_FUNCTIES_INTRO,
   AD_NO_FUNCTIES_INTRO,
+  CONCEPT_AD_FUNCTIES_INTRO,
+  CONCEPT_AD_NO_FUNCTIES_INTRO,
   EN_SOORTGELIJK,
   FUNCTIE_FOOTER,
   FUNCTIES_DELIMITER,
@@ -59,6 +61,10 @@ export function buildFunctiesIntro(scenario: DocumentScenario): string {
       return AD_FUNCTIES_INTRO;
     case 'ad_no_functies':
       return AD_NO_FUNCTIES_INTRO;
+    case 'concept_ad_with_functies':
+      return CONCEPT_AD_FUNCTIES_INTRO;
+    case 'concept_ad_no_functies':
+      return CONCEPT_AD_NO_FUNCTIES_INTRO;
     case 'belastbaarheid_only':
       return NO_AD_BELASTBAARHEID_INTRO;
     case 'intake_only':

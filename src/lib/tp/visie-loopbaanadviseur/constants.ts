@@ -8,6 +8,8 @@ export const FUNCTIES_SUBHEADING = 'Mogelijk passende functies';
 export type DocumentScenario =
   | 'ad_with_functies'
   | 'ad_no_functies'
+  | 'concept_ad_with_functies'
+  | 'concept_ad_no_functies'
   | 'belastbaarheid_only'
   | 'intake_only';
 
@@ -27,6 +29,14 @@ export const AD_FUNCTIES_INTRO =
 /** AD present but no named functions in advies. */
 export const AD_NO_FUNCTIES_INTRO =
   'In het arbeidsdeskundig rapport zijn geen passende functies benoemd. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van het belastbaarheidsprofiel en de informatie uit het intakegesprek.';
+
+/** Concept AD present with named functions — footnote asterisk links to FUNCTIE_FOOTER. */
+export const CONCEPT_AD_FUNCTIES_INTRO =
+  'Naast de functies die de concept arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:';
+
+/** Concept AD present but no named functions in advies. */
+export const CONCEPT_AD_NO_FUNCTIES_INTRO =
+  'In het concept arbeidsdeskundig rapport zijn geen passende functies benoemd. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van het belastbaarheidsprofiel en de informatie uit het intakegesprek.';
 
 /** No AD narrative, FML/IZP/LAB present. */
 export const NO_AD_BELASTBAARHEID_INTRO =

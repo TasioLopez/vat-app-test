@@ -9,6 +9,8 @@ import {
 import {
   AD_FUNCTIES_INTRO,
   AD_NO_FUNCTIES_INTRO,
+  CONCEPT_AD_FUNCTIES_INTRO,
+  CONCEPT_AD_NO_FUNCTIES_INTRO,
   FUNCTIE_FOOTER,
   NO_AD_BELASTBAARHEID_INTRO,
   NO_AD_NO_BELASTBAARHEID_INTRO,
@@ -85,7 +87,7 @@ describe('detectDocumentScenario', () => {
     assert.equal(detectDocumentScenario(docs, { advies_ad_passende_arbeid: '' }), 'ad_no_functies');
   });
 
-  it('returns ad_no_functies for concept AD without AD PDF when no functions named', () => {
+  it('returns concept_ad_no_functies for concept AD without AD PDF when no functions named', () => {
     const docs = [
       { type: 'intakeformulier', url: 'a' },
       { type: 'fml_izp', url: 'b' },
@@ -96,11 +98,11 @@ describe('detectDocumentScenario', () => {
         has_ad_report: false,
         advies_ad_passende_arbeid: '',
       }),
-      'ad_no_functies'
+      'concept_ad_no_functies'
     );
   });
 
-  it('returns ad_with_functies for concept AD when advies has functions', () => {
+  it('returns concept_ad_with_functies for concept AD when advies has functions', () => {
     const docs = [{ type: 'intakeformulier', url: 'a' }];
     assert.equal(
       detectDocumentScenario(docs, {
@@ -108,7 +110,22 @@ describe('detectDocumentScenario', () => {
         has_ad_report: false,
         advies_ad_passende_arbeid: AD_ADVIES_WITH_FUNCTIES,
       }),
-      'ad_with_functies'
+      'concept_ad_with_functies'
+    );
+  });
+
+  it('returns concept_ad_with_functies even when AD PDF is present if concept flag set', () => {
+    const docs = [
+      { type: 'intakeformulier', url: 'a' },
+      { type: 'ad_rapportage', url: 'c' },
+    ];
+    assert.equal(
+      detectDocumentScenario(docs, {
+        ad_report_concept: true,
+        has_ad_report: false,
+        advies_ad_passende_arbeid: AD_ADVIES_WITH_FUNCTIES,
+      }),
+      'concept_ad_with_functies'
     );
   });
 
@@ -137,11 +154,16 @@ describe('detectDocumentScenario', () => {
 });
 
 describe('buildFunctiesIntro', () => {
-  it('maps four AD-regels scenarios to exact intro texts', () => {
+  it('maps six AD-regels scenarios to exact intro texts', () => {
     assert.equal(buildFunctiesIntro('ad_with_functies'), AD_FUNCTIES_INTRO);
     assert.ok(AD_FUNCTIES_INTRO.endsWith('functies*:'));
     assert.equal(buildFunctiesIntro('ad_no_functies'), AD_NO_FUNCTIES_INTRO);
     assert.match(AD_NO_FUNCTIES_INTRO, /geen passende functies benoemd/);
+    assert.equal(buildFunctiesIntro('concept_ad_with_functies'), CONCEPT_AD_FUNCTIES_INTRO);
+    assert.ok(CONCEPT_AD_FUNCTIES_INTRO.endsWith('functies*:'));
+    assert.match(CONCEPT_AD_FUNCTIES_INTRO, /concept arbeidsdeskundige/);
+    assert.equal(buildFunctiesIntro('concept_ad_no_functies'), CONCEPT_AD_NO_FUNCTIES_INTRO);
+    assert.match(CONCEPT_AD_NO_FUNCTIES_INTRO, /concept arbeidsdeskundig rapport/);
     assert.equal(buildFunctiesIntro('belastbaarheid_only'), NO_AD_BELASTBAARHEID_INTRO);
     assert.match(NO_AD_BELASTBAARHEID_INTRO, /Er is geen arbeidsdeskundig rapport beschikbaar/);
     assert.equal(buildFunctiesIntro('intake_only'), NO_AD_NO_BELASTBAARHEID_INTRO);
@@ -170,6 +192,26 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
     );
     assert.ok(visie_loopbaanadviseur.includes(AD_NO_FUNCTIES_INTRO));
     assert.ok(!visie_loopbaanadviseur.includes(AD_FUNCTIES_INTRO));
+  });
+
+  it('uses concept AD intro when scenario is concept_ad_with_functies', () => {
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
+      baseCtx,
+      sampleFuncties,
+      'concept_ad_with_functies'
+    );
+    assert.ok(visie_loopbaanadviseur.includes(CONCEPT_AD_FUNCTIES_INTRO));
+    assert.ok(!visie_loopbaanadviseur.includes(AD_FUNCTIES_INTRO));
+  });
+
+  it('uses concept AD-no-functies intro when scenario is concept_ad_no_functies', () => {
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
+      baseCtx,
+      sampleFuncties,
+      'concept_ad_no_functies'
+    );
+    assert.ok(visie_loopbaanadviseur.includes(CONCEPT_AD_NO_FUNCTIES_INTRO));
+    assert.ok(!visie_loopbaanadviseur.includes(AD_NO_FUNCTIES_INTRO));
   });
 
   it('uses belastbaarheid intro for scenario belastbaarheid_only', () => {
@@ -269,6 +311,16 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
     );
     const parsed = parseVisieLoopbaanadviseur(visie_loopbaanadviseur);
     assert.equal(parsed.functiesIntro, AD_NO_FUNCTIES_INTRO);
+  });
+
+  it('round-trips concept_ad_no_functies multi-sentence intro', () => {
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
+      baseCtx,
+      sampleFuncties,
+      'concept_ad_no_functies'
+    );
+    const parsed = parseVisieLoopbaanadviseur(visie_loopbaanadviseur);
+    assert.equal(parsed.functiesIntro, CONCEPT_AD_NO_FUNCTIES_INTRO);
   });
 
   it('falls back to plain toelichting when delimiters are missing', () => {

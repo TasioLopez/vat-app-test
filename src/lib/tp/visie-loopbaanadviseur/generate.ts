@@ -2,7 +2,7 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
-import { hasIntakeAdNarrative } from '@/lib/tp/ad-report-wording';
+import { hasDefinitiveAdReport, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   buildVisieLoopbaanadviseurFields,
   type VisieLoopbaanadviseurBuildContext,
@@ -100,12 +100,16 @@ export function detectDocumentScenario(
       .filter((c): c is DocCategory => c != null)
   );
 
+  const isConcept = isAdReportConcept(meta ?? undefined);
   const hasAdDoc = categories.has('ad');
-  const hasAd = hasIntakeAdNarrative(meta ?? undefined) || hasAdDoc;
   const hasFuncties = extractAdExclusionPhrases(meta?.advies_ad_passende_arbeid).length > 0;
+  const hasDefinitiveAd = hasDefinitiveAdReport(meta ?? undefined) || (hasAdDoc && !isConcept);
   const hasBelastbaarheid = categories.has('belastbaarheid');
 
-  if (hasAd) {
+  if (isConcept) {
+    return hasFuncties ? 'concept_ad_with_functies' : 'concept_ad_no_functies';
+  }
+  if (hasDefinitiveAd) {
     return hasFuncties ? 'ad_with_functies' : 'ad_no_functies';
   }
   if (hasBelastbaarheid) return 'belastbaarheid_only';
