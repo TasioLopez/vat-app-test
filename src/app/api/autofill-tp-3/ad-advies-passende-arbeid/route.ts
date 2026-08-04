@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   ADVIES_NB_NO_REPORT,
+  buildAdAdviesFields,
   generateAdAdvies,
-  GENERATION_FALLBACK,
   parseAdAdvies,
 } from '@/lib/tp/ad-advies';
 import { hasIntakeAdNarrative } from '@/lib/tp/ad-report-wording';
@@ -50,13 +50,23 @@ export async function GET(req: NextRequest) {
       advies_ad_passende_arbeid = result.advies_ad_passende_arbeid;
       const { citaat } = parseAdAdvies(advies_ad_passende_arbeid);
 
-      if (!citaat.trim()) {
-        // Geen-AD N.B. only when there is neither definitive nor concept AD narrative.
-        advies_ad_passende_arbeid = hasAdNarrative ? '' : ADVIES_NB_NO_REPORT;
+      // No AD narrative → N.B. When narrative exists with empty citaat, keep
+      // buildAdAdviesFields output (geen-functies intro).
+      if (!citaat.trim() && !hasAdNarrative) {
+        advies_ad_passende_arbeid = ADVIES_NB_NO_REPORT;
       }
     } catch (error) {
       console.error('❌ AD advies generation failed:', error);
-      advies_ad_passende_arbeid = hasAdNarrative ? GENERATION_FALLBACK : ADVIES_NB_NO_REPORT;
+      if (hasAdNarrative) {
+        // Still emit concept/definitive geen-functies intro from meta.
+        advies_ad_passende_arbeid = buildAdAdviesFields(ctx, {
+          ad_auteur: null,
+          ad_datum_iso: null,
+          advies_citaat: null,
+        }).advies_ad_passende_arbeid;
+      } else {
+        advies_ad_passende_arbeid = ADVIES_NB_NO_REPORT;
+      }
     }
 
     if (!advies_ad_passende_arbeid.trim()) {

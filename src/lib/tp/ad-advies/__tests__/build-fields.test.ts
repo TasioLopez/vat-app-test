@@ -58,18 +58,78 @@ describe('buildAdAdviesFields', () => {
     assert.match(advies_ad_passende_arbeid, /op 2 februari 2026/);
   });
 
-  it('buildAdAdviesIntro matches expected format', () => {
+  it('buildAdAdviesIntro: definitive + functions (scenario 1)', () => {
     const intro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026');
     assert.equal(
       intro,
       'In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
+  });
 
+  it('buildAdAdviesIntro: concept + functions (scenario 2)', () => {
     const conceptIntro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026', true);
     assert.equal(
       conceptIntro,
       'In het concept arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 staat het volgende advies over passende arbeid:'
     );
+  });
+
+  it('buildAdAdviesIntro: definitive + no functions (scenario 3)', () => {
+    const intro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026', false, false);
+    assert.equal(
+      intro,
+      'In het arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 worden geen passende functies benoemd.'
+    );
+  });
+
+  it('buildAdAdviesIntro: concept + no functions (scenario 4)', () => {
+    const intro = buildAdAdviesIntro('Patricia Boomsma', '2 februari 2026', true, false);
+    assert.equal(
+      intro,
+      'In het concept arbeidsdeskundigrapport, opgesteld door Patricia Boomsma, op 2 februari 2026 worden geen passende functies benoemd.'
+    );
+  });
+
+  it('definitive AD + empty citaat → geen-functies intro, no delimiter', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'Patricia Boomsma',
+      ad_datum_iso: '2026-02-02',
+      advies_citaat: null,
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(ctx, content);
+
+    assert.equal(
+      advies_ad_passende_arbeid,
+      'In het arbeidsdeskundigrapport, opgesteld door P. Boomsma, op 2 februari 2026 worden geen passende functies benoemd.'
+    );
+    assert.ok(!advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
+  });
+
+  it('concept AD + empty citaat → concept geen-functies intro, no delimiter', () => {
+    const content: AdAdviesContentResult = {
+      ad_auteur: 'S. Kowalski',
+      ad_datum_iso: '2026-07-14',
+      advies_citaat: '   ',
+    };
+
+    const { advies_ad_passende_arbeid } = buildAdAdviesFields(
+      {
+        meta: {
+          has_ad_report: false,
+          ad_report_concept: true,
+          ad_report_date: '2026-07-14',
+          occupational_doctor_name: 'S. Kowalski',
+        },
+      },
+      content
+    );
+
+    assert.equal(
+      advies_ad_passende_arbeid,
+      'In het concept arbeidsdeskundigrapport, opgesteld door S. Kowalski, op 14 juli 2026 worden geen passende functies benoemd.'
+    );
+    assert.ok(!advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
   });
 
   it('uses concept intro when ad_report_concept is true', () => {
@@ -85,6 +145,8 @@ describe('buildAdAdviesFields', () => {
     );
 
     assert.match(advies_ad_passende_arbeid, /In het concept arbeidsdeskundigrapport,/);
+    assert.match(advies_ad_passende_arbeid, /staat het volgende advies over passende arbeid:/);
+    assert.ok(advies_ad_passende_arbeid.includes(ADVIES_DELIMITER));
   });
 
   it('assembles concept AD with intake Quote passende functies (not geen-AD N.B.)', () => {

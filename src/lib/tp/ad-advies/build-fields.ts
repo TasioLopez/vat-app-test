@@ -5,7 +5,7 @@ import {
   isAdReportConcept,
 } from '@/lib/tp/ad-report-wording';
 import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
-import { ADVIES_DELIMITER, ADVIES_INTRO_SUFFIX } from './constants';
+import { ADVIES_DELIMITER, ADVIES_INTRO_NO_FUNCTIES_SUFFIX, ADVIES_INTRO_SUFFIX } from './constants';
 import type { AdAdviesContentResult } from './schema';
 
 export type AdAdviesBuildContext = {
@@ -50,9 +50,11 @@ function resolveDatum(content: AdAdviesContentResult, ctx: AdAdviesBuildContext)
 export function buildAdAdviesIntro(
   auteur: string,
   datum: string,
-  concept = false
+  concept = false,
+  hasFuncties = true
 ): string {
-  return `${buildAdAdviesIntroPrefix(concept)} opgesteld door ${auteur}, op ${datum} ${ADVIES_INTRO_SUFFIX}`;
+  const suffix = hasFuncties ? ADVIES_INTRO_SUFFIX : ADVIES_INTRO_NO_FUNCTIES_SUFFIX;
+  return `${buildAdAdviesIntroPrefix(concept)} opgesteld door ${auteur}, op ${datum} ${suffix}`;
 }
 
 export function buildAdAdviesFields(
@@ -61,17 +63,24 @@ export function buildAdAdviesFields(
 ): AdAdviesFields {
   const auteur = resolveAuteur(content, ctx);
   const datum = resolveDatum(content, ctx);
-  const intro = buildAdAdviesIntro(auteur, datum, isAdReportConcept(ctx.meta));
   const citaat = content.advies_citaat
     ? stripLeadingIntakeQuoteLabels(stripCitations(content.advies_citaat))
     : '';
+  const hasFuncties = Boolean(citaat.trim());
+  const intro = buildAdAdviesIntro(
+    auteur,
+    datum,
+    isAdReportConcept(ctx.meta),
+    hasFuncties
+  );
 
-  const parts = [intro];
-  if (citaat) {
-    parts.push(`${ADVIES_DELIMITER}\n${citaat}`);
+  if (!hasFuncties) {
+    return { advies_ad_passende_arbeid: intro };
   }
 
-  return { advies_ad_passende_arbeid: parts.join('\n\n') };
+  return {
+    advies_ad_passende_arbeid: `${intro}\n\n${ADVIES_DELIMITER}\n${citaat}`,
+  };
 }
 
 export type ParsedAdAdvies = {
