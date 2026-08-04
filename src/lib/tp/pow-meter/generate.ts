@@ -172,7 +172,7 @@ export async function generatePowMeterContent(
       text: {
         format: {
           type: 'json_schema',
-          name: 'pow_meter_content',
+          name: 'pow_meter_content_v11',
           strict: true,
           schema: POW_METER_CONTENT_JSON_SCHEMA as Record<string, unknown>,
         },

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import type { PowMeterFacts } from '../facts';
 import { computeTredeFromLadder, type PowLadderAnswers } from '../ladder';
 import { resolveLadderFromFacts } from '../resolve-ladder';
-import { parsePowMeterContentResult, capVerwachtingTrede } from '../schema';
 
 function allYesLadder(): PowLadderAnswers {
   return {
@@ -66,17 +65,14 @@ const williamsFacts: PowMeterFacts = {
   duurzaam_passend_min_65: false,
 };
 
-/**
- * Live failure mode: model wrongly marks Q3 Ja (family/work as "social")
- * while outside_deliberate stays false (no club/sport).
- */
 const williamsOptimisticQ3Facts: PowMeterFacts = {
   ...williamsFacts,
   outside_functional_only: false,
   regular_social_participation_outside: true,
 };
 
-describe('resolveLadderFromFacts', () => {
+/** Legacy V10 ladder helpers — kept for unit coverage; not used on the live V11 path. */
+describe('resolveLadderFromFacts (legacy V10)', () => {
   it('Hulstaart: coerces optimistic model ladder to trede 1', () => {
     const { ladder, adjustments } = resolveLadderFromFacts(hulstaartFacts, allYesLadder());
     assert.ok(adjustments.length > 0);
@@ -120,72 +116,5 @@ describe('resolveLadderFromFacts', () => {
     assert.equal(ladder.q2_minimaal_2x_buitenshuis, true);
     assert.equal(ladder.q3_regelmatige_sociale_participatie, false);
     assert.equal(computeTredeFromLadder(ladder), 2);
-  });
-});
-
-describe('parsePowMeterContentResult with facts', () => {
-  it('computes trede 1 from Hulstaart-like raw payload', () => {
-    const result = parsePowMeterContentResult({
-      ...hulstaartFacts,
-      ...allYesLadder(),
-      huidige_werkzame_uren: '0 uur',
-      verwachting_trede_nummer: 2,
-      verwachting_includes_spoor2_block: true,
-      verwachting_kern: 'Revalidatie staat centraal.',
-      toelichting_kern: 'werknemer nog niet belastbaar is en 0 uur per week werkt.',
-    });
-    assert.equal(result.huidige_trede_nummer, 1);
-    assert.equal(result.facts.current_work_hours_per_week, 0);
-  });
-
-  it('computes trede 3 from Melissa-like raw payload', () => {
-    const result = parsePowMeterContentResult({
-      ...melissaFacts,
-      ...allYesLadder(),
-      huidige_werkzame_uren: '1,5 uur aangepast werk',
-      verwachting_trede_nummer: 3,
-      verwachting_includes_spoor2_block: false,
-      verwachting_kern: 'Gefaseerde urenopbouw verwacht.',
-      toelichting_kern: 'haar belastbaarheid nog laag is en zij circa 1,5 uur per week werkt.',
-    });
-    assert.equal(result.huidige_trede_nummer, 3);
-  });
-
-  it('Williams: trede 2 huidige and caps verwachting 5 → 3', () => {
-    const result = parsePowMeterContentResult({
-      ...williamsFacts,
-      ...allYesLadder(),
-      huidige_werkzame_uren:
-        'Werknemer werkt momenteel circa 2 uur per week in aangepast werk bij Stichting Cordaan binnen spoor 1.',
-      verwachting_trede_nummer: 5,
-      verwachting_includes_spoor2_block: true,
-      verwachting_kern: 'Over drie maanden wordt een verdere opbouw van de uren verwacht.',
-      toelichting_kern:
-        'haar belastbaarheid laag is, zij circa 2 uur per week in aangepast werk verricht en geen regelmatige sociale participatie buiten huis heeft.',
-    });
-    assert.equal(result.huidige_trede_nummer, 2);
-    assert.equal(result.verwachting_trede_nummer, 3);
-  });
-
-  it('Williams optimistic Q3 payload still yields trede 2 (not 3)', () => {
-    const result = parsePowMeterContentResult({
-      ...williamsOptimisticQ3Facts,
-      ...allYesLadder(),
-      huidige_werkzame_uren: 'Werknemer werkt momenteel circa 2 uur per week in aangepast werk.',
-      verwachting_trede_nummer: 5,
-      verwachting_includes_spoor2_block: true,
-      verwachting_kern: 'Urenopbouw richting 12 tot 16 uur per week wordt verwacht.',
-      toelichting_kern: 'zij circa 2 uur per week werkt en haar belastbaarheid nog beperkt is.',
-    });
-    assert.equal(result.huidige_trede_nummer, 2);
-    assert.equal(result.ladder.q3_regelmatige_sociale_participatie, false);
-    assert.equal(result.verwachting_trede_nummer, 3);
-  });
-});
-
-describe('capVerwachtingTrede', () => {
-  it('caps aggressive prognosis when intake hours are low', () => {
-    assert.equal(capVerwachtingTrede(2, 5, williamsFacts), 3);
-    assert.equal(capVerwachtingTrede(3, 6, melissaFacts), 4);
   });
 });
