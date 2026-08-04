@@ -18,7 +18,7 @@ export type BelastbaarheidsdocumentType = 'fml' | 'izp' | 'lab';
 /** Server-appended closing for paragraph 1 — [datum] replaced at assembly time. */
 export const PARA1_CLOSING_TEMPLATES: Record<BelastbaarheidsdocumentType, string> = {
   fml:
-    'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in de Functionele Mogelijkhedenlijst van [datum].',
+    'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in de Functionele Mogelijkheden Lijst van [datum].',
   izp:
     'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in het Inzetbaarheidsprofiel van [datum].',
   lab:

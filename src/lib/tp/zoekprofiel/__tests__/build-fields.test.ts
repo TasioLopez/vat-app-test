@@ -35,7 +35,7 @@ describe('buildZoekprofielFields', () => {
     assert.match(parts[0], /Op basis van de afgeronde opleiding\(en\)/);
     assert.match(
       parts[0],
-      /Functionele Mogelijkhedenlijst van 12 december 2025/
+      /Functionele Mogelijkheden Lijst van 12 december 2025/
     );
     assert.match(parts[1], /overzichtelijke/);
   });
@@ -94,7 +94,7 @@ describe('buildZoekprofielFields', () => {
     };
 
     const { zoekprofiel } = buildZoekprofielFields(ctx, content);
-    assert.ok(!zoekprofiel.includes('Functionele Mogelijkhedenlijst'));
+    assert.ok(!zoekprofiel.includes('Functionele Mogelijkheden Lijst'));
     assert.match(zoekprofiel, /Op basis van de afgeronde opleiding\(en\)/);
   });
 });
@@ -102,13 +102,13 @@ describe('buildZoekprofielFields', () => {
 describe('buildPara1Closing', () => {
   it('uses FML template with date', () => {
     const text = buildPara1Closing('fml', '20 januari 2025');
-    assert.match(text, /Functionele Mogelijkhedenlijst van 20 januari 2025/);
+    assert.match(text, /Functionele Mogelijkheden Lijst van 20 januari 2025/);
   });
 
   it('uses IZP template with date', () => {
     const text = buildPara1Closing('izp', '3 februari 2026');
     assert.match(text, /Inzetbaarheidsprofiel van 3 februari 2026/);
-    assert.ok(!text.includes('Functionele Mogelijkhedenlijst'));
+    assert.ok(!text.includes('Functionele Mogelijkheden Lijst'));
   });
 
   it('uses LAB template with date', () => {
