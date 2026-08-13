@@ -2,6 +2,7 @@ import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   buildSupervisiePhrase,
+  DOCTOR_ROLE_PREFIXES,
   expandDoctorRoleAbbreviations,
   extractDoctorRolePrefix,
   type DoctorRole,
@@ -23,6 +24,7 @@ const TP2_DATE_KEYS = [
 const ROLE_PREFIX: Record<DoctorRole, string> = {
   Arts: 'Arts',
   Anios: 'Anios',
+  Aios: 'Aios',
   BA: 'Bedrijfsarts',
   VA: 'Verzekeringsarts',
 };
@@ -40,6 +42,7 @@ function normalizeDoctorRole(value: unknown): DoctorRole | undefined {
   const role = String(value ?? '').trim().toUpperCase();
   if (role === 'ARTS') return 'Arts';
   if (role === 'ANIOS') return 'Anios';
+  if (role === 'AIOS') return 'Aios';
   if (role === 'BA' || role === 'BEDRIJFSARTS') return 'BA';
   if (role === 'VA' || role === 'VERZEKERINGSARTS') return 'VA';
   return undefined;
@@ -63,9 +66,8 @@ export function formatOccupationalDoctorOrg(
   cleaned = cleaned.replace(/[,\-]\s*$/, '').trim();
   if (!cleaned) return undefined;
 
-  const rolePrefixes = ['Verzekeringsarts', 'Bedrijfsarts', 'Arts', 'Anios'];
-  const alreadyPrefixed = rolePrefixes.some((prefix) =>
-    cleaned.toLowerCase().startsWith(prefix.toLowerCase())
+  const alreadyPrefixed = DOCTOR_ROLE_PREFIXES.some((prefix) =>
+    cleaned.toLowerCase().startsWith(`${prefix.toLowerCase()} `)
   );
   if (alreadyPrefixed) return cleaned;
 

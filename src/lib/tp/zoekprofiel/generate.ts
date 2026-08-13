@@ -8,7 +8,11 @@ import {
   type ZoekprofielBuildContext,
   type ZoekprofielFields,
 } from './build-fields';
-import { DEFAULT_ZOEKPROFIEL_MODEL } from './constants';
+import {
+  DEFAULT_ZOEKPROFIEL_MODEL,
+  MISSING_BELASTBAARHEIDSDOC_CLARIFICATION,
+  type BelastbaarheidsdocumentType,
+} from './constants';
 import {
   ZOEKPROFIEL_CONTENT_PROMPT,
   buildZoekprofielContextMessage,
@@ -19,6 +23,7 @@ import {
   parseZoekprofielContentResult,
   type ZoekprofielContentResult,
 } from './schema';
+import { resolveLeadingBelastbaarheidsdoc } from './resolve-leading-belastbaarheidsdoc';
 import { formatValidationIssues } from './validate-output';
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
@@ -27,6 +32,8 @@ export type EmployeeDoc = {
   type: string | null;
   url: string | null;
   uploaded_at?: string | null;
+  /** Optional extracted document date (ISO or Dutch long form) */
+  documentDate?: string | null;
 };
 
 type DocCategory = 'belastbaarheid' | 'ad' | 'intake';
@@ -126,6 +133,10 @@ function buildApiContext(ctx: ZoekprofielBuildContext): Record<string, unknown> 
     meta: {
       fml_izp_lab_date_voluit: ctx.meta.fml_izp_lab_date_voluit || null,
       has_belastbaarheids_doc: ctx.meta.has_belastbaarheids_doc !== false,
+      leading_belastbaarheidsdocument_type:
+        ctx.meta.leading_belastbaarheidsdocument_type || null,
+      leading_belastbaarheidsdocument_datum_voluit:
+        ctx.meta.leading_belastbaarheidsdocument_datum_voluit || null,
     },
   };
 }
@@ -211,14 +222,79 @@ function pickBetterFields(
   return first;
 }
 
+function applyLeadingDocToContext(
+  ctx: ZoekprofielBuildContext,
+  docs: EmployeeDoc[]
+): ZoekprofielBuildContext {
+  const belastbaarheidDocs = docs.filter((d) => isBelastbaarheidsDoc(d.type));
+  const leading = resolveLeadingBelastbaarheidsdoc({
+    docs: belastbaarheidDocs,
+    metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
+  });
+
+  if (!leading) return ctx;
+
+  return {
+    ...ctx,
+    meta: {
+      ...ctx.meta,
+      leading_belastbaarheidsdocument_type: leading.type,
+      leading_belastbaarheidsdocument_datum_voluit: leading.datumVoluit || null,
+      fml_izp_lab_date_voluit:
+        leading.datumVoluit || ctx.meta.fml_izp_lab_date_voluit || null,
+    },
+  };
+}
+
+function refineLeadingFromModel(
+  ctx: ZoekprofielBuildContext,
+  content: ZoekprofielContentResult,
+  docs: EmployeeDoc[]
+): ZoekprofielBuildContext {
+  const belastbaarheidDocs = docs.filter((d) => isBelastbaarheidsDoc(d.type));
+  const leading = resolveLeadingBelastbaarheidsdoc({
+    docs: belastbaarheidDocs,
+    metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
+    modelType: content.belastbaarheidsdocument_type,
+    modelDatumVoluit: content.belastbaarheidsdocument_datum_voluit,
+  });
+
+  if (!leading) return ctx;
+
+  return {
+    ...ctx,
+    meta: {
+      ...ctx.meta,
+      leading_belastbaarheidsdocument_type: leading.type,
+      leading_belastbaarheidsdocument_datum_voluit: leading.datumVoluit || null,
+    },
+  };
+}
+
 export async function generateZoekprofiel(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: ZoekprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<ZoekprofielFields> {
-  const content = await generateZoekprofielContent(openai, supabase, ctx, docs);
-  let fields = buildZoekprofielFields(ctx, content);
+  // V1.3: no belastbaarheidsdoc → clarification, do not generate
+  if (ctx.meta.has_belastbaarheids_doc === false) {
+    return {
+      zoekprofiel: '',
+      clarificationQuestion: MISSING_BELASTBAARHEIDSDOC_CLARIFICATION,
+    };
+  }
+
+  let workingCtx = applyLeadingDocToContext(ctx, docs);
+
+  const content = await generateZoekprofielContent(openai, supabase, workingCtx, docs);
+  workingCtx = refineLeadingFromModel(workingCtx, content, docs);
+  let fields = buildZoekprofielFields(workingCtx, content);
+
+  // Do not retry when clarification is intentional
+  if (fields.clarificationQuestion) {
+    return fields;
+  }
 
   if (fields.validationIssues?.length) {
     const retryHints = buildZoekprofielRetryMessage(
@@ -227,10 +303,14 @@ export async function generateZoekprofiel(
     console.warn('⚠️ Zoekprofiel: validation failed, retrying once:', retryHints);
 
     try {
-      const retryContent = await generateZoekprofielContent(openai, supabase, ctx, docs, {
+      const retryContent = await generateZoekprofielContent(openai, supabase, workingCtx, docs, {
         retryHints,
       });
-      const retryFields = buildZoekprofielFields(ctx, retryContent);
+      workingCtx = refineLeadingFromModel(workingCtx, retryContent, docs);
+      const retryFields = buildZoekprofielFields(workingCtx, retryContent);
+      if (retryFields.clarificationQuestion) {
+        return retryFields;
+      }
       fields = pickBetterFields(fields, retryFields);
     } catch (retryError) {
       console.warn('⚠️ Zoekprofiel: retry failed, using first attempt', retryError);
@@ -242,13 +322,21 @@ export async function generateZoekprofiel(
 
 export function buildZoekprofielContextFromMeta(
   fmlIzpLabDate?: string | null,
-  options?: { hasBelastbaarheidsDoc?: boolean }
+  options?: {
+    hasBelastbaarheidsDoc?: boolean;
+    leadingType?: BelastbaarheidsdocumentType | null;
+    leadingDatumVoluit?: string | null;
+  }
 ): ZoekprofielBuildContext {
+  const dateVoluit = nlDate(fmlIzpLabDate) || options?.leadingDatumVoluit || null;
   return {
     employee: {},
     meta: {
-      fml_izp_lab_date_voluit: nlDate(fmlIzpLabDate) || null,
+      fml_izp_lab_date_voluit: dateVoluit,
       has_belastbaarheids_doc: options?.hasBelastbaarheidsDoc ?? true,
+      leading_belastbaarheidsdocument_type: options?.leadingType ?? null,
+      leading_belastbaarheidsdocument_datum_voluit:
+        options?.leadingDatumVoluit ?? dateVoluit,
     },
   };
 }

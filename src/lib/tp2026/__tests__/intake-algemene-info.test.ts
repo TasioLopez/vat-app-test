@@ -6,7 +6,9 @@ import {
 } from '@/lib/tp2026/gegevens-field-options';
 import {
   isEducationCertification,
+  isNarrativeWorkExperienceText,
   isPlausibleWorkExperience,
+  normalizeWorkExperienceTitles,
   resolveIntakeEducationFields,
   resolveWorkExperienceFromIntake,
   sanitizeWorkExperienceString,
@@ -142,6 +144,15 @@ describe('isPlausibleWorkExperience', () => {
     );
     assert.equal(isPlausibleWorkExperience('Teamleider PostNL/PTT, Thuiszorg'), true);
   });
+
+  it('rejects duty-paragraph prose', () => {
+    assert.equal(
+      isPlausibleWorkExperience(
+        'Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere het stofwissen.'
+      ),
+      false
+    );
+  });
 });
 
 describe('sanitizeWorkExperienceString', () => {
@@ -167,6 +178,62 @@ describe('sanitizeWorkExperienceString', () => {
       ),
       ''
     );
+  });
+});
+
+describe('normalizeWorkExperienceTitles', () => {
+  it('keeps comma-separated job titles', () => {
+    assert.equal(
+      normalizeWorkExperienceTitles('Teamleider, Thuiszorg, Keukenassistent'),
+      'Teamleider, Thuiszorg, Keukenassistent'
+    );
+  });
+
+  it('drops duty-paragraph prose', () => {
+    assert.equal(
+      normalizeWorkExperienceTitles(
+        'Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere het stofwissen, moppen, schoonmaken van wanden.'
+      ),
+      ''
+    );
+  });
+
+  it('drops narrative verbs mixed with a title list', () => {
+    assert.equal(
+      normalizeWorkExperienceTitles(
+        'Schoonmaker, Uitvoeren van schoonmaakwerkzaamheden en moppen van vloeren'
+      ),
+      'Schoonmaker'
+    );
+  });
+
+  it('strips current_job overlap', () => {
+    assert.equal(
+      normalizeWorkExperienceTitles('Supervisor, Transportplanner', 'Supervisor'),
+      'Transportplanner'
+    );
+  });
+
+  it('parses JSON array of titles', () => {
+    assert.equal(
+      normalizeWorkExperienceTitles('["Magazijnmedewerker","Teamleider"]'),
+      'Magazijnmedewerker, Teamleider'
+    );
+  });
+});
+
+describe('isNarrativeWorkExperienceText', () => {
+  it('detects cleaning duty prose', () => {
+    assert.equal(
+      isNarrativeWorkExperienceText(
+        'Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere het stofwissen.'
+      ),
+      true
+    );
+  });
+
+  it('allows short titles', () => {
+    assert.equal(isNarrativeWorkExperienceText('Teamleider PostNL/PTT'), false);
   });
 });
 

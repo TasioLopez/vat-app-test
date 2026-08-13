@@ -39,6 +39,7 @@ import {
   describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
+import { resolveWorkExperienceFromIntake } from '@/lib/tp2026/intake-algemene-info';
 
 export const maxDuration = 180;
 
@@ -145,6 +146,12 @@ async function processIntakeForm(doc: DocRow): Promise<{
       console.log(
         `📋 Checkbox text override transport=${JSON.stringify(mapped.transport_type)} source=${sources.transportSource} license=${JSON.stringify(mapped.drivers_license_type)} source=${sources.licenseSource}`
       );
+
+      const resolvedWork = resolveWorkExperienceFromIntake(mapped.work_experience, plainText, {
+        currentJob: mapped.current_job,
+      });
+      if (resolvedWork) mapped.work_experience = resolvedWork;
+      else delete mapped.work_experience;
     } catch (error) {
       console.warn('⚠️ Intake checkbox text override failed', error);
       delete mapped.transport_type;

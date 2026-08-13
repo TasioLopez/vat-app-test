@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
-import { isAbsentText, parseWorkExperience } from '@/lib/utils';
+import { isAbsentText } from '@/lib/utils';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import {
   applyEmployeeAutofillReviewMarks,
   type EmployeeDetailFieldKey,
@@ -114,9 +115,13 @@ export function normalizeEmployeeDetailsPayload(
   details: Partial<EmployeeDetailsPersist> | null | undefined,
   employeeId: string
 ): EmployeeDetailsPersist {
-  const normalizedWorkExperience = details?.work_experience
-    ? parseWorkExperience(details.work_experience)
-    : details?.work_experience;
+  const normalizedWorkExperience =
+    details?.work_experience != null && String(details.work_experience).trim()
+      ? normalizeWorkExperienceTitles(
+          String(details.work_experience),
+          details.current_job != null ? String(details.current_job) : undefined
+        ) || undefined
+      : details?.work_experience;
 
   return buildEmployeeDetailsPayload(
     {

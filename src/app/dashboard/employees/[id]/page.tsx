@@ -27,13 +27,14 @@ import {
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
-import { SELECT_CLASS } from '@/lib/select-class';
+import { INPUT_CLASS, SELECT_CLASS } from '@/lib/select-class';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
     COMPUTER_SKILLS_OPTIONS,
     getComputerSkillsDefaultDescription,
     nextComputerSkillsDescriptionOnLevelChange,
 } from '@/lib/tp2026/gegevens-field-options';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -67,8 +68,11 @@ import {
     DUTCH_LANGUAGE_OPTIONS,
     EDUCATION_LEVEL_OPTIONS,
     TRANSPORT_TYPE_OPTIONS,
+    addCustomTransportType,
     normalizeEducationLevel,
+    removeTransportType,
     repairEmployeeEducationFields,
+    splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
@@ -224,9 +228,13 @@ function toNormalizedDetailsPayload(
     details: Partial<EmployeeDetails> | null | undefined,
     employeeId: string
 ): EmployeeDetails {
-    const normalizedWorkExperience = details?.work_experience
-        ? parseWorkExperience(details.work_experience)
-        : details?.work_experience;
+    const normalizedWorkExperience =
+        details?.work_experience != null && String(details.work_experience).trim()
+            ? normalizeWorkExperienceTitles(
+                  String(details.work_experience),
+                  details.current_job != null ? String(details.current_job) : undefined
+              ) || undefined
+            : details?.work_experience;
 
     const normalizedDetails: Partial<EmployeeDetails> = {
         ...details,
@@ -277,6 +285,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [tpOpening, setTpOpening] = useState(false);
     const [vgrOpening, setVgrOpening] = useState(false);
+    const [customTransportDraft, setCustomTransportDraft] = useState('');
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -996,9 +1005,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         getFieldDisplayStatus(field) === 'review';
 
     const fieldClass = (field: EmployeeDetailFieldKey) =>
-        `w-full border-2 border-purple-200 p-3 rounded-lg bg-white transition-all duration-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 hover:border-purple-300 ${getFieldStatusClass(
-            getFieldDisplayStatus(field)
-        )}`;
+        cn(INPUT_CLASS, getFieldStatusClass(getFieldDisplayStatus(field)));
 
     const selectFieldClass = (field: EmployeeDetailFieldKey) =>
         cn(SELECT_CLASS, getFieldStatusClass(getFieldDisplayStatus(field)));
@@ -1095,7 +1102,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
                             <input
-                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                className={INPUT_CLASS}
                                 placeholder="Voornaam"
                                 value={employee.first_name || ''}
                                 onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
@@ -1121,7 +1128,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </ValidatableField>
 
                             <input
-                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                className={INPUT_CLASS}
                                 placeholder="Achternaam"
                                 value={employee.last_name || ''}
                                 onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
@@ -1140,7 +1147,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             </ValidatableField>
 
                             <input
-                                className="w-full min-w-0 border border-gray-500/30 p-2 rounded h-10"
+                                className={INPUT_CLASS}
                                 placeholder="E-mail"
                                 value={employee.email || ''}
                                 onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
@@ -1489,8 +1496,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         placement="textarea-top"
                     >
                         <Textarea
-                            className={cn(fieldClass('work_experience'), 'min-h-[100px] pr-10')}
-                            placeholder="Beschrijf de werkervaring..."
+                            className={cn(fieldClass('work_experience'), 'h-auto min-h-[60px] pr-10')}
+                            placeholder="Functietitels, komma-gescheiden (bijv. Magazijnmedewerker, Teamleider)"
                             value={employeeDetails?.work_experience || ''}
                             onChange={e => handleDetailChange('work_experience', e.target.value)}
                         />
@@ -1723,6 +1730,74 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             );
                         })}
                     </div>
+                    {(() => {
+                        const current = Array.isArray(employeeDetails?.transport_type)
+                            ? employeeDetails.transport_type
+                            : [];
+                        const { custom } = splitTransportTypes(current);
+                        const commitCustom = () => {
+                            const next = addCustomTransportType(current, customTransportDraft);
+                            if (next === current) {
+                                setCustomTransportDraft('');
+                                return;
+                            }
+                            handleDetailChange('transport_type', next);
+                            setCustomTransportDraft('');
+                        };
+                        return (
+                            <div className="mt-3 space-y-2">
+                                {custom.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {custom.map((label) => (
+                                            <span
+                                                key={label}
+                                                className="inline-flex items-center gap-1.5 rounded-full border border-purple-300 bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-800"
+                                            >
+                                                {label}
+                                                <button
+                                                    type="button"
+                                                    aria-label={`Verwijder ${label}`}
+                                                    className="rounded-full px-1 text-purple-600 hover:bg-purple-200 hover:text-purple-900"
+                                                    onClick={() =>
+                                                        handleDetailChange(
+                                                            'transport_type',
+                                                            removeTransportType(current, label)
+                                                        )
+                                                    }
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                    <span className="text-xs font-medium text-gray-600 shrink-0">Andere</span>
+                                    <Input
+                                        value={customTransportDraft}
+                                        onChange={(e) => setCustomTransportDraft(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                commitCustom();
+                                            }
+                                        }}
+                                        placeholder="Bijv. Scootmobiel"
+                                        className="h-9 bg-white sm:max-w-xs"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
+                                        onClick={commitCustom}
+                                    >
+                                        Toevoegen
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Language proficiency dropdowns - Side by side */}
@@ -1888,7 +1963,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         placement="textarea-top"
                     >
                         <Textarea
-                            className={cn(fieldClass('other_employers'), 'min-h-[100px] pr-10')}
+                            className={cn(fieldClass('other_employers'), 'h-auto min-h-[100px] pr-10')}
                             placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..."
                             value={isAbsentText(employeeDetails?.other_employers) ? '' : (employeeDetails?.other_employers || '')}
                             onChange={e => handleDetailChange('other_employers', e.target.value)}

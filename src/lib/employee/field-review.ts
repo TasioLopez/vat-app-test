@@ -1,5 +1,5 @@
-import { parseWorkExperience } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 
 export type EmployeeFieldReviewStatus = 'review' | 'validated';
 export type EmployeeFieldDisplayStatus = 'empty' | EmployeeFieldReviewStatus;
@@ -121,7 +121,8 @@ function normalizeFieldValue(
     }
     case 'work_experience': {
       if (typeof value !== 'string') return null;
-      return parseWorkExperience(value);
+      const normalized = normalizeWorkExperienceTitles(value);
+      return normalized || null;
     }
     case 'transport_type':
     case 'drivers_license_type': {

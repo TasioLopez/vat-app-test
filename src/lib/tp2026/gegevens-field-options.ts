@@ -538,6 +538,55 @@ export function filterAllowedTransportTypes(values: unknown[]): string[] {
     .filter((v) => v.length > 0 && TRANSPORT_TYPE_SET.has(v));
 }
 
+export function isKnownTransportType(value: string): boolean {
+  return TRANSPORT_TYPE_SET.has(value.trim());
+}
+
+/** Split selected transport values into known checkboxes vs manual custom labels. */
+export function splitTransportTypes(values: string[] | null | undefined): {
+  known: string[];
+  custom: string[];
+} {
+  const known: string[] = [];
+  const custom: string[] = [];
+  for (const raw of values ?? []) {
+    const v = String(raw).trim();
+    if (!v) continue;
+    if (TRANSPORT_TYPE_SET.has(v)) known.push(v);
+    else custom.push(v);
+  }
+  return { known, custom };
+}
+
+/**
+ * Append a manual custom transport label.
+ * Rejects empty, duplicates (case-insensitive), and known option labels (case-insensitive).
+ * Returns the same array reference when nothing is added.
+ */
+export function addCustomTransportType(current: string[] | null | undefined, label: string): string[] {
+  const existing = current ?? [];
+  const trimmed = label.trim();
+  if (!trimmed) return existing;
+
+  const lower = trimmed.toLowerCase();
+  if ([...TRANSPORT_TYPE_OPTIONS].some((opt) => opt.toLowerCase() === lower)) {
+    return existing;
+  }
+  if (existing.some((v) => String(v).trim().toLowerCase() === lower)) {
+    return existing;
+  }
+
+  const base = existing.map((v) => String(v).trim()).filter((v) => v.length > 0);
+  return [...base, trimmed];
+}
+
+export function removeTransportType(current: string[] | null | undefined, label: string): string[] {
+  const target = label.trim();
+  return (current ?? [])
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0 && v !== target);
+}
+
 /** When intake was processed, transport_type must not be filled from other docs. */
 export function isIntakeLockedTransportField(
   intakeProcessed: boolean,

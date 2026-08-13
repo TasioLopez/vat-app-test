@@ -10,7 +10,7 @@ const v2Opening =
 const closing = buildPara1Closing('fml', '12 december 2025');
 
 const goodPara2 =
-  'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Beperkt fysiek belastend werk en geen zware tillen zijn passend. Een rustige werkomgeving zonder veel lawaai is passend. Regelmatige werktijden en geen nachtdiensten zijn passend. Geleidelijke urenopbouw is passend.';
+  'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Beperkt fysiek belastend werk en geen zware tillen zijn passend. Een rustige werkomgeving zonder veel lawaai is passend. Regelmatige werktijden en geen nachtdiensten zijn passend. Het werk biedt ruimte voor houdingsafwisseling en lichte tilbelasting.';
 
 function assemble(para1Kern: string, para2: string): string {
   return `${para1Kern} ${closing}\n\n${para2}`;
@@ -22,6 +22,7 @@ const baseCtx = {
 };
 
 const baseContent: ZoekprofielContentResult = {
+  verduidelijkingsvraag: null,
   alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond.`,
   alinea_2: goodPara2,
   belastbaarheidsdocument_type: 'fml',
@@ -36,9 +37,6 @@ const calvinVatPara1 = `${v2Opening} Werknemer is gestart met MBO-2 maar niet af
 const nikkiVatPara1 = `${v2Opening.replace('mbo-2', 'mbo-3')} Werknemer heeft VMBO afgerond en diverse cursussen gevolgd. Zij heeft werkervaring waarbij zij verantwoordelijk was voor coördineren en rapporteren.`;
 
 const lenieVatPara1 = `${v2Opening.replace('mbo-2', 'vmbo-niveau')}. Werknemer heeft 25 jaar werkervaring en beschikt over een VCA-certificaat en rijbewijs B.`;
-
-const sandraVatPara1 =
-  'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-4 niveau. Werknemer heeft middelbare school, MBO-SPW en apothekersassistent afgerond naast de PDG.';
 
 const bepVatPara2 =
   'Werknemer kan maximaal 10 kilogram tillen en maximaal 15 kilogram dragen. Zittend werk gedurende vier uur per dag is passend. Werktijden tussen 06.00 en 22.00 uur zijn passend.';
@@ -89,6 +87,53 @@ describe('validateZoekprofielOutput — A/B VAT fixtures', () => {
   });
 });
 
+describe('validateZoekprofielOutput — V1.3 body parts and forces', () => {
+  it('flags body parts in para 2', () => {
+    const para2 =
+      'Passend zijn overzichtelijke werkzaamheden. Werknemer kan knieën in een rechte houding houden. Werkzaamheden met lichte fysieke belasting zijn passend. Regelmatige werktijden zijn passend. Een rustige werkomgeving is passend. Houdingsafwisseling is passend. Lichte tilbelasting is passend.';
+    const zoekprofiel = assemble(bepChatGptPara1, para2);
+    const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
+    assert.ok(result.issues.some((i) => i.code === 'body_part_mentioned'));
+  });
+
+  it('allows schouderhoogte', () => {
+    const para2 =
+      'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden op schouderhoogte kunnen incidenteel voorkomen. Werkzaamheden met lichte fysieke belasting zijn passend. Een rustige werkomgeving is passend. Regelmatige werktijden en geen nachtdiensten zijn passend. Het werk biedt ruimte voor houdingsafwisseling.';
+    const zoekprofiel = assemble(bepChatGptPara1, para2);
+    const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
+    assert.ok(!result.issues.some((i) => i.code === 'body_part_mentioned'));
+  });
+
+  it('flags heuphoogte', () => {
+    const para2 =
+      'Passend zijn overzichtelijke werkzaamheden. Werk op heuphoogte is passend. Werkzaamheden met lichte fysieke belasting zijn passend. Een rustige werkomgeving is passend. Regelmatige werktijden zijn passend. Houdingsafwisseling is passend. Lichte tilbelasting is passend.';
+    const zoekprofiel = assemble(bepChatGptPara1, para2);
+    const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
+    assert.ok(result.issues.some((i) => i.code === 'heup_height_mentioned'));
+  });
+
+  it('flags newton / technical force', () => {
+    const para2 =
+      'Passend zijn overzichtelijke werkzaamheden. Duwen tot 50 newton is passend. Werkzaamheden met lichte fysieke belasting zijn passend. Een rustige werkomgeving is passend. Regelmatige werktijden zijn passend. Houdingsafwisseling is passend. Lichte tilbelasting is passend.';
+    const zoekprofiel = assemble(bepChatGptPara1, para2);
+    const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
+    assert.ok(
+      result.issues.some(
+        (i) => i.code === 'technical_force_value' || i.code === 'numeric_fml_copy' || i.code === 'forbidden_term'
+      )
+    );
+  });
+
+  it('warns on unsourced urenopbouw without failing alone', () => {
+    const para2 =
+      'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Een rustige werkomgeving is passend. Regelmatige werktijden en geen nachtdiensten zijn passend. Geleidelijke urenopbouw is passend.';
+    const zoekprofiel = assemble(bepChatGptPara1, para2);
+    const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
+    assert.ok(result.issues.some((i) => i.code === 'unsourced_condition' && i.warning));
+    assert.ok(!result.issues.some((i) => i.code === 'unsourced_condition' && !i.warning));
+  });
+});
+
 describe('validateZoekprofielOutput — ChatGPT-style fixtures', () => {
   it('accepts Bep ChatGPT-style para 1 (no task/forbidden issues)', () => {
     const zoekprofiel = assemble(bepChatGptPara1, goodPara2);
@@ -125,6 +170,7 @@ describe('validateZoekprofielOutput — closing', () => {
 describe('buildZoekprofielFields — closing and validation', () => {
   it('always appends FML closing when has_belastbaarheids_doc is true', () => {
     const content: ZoekprofielContentResult = {
+      verduidelijkingsvraag: null,
       alinea_1_kern: `${v2Opening} Werknemer heeft mbo-2 afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker.`,
       alinea_2: goodPara2,
       belastbaarheidsdocument_type: 'izp',
@@ -148,6 +194,7 @@ describe('buildZoekprofielFields — closing and validation', () => {
 
   it('returns validationIssues when output violates rules', () => {
     const content: ZoekprofielContentResult = {
+      verduidelijkingsvraag: null,
       alinea_1_kern: bepVatPara1,
       alinea_2: bepVatPara2,
       belastbaarheidsdocument_type: 'fml',

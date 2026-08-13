@@ -36,6 +36,18 @@ describe('parseTp2ExtractionResult', () => {
       false
     );
   });
+
+  it('keeps Aios doctor_role and osv_doctor_role', () => {
+    const result = parseTp2ExtractionResult({
+      doctor_role: 'Aios',
+      osv_doctor_role: 'Aios',
+      osv_doctor_name: 'K. Julien',
+      occupational_doctor_org: 'J. de Vries',
+    });
+    assert.equal(result.doctor_role, 'Aios');
+    assert.equal(result.osv_doctor_role, 'Aios');
+    assert.equal(result.osv_doctor_name, 'K. Julien');
+  });
 });
 
 describe('parseAdReportDateResult', () => {

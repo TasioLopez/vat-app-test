@@ -82,6 +82,11 @@ describe('formatDoctorWithRole', () => {
       'Bedrijfsarts K. Julien'
     );
   });
+
+  it('prefixes Aios without confusing with Anios', () => {
+    assert.equal(formatDoctorWithRole('J. de Vries', 'Aios'), 'Aios J. de Vries');
+    assert.equal(formatDoctorWithRole('J. de Vries', 'Anios'), 'Anios J. de Vries');
+  });
 });
 
 describe('buildSupervisiePhrase', () => {
@@ -89,6 +94,13 @@ describe('buildSupervisiePhrase', () => {
     assert.equal(
       buildSupervisiePhrase('M. Stevens', 'Arts', 'M. Montagne', 'BA'),
       'Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne'
+    );
+  });
+
+  it('combines Aios primary with BA supervisor', () => {
+    assert.equal(
+      buildSupervisiePhrase('J. de Vries', 'Aios', 'K. Julien', 'BA'),
+      'Aios J. de Vries werkend onder supervisie van Bedrijfsarts K. Julien'
     );
   });
 

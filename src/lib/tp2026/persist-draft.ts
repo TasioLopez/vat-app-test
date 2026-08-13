@@ -7,8 +7,10 @@ import {
   GEGEVENS_EMPLOYEE_KEYS,
   GEGEVENS_TP2_KEYS,
 } from '@/lib/tp2026/gegevens-autofill';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { stripTPProfileFields } from '@/lib/tp/resolve-profile-context';
+import { persistReferentFromTpData } from '@/lib/referents';
 
 export type PersistTp2026DraftParams = {
   tpInstanceId: string;
@@ -71,6 +73,14 @@ export async function persistTp2026Draft(
   const { tpInstanceId, employeeId, tpData, userId } = params;
   const shaped = stripTPProfileFields(ensureTP2026Shape(tpData as Record<string, any>));
 
+  if (shaped.work_experience != null) {
+    const normalizedWork = normalizeWorkExperienceTitles(
+      String(shaped.work_experience),
+      shaped.current_job != null ? String(shaped.current_job) : undefined
+    );
+    shaped.work_experience = normalizedWork || '';
+  }
+
   const { error: instanceError } = await (supabase as any)
     .from('tp_instances')
     .update({
@@ -113,6 +123,12 @@ export async function persistTp2026Draft(
     if (employeeError) {
       return { error: `employees: ${employeeError.message}` };
     }
+  }
+
+  // Profile-linked contact fields are stripped from data_json; write them to referents.
+  const referentResult = await persistReferentFromTpData(supabase, employeeId, tpData);
+  if (referentResult.error) {
+    return { error: referentResult.error };
   }
 
   return {};

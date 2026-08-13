@@ -61,7 +61,7 @@ describe('employee field review helpers', () => {
     assert.equal(nextContentHashMap.transport_type, undefined);
   });
 
-  it('hash normalization uses parseWorkExperience for work_experience', () => {
+  it('hash normalization uses normalizeWorkExperienceTitles for work_experience', () => {
     const a = computeEmployeeFieldHash('work_experience', {
       work_experience: '["A","B"]',
     });

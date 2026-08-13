@@ -42,6 +42,24 @@ describe('resolveTp3AutofillJson', () => {
     assert.equal(result.error, 'Waarschuwing');
     assert.equal(result.data.zoekprofiel, 'Nieuw profiel');
   });
+
+  it('does not overwrite zoekprofiel when clarification is required', () => {
+    const current = { zoekprofiel: 'bestaand zoekprofiel' };
+    const result = resolveTp3AutofillJson(
+      {
+        requires_clarification: true,
+        clarification_question: 'Welke opleiding heeft werknemer aantoonbaar afgerond?',
+        details: {},
+      },
+      current
+    );
+
+    assert.equal(
+      result.error,
+      'Welke opleiding heeft werknemer aantoonbaar afgerond?'
+    );
+    assert.equal(result.data.zoekprofiel, 'bestaand zoekprofiel');
+  });
 });
 
 describe('runAutofillSteps cancel', () => {

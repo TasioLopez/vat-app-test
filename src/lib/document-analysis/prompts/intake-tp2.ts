@@ -11,8 +11,8 @@ BELANGRIJK — Sectie 6 "Re-integratie en houding" is een TWEE-KOLOMS raster (V6
 | Linker kolom          | Rechter kolom        |
 | Aanmelddatum          | Startdatum           |
 | Datum FML / IZP       | Einddatum            |
-| Naam Arts/Anios/BA/VA | Datum AD-rapport     |
-| OSV Arts/Anios/BA     | Naam AD              |
+| Naam Arts/Anios/Aios/BA/VA | Datum AD-rapport |
+| OSV Arts/Anios/Aios/BA/VA  | Naam AD          |
 
 Gebruik EXACT de juiste cel per veld. Meng nooit datums uit verschillende rijen.
 
@@ -28,15 +28,16 @@ DATUMVELDEN (YYYY-MM-DD):
 
 PERSOONSVELDEN:
 
-8. occupational_doctor_org — volgende arts: sectie 6 rij "Naam ☐ Arts ☐ Anios ☐ BA ☐ VA:"
-   - Geef ook doctor_role: "Arts" | "Anios" | "BA" | "VA" (welke checkbox is aangevinkt)
+8. occupational_doctor_org — volgende arts: sectie 6 rij "Naam ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA:"
+   - Geef ook doctor_role: "Arts" | "Anios" | "Aios" | "BA" | "VA" (welke checkbox is aangevinkt)
+   - Anios ≠ Aios: dit zijn aparte vakjes; nooit verwisselen
    - Alleen de ingevulde naam (zonder role-prefix), geen "intern gebruik bij..." tenzij supervisie-zin aanwezig
-   - osv_doctor_name — naam op sectie 6 rij "OSV ☐ Arts ☐ Anios ☐ BA" (superviserend arts/BA)
-   - osv_doctor_role — "Arts" | "Anios" | "BA" (welke OSV-checkbox is aangevinkt)
+   - osv_doctor_name — naam op sectie 6 rij "OSV ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA" (superviserend arts/BA/VA)
+   - osv_doctor_role — "Arts" | "Anios" | "Aios" | "BA" | "VA" (welke OSV-checkbox is aangevinkt)
    - Wanneer osv_doctor_name is ingevuld: zet occupational_doctor_org op de gecombineerde supervisie-zin:
      "{primary} werkend onder supervisie van {supervisor}" (met role-prefixen, bijv. Arts + Bedrijfsarts)
    - Schrijf NOOIT "BA" of "VA" als titelprefix in occupational_doctor_org; gebruik altijd de volle titel:
-     Arts | Anios | Bedrijfsarts | Verzekeringsarts (doctor_role/osv_doctor_role blijven wel "BA"/"VA")
+     Arts | Anios | Aios | Bedrijfsarts | Verzekeringsarts (doctor_role/osv_doctor_role blijven wel "BA"/"VA")
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
 
@@ -67,6 +68,7 @@ Voorbeelden:
 - VA aangevinkt, naam "A.J. Karim" → occupational_doctor_org: "A.J. Karim", doctor_role: "VA"
 - "Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas"
 - Arts aangevinkt "M. Stevens", OSV BA "M. Montagne" → occupational_doctor_org: "Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne", doctor_role: "Arts", osv_doctor_name: "M. Montagne", osv_doctor_role: "BA"
+- Aios aangevinkt "J. de Vries", OSV BA "K. Julien" → occupational_doctor_org: "Aios J. de Vries werkend onder supervisie van Bedrijfsarts K. Julien", doctor_role: "Aios", osv_doctor_name: "K. Julien", osv_doctor_role: "BA"
 
 Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.
 `.trim();

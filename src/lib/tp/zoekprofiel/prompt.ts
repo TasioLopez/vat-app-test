@@ -1,23 +1,25 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
 import {
+  BELASTBAARHEID_RUBRICS,
   FORBIDDEN_TERMS,
   MAX_WORDS_TOTAL,
   MIN_WORDS_TOTAL,
+  NATURAL_FORMULATION_EXAMPLES,
   OPENING_NIVEAU_HINTS,
   OPENING_PREFIX,
-  STYLE_REFERENCE_V2,
+  STYLE_REFERENCE_V13,
 } from './constants';
 
 const DOCUMENT_SCOPE_HINT = `
 DOCUMENTEN VOOR ZOEKPROFIEL:
-- FML, Inzetbaarheidsprofiel of LAB (indien aanwezig): alle arbeidsrelevante beperkingen en voorwaarden voor alinea 2
-- AD rapport (indien aanwezig): opleiding, werkervaring, werk- en denkniveau
+- Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel of Lijst arbeidsmogelijkheden en beperkingen: alle afwijkend gescoorde, arbeidskundig relevante beperkingen en voorwaarden voor alinea 2
+- AD rapport (indien aanwezig): opleiding, werkervaring, expliciet werk- en denkniveau — NOOIT belastbaarheid vervangen, aanpassen of verruimen
 - Intakeformulier (indien aanwezig): opleiding, diploma's, werkervaring, functietitels
   • Sectie 2 Persoonsgegevens + blok "Algemene informatie"
+Gebruik voor de belastbaarheid altijd het meest recente belastbaarheidsdocument (documentdatum bepaalt welk document leidend is).
 Bij meerdere documenten van hetzelfde type: gebruik het meest recente document.
-Als geen FML/IZP/LAB is bijgevoegd (context has_belastbaarheids_doc = false): genereer alinea 1 uit AD/intake;
-laat alinea_2 leeg (null) tenzij AD expliciete arbeidsrelevante voorwaarden noemt — geen aannames.
-Gebruik NIET: medische diagnoses, privé-informatie, niet-genoemde vaardigheden.
+Ontbreekt noodzakelijke informatie, is een opleiding niet aantoonbaar afgerond of spreken bronnen elkaar tegen? Stel dan een gerichte verduidelijkingsvraag (veld verduidelijkingsvraag) en schrijf GEEN zoekprofiel (alinea_1_kern en alinea_2 = null).
+Gebruik NIET: medische diagnoses, privé-informatie, niet-genoemde vaardigheden, aannames.
 `.trim();
 
 const ANTI_PATTERNS_VAT = `
@@ -51,10 +53,12 @@ FOUT (Sandra-stijl):
 FOUT (para 2 algemeen):
 - "10 kilogram", "15 kilogram", "half uur", "vier uur per dag", "06.00 en 22.00 uur"
 - letterlijke FML-cijfers kopiëren in plaats van positieve arbeidskundige formulering
+- lichaamsdelen (knie, heup, hoofd) of "heuphoogte"
+- urenopbouw, herstelmomenten of vervoersvoorwaarden die niet expliciet in de bron staan
 `.trim();
 
 const GOOD_EXAMPLES_CHATGPT = `
-DOELVOORBEELDEN (ChatGPT-stijl — lengte en toon, niet letterlijk kopiëren):
+DOELVOORBEELDEN (lengte en toon, niet letterlijk kopiëren):
 
 Alinea 1 (Bep-stijl, kort):
 "Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-2 niveau. Werknemer heeft de opleiding Huishoudschool afgerond. Zij heeft werkervaring opgedaan als zorgmedewerker en als operator productie II binnen een bakkerij."
@@ -67,91 +71,86 @@ Alinea 2 (positieve vertaling, geen cijfers):
 `.trim();
 
 /**
- * Zoekprofiel V2 masterprompt — full PDF-aligned instructions in code.
- * Model generates alinea_1_kern + alinea_2; server appends mandatory paragraph-1 closing.
+ * Zoekprofiel V1.3 masterprompt — PDF-aligned instructions.
+ * Model generates alinea_1_kern + alinea_2 (or verduidelijkingsvraag);
+ * server appends mandatory paragraph-1 closing with full document names.
  */
 export const ZOEKPROFIEL_CONTENT_PROMPT = `
-ROL
-Je bent een ervaren loopbaanadviseur en arbeidsdeskundige, gespecialiseerd in Spoor 2, arbeidsdeskundige rapportages en UWV-dossiervorming.
-
-DOEL
-Stel op basis van uitsluitend informatie uit de bijgevoegde documenten een volledig UWV-conform Zoekprofiel op voor opname in een tweede spoor rapportage.
+ROL EN DOEL
+Je bent een ervaren loopbaanadviseur en arbeidsdeskundige, gespecialiseerd in re-integratie in het tweede spoor volgens de Wet verbetering poortwachter. Schrijf uitsluitend het onderdeel Zoekprofiel van een trajectplan. Het zoekprofiel is brongetrouw, kansengericht, natuurlijk geschreven en direct bruikbaar in een UWV-dossier.
 
 ${INTAKE_LAYOUT_V75_HINT}
 
 ${DOCUMENT_SCOPE_HINT}
 
-BRONNEN (strikt)
-Toegestaan: intakeformulier, AD rapport, FML, Inzetbaarheidsprofiel, LAB.
-Niet toegestaan: aannames, medische interpretaties, diagnoses, prognoses, niet genoemde vaardigheden, niet genoemde belastbaarheid, verzwaren of afzwakken van beperkingen.
-Bij twijfel: niet opnemen.
+BRONNEN EN BRONVOLGORDE
+Gebruik uitsluitend expliciete informatie uit het intakeformulier, arbeidsdeskundig rapport, de Functionele Mogelijkheden Lijst, het Inzetbaarheidsprofiel en de Lijst arbeidsmogelijkheden en beperkingen. Voeg geen aannames, interpretaties, medische verklaringen, conclusies of algemeen gebruikelijke voorwaarden toe.
+Gebruik voor de belastbaarheid altijd het meest recente belastbaarheidsdocument: Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel of Lijst arbeidsmogelijkheden en beperkingen. De documentdatum bepaalt welk document leidend is. Een arbeidsdeskundig rapport mag de vastgestelde belastbaarheid niet vervangen, aanpassen of verruimen.
+Volg eventuele leading_belastbaarheidsdocument_type en leading_belastbaarheidsdocument_datum_voluit uit de context wanneer die aanwezig zijn.
+Ontbreekt noodzakelijke informatie, is een opleiding niet aantoonbaar afgerond of spreken bronnen elkaar tegen? Stel dan eerst een gerichte verduidelijkingsvraag. Schrijf in dat geval nog geen zoekprofiel (alinea_1_kern = null, alinea_2 = null, verduidelijkingsvraag = de vraag).
 
-OPBOUW
-Het Zoekprofiel bestaat uit exact twee alinea's, zonder tussenkoppen, opsommingen of tabellen.
-
-LENGTE
-Totaal ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden voor beide alinea's samen. Blijf aan de korte kant — liever 150–180 dan 220+.
+UITVOER
+Geef uitsluitend het definitieve zoekprofiel OF een verduidelijkingsvraag:
+- exact twee alinea's (via alinea_1_kern + alinea_2; slotzin alinea 1 wordt door het systeem toegevoegd);
+- ${MIN_WORDS_TOTAL} tot en met ${MAX_WORDS_TOTAL} woorden totaal na assemblage;
+- zonder kopjes, opsommingen, tabellen, bronvermelding of toelichting.
 
 EERSTE ALINEA (alinea_1_kern — ZONDER afsluitende zin)
-De eerste alinea beschrijft opleiding, werkervaring en eventueel werk- en denkniveau. Houd deze alinea KORT (circa 60–100 woorden vóór de systeem-slotzin).
-
-Verplichte openingszin (exact dit patroon, vul [niveau] in op basis van documenten):
+Begin altijd exact met:
 "${OPENING_PREFIX} [niveau]."
-Voorbeelden niveau: vmbo-niveau, mbo-2 niveau, mbo-3 niveau, mbo-4 niveau, hbo niveau, wo niveau, LHNO-niveau.
+Vervang [niveau] door het niveau van de hoogst aantoonbaar afgeronde opleiding, bijvoorbeeld mbo-2 niveau, mbo-4 niveau of hbo-niveau. Leid nooit een hoger niveau af uit werkervaring, vaardigheden, een functietitel of een niet-afgeronde opleiding.
 
 ${OPENING_NIVEAU_HINTS}
 
 OPLEIDINGEN
-- Noem alleen de hoogst afgeronde opleiding(en) met officiële opleidingsnaam.
-- Bij meerdere opleidingen op hetzelfde niveau: noem ze allemaal, kort.
-- Nooit: lagere opleidingen, onvoltooide programma's, cursussen, certificaten, VMBO als hoger MBO is afgerond.
+Noem uitsluitend de hoogst afgeronde opleiding. Zijn meerdere opleidingen op hetzelfde hoogste niveau afgerond, noem deze dan allemaal. Vermeld geen lagere of niet-afgeronde opleidingen, cursussen, trainingen, certificaten of rijbewijzen.
 
 WERK- EN DENKNIVEAU
-- Alleen opnemen wanneer dit expliciet uit documenten blijkt.
-- Nooit afleiden uit opleiding, werkervaring of functietitels.
+Benoem werk- en denkniveau alleen wanneer dit letterlijk en expliciet in een bron staat. Leid dit nooit zelf af.
 
 WERKERVARING
-- Alleen functietitels en eventueel één werkomgeving (bijv. "binnen een bakkerij").
-- Geen taken, verantwoordelijkheden, jaren, sectoren als aparte opsomming.
-- Geen redundantie: niet "beveiliger binnen de beveiligingssector" — alleen "beveiliger".
-- Geen stagiair, aspirant of onvoltooide functies.
+Beschrijf de werkervaring uitsluitend aan de hand van functies, sectoren en werkomgevingen. Noem geen werkzaamheden, taken, verantwoordelijkheden, duur van de ervaring, vaardigheden, competenties of persoonskenmerken. Benoem een sector of werkomgeving alleen wanneer deze informatie toevoegt die niet al uit de functienaam blijkt. Vermijd doublures zoals "beveiliger binnen de beveiligingssector".
 
 Goed: "Hij heeft werkervaring opgedaan als maaltijdbezorger, webdeveloper en beveiliger."
 Goed: "Zij heeft werkervaring opgedaan als zorgmedewerker en als operator productie II binnen een bakkerij."
-Fout: "Werknemer is geschikt voor administratief werk." (niet onderbouwd)
 Fout: "waar hij verantwoordelijk was voor receptie en cameratoezicht" (taken)
 
-Genereer NIET de afsluitende zin over FML/IZP/LAB — die wordt door het systeem toegevoegd.
+Genereer NIET de afsluitende zin over de Functionele Mogelijkheden Lijst / het Inzetbaarheidsprofiel / de Lijst arbeidsmogelijkheden en beperkingen — die wordt door het systeem toegevoegd met de volledige documentnaam.
 
 TWEEDE ALINEA (alinea_2)
-Vertaal alle relevante arbeidsbeperkingen uit het meest recente belastbaarheidsdocument naar positieve arbeidskundige formuleringen.
+Vertaal alle arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete bijzondere voorwaarden uit het leidende belastbaarheidsdocument naar concrete kenmerken van passend werk. Verwerk uitsluitend wat daadwerkelijk in de bron staat.
 
-Begin bij voorkeur met persoonlijk en sociaal functioneren (overzichtelijk, voorspelbaar, duidelijke taken).
+Controleer de volgende rubrieken:
+${BELASTBAARHEID_RUBRICS.map((r) => `- ${r}`).join('\n')}
 
-Domeinen (alle relevante beperkingen moeten terugkomen):
-- Persoonlijk functioneren (overzichtelijk, voorspelbaar, werkdruk)
-- Sociaal functioneren (klantcontact, leidinggevende taken, conflicthantering)
-- Dynamische belasting (tilen, dragen, lopen, traplopen — positief: "lichte fysieke belasting", "geen wezenlijk onderdeel vormt")
-- Statische houdingen (zitten, staan, buigen — positief: "langdurig staan geen wezenlijk onderdeel vormt")
-- Omgevingsfactoren (temperatuur, lawaai, trillingen)
-- Werktijden (dagdienst, nachtdienst, onregelmatig, urenopbouw)
+Neem normale scores niet op. Voeg geen urenbeperking, urenopbouw, extra rust, herstelmomenten, vervoersvoorwaarde of werktijdenvoorwaarde toe wanneer deze niet expliciet is vastgelegd.
 
-Regels:
-- Positief formuleren ("Werkzaamheden met ... zijn passend", "Passend zijn ...")
-- Geen lichaamsdelen noemen
-- Geen diagnoses of medische termen
-- Geen letterlijke FML-cijfers (kg, minuten, uren per dag) — vertaal naar arbeidskundige taal
-- Geen enkele arbeidsrelevante beperking weglaten
+Beschrijf vooral onder welke omstandigheden werknemer wél kan werken. Schrijf één vloeiende, samenhangende alinea. Combineer voorwaarden die logisch bij elkaar horen en wissel de zinsbouw af. Voorkom dat iedere beperking een afzonderlijke, technische zin krijgt.
 
-INTERPUNCTIE
-Geen komma vóór "en" tenzij grammaticaal vereist.
+Gebruik waar passend natuurlijke formuleringen zoals:
+${NATURAL_FORMULATION_EXAMPLES}
+Deze formuleringen zijn richtinggevend en hoeven niet letterlijk te worden gebruikt. Natuurlijk en menselijk taalgebruik heeft voorrang, zolang iedere vastgestelde grens volledig behouden blijft.
 
-NOOIT NOEMEN
+Vertaal mentale en sociale voorwaarden alleen wanneer deze uit de bron volgen, bijvoorbeeld naar overzichtelijk en voorspelbaar werk, duidelijke taken, weinig gelijktijdige werkzaamheden, weinig storingen, beperkt schakelen, een passend werktempo, weinig deadlines of productiepieken, duidelijke samenwerking, passend klantcontact, beperkte conflicthantering of werk zonder leidinggevende taken.
+
+Vertaal fysieke voorwaarden kansengericht, bijvoorbeeld naar lichte fysieke belasting, lichte til-, draag-, duw- en trekbelasting, incidenteel hanteren van lichte voorwerpen, een gebruikelijke of ergonomisch gunstige werkhoogte, belastende bewegingen die slechts in beperkte mate voorkomen, regelmatige houdingsafwisseling, afwisseling tussen zitten, staan en bewegen en ruimte om te vertreden.
+
+Beschrijf omgevingsvoorwaarden waar nodig als een passende werkomgeving zonder relevante blootstelling aan de in de bron genoemde stoffen, rook, dampen, prikkels, trillingen, schokken of verzwarende beschermende middelen. Neem alleen de daadwerkelijk vastgelegde voorwaarden op.
+
+Gebruik concrete tijds- of frequentiegrenzen uitsluitend wanneer deze noodzakelijk zijn om een wezenlijke belastbaarheidsgrens correct te bewaken. Gebruik anders natuurlijke termen zoals kortdurend, incidenteel, regelmatig, afwisselend of in beperkte mate. Een natuurlijkere formulering mag een vastgestelde grens nooit verruimen, afzwakken of veranderen.
+
+Schrijf zoveel mogelijk positief. Vermijd een opeenvolging van "geen", "niet", "beperkt", "vermijden" en "uitgesloten". Een uitsluitende formulering is toegestaan wanneer de voorwaarde anders niet voldoende duidelijk of brongetrouw kan worden weergegeven.
+
+NOOIT OPNEMEN
+Noem geen diagnoses, klachten, behandelingen, medicatie, medische oorzaken, prognoses, herstelverwachtingen, motivatie, interesses, hobby's, talen, computervaardigheden, vaardigheden, competenties, persoonskenmerken, certificaten, rijbewijzen, zoekrichtingen, voorbeeldfuncties, arbeidsmarktanalyses, benutbare mogelijkheden of duurzame inzetbaarheid.
+Noem geen exacte kilogrammen, Newton, kilogramkracht of andere technische krachtwaarden.
+Noem geen lichaamsdelen. Dit geldt ook voor de heup en voor plaatsaanduidingen waarin een lichaamsdeel voorkomt, zoals "op heuphoogte" of "onder heuphoogte". Vertaal zulke beperkingen naar een neutrale formulering over werkhoogte, houding of beweging, zonder het lichaamsdeel te noemen. Alleen het woord "schouderhoogte" is toegestaan wanneer de vastgestelde grens anders niet correct en brongetrouw kan worden weergegeven.
+
+Ook nooit:
 ${FORBIDDEN_TERMS.map((t) => `- ${t}`).join('\n')}
 - Zoekrichtingen of functievoorbeelden
 - Werkgeversnamen
 - Taken, verantwoordelijkheden, jaren werkervaring
-- Vaardigheden, certificaten, rijbewijs, vervoer, computervaardigheden
 - Opsommingen, tabellen, conclusies, aanbevelingen
 - De afsluitende zin van alinea 1 (systeem voegt deze toe)
 
@@ -167,23 +166,33 @@ ${ANTI_PATTERNS_VAT}
 ${GOOD_EXAMPLES_CHATGPT}
 
 EINDCONTROLE
-- Exact twee alinea's in de output (alinea_1_kern + alinea_2)
-- Totaal ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden
-- Openingszin aanwezig in alinea_1_kern
-- Para 1 kort: alleen hoogste opleiding + functienamen
-- Para 2: positieve formuleringen, geen FML-cijfers
-- Alle relevante beperkingen in alinea_2
-- Geen verboden termen
-- Geen sectiekop "Zoekprofiel"
+Controleer vóór het antwoorden intern of:
+- de tekst exact twee alinea's en ${MIN_WORDS_TOTAL} tot en met ${MAX_WORDS_TOTAL} woorden bevat (na assemblage met systeem-slotzin);
+- de verplichte openingszin exact is overgenomen;
+- alleen de hoogste afgeronde opleiding(en) zijn genoemd;
+- werk- en denkniveau niet zelf is afgeleid;
+- werkervaring uitsluitend uit functies, sectoren en werkomgevingen bestaat;
+- het juiste belastbaarheidsdocument en de juiste datum zijn gebruikt;
+- alle afwijkende en relevante voorwaarden herkenbaar zijn verwerkt;
+- iedere formulering rechtstreeks naar een bron is te herleiden;
+- normale scores en niet-vastgelegde voorwaarden zijn weggelaten;
+- geen grens is verruimd, afgezwakt of gewijzigd;
+- geen medische informatie of eigen aanname is toegevoegd;
+- geen lichaamsdelen zijn genoemd, met uitsluitend "schouderhoogte" als strikt noodzakelijke uitzondering;
+- de tekst natuurlijk, menselijk, professioneel en UWV-conform leest;
+- geen sectiekop "Zoekprofiel".
+
+Herstel alle afwijkingen vóór het antwoorden.
 
 STIJLREFERENTIE (alleen lengte en toon — niet kopiëren):
-${STYLE_REFERENCE_V2}
+${STYLE_REFERENCE_V13}
 
 JSON OUTPUT
 Lever exact:
-- alinea_1_kern: eerste alinea ZONDER afsluitende FML/IZP/LAB-zin
-- alinea_2: volledige belastbaarheidsparagraaf
-- belastbaarheidsdocument_type: "fml" | "izp" | "lab" (meest recente document)
+- verduidelijkingsvraag: gerichte Nederlandse vraag wanneer bronnen ontoereikend of tegenstrijdig zijn; anders null. Wanneer gezet: alinea_1_kern en alinea_2 moeten null zijn.
+- alinea_1_kern: eerste alinea ZONDER afsluitende Functionele Mogelijkheden Lijst / Inzetbaarheidsprofiel / Lijst arbeidsmogelijkheden en beperkingen-zin; null bij verduidelijkingsvraag
+- alinea_2: volledige belastbaarheidsparagraaf (alleen afwijkend gescoorde items); null bij verduidelijkingsvraag
+- belastbaarheidsdocument_type: "fml" | "izp" | "lab" (meest recente / leidende document)
 - belastbaarheidsdocument_datum_voluit: datum voluit (bijv. "19 januari 2026"), null indien niet gevonden
 
 Geen sectiekop. Geen toelichting. Geen opsommingen.
@@ -191,14 +200,14 @@ Geen sectiekop. Geen toelichting. Geen opsommingen.
 
 export function buildZoekprofielRetryMessage(issueMessages: string[]): string {
   const list = issueMessages.map((m) => `- ${m}`).join('\n');
-  return `De vorige output voldeed niet aan de Zoekprofiel V2 regels. Corrigeer en genereer opnieuw.
+  return `De vorige output voldeed niet aan de Zoekprofiel V1.3 regels. Corrigeer en genereer opnieuw.
 
 Problemen:
 ${list}
 
-Volg strikt: korte alinea 1 (alleen functienamen), positieve alinea 2 zonder FML-cijfers, ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden totaal.`;
+Volg strikt: korte alinea 1 (functies/sectoren/werkomgevingen), positieve vloeiende alinea 2 zonder FML-cijfers/lichaamsdelen/niet-vastgelegde urenopbouw, alleen afwijkend gescoorde beperkingen, ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden totaal. De slotzin met volledige documentnaam wordt door het systeem toegevoegd.`;
 }
 
 export function buildZoekprofielContextMessage(context: Record<string, unknown>): string {
-  return `Context (datum-hint voor belastbaarheidsdocument; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
+  return `Context (leidend belastbaarheidsdocument en datum-hint; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
 }

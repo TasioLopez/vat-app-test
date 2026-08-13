@@ -69,7 +69,6 @@ export default function DocumentModal({
             }
 
             setStatus('Uploading file...');
-            const safeName = file.name.replace(/\s+/g, '-');
 
             const formData = new FormData();
             formData.append('file', file);

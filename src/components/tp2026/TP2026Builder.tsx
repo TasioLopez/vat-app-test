@@ -267,7 +267,9 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     {
       id: 2,
       title: '02 Gegevens',
-      renderEditor: () => <Gegevens2026Editor data={tpData} updateField={updateField} />,
+      renderEditor: () => (
+        <Gegevens2026Editor data={tpData} updateField={updateField} employeeId={employeeId} />
+      ),
       renderPreview: () => <Gegevens2026A4Pages data={previewData} />,
     },
     {

@@ -144,30 +144,19 @@ Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt
 
   zoekprofiel: {
     title: 'Zoekprofiel',
-    body: `In dit onderdeel beschrijf je de (werk)ervaring van de werknemer. Werknemer heeft ervaring als (naam functie of functies). De werknemer beschikt over een (nader te beschrijven) werk- en denkniveau. Let erop dat alles positief wordt geformuleerd en dat bijvoorbeeld lichte beperkingen niet worden vermeld. Zie hiervoor het document "Opstellen zoekprofiel".
+    body: `Het zoekprofiel is brongetrouw, kansengericht en UWV-conform. Het bestaat uit exact twee alinea's (150–225 woorden), zonder kopjes, opsommingen of tabellen.
 
-Vanwege de verminderde belastbaarheid van de werknemer, zoals vermeld in de Functionele Mogelijkheden Lijst of het Inzetbaarheidsprofiel (maak een keuze) opgesteld op 1 januari 2026, dient rekening te worden gehouden met de beperkingen op het gebied van (bijvoorbeeld persoonlijk en/of sociaal functioneren). Vul hier de beperkingen nader aan door deze concreet te beschrijven.
+Bronnen: uitsluitend intakeformulier, arbeidsdeskundig rapport, Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel en Lijst arbeidsmogelijkheden en beperkingen. Het meest recente belastbaarheidsdocument (documentdatum) is leidend. Een AD-rapport mag de belastbaarheid niet vervangen, aanpassen of verruimen. Ontbreekt informatie, is een opleiding niet aantoonbaar afgerond of spreken bronnen elkaar tegen? Stel eerst een verduidelijkingsvraag; schrijf dan nog geen zoekprofiel.
 
-Bij het beschrijven van de beperkingen en belemmeringen wordt uitgegaan van de informatie die de bedrijfsarts hierover heeft gerapporteerd. Voor het vaststellen van de uit te voeren re-integratieactiviteiten dient rekening te worden gehouden met de afgegeven prognose van de bedrijfsarts. De Functionele Mogelijkheden Lijst of het Inzetbaarheidsprofiel wordt hierbij door de loopbaanadviseur geanalyseerd en als uitgangspunt genomen.
+Eerste alinea — begin altijd exact met:
+"Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal [niveau]."
+Niveau = hoogst aantoonbaar afgeronde opleiding; nooit afleiden uit werkervaring, vaardigheden, functietitel of niet-afgeronde opleiding. Noem alleen die hoogste opleiding(en). Werk- en denkniveau alleen als letterlijk in een bron. Werkervaring uitsluitend via functies, sectoren en werkomgevingen (geen taken, jaren, vaardigheden of persoonskenmerken). Vermijd doublures zoals "beveiliger binnen de beveiligingssector".
 
-Onderstaand voorbeelden ter inspiratie:
+Eindig de eerste alinea altijd met (volledige documentnaam + datum voluit):
+"Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in de Functionele Mogelijkheden Lijst / het Inzetbaarheidsprofiel / de Lijst arbeidsmogelijkheden en beperkingen van [datum]."
 
-Voorbeeld mentale en fysieke beperkingen:
-Werknemer is aangewezen op functies op maximaal hbo-niveau. Dit sluit aan bij de kennis en ervaring die zij in de loop van haar arbeidshistorie en opleiding heeft opgebouwd. Binnen dit kader is zij in staat om geschoolde werkzaamheden te verrichten die aansluiten bij haar achtergrond als verkoopmedewerker, secretaresse, assistent accountmanager en administratief medewerker (financiën).
+Tweede alinea — vertaal alleen arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete voorwaarden uit het leidende belastbaarheidsdocument. Controleer: persoonlijk functioneren; sociaal functioneren; fysieke omgevingseisen; dynamische handelingen; statische houdingen; werktijden; overige. Neem normale scores niet op. Voeg geen urenbeperking, urenopbouw, extra rust, herstelmomenten, vervoers- of werktijdenvoorwaarde toe tenzij expliciet vastgelegd. Schrijf één vloeiende, positieve alinea over omstandigheden waarin werknemer wél kan werken.
 
-In onze zoektocht naar passende arbeid zullen we, naast haar wensen en persoonlijke profiel, ook rekening moeten houden met de beperkingen en voorwaarden in het Inzetbaarheidsprofiel, opgesteld op 1 januari 2026. Zij functioneert het beste in een werksituatie met een lage werkdruk, structuur en zo min mogelijk onderbrekingen. Zij is gebaat bij uitvoerende en ondersteunende taken zonder leidinggevende verantwoordelijkheden of direct klantcontact, waarbij rekening wordt gehouden met situaties die emotioneel belastend of conflictueus kunnen zijn. Daarnaast komt zij goed tot haar recht in functies waarin zij haar talenkennis van Engels, Oekraïens of Russisch kan benutten.
-
-Werknemer werkt het prettigst bij overwegend zittend werk, waarin zij haar houding regelmatig kan afwisselen, voornamelijk op lichaamshoogte kan werken en haar knieën in een rechte houding kan houden. Trillingen dienen te worden vermeden en haar hoofd dient in een comfortabele, natuurlijke stand gehouden te kunnen worden.
-
-Er zal worden gezocht naar fysiek licht werk waarbij het mogelijk is om van houding te wisselen en te pauzeren. Zij kan overdag gemiddeld zes uur per dag werken.
-
-Voorbeeld mentale beperkingen:
-Werknemer is aangewezen op functies op maximaal hbo-niveau. Dit sluit aan bij de kennis en ervaring die zij in de loop van haar arbeidshistorie en opleiding heeft opgebouwd. De focus ligt op functies met een licht en overzichtelijk takenpakket, waarin werkzaamheden een vast karakter hebben en binnen duidelijke grenzen worden uitgevoerd.
-
-In onze zoektocht naar passende arbeid zullen we, naast haar wensen en persoonlijke profiel, ook rekening moeten houden met de beperkingen en voorwaarden in het Inzetbaarheidsprofiel, opgesteld op 1 januari 2026. Werknemer functioneert het best in een rustige, gestructureerde werkomgeving met voorspelbare werkzaamheden, waarbij geen hoge eisen worden gesteld aan het herinneren, vasthouden en verdelen van aandacht. Zij is gebaat bij een werksituatie met duidelijke structuur en afgebakende taken. Daarnaast functioneert zij het beste in een omgeving waarin zij niet of nauwelijks wordt afgeleid door activiteiten van anderen. Wisselende taken of snel veranderende omstandigheden zijn voor haar belastend.
-
-Werknemer kan samenwerken, mits zij beschikt over een afgebakende en zelfstandig uitvoerbare deeltaak. In sociaal contact is zij kwetsbaar, vooral wanneer het gaat om het omgaan met emotionele problematiek van anderen. Hoewel zij hierin in gedrag voldoende afstand kan bewaren, lukt dit niet altijd in beleving. Conflicten kan zij uitsluitend hanteren in schriftelijk of telefonisch contact, en niet in direct verbaal contact met agressieve of onredelijke personen.
-
-Binnen deze functiekenmerken is duurzame inzetbaarheid mogelijk, mits het werkpatroon geleidelijk wordt opgebouwd en aansluit bij een bestendig werkritme binnen vastgestelde grenzen.`,
+Nooit opnemen: diagnoses, klachten, medicatie, prognoses, motivatie, interesses, hobby's, talen, computervaardigheden, certificaten, rijbewijzen, zoekrichtingen, voorbeeldfuncties, arbeidsmarktanalyses, benutbare mogelijkheden, duurzame inzetbaarheid, exacte kg/Newton/kgf, lichaamsdelen (ook niet "heuphoogte"; alleen "schouderhoogte" indien strikt noodzakelijk).`,
   },
 };

@@ -45,6 +45,12 @@ const ROLE_FRAGMENTS = [
   'supervisor',
 ];
 
+const WORK_EXPERIENCE_NARRATIVE_PATTERN =
+  /\b(?:uitvoeren|verantwoordelijk(?:\s+voor|\s+is)?|dit\s+betreft|betreft\s+onder\s+andere|onder\s+andere\s+het|bestaat\s+uit|waarbij|waarin|heeft\s+(?:ook\s+)?(?:wel\s+)?andere\s+functies|heeft\s+ook\s+wel|werkzaamheden|stofwissen|moppen|schoonmaken\s+van)\b/i;
+
+const MAX_TITLE_PART_LENGTH = 80;
+const MAX_SINGLE_BLOB_WITHOUT_COMMA = 120;
+
 function looksLikeJobTitle(text: string): boolean {
   if (JOB_TITLE_KEYWORDS.test(text)) return true;
   if (/\b(PostNL|PTT)\b/i.test(text)) return true;
@@ -60,13 +66,35 @@ function normalizeTitleText(text: string): string {
     .toLowerCase();
 }
 
-/** Reject LLM output that still looks like extraction metadata, not a job title list. */
+export function isNarrativeWorkExperienceText(text: string): boolean {
+  const trimmed = text?.trim();
+  if (!trimmed) return false;
+  if (WORK_EXPERIENCE_NARRATIVE_PATTERN.test(trimmed)) return true;
+  if (/[.!?].*[A-ZÀ-ÖØ-Þ]/.test(trimmed) && trimmed.length > 60) return true;
+  if (!/[,;]/.test(trimmed) && trimmed.length > MAX_SINGLE_BLOB_WITHOUT_COMMA) return true;
+  return false;
+}
+
+function isKeepableWorkExperienceTitle(part: string): boolean {
+  const trimmed = part.trim();
+  if (!trimmed || trimmed.length < 3) return false;
+  if (isNarrativeWorkExperienceText(trimmed)) return false;
+  if (trimmed.length > MAX_TITLE_PART_LENGTH) return false;
+  if (/^\d+\+?\s*jaar$/i.test(trimmed)) return false;
+  if (DATE_ONLY_PATTERN.test(trimmed)) return false;
+  // Short comma-list titles are fine even without role keywords; long blobs need a title cue.
+  if (trimmed.length > 50 && !looksLikeJobTitle(trimmed)) return false;
+  return true;
+}
+
+/** Reject LLM output that still looks like extraction metadata or duty prose. */
 export function isPlausibleWorkExperience(raw: string): boolean {
   const trimmed = raw?.trim();
   if (!trimmed || trimmed.length < 3) return false;
   if (/【|†source|\*\*/.test(trimmed)) return false;
   if (/(?:^|[\s,;])(?:current_job|work_experience)\s*:/i.test(trimmed)) return false;
   if (/^[\s\-•*]+/.test(trimmed)) return false;
+  if (isNarrativeWorkExperienceText(trimmed)) return false;
   return true;
 }
 
@@ -218,6 +246,58 @@ export function sanitizeWorkExperienceString(raw: string, currentJob?: string): 
   return unique.join(', ');
 }
 
+/**
+ * Normalize work_experience to comma-separated job titles only.
+ * Drops duty paragraphs / narrative; returns '' when nothing title-like remains.
+ */
+export function normalizeWorkExperienceTitles(
+  raw: string | null | undefined,
+  currentJob?: string | null
+): string {
+  if (raw == null || !String(raw).trim()) return '';
+
+  const parsed = parseWorkExperience(stripAssistantArtifacts(String(raw).trim()));
+  if (!parsed) return '';
+
+  const current =
+    currentJob != null && String(currentJob).trim()
+      ? stripAssistantArtifacts(String(currentJob).trim())
+      : undefined;
+
+  const roughParts = parsed
+    .split(/[,;\n]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const expanded: string[] = [];
+  for (const part of roughParts) {
+    if (part.length > MAX_TITLE_PART_LENGTH || isNarrativeWorkExperienceText(part)) {
+      const sentences = part
+        .split(/(?<=[.!?])\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (sentences.length > 1) {
+        expanded.push(...sentences);
+        continue;
+      }
+    }
+    expanded.push(part);
+  }
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const part of expanded) {
+    const cleaned = sanitizeWorkExperiencePart(part, current);
+    if (!cleaned || !isKeepableWorkExperienceTitle(cleaned)) continue;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(cleaned);
+  }
+
+  return unique.join(', ');
+}
+
 function extractWorkTitlesFromSection(section: string, currentJob?: string): string[] {
   const titles: string[] = [];
   for (const line of splitWorkExperienceLines(section)) {
@@ -299,13 +379,13 @@ function resolveMappedWorkExperience(
 ): string {
   const rawMapped =
     mappedWorkExperience != null && String(mappedWorkExperience).trim()
-      ? parseWorkExperience(stripAssistantArtifacts(String(mappedWorkExperience).trim()))
+      ? String(mappedWorkExperience).trim()
       : '';
 
-  if (!rawMapped || !isPlausibleWorkExperience(rawMapped)) return '';
+  if (!rawMapped) return '';
 
-  const sanitized = sanitizeWorkExperienceString(rawMapped, currentJob);
-  return sanitized && isPlausibleWorkExperience(sanitized) ? sanitized : '';
+  const normalized = normalizeWorkExperienceTitles(rawMapped, currentJob);
+  return normalized && isPlausibleWorkExperience(normalized) ? normalized : '';
 }
 
 export function resolveWorkExperienceFromIntake(

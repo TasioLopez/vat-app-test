@@ -5,13 +5,15 @@ export const DOCTOR_ROLE_PREFIXES = [
   'Bedrijfsarts',
   'Arts',
   'Anios',
+  'Aios',
 ] as const;
 
-export type DoctorRole = 'Arts' | 'Anios' | 'BA' | 'VA';
+export type DoctorRole = 'Arts' | 'Anios' | 'Aios' | 'BA' | 'VA';
 
 const DOCTOR_ROLE_PREFIX: Record<DoctorRole, string> = {
   Arts: 'Arts',
   Anios: 'Anios',
+  Aios: 'Aios',
   BA: 'Bedrijfsarts',
   VA: 'Verzekeringsarts',
 };

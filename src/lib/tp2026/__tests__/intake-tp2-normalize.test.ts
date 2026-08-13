@@ -43,6 +43,10 @@ describe('formatOccupationalDoctorOrg', () => {
     );
   });
 
+  it('prefixes Aios role without expanding', () => {
+    assert.equal(formatOccupationalDoctorOrg('J. de Vries', 'Aios'), 'Aios J. de Vries');
+  });
+
   it('keeps supervisie sentence with full titles', () => {
     const text =
       'Arts L. Bollen werkend onder supervisie van arts T. de Haas';
@@ -122,6 +126,32 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
     assert.equal(
       result.occupational_doctor_org,
       'Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne'
+    );
+    assert.equal(result.osv_doctor_name, undefined);
+    assert.equal(result.osv_doctor_role, undefined);
+  });
+
+  it('formats Aios primary with role prefix', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'J. de Vries',
+      doctor_role: 'Aios',
+    });
+
+    assert.equal(result.occupational_doctor_org, 'Aios J. de Vries');
+    assert.equal(result.doctor_role, undefined);
+  });
+
+  it('combines Aios primary and OSV BA into supervisie phrase', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'J. de Vries',
+      doctor_role: 'Aios',
+      osv_doctor_name: 'K. Julien',
+      osv_doctor_role: 'BA',
+    });
+
+    assert.equal(
+      result.occupational_doctor_org,
+      'Aios J. de Vries werkend onder supervisie van Bedrijfsarts K. Julien'
     );
     assert.equal(result.osv_doctor_name, undefined);
     assert.equal(result.osv_doctor_role, undefined);

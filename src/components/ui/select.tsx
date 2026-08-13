@@ -20,7 +20,8 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       SELECT_CLASS,
-      "flex items-center justify-between gap-2 [&>span]:line-clamp-1",
+      "flex items-center justify-between gap-2 text-left",
+      "[&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate [&>span]:text-left",
       "data-[placeholder]:text-muted-foreground",
       className
     )}

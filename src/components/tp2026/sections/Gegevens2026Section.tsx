@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { GEGEVENS_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
+import { gegevensPageCountForLegendaSpill } from '@/lib/tp2026/gegevens-pagination';
 import { boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
 import { GEGEVENS_EDITOR_SECTIONS } from '@/lib/tp2026/gegevens-editor-layout';
 import {
@@ -25,16 +28,19 @@ import {
   formatTP2026CoverVoorName,
   formatTransportation,
 } from '@/lib/utils';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { formatPhoneForDisplay, normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
-import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
+import { getWerkgeverName, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
 import { Button } from '@/components/ui/button';
+import { useToastHelpers } from '@/components/ui/Toast';
 import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import { supabase } from '@/lib/supabase/client';
+import { createAndLinkReferentFromTpData } from '@/lib/referents';
 import {
   fetchOrgDirectory,
   formatOrgUserDisplayName,
@@ -119,13 +125,17 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
 export function Gegevens2026Editor({
   data,
   updateField,
+  employeeId,
 }: {
   data: Record<string, any>;
   updateField: (key: string, value: any) => void;
+  employeeId: string;
 }) {
   const [orgUsers, setOrgUsers] = useState<OrgDirectoryUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<OrgDirectoryUser | null>(null);
+  const [creatingReferent, setCreatingReferent] = useState(false);
+  const { showSuccess, showError } = useToastHelpers();
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +180,37 @@ export function Gegevens2026Editor({
       key === 'consultant_email'
     ) {
       updateField('consultant_user_id', null);
+    }
+  };
+
+  const createNewContactPerson = async () => {
+    setCreatingReferent(true);
+    try {
+      const result = await createAndLinkReferentFromTpData(supabase, employeeId, data);
+      if (result.error) {
+        showError('Contactpersoon niet aangemaakt', result.error);
+        return;
+      }
+      const profileContext = await resolveTPProfileContext(supabase, employeeId);
+      for (const key of [
+        'client_referent_name',
+        'client_referent_phone',
+        'client_referent_email',
+        'client_referent_function',
+        'client_referent_gender',
+      ] as const) {
+        if (Object.prototype.hasOwnProperty.call(profileContext, key)) {
+          updateField(key, profileContext[key]);
+        }
+      }
+      showSuccess('Nieuwe contactpersoon opgeslagen en gekoppeld.');
+    } catch (err) {
+      showError(
+        'Contactpersoon niet aangemaakt',
+        err instanceof Error ? err.message : 'Onbekende fout'
+      );
+    } finally {
+      setCreatingReferent(false);
     }
   };
 
@@ -239,6 +280,23 @@ export function Gegevens2026Editor({
                 updateField={section.id === 'adviseur' ? updateConsultantField : updateField}
               />
             ))}
+            {section.id === 'opdrachtgever' ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <p className="text-xs text-muted-foreground">
+                  Wijzigingen worden opgeslagen in het contactpersonenprofiel van de werkgever.
+                  Gebruik de knop om een nieuwe contactpersoon aan te maken.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={creatingReferent}
+                  onClick={() => void createNewContactPerson()}
+                >
+                  {creatingReferent ? 'Opslaan…' : 'Opslaan als nieuwe contactpersoon'}
+                </Button>
+              </div>
+            ) : null}
           </div>
         </GegevensEditorSection>
       ))}
@@ -246,11 +304,41 @@ export function Gegevens2026Editor({
   );
 }
 
+function GegevensLegendaBlock() {
+  return (
+    <div>
+      <SectionBand title="Legenda" />
+      <TP2026FieldTable>
+        {GEGEVENS_LEGENDA_ITEMS.map(([abbr, desc]) => (
+          <DataRow key={abbr} label={abbr} value={desc} compact />
+        ))}
+      </TP2026FieldTable>
+    </div>
+  );
+}
+
+function GegevensFooter({
+  data,
+  pageNumber,
+}: {
+  data: Record<string, any>;
+  pageNumber: number;
+}) {
+  return (
+    <FooterIdentity
+      lastName={data.last_name}
+      firstName={data.first_name}
+      dateOfBirth={formatNLDate(data.date_of_birth)}
+      pageNumber={pageNumber}
+    />
+  );
+}
+
 function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
   return (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
+    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       <A4LogoHeader />
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-gegevens-body>
         <div>
           <SectionBand title="Gegevens werknemer" />
           <TP2026FieldTable>
@@ -268,7 +356,10 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Datum aanmelding" value={formatNLDate(data.registration_date)} />
             <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
             <DataRow label="Datum opmaak trajectplan" value={formatNLDate(data.tp_creation_date)} />
-            <DataRow label="Arbeidsdeskundig rapport aanwezig bij aanmelding" value={<PrintJaNeeChecks value={data.has_ad_report} className="text-[12px]" />} />
+            <DataRow
+              label="Arbeidsdeskundig rapport aanwezig bij aanmelding"
+              value={<PrintJaNeeChecks value={data.has_ad_report} className="text-[12px]" />}
+            />
             <DataRow
               label={adReportDateLabel(isAdReportConcept(data))}
               value={formatNLDate(data.ad_report_date)}
@@ -300,17 +391,20 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
         </div>
       </div>
 
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={pageNumber}
-      />
+      <GegevensFooter data={data} pageNumber={pageNumber} />
     </A4Page>
   );
 }
 
-function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
+function GegevensPage2({
+  data,
+  pageNumber,
+  includeLegenda,
+}: {
+  data: Record<string, any>;
+  pageNumber: number;
+  includeLegenda: boolean;
+}) {
   const vervoertekst = formatTransportation(null, data.transport_type);
   const rijbewijs = formatDriversLicense(data.drivers_license, data.drivers_license_type);
   const pcVaardigheden = formatComputerSkills(
@@ -318,15 +412,20 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
     data.computer_skills_description
   );
   return (
-    <A4Page className={TP2026_A4_PAGE_CLASS}>
+    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       <A4LogoHeader />
 
-      <div className="flex flex-col min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-gegevens-body>
         <div>
           <SectionBand title="Gegevens re-integratietraject 2e spoor" />
           <TP2026FieldTable>
             <DataRow label="Huidige functie" value={data.current_job || '—'} />
-            <DataRow label="Werkervaring" value={data.work_experience || '—'} />
+            <DataRow
+              label="Werkervaring"
+              value={
+                normalizeWorkExperienceTitles(data.work_experience, data.current_job) || '—'
+              }
+            />
             <DataRow
               label="Opleidingsniveau"
               value={formatEducationLevel(
@@ -341,7 +440,10 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Leesvaardigheid NL-taal" value={data.dutch_reading || '—'} />
             <DataRow label="Beschikking over een PC" value={boolToJaNee(data.has_computer)} />
             <DataRow label="PC-vaardigheden" value={pcVaardigheden} />
-            <DataRow label="Aantal contracturen" value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'} />
+            <DataRow
+              label="Aantal contracturen"
+              value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'}
+            />
             <DataRow
               label="Andere werkgever(s)"
               value={formatGegevensOtherEmployers(
@@ -360,52 +462,122 @@ function GegevensPage2({ data, pageNumber }: { data: Record<string, any>; pageNu
               label="Doelstelling"
               value="Het doel van dit traject is een bevredigend resultaat. Een structurele werkhervatting die zo dicht mogelijk aansluit bij de resterende functionele mogelijkheden."
             />
-            <DataRow label="Doorlooptijd" value={data.tp_lead_time ? `${data.tp_lead_time} weken` : '—'} />
+            <DataRow
+              label="Doorlooptijd"
+              value={data.tp_lead_time ? `${data.tp_lead_time} weken` : '—'}
+            />
             <DataRow label="Startdatum" value={formatNLDate(data.tp_start_date)} />
             <DataRow label="Einddatum (planning)" value={formatNLDate(data.tp_end_date)} />
           </TP2026FieldTable>
           <p className="mt-3 text-[11px] italic leading-snug text-[#6d2a96]/90">{NB_DEFAULT_GEEN_AD}</p>
         </div>
 
-        <div className="mt-7">
-          <SectionBand title="Legenda" />
-          <TP2026FieldTable>
-            {GEGEVENS_LEGENDA_ITEMS.map(([abbr, desc]) => (
-              <DataRow key={abbr} label={abbr} value={desc} compact />
-            ))}
-          </TP2026FieldTable>
-        </div>
+        {includeLegenda ? (
+          <div className="mt-7">
+            <GegevensLegendaBlock />
+          </div>
+        ) : null}
       </div>
 
-      <FooterIdentity
-        lastName={data.last_name}
-        firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
-        pageNumber={pageNumber}
-      />
+      <GegevensFooter data={data} pageNumber={pageNumber} />
     </A4Page>
   );
+}
+
+function GegevensPage3({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
+  return (
+    <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
+      <A4LogoHeader />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-gegevens-body>
+        <GegevensLegendaBlock />
+      </div>
+      <GegevensFooter data={data} pageNumber={pageNumber} />
+    </A4Page>
+  );
+}
+
+/** True when Gegevens page 2 body fits with optional Legenda (off-DOM measure). */
+export function doesGegevensPage2FitDom(
+  data: Record<string, any>,
+  includeLegenda: boolean
+): boolean {
+  if (typeof document === 'undefined') return true;
+
+  const mount = document.createElement('div');
+  mount.setAttribute('aria-hidden', 'true');
+  mount.style.cssText =
+    'position:fixed;left:-12000px;top:0;width:794px;max-width:794px;pointer-events:none;visibility:hidden;z-index:-9999;';
+  document.body.appendChild(mount);
+
+  const root = createRoot(mount);
+  try {
+    flushSync(() => {
+      root.render(
+        <GegevensPage2 data={data} pageNumber={1} includeLegenda={includeLegenda} />
+      );
+    });
+    const bodyEl = mount.querySelector('[data-gegevens-body]') as HTMLElement | null;
+    if (!bodyEl) return true;
+    const room = 10;
+    return bodyEl.scrollHeight <= bodyEl.clientHeight + room;
+  } finally {
+    root.unmount();
+    mount.remove();
+  }
 }
 
 export function Gegevens2026A4Pages({
   data,
   printMode = false,
+  onPaginationReady,
 }: {
   data: Record<string, any>;
   printMode?: boolean;
+  onPaginationReady?: () => void;
 }) {
   const { getPageNumber, setSectionPageCount } = useTP2026PageNumber();
+  const [spillLegenda, setSpillLegenda] = useState(false);
+
+  useLayoutEffect(() => {
+    const fitsWithLegenda = doesGegevensPage2FitDom(data, true);
+    const spill = !fitsWithLegenda;
+    setSpillLegenda(spill);
+    setSectionPageCount('gegevens', gegevensPageCountForLegendaSpill(spill));
+    onPaginationReady?.();
+  }, [data, setSectionPageCount, onPaginationReady]);
 
   useEffect(() => {
-    setSectionPageCount('gegevens', GEGEVENS_PAGE_COUNT);
+    if (typeof document === 'undefined') {
+      setSectionPageCount('gegevens', GEGEVENS_PAGE_COUNT);
+    }
   }, [setSectionPageCount]);
 
   const wrap = (node: React.ReactNode, key: string) =>
-    printMode ? <section className="print-page" key={key}>{node}</section> : <div key={key}>{node}</div>;
+    printMode ? (
+      <section className="print-page" key={key}>
+        {node}
+      </section>
+    ) : (
+      <div key={key}>{node}</div>
+    );
+
   return (
     <>
       {wrap(<GegevensPage1 data={data} pageNumber={getPageNumber('gegevens', 0)} />, 'g1')}
-      {wrap(<GegevensPage2 data={data} pageNumber={getPageNumber('gegevens', 1)} />, 'g2')}
+      {wrap(
+        <GegevensPage2
+          data={data}
+          pageNumber={getPageNumber('gegevens', 1)}
+          includeLegenda={!spillLegenda}
+        />,
+        'g2'
+      )}
+      {spillLegenda
+        ? wrap(
+            <GegevensPage3 data={data} pageNumber={getPageNumber('gegevens', 2)} />,
+            'g3'
+          )
+        : null}
     </>
   );
 }

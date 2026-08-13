@@ -20,6 +20,7 @@ const v2Opening =
   'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-2 niveau.';
 
 const baseContent: ZoekprofielContentResult = {
+  verduidelijkingsvraag: null,
   alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker en productiemedewerker in de logistiek en productie.`,
   alinea_2:
     'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Beperkt fysiek belastend werk is passend. Een rustige werkomgeving is passend. Regelmatige werktijden en geen nachtdiensten zijn passend.',
@@ -48,6 +49,37 @@ describe('buildZoekprofielFields', () => {
 
     const { zoekprofiel } = buildZoekprofielFields(baseCtx, content);
     assert.equal(zoekprofiel, '');
+  });
+
+  it('returns clarificationQuestion and empty zoekprofiel when verduidelijkingsvraag is set', () => {
+    const content: ZoekprofielContentResult = {
+      ...baseContent,
+      verduidelijkingsvraag: 'Welke opleiding heeft werknemer aantoonbaar afgerond?',
+      alinea_1_kern: null,
+      alinea_2: null,
+    };
+
+    const result = buildZoekprofielFields(baseCtx, content);
+    assert.equal(result.zoekprofiel, '');
+    assert.equal(
+      result.clarificationQuestion,
+      'Welke opleiding heeft werknemer aantoonbaar afgerond?'
+    );
+  });
+
+  it('prefers server leading doc type/date for closing', () => {
+    const ctx: ZoekprofielBuildContext = {
+      employee: {},
+      meta: {
+        fml_izp_lab_date_voluit: '1 januari 2025',
+        leading_belastbaarheidsdocument_type: 'izp',
+        leading_belastbaarheidsdocument_datum_voluit: '5 december 2025',
+        has_belastbaarheids_doc: true,
+      },
+    };
+    const { zoekprofiel } = buildZoekprofielFields(ctx, baseContent);
+    assert.match(zoekprofiel, /Inzetbaarheidsprofiel van 5 december 2025/);
+    assert.ok(!zoekprofiel.includes('Functionele Mogelijkheden Lijst'));
   });
 
   it('strips accidental section heading from alinea text', () => {
@@ -121,6 +153,18 @@ describe('buildPara1Closing', () => {
 });
 
 describe('resolveBelastbaarheidsdatum', () => {
+  it('prefers leading doc date over ctx.meta and model date', () => {
+    const ctx: ZoekprofielBuildContext = {
+      employee: {},
+      meta: {
+        fml_izp_lab_date_voluit: '12 december 2025',
+        leading_belastbaarheidsdocument_datum_voluit: '5 december 2025',
+      },
+    };
+    const datum = resolveBelastbaarheidsdatum(ctx, baseContent);
+    assert.equal(datum, '5 december 2025');
+  });
+
   it('prefers ctx.meta date over model-extracted date', () => {
     const datum = resolveBelastbaarheidsdatum(baseCtx, baseContent);
     assert.equal(datum, '12 december 2025');
@@ -134,7 +178,7 @@ describe('resolveBelastbaarheidsdatum', () => {
 });
 
 describe('hasV2OpeningSentence', () => {
-  it('returns true when V2 opening sentence is present', () => {
+  it('returns true when V1.3 opening sentence is present', () => {
     assert.equal(
       hasV2OpeningSentence(
         'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal mbo-2 niveau.'
@@ -143,7 +187,7 @@ describe('hasV2OpeningSentence', () => {
     );
   });
 
-  it('returns false when V2 opening sentence is missing', () => {
+  it('returns false when V1.3 opening sentence is missing', () => {
     assert.equal(
       hasV2OpeningSentence('Werknemer heeft administratieve ervaring.'),
       false
@@ -174,6 +218,7 @@ describe('parseZoekprofielContentResult', () => {
   it('coerces belastbaarheidsdocument_type to fml by default', async () => {
     const { parseZoekprofielContentResult } = await import('../schema');
     const result = parseZoekprofielContentResult({
+      verduidelijkingsvraag: null,
       alinea_1_kern: 'test',
       alinea_2: null,
       belastbaarheidsdocument_type: 'unknown',
@@ -185,11 +230,26 @@ describe('parseZoekprofielContentResult', () => {
   it('coerces belastbaarheidsdocument_type to lab', async () => {
     const { parseZoekprofielContentResult } = await import('../schema');
     const result = parseZoekprofielContentResult({
+      verduidelijkingsvraag: null,
       alinea_1_kern: 'test',
       alinea_2: null,
       belastbaarheidsdocument_type: 'lab',
       belastbaarheidsdocument_datum_voluit: null,
     });
     assert.equal(result.belastbaarheidsdocument_type, 'lab');
+  });
+
+  it('clears paragraphs when verduidelijkingsvraag is set with content', async () => {
+    const { parseZoekprofielContentResult } = await import('../schema');
+    const result = parseZoekprofielContentResult({
+      verduidelijkingsvraag: 'Welke opleiding is afgerond?',
+      alinea_1_kern: 'should be cleared',
+      alinea_2: 'also cleared',
+      belastbaarheidsdocument_type: 'fml',
+      belastbaarheidsdocument_datum_voluit: null,
+    });
+    assert.equal(result.verduidelijkingsvraag, 'Welke opleiding is afgerond?');
+    assert.equal(result.alinea_1_kern, null);
+    assert.equal(result.alinea_2, null);
   });
 });

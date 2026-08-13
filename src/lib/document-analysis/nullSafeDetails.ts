@@ -5,6 +5,7 @@ import {
   normalizeEducationLevel,
   repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
+import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { filterAllowedDriversLicenseTypes } from '@/lib/document-analysis/intakeCheckboxText';
 
 const FIELD_MAPPING: Record<string, string> = {
@@ -236,6 +237,15 @@ export function mapAndValidateEmployeeDetails(
   else delete mappedData.education_level;
   if (repaired.education_name) mappedData.education_name = repaired.education_name;
   else delete mappedData.education_name;
+
+  if (mappedData.work_experience != null) {
+    const normalized = normalizeWorkExperienceTitles(
+      String(mappedData.work_experience),
+      mappedData.current_job != null ? String(mappedData.current_job) : undefined
+    );
+    if (normalized) mappedData.work_experience = normalized;
+    else delete mappedData.work_experience;
+  }
 
   return mappedData;
 }

@@ -1,7 +1,7 @@
 export type Tp2ExtractionResult = Record<string, unknown>;
 
-const DOCTOR_ROLE_ENUM = ['Arts', 'Anios', 'BA', 'VA', null] as const;
-const OSV_ROLE_ENUM = ['Arts', 'Anios', 'BA', null] as const;
+const DOCTOR_ROLE_ENUM = ['Arts', 'Anios', 'Aios', 'BA', 'VA', null] as const;
+const OSV_ROLE_ENUM = ['Arts', 'Anios', 'Aios', 'BA', 'VA', null] as const;
 
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };

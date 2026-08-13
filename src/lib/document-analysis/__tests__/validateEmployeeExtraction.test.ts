@@ -49,6 +49,34 @@ describe('validateIntakeAlgemeneInfoExtraction', () => {
     assert.ok(result.errors.some((e) => /narratieve/i.test(e)));
   });
 
+  it('rejects duty-paragraph work_experience', () => {
+    const result = validateIntakeAlgemeneInfoExtraction(
+      {
+        work_experience:
+          'Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere het stofwissen, moppen, schoonmaken van wanden.',
+        transport_type: ['Auto'],
+        dutch_speaking: 'Goed',
+        computer_skills: '2',
+      }
+    );
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => /narratieve/i.test(e)));
+  });
+
+  it('rejects long single-blob work_experience without commas', () => {
+    const result = validateIntakeAlgemeneInfoExtraction(
+      {
+        work_experience:
+          'Een hele lange beschrijving van taken zonder functietitels en zonder komma die veel te lang is voor een titelveld en daardoor niet mag worden geaccepteerd als werkervaring',
+        transport_type: ['Auto'],
+        dutch_speaking: 'Goed',
+        computer_skills: '2',
+      }
+    );
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((e) => /narratieve/i.test(e)));
+  });
+
   it('does not hard-fail on work_experience overlapping current_job', () => {
     const result = validateIntakeAlgemeneInfoExtraction(
       {

@@ -293,11 +293,9 @@ export default function ClientsPage() {
           <h1 className="text-4xl font-bold text-gray-900">Werkgevers</h1>
           <p className="text-lg text-gray-600">Beheer werkgevers en hun gegevens</p>
         </div>
-        {userRole === 'admin' && (
-          <Link href="/dashboard/clients/new">
-            <Button size="lg">+ Nieuwe werkgever</Button>
-          </Link>
-        )}
+        <Link href="/dashboard/clients/new">
+          <Button size="lg">+ Nieuwe werkgever</Button>
+        </Link>
       </div>
 
       {clients.length > 0 && (

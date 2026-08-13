@@ -240,9 +240,28 @@ function hasMeaningfulAutofillDetails(details: Record<string, unknown>): boolean
 
 /** Maps a TP3 autofill API JSON body to a step result (handles HTTP 200 + error responses). */
 export function resolveTp3AutofillJson(
-  json: { error?: string; details?: Record<string, unknown> },
+  json: {
+    error?: string;
+    details?: Record<string, unknown>;
+    requires_clarification?: boolean;
+    clarification_question?: string;
+    warnings?: string[];
+  },
   currentData: Record<string, unknown>
 ): AutofillStepRunResult {
+  const clarification =
+    typeof json.clarification_question === 'string'
+      ? json.clarification_question.trim()
+      : '';
+
+  // V1.3 zoekprofiel: clarification means do not overwrite existing field
+  if (json.requires_clarification || clarification) {
+    return {
+      data: currentData,
+      error: clarification || 'Verduidelijking nodig vóór het zoekprofiel',
+    };
+  }
+
   const details =
     json?.details && typeof json.details === 'object' ? json.details : undefined;
   const hasDetails = details ? hasMeaningfulAutofillDetails(details) : false;
@@ -259,6 +278,8 @@ export function resolveTp3AutofillJson(
   const result: AutofillStepRunResult = { data: ensureTP2026Shape(next) };
   if (json.error) {
     result.error = json.error;
+  } else if (Array.isArray(json.warnings) && json.warnings.length > 0) {
+    result.error = json.warnings.join('; ');
   }
   return result;
 }

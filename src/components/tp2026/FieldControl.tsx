@@ -1,13 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { cn, normalizeStringArrayField } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_OPTIONS,
+  addCustomTransportType,
   normalizeEducationLevel,
+  removeTransportType,
+  splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { useDebouncedSync } from '@/hooks/useDebouncedSync';
@@ -87,39 +92,107 @@ function MultiselectControl({
     field.key === 'drivers_license_type'
       ? DRIVERS_LICENSE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
       : (field.options || []).map((opt) => ({ value: opt, label: opt }));
+  const allowCustomTransport = field.key === 'transport_type';
+  const [customDraft, setCustomDraft] = useState('');
+  const { custom } = allowCustomTransport
+    ? splitTransportTypes(selected)
+    : { custom: [] as string[] };
+
+  const commitCustom = () => {
+    const next = addCustomTransportType(selected, customDraft);
+    if (next === selected) {
+      setCustomDraft('');
+      return;
+    }
+    onChange(next);
+    setCustomDraft('');
+  };
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {options.map((option) => {
-        const isSelected = selected.includes(option.value);
-        return (
-          <label
-            key={option.value}
-            className={cn(
-              'flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors',
-              isSelected
-                ? 'border-[#6d2a96]/60 bg-[#6d2a96]/10 text-foreground'
-                : 'border-border bg-background hover:bg-muted/50',
-              disabled && 'cursor-not-allowed opacity-60'
-            )}
-          >
-            <input
-              type="checkbox"
-              className="h-4 w-4 shrink-0 rounded border-border"
-              checked={isSelected}
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {options.map((option) => {
+          const isSelected = selected.includes(option.value);
+          return (
+            <label
+              key={option.value}
+              className={cn(
+                'flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors',
+                isSelected
+                  ? 'border-[#6d2a96]/60 bg-[#6d2a96]/10 text-foreground'
+                  : 'border-border bg-background hover:bg-muted/50',
+                disabled && 'cursor-not-allowed opacity-60'
+              )}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 rounded border-border"
+                checked={isSelected}
+                disabled={disabled}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    onChange([...selected, option.value]);
+                  } else {
+                    onChange(selected.filter((v) => v !== option.value));
+                  }
+                }}
+              />
+              <span className="leading-snug">{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+      {allowCustomTransport && (
+        <div className="space-y-2">
+          {custom.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {custom.map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#6d2a96]/35 bg-[#6d2a96]/10 px-2.5 py-1 text-xs font-medium text-foreground"
+                >
+                  {label}
+                  <button
+                    type="button"
+                    aria-label={`Verwijder ${label}`}
+                    disabled={disabled}
+                    className="rounded-full px-1 text-muted-foreground hover:bg-[#6d2a96]/15 hover:text-foreground disabled:opacity-60"
+                    onClick={() => onChange(removeTransportType(selected, label))}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">Andere</span>
+            <Input
+              value={customDraft}
               disabled={disabled}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  onChange([...selected, option.value]);
-                } else {
-                  onChange(selected.filter((v) => v !== option.value));
+              onChange={(e) => setCustomDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (!disabled) commitCustom();
                 }
               }}
+              placeholder="Bijv. Scootmobiel"
+              className="h-9 sm:max-w-xs"
             />
-            <span className="leading-snug">{option.label}</span>
-          </label>
-        );
-      })}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={disabled}
+              onClick={commitCustom}
+            >
+              Toevoegen
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

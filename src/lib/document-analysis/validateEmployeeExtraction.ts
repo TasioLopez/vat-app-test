@@ -3,6 +3,7 @@ import {
   isInvalidEducationLevelToken,
   normalizeEducationLevel,
 } from '@/lib/tp2026/gegevens-field-options';
+import { isNarrativeWorkExperienceText } from '@/lib/tp2026/intake-algemene-info';
 import { INTAKE_TRANSPORT_CORRECTION_HINT } from './prompts/intake-algemene-info-extraction';
 import type { ValidationResult } from './runStructuredExtraction';
 
@@ -39,9 +40,14 @@ function validateWorkExperience(workExperience: unknown): string[] {
   if (!isPresent(workExperience)) return errors;
 
   const raw = String(workExperience).trim();
+  const narrativeMessage =
+    'work_experience mag geen narratieve tekst bevatten — alleen functietitels';
 
-  if (/heeft\s+ook\s+wel\s+andere\s+functies/i.test(raw)) {
-    errors.push('work_experience mag geen narratieve tekst bevatten — alleen functietitels');
+  if (
+    /heeft\s+ook\s+wel\s+andere\s+functies/i.test(raw) ||
+    isNarrativeWorkExperienceText(raw)
+  ) {
+    errors.push(narrativeMessage);
   }
 
   for (const part of raw.split(/[,;]+/)) {
@@ -49,6 +55,11 @@ function validateWorkExperience(workExperience: unknown): string[] {
     if (!title || title.length < 3) continue;
     if (/^\d+\+?\s*jaar$/i.test(title)) {
       errors.push('work_experience mag geen pure duur/jaar-waarden bevatten');
+    }
+    if (title.length > 120 || isNarrativeWorkExperienceText(title)) {
+      if (!errors.includes(narrativeMessage)) {
+        errors.push(narrativeMessage);
+      }
     }
   }
 

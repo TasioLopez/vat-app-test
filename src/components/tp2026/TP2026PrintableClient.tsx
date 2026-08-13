@@ -13,16 +13,19 @@ type Props = { data: Record<string, any> };
 
 export default function TP2026PrintableClient({ data: raw }: Props) {
   const data = ensureTP2026Shape(raw || {});
+  const [gegevensReady, setGegevensReady] = useState(false);
   const [basisReady, setBasisReady] = useState(false);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      console.warn('TP2026 print: basis pagination fallback (timeout)');
+      console.warn('TP2026 print: pagination fallback (timeout)');
+      setGegevensReady(true);
       setBasisReady(true);
     }, 10000);
     return () => window.clearTimeout(id);
   }, []);
 
+  const onGegevensPaginationReady = useCallback(() => setGegevensReady(true), []);
   const onBasisPaginationReady = useCallback(() => setBasisReady(true), []);
 
   return (
@@ -30,12 +33,16 @@ export default function TP2026PrintableClient({ data: raw }: Props) {
       <div
         id="tp-print-root"
         className={cn('tp-print-root', data.text_justified && 'tp-text-justified')}
-        data-ready={basisReady ? '1' : '0'}
+        data-ready={gegevensReady && basisReady ? '1' : '0'}
       >
         <section className="print-page">
           <Cover2026A4 data={data} />
         </section>
-        <Gegevens2026A4Pages data={data} printMode />
+        <Gegevens2026A4Pages
+          data={data}
+          printMode
+          onPaginationReady={onGegevensPaginationReady}
+        />
         <Basis2026A4Pages data={data} printMode onPaginationReady={onBasisPaginationReady} />
         <Bijlage1A4Pages data={data} phases={data.bijlage1_phases || []} printMode />
       </div>

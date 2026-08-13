@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     const relevantDocs = filterZoekprofielDocs(allDocs);
     if (relevantDocs.length === 0) {
       return NextResponse.json(
-        { error: "Geen intake-, AD- of FML/IZP-document gevonden", details: {} },
+        { error: "Geen intake-, AD- of belastbaarheidsdocument gevonden", details: {} },
         { status: 200 }
       );
     }
@@ -56,29 +56,43 @@ export async function GET(req: NextRequest) {
       employee: employee ?? {},
     };
 
-    let zoekprofiel: string;
-    const warnings: string[] = [];
-
-    if (!hasBelastbaarheidsDoc) {
-      warnings.push(
-        "Zoekprofiel gegenereerd zonder FML/IZP/LAB — beperkingen-sectie kan onvolledig zijn."
-      );
-    }
-
     try {
       const result = await generateZoekprofiel(openai, supabase, ctx, allDocs);
-      zoekprofiel = result.zoekprofiel;
+
+      if (result.clarificationQuestion) {
+        return NextResponse.json({
+          requires_clarification: true,
+          clarification_question: result.clarificationQuestion,
+          details: {},
+        });
+      }
+
+      const zoekprofiel = result.zoekprofiel;
+      const warnings: string[] = [];
+
       if (result.validationIssues?.length) {
         for (const issue of result.validationIssues) {
           warnings.push(`Zoekprofiel validatie: ${issue.message}`);
         }
       }
+
       if (!zoekprofiel.trim()) {
         return NextResponse.json(
           { error: "Geen zoekprofielinformatie gevonden in documenten", details: {} },
           { status: 200 }
         );
       }
+
+      await supabase.from("tp_meta").upsert(
+        { employee_id: employeeId, zoekprofiel } as any,
+        { onConflict: "employee_id" }
+      );
+
+      return NextResponse.json({
+        details: { zoekprofiel },
+        autofilled_fields: ["zoekprofiel"],
+        ...(warnings.length ? { warnings } : {}),
+      });
     } catch (error) {
       console.error("❌ Zoekprofiel generation failed:", error);
       if (error instanceof Error && error.message.includes('could not be uploaded')) {
@@ -87,19 +101,14 @@ export async function GET(req: NextRequest) {
           { status: 500 }
         );
       }
-      zoekprofiel = `[Zoekprofiel voor ${employee?.first_name || "werknemer"} ${employee?.last_name || ""} - AI generatie mislukt, handmatig invullen vereist]`;
+      return NextResponse.json(
+        {
+          error: `Zoekprofiel AI generatie mislukt voor ${employee?.first_name || "werknemer"} ${employee?.last_name || ""} — handmatig invullen vereist`,
+          details: {},
+        },
+        { status: 200 }
+      );
     }
-
-    await supabase.from("tp_meta").upsert(
-      { employee_id: employeeId, zoekprofiel } as any,
-      { onConflict: "employee_id" }
-    );
-
-    return NextResponse.json({
-      details: { zoekprofiel },
-      autofilled_fields: ["zoekprofiel"],
-      ...(warnings.length ? { warnings } : {}),
-    });
   } catch (err: any) {
     console.error("❌ zoekprofiel route error:", err);
     return NextResponse.json(

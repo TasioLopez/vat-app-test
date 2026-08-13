@@ -16,6 +16,7 @@ export type { ZoekprofielBuildContext };
 
 export type ZoekprofielFields = {
   zoekprofiel: string;
+  clarificationQuestion?: string;
   validationIssues?: ZoekprofielValidationIssue[];
 };
 
@@ -53,13 +54,26 @@ export function hasV2OpeningSentence(text: string): boolean {
   return OPENING_PATTERN.test(text.trim());
 }
 
+export const hasV13OpeningSentence = hasV2OpeningSentence;
+
 export function resolveBelastbaarheidsdatum(
   ctx: ZoekprofielBuildContext,
   content: ZoekprofielContentResult
 ): string {
   return (
+    (ctx.meta.leading_belastbaarheidsdocument_datum_voluit || '').trim() ||
     (ctx.meta.fml_izp_lab_date_voluit || '').trim() ||
     (content.belastbaarheidsdocument_datum_voluit || '').trim()
+  );
+}
+
+export function resolveBelastbaarheidsType(
+  ctx: ZoekprofielBuildContext,
+  content: ZoekprofielContentResult
+): BelastbaarheidsdocumentType {
+  return (
+    ctx.meta.leading_belastbaarheidsdocument_type ||
+    content.belastbaarheidsdocument_type
   );
 }
 
@@ -79,15 +93,23 @@ export function buildZoekprofielFields(
   ctx: ZoekprofielBuildContext,
   content: ZoekprofielContentResult
 ): ZoekprofielFields {
+  if (content.verduidelijkingsvraag) {
+    return {
+      zoekprofiel: '',
+      clarificationQuestion: content.verduidelijkingsvraag,
+    };
+  }
+
   if (!content.alinea_1_kern) {
     return { zoekprofiel: '' };
   }
 
   const alinea1Kern = stripSectionHeading(sanitizeParagraph(content.alinea_1_kern));
   const includeBelastbaarheidsClosing = ctx.meta.has_belastbaarheids_doc !== false;
+  const docType = resolveBelastbaarheidsType(ctx, content);
   const datum = includeBelastbaarheidsClosing ? resolveBelastbaarheidsdatum(ctx, content) : '';
   const closing = includeBelastbaarheidsClosing
-    ? buildPara1Closing(content.belastbaarheidsdocument_type, datum)
+    ? buildPara1Closing(docType, datum)
     : '';
   const para1 = [alinea1Kern, closing].filter(Boolean).join(' ');
 
@@ -104,8 +126,9 @@ export function buildZoekprofielFields(
     }
   }
 
+  const blockingIssues = validation.issues.filter((i) => !i.warning);
   return {
     zoekprofiel,
-    validationIssues: validation.ok ? undefined : validation.issues,
+    validationIssues: blockingIssues.length ? validation.issues : undefined,
   };
 }

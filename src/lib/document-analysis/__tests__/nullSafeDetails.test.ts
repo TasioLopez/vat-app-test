@@ -107,6 +107,23 @@ describe('mapAndValidateEmployeeDetails', () => {
     assert.equal(result.education_level, 'MBO 2');
     assert.equal(result.education_name, 'Facilitaire Dienstverlening');
   });
+
+  it('normalizes work_experience to titles only', () => {
+    const result = mapAndValidateEmployeeDetails({
+      current_job: 'Schoonmaker',
+      work_experience:
+        'Teamleider, Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere moppen.',
+    });
+    assert.equal(result.work_experience, 'Teamleider');
+  });
+
+  it('omits work_experience when only duty prose remains', () => {
+    const result = mapAndValidateEmployeeDetails({
+      work_experience:
+        'Uitvoeren van schoonmaakwerkzaamheden. Dit betreft onder andere het stofwissen.',
+    });
+    assert.equal('work_experience' in result, false);
+  });
 });
 
 describe('extractReferentFromRaw', () => {
