@@ -43,6 +43,20 @@ describe('resolveTp3AutofillJson', () => {
     assert.equal(result.data.zoekprofiel, 'Nieuw profiel');
   });
 
+  it('does not fail the step on soft warnings when details are present', () => {
+    const current = { zoekprofiel: '' };
+    const result = resolveTp3AutofillJson(
+      {
+        details: { zoekprofiel: 'AD-only profiel' },
+        warnings: ['Zoekprofiel gegenereerd zonder apart FML/IZP/LAB-document'],
+      },
+      current
+    );
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.data.zoekprofiel, 'AD-only profiel');
+  });
+
   it('does not overwrite zoekprofiel when clarification is required', () => {
     const current = { zoekprofiel: 'bestaand zoekprofiel' };
     const result = resolveTp3AutofillJson(

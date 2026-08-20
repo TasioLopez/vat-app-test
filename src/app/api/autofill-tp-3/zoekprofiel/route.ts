@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
+  AD_ONLY_BELASTBAARHEID_WARNING,
   buildZoekprofielContextFromMeta,
   filterZoekprofielDocs,
   generateZoekprofiel,
@@ -69,6 +70,10 @@ export async function GET(req: NextRequest) {
 
       const zoekprofiel = result.zoekprofiel;
       const warnings: string[] = [];
+
+      if (!hasBelastbaarheidsDoc) {
+        console.warn(`⚠️ Zoekprofiel: ${AD_ONLY_BELASTBAARHEID_WARNING}`);
+      }
 
       if (result.validationIssues?.length) {
         for (const issue of result.validationIssues) {

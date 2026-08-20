@@ -224,6 +224,6 @@ Niveau-regels voor de openingszin:
 - Leid nooit een hoger niveau af uit werkervaring, vaardigheden, een functietitel of een niet-afgeronde opleiding
 `.trim();
 
-/** Server-side clarification when no belastbaarheidsdocument is available. */
-export const MISSING_BELASTBAARHEIDSDOC_CLARIFICATION =
-  'Upload het meest recente belastbaarheidsdocument (Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel of Lijst arbeidsmogelijkheden en beperkingen) om het zoekprofiel te kunnen opstellen.';
+/** Soft notice when generating without a separate FML/IZP/LAB upload. */
+export const AD_ONLY_BELASTBAARHEID_WARNING =
+  'Zoekprofiel gegenereerd zonder apart FML/IZP/LAB-document — belastbaarheid is uit het AD-rapport (of intake) gehaald waar die expliciet staat.';

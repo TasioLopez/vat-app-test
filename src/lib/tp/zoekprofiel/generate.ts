@@ -10,7 +10,6 @@ import {
 } from './build-fields';
 import {
   DEFAULT_ZOEKPROFIEL_MODEL,
-  MISSING_BELASTBAARHEIDSDOC_CLARIFICATION,
   type BelastbaarheidsdocumentType,
 } from './constants';
 import {
@@ -277,14 +276,9 @@ export async function generateZoekprofiel(
   ctx: ZoekprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<ZoekprofielFields> {
-  // V1.3: no belastbaarheidsdoc → clarification, do not generate
-  if (ctx.meta.has_belastbaarheids_doc === false) {
-    return {
-      zoekprofiel: '',
-      clarificationQuestion: MISSING_BELASTBAARHEIDSDOC_CLARIFICATION,
-    };
-  }
-
+  // FML/IZP/LAB preferred when present; AD-only (or intake) still generates.
+  // has_belastbaarheids_doc=false omits the FML/IZP/LAB para-1 closing and
+  // tells the model to use explicit AD belastbaarheid instead of blocking.
   let workingCtx = applyLeadingDocToContext(ctx, docs);
 
   const content = await generateZoekprofielContent(openai, supabase, workingCtx, docs);

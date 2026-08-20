@@ -277,10 +277,10 @@ export function resolveTp3AutofillJson(
 
   const result: AutofillStepRunResult = { data: ensureTP2026Shape(next) };
   if (json.error) {
+    // Hard/partial API errors may still carry details; keep them as step errors.
     result.error = json.error;
-  } else if (Array.isArray(json.warnings) && json.warnings.length > 0) {
-    result.error = json.warnings.join('; ');
   }
+  // Soft `warnings` (e.g. AD-only zoekprofiel) must not mark a successful step as failed.
   return result;
 }
 

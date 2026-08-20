@@ -146,16 +146,16 @@ Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt
     title: 'Zoekprofiel',
     body: `Het zoekprofiel is brongetrouw, kansengericht en UWV-conform. Het bestaat uit exact twee alinea's (150–225 woorden), zonder kopjes, opsommingen of tabellen.
 
-Bronnen: uitsluitend intakeformulier, arbeidsdeskundig rapport, Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel en Lijst arbeidsmogelijkheden en beperkingen. Het meest recente belastbaarheidsdocument (documentdatum) is leidend. Een AD-rapport mag de belastbaarheid niet vervangen, aanpassen of verruimen. Ontbreekt informatie, is een opleiding niet aantoonbaar afgerond of spreken bronnen elkaar tegen? Stel eerst een verduidelijkingsvraag; schrijf dan nog geen zoekprofiel.
+Bronnen: intakeformulier, arbeidsdeskundig rapport, Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel en Lijst arbeidsmogelijkheden en beperkingen. Prioriteit belastbaarheid: meest recente FML/IZP/LAB wanneer aanwezig (AD mag die dan niet vervangen/verruimen). Ontbreekt een apart FML/IZP/LAB-document, gebruik dan expliciete belastbaarheid uit het AD-rapport — dat is voldoende om een zoekprofiel te schrijven. Ontbreekt opleiding of spreken bronnen elkaar tegen? Stel eerst een verduidelijkingsvraag; schrijf dan nog geen zoekprofiel.
 
 Eerste alinea — begin altijd exact met:
 "Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal [niveau]."
 Niveau = hoogst aantoonbaar afgeronde opleiding; nooit afleiden uit werkervaring, vaardigheden, functietitel of niet-afgeronde opleiding. Noem alleen die hoogste opleiding(en). Werk- en denkniveau alleen als letterlijk in een bron. Werkervaring uitsluitend via functies, sectoren en werkomgevingen (geen taken, jaren, vaardigheden of persoonskenmerken). Vermijd doublures zoals "beveiliger binnen de beveiligingssector".
 
-Eindig de eerste alinea altijd met (volledige documentnaam + datum voluit):
+Eindig de eerste alinea met (alleen wanneer FML/IZP/LAB aanwezig is; volledige documentnaam + datum voluit):
 "Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in de Functionele Mogelijkheden Lijst / het Inzetbaarheidsprofiel / de Lijst arbeidsmogelijkheden en beperkingen van [datum]."
 
-Tweede alinea — vertaal alleen arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete voorwaarden uit het leidende belastbaarheidsdocument. Controleer: persoonlijk functioneren; sociaal functioneren; fysieke omgevingseisen; dynamische handelingen; statische houdingen; werktijden; overige. Neem normale scores niet op. Voeg geen urenbeperking, urenopbouw, extra rust, herstelmomenten, vervoers- of werktijdenvoorwaarde toe tenzij expliciet vastgelegd. Schrijf één vloeiende, positieve alinea over omstandigheden waarin werknemer wél kan werken.
+Tweede alinea — vertaal alleen arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete voorwaarden uit de leidende bron (FML/IZP/LAB, of AD wanneer die ontbreekt). Controleer: persoonlijk functioneren; sociaal functioneren; fysieke omgevingseisen; dynamische handelingen; statische houdingen; werktijden; overige. Neem normale scores niet op. Voeg geen urenbeperking, urenopbouw, extra rust, herstelmomenten, vervoers- of werktijdenvoorwaarde toe tenzij expliciet vastgelegd. Schrijf één vloeiende, positieve alinea over omstandigheden waarin werknemer wél kan werken.
 
 Nooit opnemen: diagnoses, klachten, medicatie, prognoses, motivatie, interesses, hobby's, talen, computervaardigheden, certificaten, rijbewijzen, zoekrichtingen, voorbeeldfuncties, arbeidsmarktanalyses, benutbare mogelijkheden, duurzame inzetbaarheid, exacte kg/Newton/kgf, lichaamsdelen (ook niet "heuphoogte"; alleen "schouderhoogte" indien strikt noodzakelijk).`,
   },
