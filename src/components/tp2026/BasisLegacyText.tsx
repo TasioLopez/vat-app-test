@@ -3,11 +3,16 @@
 import React from 'react';
 import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { TP_BASIS_DISCLAIMER_CLASS, formatBasisFootnoteDisplay } from '@/lib/tp2026/basis-document-layout';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 /** Inline **bold**, *italic*, ***both***, and "quoted" segments (legacy TP preview semantics). */
-export function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean }): React.ReactNode {
+export function formatInlineText(
+  text: string,
+  opts?: { noQuoteWrap?: boolean; protectDates?: boolean }
+): React.ReactNode {
   if (!text) return text;
   const noQuoteWrap = opts?.noQuoteWrap ?? false;
+  const processed = opts?.protectDates ? protectDutchDatesInText(text) : text;
 
   const parts: React.ReactNode[] = [];
   let currentIdx = 0;
@@ -15,16 +20,16 @@ export function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean })
   const markdownRegex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*)/g;
   const allMatches: Array<{ index: number; length: number; type: 'quote' | 'markdown'; content: string }> = [];
   let match: RegExpExecArray | null;
-  while ((match = quoteRegex.exec(text)) !== null) {
+  while ((match = quoteRegex.exec(processed)) !== null) {
     allMatches.push({ index: match.index, length: match[0].length, type: 'quote', content: match[1] });
   }
-  while ((match = markdownRegex.exec(text)) !== null) {
+  while ((match = markdownRegex.exec(processed)) !== null) {
     allMatches.push({ index: match.index, length: match[0].length, type: 'markdown', content: match[0] });
   }
   allMatches.sort((a, b) => a.index - b.index);
 
   for (const m of allMatches) {
-    if (m.index > currentIdx) parts.push(text.slice(currentIdx, m.index));
+    if (m.index > currentIdx) parts.push(processed.slice(currentIdx, m.index));
     if (m.type === 'quote') {
       parts.push(
         <span key={m.index}>
@@ -51,27 +56,30 @@ export function formatInlineText(text: string, opts?: { noQuoteWrap?: boolean })
     }
     currentIdx = m.index + m.length;
   }
-  if (currentIdx < text.length) parts.push(text.slice(currentIdx));
-  return parts.length > 0 ? parts : text;
+  if (currentIdx < processed.length) parts.push(processed.slice(currentIdx));
+  return parts.length > 0 ? parts : processed;
 }
 
 /** Render narrative with ValentineZ logo bullets where lines use • / - / checkmarks (matches legacy Section 3). */
 export function renderTextWithLogoBullets(
   text: string,
   isPlaatsbaarheid = false,
-  eagerLoading = false
+  eagerLoading = false,
+  protectDates = false
 ): React.ReactNode {
   if (!text) return text;
 
+  const inlineOpts = { protectDates };
   const paragraphs = text.split(/\n\n+/);
 
   return paragraphs.map((para, paraIdx) => {
     const trimmedPara = para.trim();
 
     if (isPlaatsbaarheid && trimmedPara.startsWith('Dit is geen limitatieve opsomming')) {
+      const footnote = protectDates ? protectDutchDatesInText(trimmedPara) : trimmedPara;
       return (
         <p key={paraIdx} className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
-          {formatBasisFootnoteDisplay(trimmedPara)}
+          {formatBasisFootnoteDisplay(footnote)}
         </p>
       );
     }
@@ -100,27 +108,27 @@ export function renderTextWithLogoBullets(
                   const description = content.substring(colonIndex + 1).trim();
                   return (
                     <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
-                      <strong>{jobTitle}:</strong> {formatInlineText(description)}
+                      <strong>{jobTitle}:</strong> {formatInlineText(description, inlineOpts)}
                     </ValentineZLogoBulletRow>
                   );
                 }
                 return (
                   <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
-                    <strong>{formatInlineText(content)}</strong>
+                    <strong>{formatInlineText(content, inlineOpts)}</strong>
                   </ValentineZLogoBulletRow>
                 );
               }
 
               return (
                 <ValentineZLogoBulletRow key={idx} className="ml-4 mt-1" eagerLoading={eagerLoading}>
-                  {formatInlineText(content)}
+                  {formatInlineText(content, inlineOpts)}
                 </ValentineZLogoBulletRow>
               );
             }
 
             return (
               <p key={idx} className={idx > 0 ? 'mt-2' : ''}>
-                {formatInlineText(t)}
+                {formatInlineText(t, inlineOpts)}
               </p>
             );
           })}
@@ -133,7 +141,7 @@ export function renderTextWithLogoBullets(
         {lines.map((line, lineIdx) => (
           <React.Fragment key={lineIdx}>
             {lineIdx > 0 && <br />}
-            {formatInlineText(line)}
+            {formatInlineText(line, inlineOpts)}
           </React.Fragment>
         ))}
       </p>

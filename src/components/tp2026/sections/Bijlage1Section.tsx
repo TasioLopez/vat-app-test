@@ -25,7 +25,7 @@ import {
   TP2026_A4_PAGE_CLASS,
 } from '@/components/tp2026/primitives';
 import type { TP2026Bijlage1Activity, TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
-import { formatNLDate } from '@/lib/tp2026/schema';
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import {
@@ -694,7 +694,7 @@ export function Bijlage1A4Pages({
 
   const normalized = phases.map((phase, index) => normalizePhase(phase, index));
   const renderPeriodeText = (phase: TP2026Bijlage1Phase) =>
-    `Van ${formatNLDate(phase.period_from)} tot ${formatNLDate(phase.period_to)}`;
+    `Van ${formatNLDateForDoc(phase.period_from)} tot ${formatNLDateForDoc(phase.period_to)}`;
 
   const page = (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
@@ -785,7 +785,7 @@ export function Bijlage1A4Pages({
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
+        dateOfBirth={formatNLDateForDoc(data.date_of_birth)}
         pageNumber={getPageNumber('bijlage1', 0)}
       />
     </A4Page>

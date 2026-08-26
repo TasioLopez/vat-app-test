@@ -187,7 +187,7 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
   }
 
   if (isAbsentText(next.other_employers)) {
-    next.other_employers = '';
+    next.other_employers = 'Geen';
   }
 
   if (isAdReportConcept(next) && next.has_ad_report !== false) {

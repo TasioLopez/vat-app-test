@@ -14,9 +14,12 @@ import {
   formatBasisFootnoteDisplay,
   TP_BASIS_DISCLAIMER_CLASS,
 } from '@/lib/tp2026/basis-document-layout';
+import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
-function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
+function renderVisieLaFunctieBullets(bullets: string, protectDates: boolean): React.ReactNode {
   const lines = bullets.split('\n').map((l) => l.trim()).filter(Boolean);
+  const inlineOpts = { protectDates };
 
   return (
     <div className="space-y-1">
@@ -30,7 +33,7 @@ function renderVisieLaFunctieBullets(bullets: string): React.ReactNode {
             {parsed.description ? (
               <>
                 {': '}
-                <span className="font-normal">{formatInlineText(parsed.description)}</span>
+                <span className="font-normal">{formatInlineText(parsed.description, inlineOpts)}</span>
               </>
             ) : null}
           </ValentineZLogoBulletRow>
@@ -50,6 +53,9 @@ export function VisieLoopbaanadviseurBlock({
   text: string;
   className?: string;
 }) {
+  const forDocument = useTPDocumentRender();
+  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
+
   if (!text?.trim()) return null;
 
   if (!text.includes(TOELICHTING_DELIMITER)) {
@@ -64,16 +70,18 @@ export function VisieLoopbaanadviseurBlock({
 
   return (
     <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      <p className="mb-4">{toelichting}</p>
+      <p className="mb-4">{doc(toelichting)}</p>
 
       {functiesIntro || functieBullets || footer ? (
         <>
           <BasisToelichtingHeading label={FUNCTIES_SUBHEADING} />
-          {functiesIntro ? <p className="mb-2">{functiesIntro}</p> : null}
-          {functieBullets ? <div className="mt-1">{renderVisieLaFunctieBullets(functieBullets)}</div> : null}
+          {functiesIntro ? <p className="mb-2">{doc(functiesIntro)}</p> : null}
+          {functieBullets ? (
+            <div className="mt-1">{renderVisieLaFunctieBullets(functieBullets, forDocument)}</div>
+          ) : null}
           {footer ? (
             <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
-              {formatBasisFootnoteDisplay(footer)}
+              {formatBasisFootnoteDisplay(doc(footer))}
             </p>
           ) : null}
         </>

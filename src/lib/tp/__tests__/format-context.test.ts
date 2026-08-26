@@ -6,6 +6,8 @@ import {
   enrichArtsOrgFromMeta,
   expandDoctorRoleAbbreviations,
   formatDoctorWithRole,
+  resolveOccupationalDoctorLabel,
+  stripLeadingDoctorRolePrefix,
 } from '../format-context';
 
 describe('expandDoctorRoleAbbreviations', () => {
@@ -86,6 +88,59 @@ describe('formatDoctorWithRole', () => {
   it('prefixes Aios without confusing with Anios', () => {
     assert.equal(formatDoctorWithRole('J. de Vries', 'Aios'), 'Aios J. de Vries');
     assert.equal(formatDoctorWithRole('J. de Vries', 'Anios'), 'Anios J. de Vries');
+  });
+});
+
+describe('resolveOccupationalDoctorLabel', () => {
+  it('defaults to Bedrijfsarts when empty or name-only', () => {
+    assert.equal(resolveOccupationalDoctorLabel(null), 'Bedrijfsarts');
+    assert.equal(resolveOccupationalDoctorLabel(''), 'Bedrijfsarts');
+    assert.equal(resolveOccupationalDoctorLabel('S.V. Ramlochan-Tewari'), 'Bedrijfsarts');
+  });
+
+  it('uses leading title as label', () => {
+    assert.equal(
+      resolveOccupationalDoctorLabel('Verzekeringsarts A.J. Karim'),
+      'Verzekeringsarts'
+    );
+    assert.equal(resolveOccupationalDoctorLabel('Aios J. de Vries'), 'Aios');
+    assert.equal(resolveOccupationalDoctorLabel('Anios J. de Vries'), 'Anios');
+    assert.equal(resolveOccupationalDoctorLabel('Arts M. Stevens'), 'Arts');
+    assert.equal(
+      resolveOccupationalDoctorLabel('Bedrijfsarts K. Julien'),
+      'Bedrijfsarts'
+    );
+  });
+
+  it('expands VA/BA abbreviations before resolving label', () => {
+    assert.equal(resolveOccupationalDoctorLabel('VA P. Mort'), 'Verzekeringsarts');
+    assert.equal(resolveOccupationalDoctorLabel('BA K. Julien'), 'Bedrijfsarts');
+  });
+
+  it('uses primary role for supervisie phrases', () => {
+    assert.equal(
+      resolveOccupationalDoctorLabel(
+        'Aios J. de Vries werkend onder supervisie van Bedrijfsarts K. Julien'
+      ),
+      'Aios'
+    );
+  });
+});
+
+describe('stripLeadingDoctorRolePrefix', () => {
+  it('strips leading title for print value', () => {
+    assert.equal(stripLeadingDoctorRolePrefix('Aios J. de Vries'), 'J. de Vries');
+    assert.equal(
+      stripLeadingDoctorRolePrefix('Verzekeringsarts A.J. Karim'),
+      'A.J. Karim'
+    );
+  });
+
+  it('leaves name-only values unchanged', () => {
+    assert.equal(
+      stripLeadingDoctorRolePrefix('S.V. Ramlochan-Tewari'),
+      'S.V. Ramlochan-Tewari'
+    );
   });
 });
 

@@ -66,9 +66,12 @@ import {
 } from '@/lib/employee/field-review';
 import {
     DUTCH_LANGUAGE_OPTIONS,
+    EDUCATION_LEVEL_CUSTOM_SELECT_VALUE,
     EDUCATION_LEVEL_OPTIONS,
     TRANSPORT_TYPE_OPTIONS,
     addCustomTransportType,
+    coerceEducationLevelInput,
+    getCustomEducationLevelLabel,
     normalizeEducationLevel,
     removeTransportType,
     repairEmployeeEducationFields,
@@ -286,6 +289,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [tpOpening, setTpOpening] = useState(false);
     const [vgrOpening, setVgrOpening] = useState(false);
     const [customTransportDraft, setCustomTransportDraft] = useState('');
+    const [customEducationDraft, setCustomEducationDraft] = useState('');
+    const [educationAndereOpen, setEducationAndereOpen] = useState(false);
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -407,6 +412,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 phone: normalizePhoneForStorage(data.phone) ?? data.phone,
                 work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
                 drivers_license_type: parsedLicenseType,
+                other_employers: isAbsentText(data.other_employers) ? 'Geen' : data.other_employers,
                 field_review_status: undefined as any,
                 field_content_hash: undefined as any,
             };
@@ -1516,19 +1522,91 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             canValidate={canValidateField('education_level')}
                             validateLabel="Valideer opleidingsniveau"
                         >
-                            <Select
-                                value={normalizeEducationLevel(employeeDetails?.education_level) ?? undefined}
-                                onValueChange={(v) => handleDetailChange('education_level', v)}
-                            >
-                                <SelectTrigger className={cn(selectFieldClass('education_level'), 'pr-10')}>
-                                    <SelectValue placeholder="Selecteer opleidingsniveau" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {EDUCATION_LEVEL_OPTIONS.map(level => (
-                                        <SelectItem key={level} value={level}>{level}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {(() => {
+                                const storedCustom = getCustomEducationLevelLabel(
+                                    employeeDetails?.education_level
+                                );
+                                const showAndere = educationAndereOpen || !!storedCustom;
+                                const selectValue = showAndere
+                                    ? EDUCATION_LEVEL_CUSTOM_SELECT_VALUE
+                                    : normalizeEducationLevel(employeeDetails?.education_level) ??
+                                      undefined;
+                                const draftValue =
+                                    educationAndereOpen || customEducationDraft
+                                        ? customEducationDraft
+                                        : storedCustom;
+                                const commitCustomEducation = () => {
+                                    const next = coerceEducationLevelInput(draftValue);
+                                    if (!next) return;
+                                    handleDetailChange('education_level', next);
+                                    setEducationAndereOpen(false);
+                                    setCustomEducationDraft('');
+                                };
+                                return (
+                                    <div className="space-y-2">
+                                        <Select
+                                            value={selectValue}
+                                            onValueChange={(v) => {
+                                                if (v === EDUCATION_LEVEL_CUSTOM_SELECT_VALUE) {
+                                                    setEducationAndereOpen(true);
+                                                    setCustomEducationDraft(storedCustom);
+                                                    return;
+                                                }
+                                                setEducationAndereOpen(false);
+                                                setCustomEducationDraft('');
+                                                handleDetailChange('education_level', v);
+                                            }}
+                                        >
+                                            <SelectTrigger
+                                                className={cn(
+                                                    selectFieldClass('education_level'),
+                                                    'pr-10'
+                                                )}
+                                            >
+                                                <SelectValue placeholder="Selecteer opleidingsniveau" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {EDUCATION_LEVEL_OPTIONS.map((level) => (
+                                                    <SelectItem key={level} value={level}>
+                                                        {level}
+                                                    </SelectItem>
+                                                ))}
+                                                <SelectItem value={EDUCATION_LEVEL_CUSTOM_SELECT_VALUE}>
+                                                    Andere
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {showAndere && (
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                <Input
+                                                    value={draftValue}
+                                                    onChange={(e) => {
+                                                        setEducationAndereOpen(true);
+                                                        setCustomEducationDraft(e.target.value);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            commitCustomEducation();
+                                                        }
+                                                    }}
+                                                    placeholder="Bijv. Buitenlands diploma"
+                                                    className="h-9 bg-white"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
+                                                    onClick={commitCustomEducation}
+                                                >
+                                                    Toevoegen
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </ValidatableField>
                     </div>
                     <div className="space-y-2 group">
@@ -1965,7 +2043,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         <Textarea
                             className={cn(fieldClass('other_employers'), 'h-auto min-h-[100px] pr-10')}
                             placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..."
-                            value={isAbsentText(employeeDetails?.other_employers) ? '' : (employeeDetails?.other_employers || '')}
+                            value={isAbsentText(employeeDetails?.other_employers) ? 'Geen' : (employeeDetails?.other_employers || 'Geen')}
                             onChange={e => handleDetailChange('other_employers', e.target.value)}
                         />
                     </ValidatableField>

@@ -493,6 +493,46 @@ export function splitEducationNameLevel(
   };
 }
 
+/** Sentinel Select value for a manually entered education_level. */
+export const EDUCATION_LEVEL_CUSTOM_SELECT_VALUE = '__andere__' as const;
+
+export function isKnownEducationLevel(value: unknown): boolean {
+  return normalizeEducationLevel(value) != null;
+}
+
+/** Select value: known option, Andere sentinel for custom, or undefined when empty/invalid. */
+export function resolveEducationLevelSelectValue(raw: unknown): string | undefined {
+  const known = normalizeEducationLevel(raw);
+  if (known) return known;
+  const trimmed = raw != null ? String(raw).trim() : '';
+  if (!trimmed || isInvalidEducationLevelToken(trimmed) || isEducationCertification(trimmed)) {
+    return undefined;
+  }
+  return EDUCATION_LEVEL_CUSTOM_SELECT_VALUE;
+}
+
+/** Custom label when education_level is not a predetermined option. */
+export function getCustomEducationLevelLabel(raw: unknown): string {
+  if (normalizeEducationLevel(raw)) return '';
+  const trimmed = raw != null ? String(raw).trim() : '';
+  if (!trimmed || isInvalidEducationLevelToken(trimmed) || isEducationCertification(trimmed)) {
+    return '';
+  }
+  return trimmed;
+}
+
+/**
+ * Coerce a manual Andere input: known aliases → canonical option; otherwise keep trimmed custom.
+ * Returns undefined when empty / invalid / certificate.
+ */
+export function coerceEducationLevelInput(label: string): string | undefined {
+  const trimmed = label.trim();
+  if (!trimmed || isInvalidEducationLevelToken(trimmed) || isEducationCertification(trimmed)) {
+    return undefined;
+  }
+  return normalizeEducationLevel(trimmed) ?? trimmed;
+}
+
 /** Normalize education_level and education_name together (load/repair). */
 export function repairEmployeeEducationFields(
   level: unknown,
@@ -502,27 +542,41 @@ export function repairEmployeeEducationFields(
     return {};
   }
 
-  const split = splitEducationNameLevel(
-    level != null && String(level).trim() ? String(level) : undefined,
-    name != null && String(name).trim() ? String(name) : undefined
-  );
+  const rawLevel = level != null && String(level).trim() ? String(level).trim() : undefined;
+  const rawName = name != null && String(name).trim() ? String(name).trim() : undefined;
 
-  if (!split.level || isInvalidEducationLevelToken(split.level)) {
+  const split = splitEducationNameLevel(rawLevel, rawName);
+
+  let educationLevel = split.level;
+  let educationName = split.name;
+
+  // Preserve manual custom levels that do not map to EDUCATION_LEVEL_OPTIONS.
+  // AI/autofill never reaches here with customs (normalizeEducationLevel runs first).
+  if (
+    !educationLevel &&
+    rawLevel &&
+    !isInvalidEducationLevelToken(rawLevel) &&
+    !isEducationCertification(rawLevel)
+  ) {
+    educationLevel = rawLevel;
+    educationName = rawName;
+  }
+
+  if (!educationLevel || isInvalidEducationLevelToken(educationLevel)) {
     return {};
   }
 
-  let educationName = split.name;
   educationName = sanitizeEducationName(educationName);
   if (
     educationName &&
-    split.level &&
-    educationName.toLowerCase() === split.level.toLowerCase()
+    educationLevel &&
+    educationName.toLowerCase() === educationLevel.toLowerCase()
   ) {
     educationName = undefined;
   }
 
   return {
-    education_level: split.level,
+    education_level: educationLevel,
     education_name: educationName,
   };
 }

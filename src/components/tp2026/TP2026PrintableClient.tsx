@@ -7,6 +7,7 @@ import { Gegevens2026A4Pages } from '@/components/tp2026/sections/Gegevens2026Se
 import { Basis2026A4Pages } from '@/components/tp2026/Basis2026A4Measured';
 import { Bijlage1A4Pages } from '@/components/tp2026/sections/Bijlage1Section';
 import { TP2026PageNumberProvider } from '@/context/TP2026PageNumberContext';
+import { TPDocumentRenderProvider } from '@/context/TPDocumentRenderContext';
 import { cn } from '@/lib/utils';
 
 type Props = { data: Record<string, any> };
@@ -30,22 +31,24 @@ export default function TP2026PrintableClient({ data: raw }: Props) {
 
   return (
     <TP2026PageNumberProvider>
-      <div
-        id="tp-print-root"
-        className={cn('tp-print-root', data.text_justified && 'tp-text-justified')}
-        data-ready={gegevensReady && basisReady ? '1' : '0'}
-      >
-        <section className="print-page">
-          <Cover2026A4 data={data} />
-        </section>
-        <Gegevens2026A4Pages
-          data={data}
-          printMode
-          onPaginationReady={onGegevensPaginationReady}
-        />
-        <Basis2026A4Pages data={data} printMode onPaginationReady={onBasisPaginationReady} />
-        <Bijlage1A4Pages data={data} phases={data.bijlage1_phases || []} printMode />
-      </div>
+      <TPDocumentRenderProvider>
+        <div
+          id="tp-print-root"
+          className={cn('tp-print-root', data.text_justified && 'tp-text-justified')}
+          data-ready={gegevensReady && basisReady ? '1' : '0'}
+        >
+          <section className="print-page">
+            <Cover2026A4 data={data} />
+          </section>
+          <Gegevens2026A4Pages
+            data={data}
+            printMode
+            onPaginationReady={onGegevensPaginationReady}
+          />
+          <Basis2026A4Pages data={data} printMode onPaginationReady={onBasisPaginationReady} />
+          <Bijlage1A4Pages data={data} phases={data.bijlage1_phases || []} printMode />
+        </div>
+      </TPDocumentRenderProvider>
     </TP2026PageNumberProvider>
   );
 }

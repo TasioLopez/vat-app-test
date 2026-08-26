@@ -29,9 +29,10 @@ import {
   type TP2026ProfielWerknemerFieldKey,
 } from '@/lib/tp2026/basis-profiel-field-order';
 import { getAtomMarginClass, Spoor2SubsectionUnit } from '@/components/tp2026/Spoor2SectionUnits';
-import { formatNLDate } from '@/lib/tp2026/schema';
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { Basis2026InhoudsopgavePage } from '@/components/tp2026/Basis2026InhoudsopgavePage';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
+import { useDocumentText, useTPDocumentRender } from '@/context/TPDocumentRenderContext';
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
@@ -451,6 +452,7 @@ function InleidingAtomPreview({
 }) {
   const sub = String(data.inleiding_sub || '').trim();
   const adReportConcept = isAdReportConcept(data);
+  const avgDisclaimer = useDocumentText(NB_AVG_INLEIDING);
 
   return (
     <div>
@@ -462,7 +464,7 @@ function InleidingAtomPreview({
           <span className="text-[12px] text-neutral-600">— nog niet ingevuld —</span>
         ) : null}
         {atom.showAvgDisclaimer ? (
-          <p className="mt-3 text-[12px] font-semibold text-neutral-900">{NB_AVG_INLEIDING}</p>
+          <p className="mt-3 text-[12px] font-semibold text-neutral-900">{avgDisclaimer}</p>
         ) : null}
         {atom.showToelichting && sub ? (
           <div className="mt-4">
@@ -490,6 +492,8 @@ function TextBlockBody({
   adReportConcept?: boolean;
 }) {
   const trimmed = String(markdown || '').trim();
+  const docTrimmed = useDocumentText(trimmed);
+  const forDocument = useTPDocumentRender();
 
   if (variant === 'powStatic') {
     return <PerspectiefOpWerkBlock />;
@@ -510,7 +514,7 @@ function TextBlockBody({
   }
 
   if (variant === 'adNb') {
-    return <span className="text-[12px] font-bold text-neutral-900">{trimmed}</span>;
+    return <span className="text-[12px] font-bold text-neutral-900">{docTrimmed}</span>;
   }
 
   if (variant === 'adAdvies') {
@@ -546,7 +550,7 @@ function TextBlockBody({
   if (variant === 'logo') {
     return (
       <div className="tp-body-prose text-[12px] leading-relaxed text-neutral-900">
-        {renderTextWithLogoBullets(trimmed, fieldKey === 'plaats', true)}
+        {renderTextWithLogoBullets(trimmed, fieldKey === 'plaats', true, forDocument)}
       </div>
     );
   }
@@ -722,7 +726,7 @@ function BasisBodyPage({
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
+        dateOfBirth={formatNLDateForDoc(data.date_of_birth)}
         pageNumber={pageNumber}
       />
     </A4Page>

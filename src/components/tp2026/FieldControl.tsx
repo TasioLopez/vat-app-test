@@ -9,7 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_OPTIONS,
+  EDUCATION_LEVEL_CUSTOM_SELECT_VALUE,
+  EDUCATION_LEVEL_OPTIONS,
   addCustomTransportType,
+  coerceEducationLevelInput,
+  getCustomEducationLevelLabel,
   normalizeEducationLevel,
   removeTransportType,
   splitTransportTypes,
@@ -32,6 +36,94 @@ type Props = {
 
 function normalizeMultiselectValue(value: unknown): string[] {
   return normalizeStringArrayField(value);
+}
+
+function EducationLevelSelectControl({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: unknown;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const storedCustom = getCustomEducationLevelLabel(value);
+  const [andereOpen, setAndereOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const showAndere = andereOpen || !!storedCustom;
+  const selectValue = showAndere
+    ? EDUCATION_LEVEL_CUSTOM_SELECT_VALUE
+    : normalizeEducationLevel(value) ?? undefined;
+  const draftValue = andereOpen || draft ? draft : storedCustom;
+
+  const commitCustom = () => {
+    const next = coerceEducationLevelInput(draftValue);
+    if (!next) return;
+    onChange(next);
+    setAndereOpen(false);
+    setDraft('');
+  };
+
+  return (
+    <div className="space-y-2">
+      <Select
+        value={selectValue}
+        disabled={disabled}
+        onValueChange={(v) => {
+          if (v === EDUCATION_LEVEL_CUSTOM_SELECT_VALUE) {
+            setAndereOpen(true);
+            setDraft(storedCustom);
+            return;
+          }
+          setAndereOpen(false);
+          setDraft('');
+          onChange(v);
+        }}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Selecteer" />
+        </SelectTrigger>
+        <SelectContent>
+          {EDUCATION_LEVEL_OPTIONS.map((level) => (
+            <SelectItem key={level} value={level}>
+              {level}
+            </SelectItem>
+          ))}
+          <SelectItem value={EDUCATION_LEVEL_CUSTOM_SELECT_VALUE}>Andere</SelectItem>
+        </SelectContent>
+      </Select>
+      {showAndere && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            value={draftValue}
+            disabled={disabled}
+            onChange={(e) => {
+              setAndereOpen(true);
+              setDraft(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!disabled) commitCustom();
+              }
+            }}
+            placeholder="Bijv. Buitenlands diploma"
+            className="h-9 sm:max-w-xs"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            disabled={disabled}
+            onClick={commitCustom}
+          >
+            Toevoegen
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CompactBooleanControl({
@@ -327,6 +419,24 @@ export default function FieldControl({
   if (field.type === 'select' && field.options?.length) {
     const isComputerSkills = field.key === 'computer_skills';
     const isEducationLevel = field.key === 'education_level';
+
+    if (isEducationLevel) {
+      return (
+        <FieldShell
+          field={field}
+          layout={layout}
+          className={className}
+          control={
+            <EducationLevelSelectControl
+              value={value}
+              onChange={(x) => onChange(x)}
+              disabled={disabled}
+            />
+          }
+        />
+      );
+    }
+
     const selectOptions = isComputerSkills
       ? COMPUTER_SKILLS_OPTIONS.map((o) => ({
           value: o.value,
@@ -334,9 +444,7 @@ export default function FieldControl({
         }))
       : field.options.map((opt) => ({ value: opt, label: opt }));
 
-    const selectValue = isEducationLevel
-      ? normalizeEducationLevel(value) ?? undefined
-      : value || undefined;
+    const selectValue = value || undefined;
 
     return (
       <FieldShell

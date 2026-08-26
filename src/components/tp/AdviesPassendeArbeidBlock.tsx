@@ -5,6 +5,8 @@ import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
 import { patchAdviesIntroForConcept } from '@/lib/tp/ad-report-wording';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
+import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 /**
  * Renders Advies passende arbeid: intro + italic AD quote only.
@@ -18,12 +20,15 @@ export function AdviesPassendeArbeidBlock({
   className?: string;
   adReportConcept?: boolean;
 }) {
+  const forDocument = useTPDocumentRender();
+  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
+
   if (!text?.trim()) return null;
 
   if (text.trim().startsWith('N.B.')) {
     return (
       <div className={className}>
-        <span className="text-[12px] font-bold text-neutral-900">{text.trim()}</span>
+        <span className="text-[12px] font-bold text-neutral-900">{doc(text.trim())}</span>
       </div>
     );
   }
@@ -42,7 +47,7 @@ export function AdviesPassendeArbeidBlock({
 
   return (
     <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{intro}</p> : null}
+      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{doc(intro)}</p> : null}
       {quote ? (
         <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />

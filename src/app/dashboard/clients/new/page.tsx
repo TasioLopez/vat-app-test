@@ -58,6 +58,15 @@ export default function AddClientPage() {
     };
 
     const submitClient = useCallback(async () => {
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            throw new Error('Not authenticated. Please log in again.');
+        }
+
         const { data: newClient, error: clientError } = await supabase
             .from('clients')
             .insert({
@@ -72,6 +81,18 @@ export default function AddClientPage() {
 
         if (clientError) {
             throw new Error(clientError.message);
+        }
+
+        if (newClient?.id) {
+            const { error: assignError } = await supabase.from('user_clients').insert({
+                user_id: user.id,
+                client_id: newClient.id,
+            });
+            if (assignError) {
+                throw new Error(
+                    'Werkgever aangemaakt, maar toegang toewijzen mislukt: ' + assignError.message
+                );
+            }
         }
 
         if (newClient?.id && (form.referent_first_name?.trim() || form.referent_last_name?.trim())) {

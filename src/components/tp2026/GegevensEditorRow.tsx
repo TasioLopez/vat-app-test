@@ -10,6 +10,7 @@ import {
 } from '@/lib/tp2026/gegevens-editor-layout';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { resolveOccupationalDoctorLabel } from '@/lib/tp/format-context';
 import { hasFilledAdReportDate } from '@/lib/tp/intake-ad-presence';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
@@ -60,10 +61,19 @@ export function GegevensEditorRow({
       <div className={gridClass}>
         {visibleKeys.map((key) => {
           const fieldDef = getGegevensFieldDef(key);
-          const field: TP2026FieldDef =
-            key === 'ad_report_date'
-              ? { ...fieldDef, label: adReportDateLabel(isAdReportConcept(data)) }
-              : fieldDef;
+          let field: TP2026FieldDef = fieldDef;
+          if (key === 'ad_report_date') {
+            field = { ...fieldDef, label: adReportDateLabel(isAdReportConcept(data)) };
+          } else if (key === 'occupational_doctor_org') {
+            field = {
+              ...fieldDef,
+              label: resolveOccupationalDoctorLabel(
+                typeof data.occupational_doctor_org === 'string'
+                  ? data.occupational_doctor_org
+                  : null
+              ),
+            };
+          }
           const props = resolveFieldProps(field);
 
           if (key === 'computer_skills') {

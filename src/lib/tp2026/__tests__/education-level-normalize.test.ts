@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import { mapAndValidateEmployeeDetails } from '@/lib/document-analysis/nullSafeDetails';
 import { formatEducationLevel } from '@/lib/utils';
 import {
+  EDUCATION_LEVEL_CUSTOM_SELECT_VALUE,
   EDUCATION_LEVEL_OPTIONS,
+  coerceEducationLevelInput,
   detectEducationLineFinished,
   extractEducationLevelsInTextOrder,
   normalizeEducationLevel,
   parseIntakeEducationRows,
   repairEmployeeEducationFields,
   resolveEducationLevelFromIntake,
+  resolveEducationLevelSelectValue,
   resolveHighestFinishedEducation,
   sliceEducationSection,
   splitEducationNameLevel,
@@ -194,12 +197,42 @@ describe('repairEmployeeEducationFields', () => {
     assert.deepEqual(repairEmployeeEducationFields('nee', undefined), {});
     assert.deepEqual(repairEmployeeEducationFields('nei', undefined), {});
   });
+
+  it('preserves manual custom education_level', () => {
+    const result = repairEmployeeEducationFields('Buitenlands diploma', 'Fysiotherapie');
+    assert.equal(result.education_level, 'Buitenlands diploma');
+    assert.equal(result.education_name, 'Fysiotherapie');
+  });
+
+  it('does not treat certificates as custom education_level', () => {
+    assert.deepEqual(repairEmployeeEducationFields('VCA', undefined), {});
+  });
+});
+
+describe('education level custom helpers', () => {
+  it('resolves select value for known and custom', () => {
+    assert.equal(resolveEducationLevelSelectValue('MBO-2'), 'MBO 2');
+    assert.equal(resolveEducationLevelSelectValue('Buitenlands diploma'), EDUCATION_LEVEL_CUSTOM_SELECT_VALUE);
+    assert.equal(resolveEducationLevelSelectValue(''), undefined);
+  });
+
+  it('coerces Andere input to known or custom', () => {
+    assert.equal(coerceEducationLevelInput('  mbo-2  '), 'MBO 2');
+    assert.equal(coerceEducationLevelInput('Buitenlands diploma'), 'Buitenlands diploma');
+    assert.equal(coerceEducationLevelInput('nee'), undefined);
+    assert.equal(coerceEducationLevelInput('VCA'), undefined);
+  });
 });
 
 describe('mapAndValidateEmployeeDetails education_level', () => {
   it('normalizes MBO-2 on autofill map', () => {
     const result = mapAndValidateEmployeeDetails({ education_level: 'MBO-2' });
     assert.equal(result.education_level, 'MBO 2');
+  });
+
+  it('does not invent free-text custom education_level from autofill', () => {
+    const result = mapAndValidateEmployeeDetails({ education_level: 'Buitenlands diploma' });
+    assert.equal('education_level' in result, false);
   });
 });
 
@@ -211,5 +244,14 @@ describe('ensureTP2026Shape education repair', () => {
     });
     assert.equal(shaped.education_level, 'MBO 2');
     assert.equal(shaped.education_name, 'Facilitaire Dienstverlening');
+  });
+
+  it('keeps manual custom education_level in tp data', () => {
+    const shaped = ensureTP2026Shape({
+      education_level: 'Buitenlands diploma',
+      education_name: 'Fysiotherapie',
+    });
+    assert.equal(shaped.education_level, 'Buitenlands diploma');
+    assert.equal(shaped.education_name, 'Fysiotherapie');
   });
 });

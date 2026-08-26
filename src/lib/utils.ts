@@ -287,7 +287,19 @@ export function isAbsentText(value: unknown): boolean {
   const s = value.trim();
   if (!s) return true;
   const lower = s.toLowerCase();
-  return lower === 'null' || lower === 'undefined' || lower === 'none' || lower === 'geen' || s === '—' || s === '-';
+  return (
+    lower === 'null' ||
+    lower === 'undefined' ||
+    lower === 'none' ||
+    lower === 'geen' ||
+    lower === 'nee' ||
+    lower === 'nei' ||
+    lower === 'n.v.t.' ||
+    lower === 'nvt' ||
+    lower === 'n/a' ||
+    s === '—' ||
+    s === '-'
+  );
 }
 
 /**

@@ -5,6 +5,7 @@ import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody
 import { SalmonSectionBar, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { TP_SPOOR2_SECTION_TITLE } from '@/lib/tp2026/basis-spoor2-begeleiding';
+import { useDocumentText } from '@/context/TPDocumentRenderContext';
 
 export const TP_SPOOR2_COLOR_SALMON = '#df9180';
 export const TP_SPOOR2_COLOR_HEADING = '#171717';
@@ -36,9 +37,10 @@ export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefine
 }
 
 export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
+  const display = useDocumentText(subText.trim());
   return (
     <ValentineZLogoBulletRow className="mt-2 text-[12px] leading-tight text-neutral-900">
-      {subText.trim()}
+      {display}
     </ValentineZLogoBulletRow>
   );
 }

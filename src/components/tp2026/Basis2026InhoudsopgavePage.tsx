@@ -9,7 +9,7 @@ import {
   TP2026_SECTION_BAR_CLASS,
   ValentineZLogoBulletRow,
 } from '@/components/tp2026/primitives';
-import { formatNLDate } from '@/lib/tp2026/schema';
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import {
   BASIS_INHOUDSOPGAVE_INTRO_ITEMS,
   BASIS_INHOUDSOPGAVE_SECTIONS,
@@ -73,7 +73,7 @@ export function Basis2026InhoudsopgavePage({
       <FooterIdentity
         lastName={data.last_name}
         firstName={data.first_name}
-        dateOfBirth={formatNLDate(data.date_of_birth)}
+        dateOfBirth={formatNLDateForDoc(data.date_of_birth)}
         pageNumber={pageNumber}
       />
     </A4Page>

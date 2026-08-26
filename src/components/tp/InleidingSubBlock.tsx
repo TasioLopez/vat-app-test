@@ -7,6 +7,8 @@ import {
   stripInleidingSubQuoteWrapping,
 } from '@/lib/tp/inleiding/build-fields';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
+import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 const NB_PATTERN = 'nog geen AD-rapport';
 
@@ -24,12 +26,15 @@ export function InleidingSubBlock({
   className?: string;
   adReportConcept?: boolean;
 }) {
+  const forDocument = useTPDocumentRender();
+  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
+
   if (!text) return null;
 
   if (text.includes('N.B.:') && text.includes(NB_PATTERN)) {
     return (
       <div className="tp-body-prose">
-        <p className={className}>{text}</p>
+        <p className={className}>{doc(text)}</p>
       </div>
     );
   }
@@ -40,7 +45,7 @@ export function InleidingSubBlock({
   if (quote) {
     return (
       <div className={`tp-body-prose ${className}`.trim()}>
-        <strong>{patchedIntro}</strong>
+        <strong>{doc(patchedIntro)}</strong>
         <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
         </div>
@@ -51,14 +56,14 @@ export function InleidingSubBlock({
   if (patchedIntro !== text.trim()) {
     return (
       <div className={`tp-body-prose ${className}`.trim()}>
-        <strong>{patchedIntro}</strong>
+        <strong>{doc(patchedIntro)}</strong>
       </div>
     );
   }
 
   return (
     <div className="tp-body-prose">
-      <p className={className}>{text}</p>
+      <p className={className}>{doc(text)}</p>
     </div>
   );
 }

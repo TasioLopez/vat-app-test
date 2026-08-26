@@ -5,6 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import type { Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 const basisSanitizeSchema = defaultSchema;
 
@@ -57,6 +59,9 @@ export function Basis2026MarkdownBody({
   markdown: string;
   withInlineQuotes?: boolean;
 }) {
+  const forDocument = useTPDocumentRender();
+  const md = forDocument ? protectDutchDatesInText(markdown) : markdown;
+
   return (
     <div
       className={cn(
@@ -65,7 +70,7 @@ export function Basis2026MarkdownBody({
       )}
     >
       <ReactMarkdown rehypePlugins={[[rehypeSanitize, basisSanitizeSchema]]} components={components}>
-        {markdown}
+        {md}
       </ReactMarkdown>
     </div>
   );

@@ -6,6 +6,8 @@ import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
+import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
+import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 function splitBeforeRubrieken(text: string): { intro: string; rest: string } {
   const bulletIdx = text.search(/\n•\s/);
@@ -45,6 +47,9 @@ export function BelastbaarheidsprofielBlock({
   text: string;
   className?: string;
 }) {
+  const forDocument = useTPDocumentRender();
+  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
+
   if (!text?.trim()) return null;
 
   if (!text.includes(PROGNOSE_DELIMITER)) {
@@ -62,11 +67,13 @@ export function BelastbaarheidsprofielBlock({
 
   return (
     <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{intro}</p> : null}
+      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{doc(intro)}</p> : null}
       {bullets ? (
-        <div className="my-3">{renderTextWithLogoBullets(bullets, false, true)}</div>
+        <div className="my-3">{renderTextWithLogoBullets(bullets, false, true, forDocument)}</div>
       ) : null}
-      {spreekuurIntro ? <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{spreekuurIntro}</p> : null}
+      {spreekuurIntro ? (
+        <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{doc(spreekuurIntro)}</p>
+      ) : null}
       {quote ? (
         <div className="mt-4">
           <BasisToelichtingHeading label="Prognose:" />

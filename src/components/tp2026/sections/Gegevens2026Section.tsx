@@ -6,7 +6,8 @@ import { flushSync } from 'react-dom';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { GEGEVENS_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import { gegevensPageCountForLegendaSpill } from '@/lib/tp2026/gegevens-pagination';
-import { boolToJaNee, formatNLDate } from '@/lib/tp2026/schema';
+import { boolToJaNee } from '@/lib/tp2026/schema';
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { GEGEVENS_EDITOR_SECTIONS } from '@/lib/tp2026/gegevens-editor-layout';
 import {
   A4LogoHeader,
@@ -20,6 +21,10 @@ import {
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
 import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import {
+  resolveOccupationalDoctorLabel,
+  stripLeadingDoctorRolePrefix,
+} from '@/lib/tp/format-context';
 import {
   formatComputerSkills,
   formatDriversLicense,
@@ -328,7 +333,7 @@ function GegevensFooter({
     <FooterIdentity
       lastName={data.last_name}
       firstName={data.first_name}
-      dateOfBirth={formatNLDate(data.date_of_birth)}
+      dateOfBirth={formatNLDateForDoc(data.date_of_birth)}
       pageNumber={pageNumber}
     />
   );
@@ -345,28 +350,35 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
             <DataRow label="Naam" value={<GegevensNaamBlock data={data} />} />
             <DataRow label="Telefoon" value={formatPhoneForDisplay(data.phone)} />
             <DataRow label="E-mail" value={data.email || '—'} />
-            <DataRow label="Geboortedatum" value={formatNLDate(data.date_of_birth)} />
+            <DataRow label="Geboortedatum" value={formatNLDateForDoc(data.date_of_birth)} />
           </TP2026FieldTable>
         </div>
 
         <div className="mt-7">
           <SectionBand title="Gegevens re-integratietraject 2e spoor" />
           <TP2026FieldTable>
-            <DataRow label="Eerste ziektedag" value={formatNLDate(data.first_sick_day)} />
-            <DataRow label="Datum aanmelding" value={formatNLDate(data.registration_date)} />
-            <DataRow label="Datum intakegesprek" value={formatNLDate(data.intake_date)} />
-            <DataRow label="Datum opmaak trajectplan" value={formatNLDate(data.tp_creation_date)} />
+            <DataRow label="Eerste ziektedag" value={formatNLDateForDoc(data.first_sick_day)} />
+            <DataRow label="Datum aanmelding" value={formatNLDateForDoc(data.registration_date)} />
+            <DataRow label="Datum intakegesprek" value={formatNLDateForDoc(data.intake_date)} />
+            <DataRow label="Datum opmaak trajectplan" value={formatNLDateForDoc(data.tp_creation_date)} />
             <DataRow
               label="Arbeidsdeskundig rapport aanwezig bij aanmelding"
               value={<PrintJaNeeChecks value={data.has_ad_report} className="text-[12px]" />}
             />
             <DataRow
               label={adReportDateLabel(isAdReportConcept(data))}
-              value={formatNLDate(data.ad_report_date)}
+              value={formatNLDateForDoc(data.ad_report_date)}
             />
             <DataRow label="Arbeidsdeskundige" value={data.occupational_doctor_name || '—'} />
-            <DataRow label="Bedrijfsarts" value={data.occupational_doctor_org || '—'} />
-            <DataRow label="Datum FML/IZP/LAB" value={formatNLDate(data.fml_izp_lab_date)} />
+            <DataRow
+              label={resolveOccupationalDoctorLabel(data.occupational_doctor_org)}
+              value={
+                data.occupational_doctor_org
+                  ? stripLeadingDoctorRolePrefix(String(data.occupational_doctor_org)) || '—'
+                  : '—'
+              }
+            />
+            <DataRow label="Datum FML/IZP/LAB" value={formatNLDateForDoc(data.fml_izp_lab_date)} />
           </TP2026FieldTable>
         </div>
 
@@ -466,8 +478,8 @@ function GegevensPage2({
               label="Doorlooptijd"
               value={data.tp_lead_time ? `${data.tp_lead_time} weken` : '—'}
             />
-            <DataRow label="Startdatum" value={formatNLDate(data.tp_start_date)} />
-            <DataRow label="Einddatum (planning)" value={formatNLDate(data.tp_end_date)} />
+            <DataRow label="Startdatum" value={formatNLDateForDoc(data.tp_start_date)} />
+            <DataRow label="Einddatum (planning)" value={formatNLDateForDoc(data.tp_end_date)} />
           </TP2026FieldTable>
           <p className="mt-3 text-[11px] italic leading-snug text-[#6d2a96]/90">{NB_DEFAULT_GEEN_AD}</p>
         </div>

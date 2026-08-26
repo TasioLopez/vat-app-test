@@ -5,7 +5,8 @@ import Image from 'next/image';
 import { useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { COVER_PAGE_COUNT } from '@/lib/tp2026/page-numbering';
 import type { TP2026FieldDef } from '@/lib/tp2026/schema';
-import { TP2026CoverFields, formatNLDate } from '@/lib/tp2026/schema';
+import { TP2026CoverFields } from '@/lib/tp2026/schema';
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
 import { A4Page } from '@/components/tp2026/primitives';
@@ -164,7 +165,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
               className="grid text-[#6d2a96] leading-tight"
             >
               <CoverInfoLine label="Voor" value={employeeName} />
-              <CoverInfoLine label="Datum rapportage" value={formatNLDate(data.tp_creation_date)} />
+              <CoverInfoLine label="Datum rapportage" value={formatNLDateForDoc(data.tp_creation_date)} />
               <CoverInfoLine
                 label="Opdrachtgever"
                 value={getWerkgeverName(data)}
@@ -201,7 +202,7 @@ function CoverInfoLine({ label, value }: { label: string; value: string }) {
       <span className="antialiased whitespace-nowrap" style={{ fontSize: fs, color: purple, fontWeight: 800 }}>
         {label}
       </span>
-      <span className="truncate antialiased" style={{ fontSize: fs, color: purple, fontWeight: 400 }}>
+      <span className="antialiased" style={{ fontSize: fs, color: purple, fontWeight: 400 }}>
         {display}
       </span>
     </div>

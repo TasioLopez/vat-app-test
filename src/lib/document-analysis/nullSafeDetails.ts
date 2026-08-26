@@ -217,6 +217,7 @@ export function mapAndValidateEmployeeDetails(
     }
 
     if (mappedKey === 'other_employers') {
+      // Skip empty / Nee / Geen — only persist real employer names from intake
       if (isAbsentText(rawValue)) continue;
       const text = String(rawValue).trim();
       if (!text) continue;

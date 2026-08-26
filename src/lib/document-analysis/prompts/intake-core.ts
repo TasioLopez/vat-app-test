@@ -20,7 +20,7 @@ VELDEN (exacte JSON keys):
 - date_of_birth: YYYY-MM-DD (sectie 6 "Geboortedatum:" of sectie 2)
 - gender: "Man" of "Vrouw"
 - phone: telefoonnummer WERKNEMER sectie 2 — NIET sectie 4 contactpersoon
-- other_employers: komma-gescheiden uit sectie 2 "Andere werkgever:"; null indien leeg
+- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; null indien leeg, "Nee", "Geen" of n.v.t. — NOOIT "Nee"/"Geen" als waarde opslaan; alleen echte werkgeversnamen
 
 SECTIE 4 — AANMELDING (ENIGE BRON referent_*):
 - "Naam contactpersoon:" → referent_first_name + referent_last_name (laatste woord = achternaam)

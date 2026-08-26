@@ -85,6 +85,30 @@ export function extractDoctorRolePrefix(value: string): string | null {
   return null;
 }
 
+/** Default Stap 2 / Gegevens label when no role prefix is present on the value. */
+export const DEFAULT_OCCUPATIONAL_DOCTOR_LABEL = 'Bedrijfsarts';
+
+/**
+ * Gegevens label for occupational_doctor_org: use the leading doctor title
+ * (Verzekeringsarts, Aios, Anios, Arts, Bedrijfsarts) when present.
+ */
+export function resolveOccupationalDoctorLabel(
+  occupationalDoctorOrg: string | null | undefined
+): string {
+  if (!occupationalDoctorOrg?.trim()) return DEFAULT_OCCUPATIONAL_DOCTOR_LABEL;
+  const expanded = expandDoctorRoleAbbreviations(occupationalDoctorOrg.trim());
+  return extractDoctorRolePrefix(expanded) ?? DEFAULT_OCCUPATIONAL_DOCTOR_LABEL;
+}
+
+/** Strip a leading doctor-role title so print can show title in the label and name in the value. */
+export function stripLeadingDoctorRolePrefix(value: string): string {
+  const expanded = expandDoctorRoleAbbreviations(value.trim()).replace(/\s+/g, ' ').trim();
+  if (!expanded) return '';
+  const prefix = extractDoctorRolePrefix(expanded);
+  if (!prefix) return expanded;
+  return expanded.slice(prefix.length).trim();
+}
+
 export function cleanDoctorOrgRaw(raw: string): string {
   let cleaned = expandDoctorRoleAbbreviations(raw.trim());
   if (/werkend onder supervisie van/i.test(cleaned)) {

@@ -92,6 +92,18 @@ export default function NewEmployeePage() {
 
         const newEmployeeId = newEmployees[0].id;
 
+        const { error: assignError } = await supabase.from('employee_users').insert({
+            user_id: user.id,
+            employee_id: newEmployeeId,
+            assigned_at: new Date().toISOString(),
+        });
+
+        if (assignError) {
+            throw new Error(
+                'Employee created, but failed to assign access: ' + assignError.message
+            );
+        }
+
         const { error: detailsError } = await supabase.from('employee_details').insert([
             { employee_id: newEmployeeId },
         ]);

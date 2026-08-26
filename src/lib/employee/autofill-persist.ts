@@ -130,6 +130,10 @@ export function normalizeEmployeeDetailsPayload(
       work_experience: normalizedWorkExperience,
       transport_type: normalizeStringArray(details?.transport_type),
       drivers_license_type: normalizeStringArray(details?.drivers_license_type),
+      // Default "Geen" when empty / Nee / etc.; only real employer names stay.
+      other_employers: isAbsentText(details?.other_employers)
+        ? 'Geen'
+        : String(details?.other_employers).trim(),
     },
     employeeId
   );
@@ -185,22 +189,24 @@ export async function applyEmployeeAutofillDetails(
     field_content_hash: nextContentHashMap,
   };
 
+  const toPersist = normalizeEmployeeDetailsPayload(updatedDetails, employeeId);
+
   const { error: persistError } = await supabase
     .from('employee_details')
-    .upsert([buildEmployeeDetailsPayload(updatedDetails, employeeId)], {
+    .upsert([buildEmployeeDetailsPayload(toPersist, employeeId)], {
       onConflict: 'employee_id',
     });
 
   if (persistError) {
     return {
-      updatedDetails,
+      updatedDetails: toPersist,
       autofilledFields,
       error: persistError.message,
     };
   }
 
   return {
-    updatedDetails: normalizeEmployeeDetailsPayload(updatedDetails, employeeId),
+    updatedDetails: toPersist,
     autofilledFields,
     autofillIncomplete: meta?.autofill_incomplete,
     autofillWarnings: meta?.autofill_warnings,

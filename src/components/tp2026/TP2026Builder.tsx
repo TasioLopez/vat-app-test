@@ -9,6 +9,7 @@ import { createBrowserClient } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
+import { TPDocumentRenderProvider } from '@/context/TPDocumentRenderContext';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { cn } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
@@ -612,9 +613,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
                   {section.renderEditor()}
                 </div>
                 <TPPreviewWrapper>
-                  <div className={cn('space-y-8', textJustified && 'tp-text-justified')}>
-                    {section.renderPreview()}
-                  </div>
+                  <TPDocumentRenderProvider>
+                    <div className={cn('space-y-8', textJustified && 'tp-text-justified')}>
+                      {section.renderPreview()}
+                    </div>
+                  </TPDocumentRenderProvider>
                 </TPPreviewWrapper>
               </div>
             </div>
@@ -634,7 +637,9 @@ function HiddenBasisPageMeasure({ data }: { data: Record<string, any> }) {
       className="sr-only pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden"
       aria-hidden
     >
-      <Basis2026A4Pages data={data} paginationEnabled />
+      <TPDocumentRenderProvider>
+        <Basis2026A4Pages data={data} paginationEnabled />
+      </TPDocumentRenderProvider>
     </div>
   );
 }
