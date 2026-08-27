@@ -244,14 +244,14 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
     assert.ok(visie_loopbaanadviseur.includes(TOELICHTING_VROUW));
   });
 
-  it('omits En soortgelijk and keeps only three concrete functies', () => {
+  it('omits En soortgelijk and keeps all concrete functies (variable count)', () => {
     const content: VisieLoopbaanadviseurContentResult = {
       functies: [
         { naam: 'Functie A', toelichting: 'Passend.' },
         { naam: 'Functie B', toelichting: 'Passend.' },
         { naam: 'Functie C', toelichting: 'Passend.' },
         { naam: 'En soortgelijk', toelichting: '' },
-        { naam: 'Functie D', toelichting: 'Te veel.' },
+        { naam: 'Functie D', toelichting: 'Ook passend.' },
       ],
     };
     const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
@@ -260,10 +260,26 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
       'ad_with_functies'
     );
     assert.ok(!visie_loopbaanadviseur.includes('En soortgelijk'));
-    assert.ok(!visie_loopbaanadviseur.includes('Functie D'));
     assert.match(visie_loopbaanadviseur, /• Functie A: Passend\./);
     assert.match(visie_loopbaanadviseur, /• Functie B: Passend\./);
     assert.match(visie_loopbaanadviseur, /• Functie C: Passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie D: Ook passend\./);
+  });
+
+  it('emits a single functie when only one is provided', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [{ naam: 'Alleen A', toelichting: 'Passend.' }],
+    };
+    const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
+      baseCtx,
+      content,
+      'intake_only'
+    );
+    assert.match(visie_loopbaanadviseur, /• Alleen A: Passend\./);
+    assert.equal(
+      (visie_loopbaanadviseur.match(/^• /gm) || []).length,
+      1
+    );
   });
 });
 
@@ -353,7 +369,7 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
 });
 
 describe('parseVisieLoopbaanadviseurContentResult', () => {
-  it('parses three functies and drops En soortgelijk', async () => {
+  it('parses functies and drops En soortgelijk without hard-capping at 3', async () => {
     const { parseVisieLoopbaanadviseurContentResult } = await import('../schema');
     const result = parseVisieLoopbaanadviseurContentResult({
       functies: [
@@ -361,10 +377,27 @@ describe('parseVisieLoopbaanadviseurContentResult', () => {
         { naam: 'B', toelichting: 'y' },
         { naam: 'C', toelichting: 'z' },
         { naam: 'En soortgelijk', toelichting: '' },
+        { naam: 'D', toelichting: 'w' },
       ],
     });
-    assert.equal(result.functies.length, 3);
-    assert.equal(result.functies[2].naam, 'C');
+    assert.equal(result.functies.length, 4);
+    assert.equal(result.functies[3].naam, 'D');
+  });
+
+  it('caps suggestion parse at batch size 5', async () => {
+    const { parseVisieLoopbaanadviseurSuggestionResult } = await import('../schema');
+    const result = parseVisieLoopbaanadviseurSuggestionResult({
+      functies: [
+        { naam: 'A', toelichting: '1' },
+        { naam: 'B', toelichting: '2' },
+        { naam: 'C', toelichting: '3' },
+        { naam: 'D', toelichting: '4' },
+        { naam: 'E', toelichting: '5' },
+        { naam: 'F', toelichting: '6' },
+      ],
+    });
+    assert.equal(result.functies.length, 5);
+    assert.equal(result.functies[4].naam, 'E');
   });
 });
 

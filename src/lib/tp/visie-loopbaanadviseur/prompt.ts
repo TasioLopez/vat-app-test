@@ -3,14 +3,16 @@ import {
   AD_SYNONYM_EXAMPLES,
   DOCUMENT_SCOPE_HINT,
   EINDCONTROLE_CHECKLIST,
+  FUNCTIE_SUGGESTION_BATCH_SIZE,
   PRAKTIJKTOETS_AVOID,
   SELECTION_PROCESS_V10,
   SOURCE_HIERARCHY_V10,
 } from './constants';
+import type { VisieLoopbaanFunctie } from './schema';
 
 /**
- * Visie loopbaanadviseur V10 masterprompt — instructions in code (not uploaded as PDF).
- * Model generates three functies only; server builds toelichting, intro, and footer.
+ * Visie loopbaanadviseur V11 masterprompt — suggestion rounds of 5; final count is variable.
+ * Model generates functies only; server builds toelichting, intro, and footer.
  */
 export const VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT = `
 ROL
@@ -46,23 +48,51 @@ CONTEXT
 - ad_uitsluiting_functies: gestructureerde uitsluitingslijst — titels/synoniemen hierin NOOIT opnieuw noemen
 
 OUTPUT (model levert alleen functies)
-Selecteer exact drie functies:
-- Drie concrete functienamen op de Nederlandse arbeidsmarkt
+Selecteer exact ${FUNCTIE_SUGGESTION_BATCH_SIZE} NIEUWE functies:
+- ${FUNCTIE_SUGGESTION_BATCH_SIZE} concrete functienamen op de Nederlandse arbeidsmarkt
 - Geen "En soortgelijk" of vergelijkbare filler-regels
 - Per functie: maximaal één zin toelichting waarom passend binnen belastbaarheid
-- Drie verschillende roltypen (bijv. contactgericht vs planning/organisatie vs specialistisch/intern) — geen drie near-clones van admin/backoffice
+- Duidelijk verschillende roltypen (bijv. contactgericht vs planning/organisatie vs specialistisch/intern) — geen near-clones van admin/backoffice
 - Per toelichting een ander passendheidsargument; geen herhaling van dezelfde prikkelarm/lage druk-formulering
-- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport of ad_uitsluiting_functies
+- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport, ad_uitsluiting_functies, behouden of afgewezen functies
 - Conservatief binnen belastbaarheid en zoekprofiel; maximaal circa zes maanden scholing; geen onrealistische of te verliggende functies
 
 EINDCONTROLE
 ${EINDCONTROLE_CHECKLIST}
 
 JSON OUTPUT
-Lever exact: functies (array van 3 objecten met naam en toelichting).
+Lever exact: functies (array van ${FUNCTIE_SUGGESTION_BATCH_SIZE} objecten met naam en toelichting).
 Geen sectiekop "Visie loopbaanadviseur". Geen extra velden.
 `.trim();
 
 export function buildVisieLoopbaanadviseurContextMessage(ctx: Record<string, unknown>): string {
   return `Context (zoekprofiel is leidend; genereer geen andere data uit context):\n${JSON.stringify(ctx, null, 2)}`;
+}
+
+export function buildRegenerateContextExtras(opts: {
+  kept: VisieLoopbaanFunctie[];
+  rejectedNames: string[];
+  userFeedback?: string;
+  batchSize?: number;
+}): string {
+  const batchSize = opts.batchSize ?? FUNCTIE_SUGGESTION_BATCH_SIZE;
+  return [
+    `REGENERATIE — genereer exact ${batchSize} NIEUWE functiesuggesties.`,
+    opts.kept.length
+      ? `Behouden door adviseur (NOOIT opnieuw voorstellen, ook geen synoniemen):\n${opts.kept
+          .map((f) => `- ${f.naam}`)
+          .join('\n')}`
+      : '',
+    opts.rejectedNames.length
+      ? `Afgewezen door adviseur (niet opnieuw voorstellen, ook geen synoniemen):\n${opts.rejectedNames
+          .map((n) => `- ${n}`)
+          .join('\n')}`
+      : '',
+    opts.userFeedback?.trim()
+      ? `Feedback adviseur: ${opts.userFeedback.trim()}`
+      : '',
+    `Lever alleen nieuwe, concrete functies; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }

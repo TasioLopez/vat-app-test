@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
 import {
   assessFunctieQuality,
+  buildRegenerateFeedbackMessage,
   extractAdExclusionPhrases,
   normalizeFunctieNaam,
 } from '../functie-quality';
@@ -116,5 +117,37 @@ describe('assessFunctieQuality', () => {
     const result = assessFunctieQuality(content, ['Receptionist hotel']);
     assert.equal(result.ok, false);
     assert.ok(result.issues.some((i) => /AD-overlap/i.test(i)));
+  });
+
+  it('fails when suggestion overlaps kept or rejected names', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [
+        { naam: 'Junior reisadviseur', toelichting: 'Opleiding toerisme.' },
+        { naam: 'Roostermaker zorg', toelichting: 'Organisatie-ervaring.' },
+        { naam: 'Documentcontroleur', toelichting: 'Digitale vaardigheden.' },
+      ],
+    };
+    const result = assessFunctieQuality(content, {
+      keptNames: ['Junior reisadviseur ondersteuning'],
+      rejectedNames: ['Documentcontroleur dossiers'],
+    });
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((i) => /Behouden-overlap|Afgewezen-overlap/i.test(i)));
+  });
+});
+
+describe('buildRegenerateFeedbackMessage', () => {
+  it('includes kept, rejected and user feedback', () => {
+    const msg = buildRegenerateFeedbackMessage({
+      kept: [{ naam: 'Planner A', toelichting: 'x' }],
+      rejectedNames: ['Functie B'],
+      userFeedback: 'Meer administratief',
+      batchSize: 5,
+    });
+    assert.match(msg, /REGENERATIE/);
+    assert.match(msg, /Planner A/);
+    assert.match(msg, /Functie B/);
+    assert.match(msg, /Meer administratief/);
+    assert.match(msg, /exact 5/);
   });
 });

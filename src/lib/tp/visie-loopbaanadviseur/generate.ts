@@ -8,10 +8,18 @@ import {
   type VisieLoopbaanadviseurBuildContext,
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
-import { type DocumentScenario } from './constants';
+import {
+  FUNCTIE_SUGGESTION_BATCH_SIZE,
+  type DocumentScenario,
+} from './constants';
 import { DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL } from './constants';
 import {
+  draftFromGeneratedBatch,
+  type VisieLaFunctieDraft,
+} from './draft';
+import {
   assessFunctieQuality,
+  buildRegenerateFeedbackMessage,
   buildRepairFeedbackMessage,
   extractAdExclusionPhrases,
 } from './functie-quality';
@@ -20,9 +28,10 @@ import {
   buildVisieLoopbaanadviseurContextMessage,
 } from './prompt';
 import {
-  VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA,
-  parseVisieLoopbaanadviseurContentResult,
+  VISIE_LOOPBAANADVISEUR_SUGGESTION_JSON_SCHEMA,
+  parseVisieLoopbaanadviseurSuggestionResult,
   type VisieLoopbaanadviseurContentResult,
+  type VisieLoopbaanFunctie,
 } from './schema';
 
 const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
@@ -188,7 +197,7 @@ async function callVisieLoopbaanadviseurModel(
   openai: OpenAI,
   fileIds: string[],
   contextMessage: string,
-  repairMessage?: string
+  extraMessage?: string
 ): Promise<VisieLoopbaanadviseurContentResult> {
   const userContent: OpenAI.Responses.ResponseInputContent[] = [
     { type: 'input_text', text: contextMessage },
@@ -199,8 +208,8 @@ async function callVisieLoopbaanadviseurModel(
       })
     ),
   ];
-  if (repairMessage) {
-    userContent.push({ type: 'input_text', text: repairMessage });
+  if (extraMessage) {
+    userContent.push({ type: 'input_text', text: extraMessage });
   }
 
   const reasoningEffort = getReasoningEffort();
@@ -212,9 +221,9 @@ async function callVisieLoopbaanadviseurModel(
     text: {
       format: {
         type: 'json_schema',
-        name: 'visie_loopbaanadviseur_content',
+        name: 'visie_loopbaanadviseur_suggestions',
         strict: true,
-        schema: VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA as Record<string, unknown>,
+        schema: VISIE_LOOPBAANADVISEUR_SUGGESTION_JSON_SCHEMA as Record<string, unknown>,
       },
     },
   });
@@ -224,15 +233,28 @@ async function callVisieLoopbaanadviseurModel(
     throw new Error('Empty response from model');
   }
 
-  return parseVisieLoopbaanadviseurContentResult(JSON.parse(outputText) as unknown);
+  return parseVisieLoopbaanadviseurSuggestionResult(JSON.parse(outputText) as unknown);
 }
 
-export async function generateVisieLoopbaanadviseurContent(
+export type GenerateFunctieSuggestionsOptions = {
+  kept?: VisieLoopbaanFunctie[];
+  rejectedNames?: string[];
+  userFeedback?: string;
+  batchSize?: number;
+};
+
+export type GenerateFunctieSuggestionsResult = {
+  suggestions: VisieLoopbaanFunctie[];
+  qualityWarnings: string[];
+};
+
+export async function generateFunctieSuggestions(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
-  docs: EmployeeDoc[]
-): Promise<VisieLoopbaanadviseurContentResult> {
+  docs: EmployeeDoc[],
+  options: GenerateFunctieSuggestionsOptions = {}
+): Promise<GenerateFunctieSuggestionsResult> {
   if (!hasIntakeDoc(docs)) {
     throw new Error('No intake document found for visie loopbaanadviseur');
   }
@@ -241,6 +263,11 @@ export async function generateVisieLoopbaanadviseurContent(
     console.warn('⚠️ Visie loopbaanadviseur: zoekprofiel ontbreekt in context');
   }
 
+  const batchSize = options.batchSize ?? FUNCTIE_SUGGESTION_BATCH_SIZE;
+  const kept = options.kept ?? [];
+  const rejectedNames = options.rejectedNames ?? [];
+  const keptNames = kept.map((f) => f.naam);
+
   const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs);
 
   if (fileIds.length === 0) {
@@ -248,26 +275,51 @@ export async function generateVisieLoopbaanadviseurContent(
   }
 
   const adExclusion = extractAdExclusionPhrases(ctx.meta.advies_ad_passende_arbeid);
+  const qualityExclusions = {
+    adExclusionPhrases: adExclusion,
+    keptNames,
+    rejectedNames,
+  };
 
   try {
     const contextMessage = buildVisieLoopbaanadviseurContextMessage(buildApiContext(ctx));
-    let content = await callVisieLoopbaanadviseurModel(openai, fileIds, contextMessage);
-    let quality = assessFunctieQuality(content, adExclusion);
+    const hasRegenerateContext =
+      kept.length > 0 || rejectedNames.length > 0 || Boolean(options.userFeedback?.trim());
+    const regenerateMessage = hasRegenerateContext
+      ? buildRegenerateFeedbackMessage({
+          kept,
+          rejectedNames,
+          userFeedback: options.userFeedback,
+          batchSize,
+        })
+      : undefined;
+
+    let content = await callVisieLoopbaanadviseurModel(
+      openai,
+      fileIds,
+      contextMessage,
+      regenerateMessage
+    );
+    let quality = assessFunctieQuality(content, qualityExclusions);
 
     if (!quality.ok) {
       console.warn(
         '⚠️ Visie loopbaanadviseur: kwaliteit onvoldoende, één reparatiepoging',
         quality.issues
       );
-      const rejectedNames = content.functies.slice(0, 3).map((f) => f.naam);
-      const repairMessage = buildRepairFeedbackMessage(quality.issues, rejectedNames);
+      const rejectedFromBatch = content.functies.map((f) => f.naam);
+      const repairMessage = buildRepairFeedbackMessage(
+        quality.issues,
+        [...rejectedNames, ...rejectedFromBatch],
+        batchSize
+      );
       content = await callVisieLoopbaanadviseurModel(
         openai,
         fileIds,
         contextMessage,
-        repairMessage
+        [regenerateMessage, repairMessage].filter(Boolean).join('\n\n')
       );
-      quality = assessFunctieQuality(content, adExclusion);
+      quality = assessFunctieQuality(content, qualityExclusions);
       if (!quality.ok) {
         console.warn(
           '⚠️ Visie loopbaanadviseur: reparatiepoging nog steeds onvoldoende — output behouden',
@@ -276,21 +328,51 @@ export async function generateVisieLoopbaanadviseurContent(
       }
     }
 
-    return content;
+    return {
+      suggestions: content.functies.slice(0, batchSize),
+      qualityWarnings: quality.ok ? [] : quality.issues,
+    };
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }
 }
+
+/** @deprecated Prefer generateFunctieSuggestions; kept for callers that only need content. */
+export async function generateVisieLoopbaanadviseurContent(
+  openai: OpenAI,
+  supabase: SupabaseClient,
+  ctx: VisieLoopbaanadviseurBuildContext,
+  docs: EmployeeDoc[]
+): Promise<VisieLoopbaanadviseurContentResult> {
+  const result = await generateFunctieSuggestions(openai, supabase, ctx, docs);
+  return { functies: result.suggestions };
+}
+
+export type VisieLoopbaanadviseurGenerateResult = VisieLoopbaanadviseurFields & {
+  draft: VisieLaFunctieDraft;
+  qualityWarnings: string[];
+};
 
 export async function generateVisieLoopbaanadviseur(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
   docs: EmployeeDoc[]
-): Promise<VisieLoopbaanadviseurFields> {
+): Promise<VisieLoopbaanadviseurGenerateResult> {
   const scenario = detectDocumentScenario(docs, ctx.meta);
-  const content = await generateVisieLoopbaanadviseurContent(openai, supabase, ctx, docs);
-  return buildVisieLoopbaanadviseurFields(ctx, content, scenario);
+  const { suggestions, qualityWarnings } = await generateFunctieSuggestions(
+    openai,
+    supabase,
+    ctx,
+    docs
+  );
+  const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: suggestions }, scenario);
+  const draft = draftFromGeneratedBatch(suggestions, { status: 'kept', round: 1 });
+  return {
+    ...fields,
+    draft,
+    qualityWarnings,
+  };
 }
 
 export type { VisieLoopbaanadviseurBuildContext, VisieLoopbaanadviseurFields };

@@ -12,6 +12,8 @@ export {
   NO_AD_BELASTBAARHEID_INTRO,
   NO_AD_NO_BELASTBAARHEID_INTRO,
   EN_SOORTGELIJK,
+  FUNCTIE_SUGGESTION_BATCH_SIZE,
+  FUNCTIE_FINAL_MIN_COUNT,
   DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL,
   GENERATION_FALLBACK,
   type DocumentScenario,
@@ -28,29 +30,56 @@ export {
   type VisieLoopbaanadviseurFields,
 } from './build-fields';
 export {
+  createEmptyDraft,
+  draftFromGeneratedBatch,
+  draftFromKeptFuncties,
+  getKeptFuncties,
+  getPendingSuggestions,
+  getRejectedNames,
+  markDraftFinalized,
+  mergeRegenerationBatch,
+  parseDraft,
+  rejectPendingSuggestions,
+  toggleSuggestionStatus,
+  updateSuggestionFields,
+  type FunctieSuggestion,
+  type FunctieSuggestionStatus,
+  type VisieLaFunctieDraft,
+} from './draft';
+export {
   assessFunctieQuality,
+  buildRegenerateFeedbackMessage,
+  buildRepairFeedbackMessage,
   extractAdExclusionPhrases,
   normalizeFunctieNaam,
   significantTokens,
+  type FunctieQualityExclusions,
   type FunctieQualityResult,
 } from './functie-quality';
 export {
   detectDocumentScenario,
   filterVisieLoopbaanadviseurDocs,
+  generateFunctieSuggestions,
   generateVisieLoopbaanadviseur,
   generateVisieLoopbaanadviseurContent,
   getVisieLoopbaanadviseurDocCategory,
   hasIntakeDoc,
   type EmployeeDoc,
+  type GenerateFunctieSuggestionsOptions,
+  type GenerateFunctieSuggestionsResult,
+  type VisieLoopbaanadviseurGenerateResult,
 } from './generate';
 export {
   VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA,
+  VISIE_LOOPBAANADVISEUR_SUGGESTION_JSON_SCHEMA,
   parseVisieLoopbaanadviseurContentResult,
+  parseVisieLoopbaanadviseurSuggestionResult,
   type VisieLoopbaanadviseurContentResult,
   type VisieLoopbaanFunctie,
 } from './schema';
 export { parseFunctieLine } from './parse-functie-line';
 export {
   VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,
+  buildRegenerateContextExtras,
   buildVisieLoopbaanadviseurContextMessage,
 } from './prompt';

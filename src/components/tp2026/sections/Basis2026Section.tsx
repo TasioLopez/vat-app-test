@@ -150,9 +150,10 @@ type EditorProps = {
   data: Record<string, any>;
   updateField: (key: string, value: any) => void;
   onAutofillField?: (fieldKey: string) => Promise<void>;
+  employeeId?: string;
 };
 
-export function Basis2026Editor({ data, updateField, onAutofillField }: EditorProps) {
+export function Basis2026Editor({ data, updateField, onAutofillField, employeeId }: EditorProps) {
   const [view, setView] = useState<'list' | 'detail'>('list');
   const [activeSectionId, setActiveSectionId] = useState<BasisEditorSectionId | null>(null);
 
@@ -176,6 +177,7 @@ export function Basis2026Editor({ data, updateField, onAutofillField }: EditorPr
         data={data}
         updateField={updateField}
         onAutofillField={onAutofillField}
+        employeeId={employeeId}
         onBack={backToList}
         onOpenNext={nextSection ? () => openSection(nextSection.id) : undefined}
       />
@@ -243,6 +245,7 @@ function Basis2026SectionDetail({
   data,
   updateField,
   onAutofillField,
+  employeeId,
   onBack,
   onOpenNext,
 }: EditorProps & {
@@ -305,6 +308,7 @@ function Basis2026SectionDetail({
           data={data}
           updateField={updateField}
           onAutofillField={onAutofillField}
+          employeeId={employeeId}
           showAutofillButton={false}
           hideLabel
         />
@@ -360,6 +364,7 @@ function BasisFieldEditorRow({
   data,
   updateField,
   onAutofillField,
+  employeeId,
   showAutofillButton = true,
   hideLabel = false,
 }: {
@@ -367,6 +372,7 @@ function BasisFieldEditorRow({
   data: Record<string, any>;
   updateField: (key: string, value: any) => void;
   onAutofillField?: (fieldKey: string) => Promise<void>;
+  employeeId?: string;
   showAutofillButton?: boolean;
   hideLabel?: boolean;
 }) {
@@ -412,7 +418,10 @@ function BasisFieldEditorRow({
       ) : field.key === 'visie_loopbaanadviseur' ? (
         <VisieLoopbaanadviseurEditor
           raw={String(data[field.key] ?? '')}
+          draft={data.visie_la_functie_draft}
+          employeeId={employeeId}
           onChange={(md) => updateField(field.key, md)}
+          onDraftChange={(next) => updateField('visie_la_functie_draft', next)}
         />
       ) : field.key === 'prognose_bedrijfsarts' ? (
         <BelastbaarheidsprofielEditor

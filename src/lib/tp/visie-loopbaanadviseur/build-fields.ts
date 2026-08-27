@@ -81,8 +81,8 @@ function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
   const functies = content.functies.filter(
     (f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase()
   );
-  if (functies.length !== 3) {
-    console.warn(`⚠️ Visie loopbaanadviseur: verwacht 3 functies, gevonden ${functies.length}`);
+  if (functies.length < 1) {
+    console.warn('⚠️ Visie loopbaanadviseur: verwacht ≥1 functie, gevonden 0');
   }
 
   const names = functies.map((f) => f.naam.trim().toLowerCase()).filter(Boolean);
@@ -91,7 +91,7 @@ function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
     console.warn('⚠️ Visie loopbaanadviseur: dubbele functienamen gevonden');
   }
 
-  for (const f of functies.slice(0, 3)) {
+  for (const f of functies) {
     if (countSentences(f.toelichting) > 1) {
       console.warn(`⚠️ Visie loopbaanadviseur: toelichting >1 zin voor "${f.naam}"`);
     }
@@ -99,9 +99,9 @@ function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
 }
 
 function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): string {
-  const functies = content.functies
-    .filter((f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase())
-    .slice(0, 3);
+  const functies = content.functies.filter(
+    (f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase()
+  );
 
   return functies
     .map((f) => {

@@ -1,6 +1,10 @@
 import { parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
-import { EN_SOORTGELIJK, TOELICHTING_CLONE_PHRASES } from './constants';
-import type { VisieLoopbaanadviseurContentResult } from './schema';
+import {
+  EN_SOORTGELIJK,
+  FUNCTIE_SUGGESTION_BATCH_SIZE,
+  TOELICHTING_CLONE_PHRASES,
+} from './constants';
+import type { VisieLoopbaanadviseurContentResult, VisieLoopbaanFunctie } from './schema';
 
 const FUNCTIE_STOPWORDS = new Set([
   'medewerker',
@@ -23,6 +27,12 @@ const AD_PLACEHOLDER_PATTERN =
 export type FunctieQualityResult = {
   ok: boolean;
   issues: string[];
+};
+
+export type FunctieQualityExclusions = {
+  adExclusionPhrases?: string[];
+  keptNames?: string[];
+  rejectedNames?: string[];
 };
 
 export function normalizeFunctieNaam(name: string): string {
@@ -165,25 +175,42 @@ function toelichtingCloneFamilies(toelichtingen: string[]): string[] {
   return hits;
 }
 
-export function assessFunctieQuality(
-  content: VisieLoopbaanadviseurContentResult,
-  adExclusionPhrases: string[]
-): FunctieQualityResult {
-  const issues: string[] = [];
-  const concrete = content.functies
-    .slice(0, 3)
-    .filter((f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase());
-
+function checkExclusionOverlaps(
+  concrete: VisieLoopbaanFunctie[],
+  phrases: string[],
+  label: string,
+  issues: string[]
+): void {
   for (const f of concrete) {
-    for (const excluded of adExclusionPhrases) {
+    for (const excluded of phrases) {
       if (phrasesOverlap(f.naam, excluded)) {
-        issues.push(
-          `AD-overlap: "${f.naam}" lijkt te veel op AD-titel "${excluded}"`
-        );
+        issues.push(`${label}: "${f.naam}" lijkt te veel op "${excluded}"`);
         break;
       }
     }
   }
+}
+
+/**
+ * Assess quality of a suggestion batch (or any functies list).
+ * Second arg may be a string[] (legacy AD exclusions) or a structured exclusions object.
+ */
+export function assessFunctieQuality(
+  content: VisieLoopbaanadviseurContentResult,
+  exclusions: string[] | FunctieQualityExclusions = []
+): FunctieQualityResult {
+  const issues: string[] = [];
+  const concrete = content.functies.filter(
+    (f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase()
+  );
+
+  const excl: FunctieQualityExclusions = Array.isArray(exclusions)
+    ? { adExclusionPhrases: exclusions }
+    : exclusions;
+
+  checkExclusionOverlaps(concrete, excl.adExclusionPhrases ?? [], 'AD-overlap', issues);
+  checkExclusionOverlaps(concrete, excl.keptNames ?? [], 'Behouden-overlap', issues);
+  checkExclusionOverlaps(concrete, excl.rejectedNames ?? [], 'Afgewezen-overlap', issues);
 
   for (let i = 0; i < concrete.length; i++) {
     for (let j = i + 1; j < concrete.length; j++) {
@@ -209,16 +236,45 @@ export function assessFunctieQuality(
 
 export function buildRepairFeedbackMessage(
   issues: string[],
-  rejectedNames: string[]
+  rejectedNames: string[],
+  batchSize: number = FUNCTIE_SUGGESTION_BATCH_SIZE
 ): string {
   const names = rejectedNames.filter(Boolean).join('; ');
   return [
     'REPARATIE — vorige functiesuggesties voldeden niet aan de kwaliteitseisen.',
     `Problemen: ${issues.join(' | ')}`,
     names ? `Afgewezen namen: ${names}` : '',
-    'Lever opnieuw exact drie functies.',
-    'Eisen: drie duidelijk verschillende roltypen; geen AD-overlap/synoniemen; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid; geen onrealistische functies.',
+    `Lever opnieuw exact ${batchSize} NIEUWE functies.`,
+    `Eisen: ${batchSize} duidelijk verschillende roltypen; geen AD/behouden/afgewezen-overlap; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid; geen onrealistische functies.`,
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+export function buildRegenerateFeedbackMessage(opts: {
+  kept: VisieLoopbaanFunctie[];
+  rejectedNames: string[];
+  userFeedback?: string;
+  batchSize?: number;
+}): string {
+  const batchSize = opts.batchSize ?? FUNCTIE_SUGGESTION_BATCH_SIZE;
+  return [
+    `REGENERATIE — genereer exact ${batchSize} NIEUWE functiesuggesties.`,
+    opts.kept.length
+      ? `Behouden door adviseur (NOOIT opnieuw voorstellen, ook geen synoniemen):\n${opts.kept
+          .map((f) => `- ${f.naam}`)
+          .join('\n')}`
+      : '',
+    opts.rejectedNames.length
+      ? `Afgewezen door adviseur (niet opnieuw voorstellen):\n${opts.rejectedNames
+          .map((n) => `- ${n}`)
+          .join('\n')}`
+      : '',
+    opts.userFeedback?.trim()
+      ? `Feedback adviseur: ${opts.userFeedback.trim()}`
+      : '',
+    `Lever alleen nieuwe, concrete functies; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 }

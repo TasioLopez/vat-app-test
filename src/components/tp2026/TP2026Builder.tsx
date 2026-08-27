@@ -277,7 +277,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       id: 3,
       title: '03 Basisdocument',
       renderEditor: () => (
-        <Basis2026Editor data={tpData} updateField={updateBasisField} onAutofillField={autofillBasisField} />
+        <Basis2026Editor
+          data={tpData}
+          updateField={updateBasisField}
+          onAutofillField={autofillBasisField}
+          employeeId={employeeId}
+        />
       ),
       renderPreview: () => (
         <Basis2026A4Pages data={previewData} paginationEnabled={currentStep === 3} />

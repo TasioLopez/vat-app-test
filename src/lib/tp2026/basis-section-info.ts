@@ -128,6 +128,8 @@ Werknemer bevindt zich op het moment van de intake in trede 2 van de POW-meter�
     body: `Gezien de opleiding, werkervaring en de vastgestelde medische beperkingen acht ValentineZ de kansen van de werknemer op de vrije arbeidsmarkt op dit moment "voldoende". Mocht de belastbaarheid van de werknemer in de toekomst verbeteren, dan zullen ook haar kansen op de arbeidsmarkt toenemen. In dat geval kunnen andere functies worden onderzocht als mogelijke opties voor passend werk.
 
 Mogelijk passende functies
+Genereer vijf functiesuggesties, vink aan welke je wilt behouden, en pas ze toe op het trajectplan. Het eindresultaat mag een variabel aantal functies bevatten (minstens één). Optioneel: schrijf feedback en genereer nieuwe suggesties; behouden functies blijven staan.
+
 Let op: als er geen arbeidsdeskundig rapport beschikbaar is, dan moet onderstaande zin worden aangepast naar:
 Op basis van de eerder genoemde beperkingen en vaardigheden kunnen de volgende functies als passend worden beschouwd:
 
@@ -137,7 +139,7 @@ Op basis van het persoonlijke profiel van de werknemer kan worden gesteld dat hi
 Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:
 • Functie + korte toelichting
 • Functie + korte toelichting
-• Functie + korte toelichting
+• …
 
 *Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/IZP/LAB.`,
   },
