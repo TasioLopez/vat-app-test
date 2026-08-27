@@ -56,6 +56,12 @@ export const GENERATION_FALLBACK =
 
 export const EN_SOORTGELIJK = 'En soortgelijk';
 
+/** AI suggestion batch size per generation round. */
+export const FUNCTIE_SUGGESTION_BATCH_SIZE = 5;
+
+/** Minimum kept functies required to finalize into the trajectplan. */
+export const FUNCTIE_FINAL_MIN_COUNT = 1;
+
 export const SOURCE_HIERARCHY_V10 = `
 Belastbaarheid (gebruik meest recente bron):
 1. meest recente FML
@@ -84,8 +90,8 @@ Stap 3 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren
 Stap 4 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook de structured list ad_uitsluiting_functies in context.
 Stap 5 — Arbeidsmarkttoets: regulier, Nederlandse arbeidsmarkt, voldoende vacatures, realistisch bemiddelbaar, maximaal circa zes maanden scholing.
 Stap 6 — Praktijktoets: functies waarin regelmatig langdurig staan/lopen, productietempo, assemblage, productiewerk, kwaliteitscontrole, zwaar tillen, veel bukken/traplopen/reiken of structurele fysieke belasting: afwijzen. Bij twijfel afwijzen.
-Stap 7 — Onderlinge controle: exact drie functies. De drie concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet drie herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering.
-Stap 8 — Eindcontrole: volledig passend binnen belastbaarheid, aansluitend bij profiel en zoekprofiel, niet door AD genoemd, geen synoniemen, regulier en kansrijk.
+Stap 7 — Onderlinge controle: exact vijf NIEUWE functiesuggesties per ronde. De vijf concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering. Nooit behouden of afgewezen namen (of synoniemen) opnieuw voorstellen.
+Stap 8 — Eindcontrole: volledig passend binnen belastbaarheid, aansluitend bij profiel en zoekprofiel, niet door AD genoemd, geen synoniemen, regulier en kansrijk. Het eindresultaat in het trajectplan mag een variabel aantal behouden functies bevatten (≥1).
 `.trim();
 
 export const AD_SYNONYM_EXAMPLES = `
@@ -117,10 +123,12 @@ export const PRAKTIJKTOETS_AVOID = [
 export const EINDCONTROLE_CHECKLIST = `
 - Juiste vaste toelichting (systeem)
 - Juiste inleidende zin functies (systeem)
-- Exact drie functies
+- Suggestieronde: exact vijf NIEUWE functies
+- Eindresultaat trajectplan: variabel aantal behouden functies (≥1)
 - Maximaal één zin toelichting per functie
 - Geen AD-titels of synoniemen (inclusief ad_uitsluiting_functies)
-- Drie suggesties = verschillende roltypen (niet drie near-clones)
+- Geen overlap met behouden of afgewezen functies
+- Vijf suggesties = verschillende roltypen (geen near-clones)
 - Toelichtingen niet copy-paste (verschillende passendheidsargumenten)
 - Passend binnen belastbaarheid en zoekprofiel
 `.trim();

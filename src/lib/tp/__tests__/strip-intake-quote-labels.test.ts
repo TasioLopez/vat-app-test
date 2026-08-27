@@ -53,4 +53,22 @@ describe('stripLeadingIntakeQuoteLabels', () => {
   it('returns empty/falsy input as-is', () => {
     assert.equal(stripLeadingIntakeQuoteLabels(''), '');
   });
+
+  it('strips Korte beschrijving van de werkzaamheden label', () => {
+    const input =
+      'Korte beschrijving van de werkzaamheden: De activiteiten- en welzijnsbegeleider ondersteunt en coacht.';
+    assert.equal(
+      stripLeadingIntakeQuoteLabels(input),
+      'De activiteiten- en welzijnsbegeleider ondersteunt en coacht.'
+    );
+  });
+
+  it('strips Korte beschrijving label when no space after colon', () => {
+    const input =
+      'Korte beschrijving van de werkzaamheden:De activiteiten- en welzijnsbegeleider ondersteunt en coacht.';
+    assert.equal(
+      stripLeadingIntakeQuoteLabels(input),
+      'De activiteiten- en welzijnsbegeleider ondersteunt en coacht.'
+    );
+  });
 });

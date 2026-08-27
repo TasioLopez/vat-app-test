@@ -73,6 +73,19 @@ describe('buildInleidingFields', () => {
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
+  it('renders long verbatim intake functiebeschrijving without truncation', () => {
+    const intakeQuote =
+      'De activiteiten- en welzijnsbegeleider ondersteunt en coacht de teamleider en het multidisciplinaire team bij het bevorderen van het welzijn van onze klanten. Daarnaast levert de activiteiten- en welzijnsbegeleider een grote bijdrage aan de ontwikkeling van het welzijnsplan (waaronder (groeps)activiteiten) van de locatie en draagt bij aan de uitvoering. Het welzijn van klanten wordt bevorderd door in álle onderdelen van de dagelijkse zorgverlening het welzijn centraal te stellen.';
+    const content = { ...baseContent, functieomschrijving: intakeQuote };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    const functieBlock = inleiding.split('\n\n')[2];
+
+    assert.match(functieBlock, /^\*\*Functieomschrijving\*\*\n/);
+    assert.ok(functieBlock.includes(intakeQuote));
+    assert.match(functieBlock, /welzijnsplan/);
+    assert.match(functieBlock, /dagelijkse zorgverlening/);
+  });
+
   it('appends bold no-AD paragraph and empty sub when no AD report', () => {
     const ctx = {
       ...baseCtx,

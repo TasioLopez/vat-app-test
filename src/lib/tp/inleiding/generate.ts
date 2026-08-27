@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import type { ReferentRow } from '@/lib/referents';
+import { generateIntakeSectie3Content } from '@/lib/tp/intake-sectie3';
 import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import {
   buildInleidingFields,
@@ -191,7 +192,22 @@ export async function generateInleiding(
   ctx: InleidingBuildContext,
   docs: EmployeeDoc[]
 ): Promise<InleidingFields> {
+  let intakeFunctiebeschrijving: string | null = null;
+  try {
+    const sectie3 = await generateIntakeSectie3Content(openai, supabase, docs);
+    intakeFunctiebeschrijving = sectie3.korte_beschrijving_werkzaamheden?.trim() || null;
+  } catch {
+    // No intake doc — fall through to LLM fallback for functieomschrijving.
+  }
+
   const content = await generateInleidingContent(openai, supabase, ctx, docs);
+
+  if (intakeFunctiebeschrijving) {
+    content.functieomschrijving = stripLeadingIntakeQuoteLabels(
+      stripCitations(intakeFunctiebeschrijving)
+    );
+  }
+
   return buildInleidingFields(ctx, content);
 }
 

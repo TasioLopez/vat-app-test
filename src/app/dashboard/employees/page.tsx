@@ -42,10 +42,10 @@ type OwnerFilterMode = 'mine' | 'all' | 'colleague' | 'unassigned';
 const OWNER_FILTER_STORAGE_KEY = 'werknemers.ownerFilter';
 
 function readStoredOwnerFilter(): { mode: OwnerFilterMode; colleagueId: string | null } {
-  if (typeof window === 'undefined') return { mode: 'mine', colleagueId: null };
+  if (typeof window === 'undefined') return { mode: 'all', colleagueId: null };
   try {
     const raw = localStorage.getItem(OWNER_FILTER_STORAGE_KEY);
-    if (!raw) return { mode: 'mine', colleagueId: null };
+    if (!raw) return { mode: 'all', colleagueId: null };
     const parsed = JSON.parse(raw) as { mode?: OwnerFilterMode; colleagueId?: string | null };
     const mode = parsed.mode;
     if (mode === 'mine' || mode === 'all' || mode === 'colleague' || mode === 'unassigned') {
@@ -54,7 +54,7 @@ function readStoredOwnerFilter(): { mode: OwnerFilterMode; colleagueId: string |
   } catch {
     /* ignore */
   }
-  return { mode: 'mine', colleagueId: null };
+  return { mode: 'all', colleagueId: null };
 }
 
 export default function EmployeesPage() {
@@ -67,8 +67,9 @@ export default function EmployeesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState<string>('all');
-  const [ownerFilterMode, setOwnerFilterMode] = useState<OwnerFilterMode>('mine');
+  const [ownerFilterMode, setOwnerFilterMode] = useState<OwnerFilterMode>('all');
   const [colleagueUserId, setColleagueUserId] = useState<string | null>(null);
+  const [ownerFilterHydrated, setOwnerFilterHydrated] = useState(false);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -77,14 +78,18 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     const stored = readStoredOwnerFilter();
+    // Admins (and anyone with a stuck "mine" preference) should see the full accessible set.
+    // Role is unknown here; fetchEmployees will nudge admins to "all" if needed.
     setOwnerFilterMode(stored.mode);
     setColleagueUserId(stored.colleagueId);
+    setOwnerFilterHydrated(true);
     fetchEmployees();
     fetchClients();
     void fetchOrgDirectory(supabase).then(setOrgUsers);
   }, []);
 
   useEffect(() => {
+    if (!ownerFilterHydrated) return;
     try {
       localStorage.setItem(
         OWNER_FILTER_STORAGE_KEY,
@@ -93,7 +98,7 @@ export default function EmployeesPage() {
     } catch {
       /* ignore */
     }
-  }, [ownerFilterMode, colleagueUserId]);
+  }, [ownerFilterMode, colleagueUserId, ownerFilterHydrated]);
 
   const ownerById = useMemo(() => orgUsersById(orgUsers), [orgUsers]);
 
@@ -114,12 +119,21 @@ export default function EmployeesPage() {
     const role = userData?.role || 'user';
     setUserRole(role);
 
+    // Admins previously defaulted to "Mijn dossiers", which hid most rows (null owner_id).
+    if (role === 'admin') {
+      setOwnerFilterMode((prev) => (prev === 'mine' ? 'all' : prev));
+    }
+
     const { data, error } = await supabase
       .from('employees')
       .select('*, clients(name)')
       .order('created_at', { ascending: false });
 
-    if (!error && data) setEmployees(data as Employee[]);
+    if (error) {
+      console.error('Error fetching employees:', error);
+      return;
+    }
+    if (data) setEmployees(data as Employee[]);
   };
 
   const fetchClients = async () => {

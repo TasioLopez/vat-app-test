@@ -6,6 +6,7 @@
 const LEADING_QUOTE_LABELS = [
   /^Quote advies spoor 2(?:\s*\(inleiding\))?\s*:\s*/i,
   /^Quote passende functies\s*:\s*/i,
+  /^Korte beschrijving van de werkzaamheden\s*:\s*/i,
 ];
 
 export function stripLeadingIntakeQuoteLabels(text: string): string {

@@ -3,6 +3,8 @@ export const INTAKE_LAYOUT_V75_HINT = `
 INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/V3):
 - Sectie 1 Gespreksinformatie: naam werknemer, Datum gesprek
 - Sectie 2 Persoonsgegevens: leeftijd, geslacht, functietitel, werkgever/organisatie, urenomvang, woonplaats, Telefoonnummer (werknemer → phone), Andere werkgever
+- Sectie 3 Functiebeschrijving:
+  • "Korte beschrijving van de werkzaamheden:" — verbatim job description for TP inleiding Functieomschrijving block; ends before sectie 4 Aanmelding
 - Sectie 4 Aanmelding: Naam contactpersoon, Functietitel contactpersoon, Telefoonnummer contactpersoon, Email contactpersoon (enige bron voor referent_*)
 - Sectie 5 Medische situatie:
   • Datum eerste ziekte dag

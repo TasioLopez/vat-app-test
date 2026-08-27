@@ -28,7 +28,7 @@ export const INLEIDING_CONTENT_JSON_SCHEMA = {
     functieomschrijving: {
       type: 'string',
       description:
-        'Body of the job description only: narrative, max 4 sentences, no heading, no bullet list.',
+        'Fallback job description when intake sectie 3 is empty: narrative, max 4 sentences, no heading, no bullet list. Ignored server-side when intake sectie 3 quote exists.',
     },
     medische_begeleiding: {
       type: 'string',

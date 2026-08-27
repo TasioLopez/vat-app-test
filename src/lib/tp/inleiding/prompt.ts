@@ -22,10 +22,11 @@ ALGEMENE REGELS VOOR CONTENT
 VELDEN (JSON output)
 
 functieomschrijving
+- FALLBACK ONLY: invullen wanneer intake sectie 3 "Korte beschrijving van de werkzaamheden" leeg is (server-side override wanneer intake wel tekst heeft).
 - Beschrijf het doel van de functie in maximaal vier zinnen.
 - Verhalend; geen taakopsomming of bullets.
-- Gebruik AD-rapport of intake (sectie 7) indien aanwezig.
-- Ontbreekt een beschrijving: korte zakelijke omschrijving op basis van functietitel en werkgever uit context.
+- Gebruik uitsluitend functietitel (context.details.current_job) en werkgever (context.client.name) — NOOIT AD-rapport of intake sectie 7.
+- Verzin geen taken of details die niet uit functietitel en werkgever volgen.
 
 medische_begeleiding — kies exact één waarde:
 - actief: lopende behandeling, controle, vervolgonderzoek, vervolgafspraak, specialistische begeleiding, actieve medische begeleiding.

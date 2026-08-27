@@ -95,29 +95,41 @@ ON public.employees
 FOR SELECT
 TO authenticated
 USING (
-  NOT public.is_admin()
-  AND public.user_has_employee_access(id)
+  public.is_admin()
+  OR public.user_has_employee_access(id)
 );
 
--- Allow create for any authenticated non-admin (creator is auto-assigned in app + owner_id).
+-- Allow create for any authenticated user (creator is auto-assigned in app + owner_id).
 CREATE POLICY "employees_insert"
 ON public.employees
 FOR INSERT
 TO authenticated
-WITH CHECK (NOT public.is_admin());
+WITH CHECK (
+  public.is_admin()
+  OR auth.uid() IS NOT NULL
+);
 
 CREATE POLICY "employees_update"
 ON public.employees
 FOR UPDATE
 TO authenticated
 USING (
-  NOT public.is_admin()
-  AND public.user_has_employee_access(id)
+  public.is_admin()
+  OR public.user_has_employee_access(id)
 )
 WITH CHECK (
-  NOT public.is_admin()
-  AND public.user_has_employee_access(id)
+  public.is_admin()
+  OR public.user_has_employee_access(id)
 );
+
+-- Ensure admin catch-all exists (admins must see all employees).
+DROP POLICY IF EXISTS "employees_admin_all" ON public.employees;
+CREATE POLICY "employees_admin_all"
+ON public.employees
+FOR ALL
+TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 -- No standard-user DELETE policy (admins via employees_admin_all).
 
@@ -128,21 +140,27 @@ DROP POLICY IF EXISTS "employee_users_select" ON public.employee_users;
 DROP POLICY IF EXISTS "employee_users_insert" ON public.employee_users;
 DROP POLICY IF EXISTS "employee_users_update" ON public.employee_users;
 DROP POLICY IF EXISTS "employee_users_delete" ON public.employee_users;
+DROP POLICY IF EXISTS "employee_users_admin_all" ON public.employee_users;
+
+CREATE POLICY "employee_users_admin_all"
+ON public.employee_users
+FOR ALL
+TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
 
 CREATE POLICY "employee_users_select"
 ON public.employee_users
 FOR SELECT
 TO authenticated
 USING (
-  NOT public.is_admin()
-  AND (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.employees e
-      WHERE e.id = employee_users.employee_id
-        AND e.owner_id = auth.uid()
-    )
+  public.is_admin()
+  OR user_id = auth.uid()
+  OR EXISTS (
+    SELECT 1
+    FROM public.employees e
+    WHERE e.id = employee_users.employee_id
+      AND e.owner_id = auth.uid()
   )
 );
 
@@ -151,13 +169,15 @@ ON public.employee_users
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  NOT public.is_admin()
-  AND user_id = auth.uid()
-  AND EXISTS (
-    SELECT 1
-    FROM public.employees e
-    WHERE e.id = employee_users.employee_id
-      AND e.owner_id = auth.uid()
+  public.is_admin()
+  OR (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1
+      FROM public.employees e
+      WHERE e.id = employee_users.employee_id
+        AND e.owner_id = auth.uid()
+    )
   )
 );
 
@@ -165,23 +185,21 @@ CREATE POLICY "employee_users_update"
 ON public.employee_users
 FOR UPDATE
 TO authenticated
-USING (NOT public.is_admin() AND user_id = auth.uid())
-WITH CHECK (NOT public.is_admin() AND user_id = auth.uid());
+USING (public.is_admin() OR user_id = auth.uid())
+WITH CHECK (public.is_admin() OR user_id = auth.uid());
 
 CREATE POLICY "employee_users_delete"
 ON public.employee_users
 FOR DELETE
 TO authenticated
 USING (
-  NOT public.is_admin()
-  AND (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.employees e
-      WHERE e.id = employee_users.employee_id
-        AND e.owner_id = auth.uid()
-    )
+  public.is_admin()
+  OR user_id = auth.uid()
+  OR EXISTS (
+    SELECT 1
+    FROM public.employees e
+    WHERE e.id = employee_users.employee_id
+      AND e.owner_id = auth.uid()
   )
 );
 
