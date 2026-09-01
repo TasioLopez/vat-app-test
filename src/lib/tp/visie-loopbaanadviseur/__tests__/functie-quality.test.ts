@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
+import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT, ADVIES_NB_NO_REPORT_LEGACY } from '@/lib/tp/ad-advies/constants';
 import {
   assessFunctieQuality,
   buildRegenerateFeedbackMessage,
@@ -26,13 +26,9 @@ describe('extractAdExclusionPhrases', () => {
     assert.ok(phrases.some((p) => /planner logistiek/i.test(p)));
   });
 
-  it('returns empty for N.B. / geen AD placeholder', () => {
-    assert.deepEqual(
-      extractAdExclusionPhrases(
-        'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.'
-      ),
-      []
-    );
+  it('returns empty for geen AD placeholder', () => {
+    assert.deepEqual(extractAdExclusionPhrases(ADVIES_NB_NO_REPORT), []);
+    assert.deepEqual(extractAdExclusionPhrases(ADVIES_NB_NO_REPORT_LEGACY), []);
     assert.deepEqual(extractAdExclusionPhrases(''), []);
     assert.deepEqual(extractAdExclusionPhrases(null), []);
   });

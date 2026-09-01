@@ -1,7 +1,10 @@
 import {
+  buildActualisatieSuffix,
   OPENING_PATTERN,
   PARA1_CLOSING_TEMPLATES,
   SECTION_HEADING_PATTERN,
+  ZOEKPROFIEL_NB_NO_AD,
+  type ActualisatieEntry,
   type BelastbaarheidsdocumentType,
 } from './constants';
 import type { ZoekprofielContentResult } from './schema';
@@ -79,20 +82,33 @@ export function resolveBelastbaarheidsType(
 
 export function buildPara1Closing(
   type: BelastbaarheidsdocumentType,
-  datumVoluit: string
+  datumVoluit: string,
+  actualisaties?: ActualisatieEntry[] | null
 ): string {
   const template = PARA1_CLOSING_TEMPLATES[type];
+  let closing: string;
   if (!datumVoluit) {
     console.warn('⚠️ Zoekprofiel: belastbaarheidsdocument datum ontbreekt voor alinea 1 closing');
-    return template.replace(' van [datum]', '').replace('[datum]', '').trim();
+    closing = template.replace(' van [datum]', '').replace('[datum]', '').trim();
+  } else {
+    closing = template.replace('[datum]', datumVoluit);
   }
-  return template.replace('[datum]', datumVoluit);
+  const suffix = buildActualisatieSuffix(actualisaties ?? []);
+  return `${closing}${suffix}`.trim();
+}
+
+export function buildInsufficientZoekprofielFields(): ZoekprofielFields {
+  return { zoekprofiel: ZOEKPROFIEL_NB_NO_AD };
 }
 
 export function buildZoekprofielFields(
   ctx: ZoekprofielBuildContext,
   content: ZoekprofielContentResult
 ): ZoekprofielFields {
+  if (ctx.meta.scenario === 'insufficient') {
+    return buildInsufficientZoekprofielFields();
+  }
+
   if (content.verduidelijkingsvraag) {
     return {
       zoekprofiel: '',
@@ -109,7 +125,7 @@ export function buildZoekprofielFields(
   const docType = resolveBelastbaarheidsType(ctx, content);
   const datum = includeBelastbaarheidsClosing ? resolveBelastbaarheidsdatum(ctx, content) : '';
   const closing = includeBelastbaarheidsClosing
-    ? buildPara1Closing(docType, datum)
+    ? buildPara1Closing(docType, datum, content.actualisaties)
     : '';
   const para1 = [alinea1Kern, closing].filter(Boolean).join(' ');
 

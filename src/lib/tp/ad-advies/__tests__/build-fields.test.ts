@@ -6,7 +6,7 @@ import {
   buildAdAdviesBlock,
   parseAdAdvies,
 } from '../build-fields';
-import { ADVIES_DELIMITER } from '../constants';
+import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT, ADVIES_NB_NO_REPORT_LEGACY, isAdviesNbNoReport } from '../constants';
 import type { AdAdviesContentResult } from '../schema';
 
 const CALVIN_SPOOR2_ADVIES =
@@ -236,5 +236,14 @@ describe('buildAdAdviesFields', () => {
     );
     const parsed = parseAdAdvies(block);
     assert.equal(parsed.citaat, '- toezichthouder parkeergarage');
+  });
+});
+
+describe('isAdviesNbNoReport', () => {
+  it('recognizes current and legacy geen-AD placeholders', () => {
+    assert.equal(isAdviesNbNoReport(ADVIES_NB_NO_REPORT), true);
+    assert.equal(isAdviesNbNoReport(ADVIES_NB_NO_REPORT_LEGACY), true);
+    assert.equal(isAdviesNbNoReport(`  ${ADVIES_NB_NO_REPORT}  `), true);
+    assert.equal(isAdviesNbNoReport('In het arbeidsdeskundigrapport'), false);
   });
 });

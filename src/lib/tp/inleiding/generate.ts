@@ -103,6 +103,7 @@ function buildApiContext(ctx: InleidingBuildContext): Record<string, unknown> {
   return {
     has_ad_report: ctx.meta.has_ad_report ?? false,
     ad_report_concept: ctx.meta.ad_report_concept ?? false,
+    is_ex_werknemer: ctx.meta.is_ex_werknemer ?? false,
     employee: {
       first_name: ctx.employee.first_name,
       last_name: ctx.employee.last_name,

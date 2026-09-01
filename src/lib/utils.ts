@@ -65,7 +65,7 @@ export function formatOrganizationDisplayName(name: string | null | undefined): 
 
 /**
  * Formats employee name as "Title Initial. LastName (FirstName)"
- * e.g., "Mevrouw K. Baaijens (Kim)"
+ * e.g., "Mevrouw K. Baaijens (Kim)" or "De heer J. Jansen (Jan)"
  * 
  * @param firstName - Employee's first name
  * @param lastName - Employee's last name
@@ -92,7 +92,7 @@ export function formatEmployeeName(
   const isMale = gender === 'Male' || gender === 'Man' || gender?.toLowerCase() === 'man';
   
   if (isFemale || isMale) {
-    const title = isFemale ? 'Mevrouw' : 'Meneer';
+    const title = isFemale ? 'Mevrouw' : 'De heer';
     const initial = first.charAt(0).toUpperCase();
     return `${title} ${initial}. ${last} (${first})`;
   }

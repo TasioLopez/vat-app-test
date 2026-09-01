@@ -2,6 +2,16 @@
 export const INLEIDING_GEEN_AD =
   'Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Eventuele adviezen van de arbeidsdeskundige zullen worden verwerkt in de voortgangsrapportage.';
 
+export const INLEIDING_EX_WERKNEMER_DISCLAIMER_PREFIX = 'Werknemer is uit dienst bij';
+
+export function buildInleidingExWerknemerDisclaimer(werkgeverName: string): string {
+  return `*${INLEIDING_EX_WERKNEMER_DISCLAIMER_PREFIX} ${werkgeverName}. Omwille van leesbaarheid wordt de term "werknemer" gehanteerd in plaats van "ex-werknemer". Ditzelfde geldt voor "werkgever" en "ex-werkgever".`;
+}
+
+export function hasInleidingExWerknemerDisclaimer(text: string): boolean {
+  return text.includes(INLEIDING_EX_WERKNEMER_DISCLAIMER_PREFIX);
+}
+
 /** Fixed opening of alinea 5 (medische situatie). */
 export const MEDISCHE_SITUATIE_OPENING =
   'Werknemer vertelt openhartig over de reden van zijn/haar ziekmelding, de aanleiding hiervan en de samenhangende gezondheidsproblemen. Gezien de wetgeving verwerking persoonsgegevens worden er geen medische gegevens geregistreerd in dit rapport.';

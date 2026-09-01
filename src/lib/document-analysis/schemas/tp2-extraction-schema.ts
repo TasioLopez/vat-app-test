@@ -39,6 +39,9 @@ export const TP2_EXTRACTION_JSON_SCHEMA = {
     ad_report_concept: nullableBoolean(
       'True only when Concept checkbox under AD-rapport is clearly checked; otherwise false (default not concept)'
     ),
+    is_ex_werknemer: nullableBoolean(
+      'True only when Ex-werknemer checkbox in sectie 6 header is clearly checked; otherwise false'
+    ),
   },
   required: [
     'intake_date',
@@ -54,6 +57,7 @@ export const TP2_EXTRACTION_JSON_SCHEMA = {
     'osv_doctor_name',
     'osv_doctor_role',
     'ad_report_concept',
+    'is_ex_werknemer',
   ],
   additionalProperties: false,
 } as const;
@@ -76,6 +80,10 @@ export function parseTp2ExtractionResult(raw: unknown): Tp2ExtractionResult {
 
   if (!('ad_report_concept' in out)) {
     out.ad_report_concept = false;
+  }
+
+  if (!('is_ex_werknemer' in out)) {
+    out.is_ex_werknemer = false;
   }
 
   return out;

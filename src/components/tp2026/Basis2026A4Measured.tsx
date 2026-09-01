@@ -36,6 +36,7 @@ import { useDocumentText, useTPDocumentRender } from '@/context/TPDocumentRender
 import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { ADVIES_NB_NO_REPORT, isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
@@ -172,7 +173,7 @@ function textVariant(key: string, text: string): BasisTextVariant {
   const t = text.trim();
   if (key === 'prog') return 'belastbaarheid';
   if (key === 'vlb') return 'visieLa';
-  if (key === 'ad' && t.startsWith('N.B.')) return 'adNb';
+  if (key === 'ad' && isAdviesNbNoReport(t)) return 'adNb';
   if (key === 'ad') return 'adAdvies';
   if (key === 'wk') return 'logo';
   return 'markdown';
@@ -219,7 +220,7 @@ function getProfielFieldFallback(
     const hasNarrative =
       data.ad_report_concept === true || data.has_ad_report === true;
     if (!hasNarrative) {
-      return 'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
+      return ADVIES_NB_NO_REPORT;
     }
   }
   return '';

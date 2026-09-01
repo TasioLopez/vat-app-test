@@ -37,6 +37,15 @@ describe('parseTp2ExtractionResult', () => {
     );
   });
 
+  it('defaults is_ex_werknemer to false when absent or null', () => {
+    assert.equal(parseTp2ExtractionResult({}).is_ex_werknemer, false);
+    assert.equal(parseTp2ExtractionResult({ is_ex_werknemer: null }).is_ex_werknemer, false);
+  });
+
+  it('keeps explicit true for is_ex_werknemer', () => {
+    assert.equal(parseTp2ExtractionResult({ is_ex_werknemer: true }).is_ex_werknemer, true);
+  });
+
   it('keeps Aios doctor_role and osv_doctor_role', () => {
     const result = parseTp2ExtractionResult({
       doctor_role: 'Aios',

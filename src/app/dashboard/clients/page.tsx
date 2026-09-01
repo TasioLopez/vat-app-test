@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { canManageClients, type AppRole } from '@/lib/auth/roles';
 
 type SortField = 'name' | 'industry';
 type SortDirection = 'asc' | 'desc';
@@ -44,7 +45,7 @@ export default function ClientsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [userRole, setUserRole] = useState<'admin' | 'user' | null>(null);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -129,8 +130,12 @@ export default function ClientsPage() {
 
     if (userError || !userRecord) return console.error('User fetch error:', userError);
 
-    if (userRecord.role === 'admin' || userRecord.role === 'user') {
-      setUserRole(userRecord.role);
+    if (
+      userRecord.role === 'admin' ||
+      userRecord.role === 'user' ||
+      userRecord.role === 'back_office'
+    ) {
+      setUserRole(userRecord.role as AppRole);
     } else {
       setUserRole(null);
     }
@@ -173,7 +178,7 @@ export default function ClientsPage() {
   };
 
   const handleDeleteClick = (client: Client) => {
-    if (userRole !== 'admin') return;
+    if (!userRole || !canManageClients(userRole)) return;
     setClientToDelete(client);
     setShowDeleteModal(true);
   };
@@ -293,9 +298,11 @@ export default function ClientsPage() {
           <h1 className="text-4xl font-bold text-gray-900">Werkgevers</h1>
           <p className="text-lg text-gray-600">Beheer werkgevers en hun gegevens</p>
         </div>
-        <Link href="/dashboard/clients/new">
-          <Button size="lg">+ Nieuwe werkgever</Button>
-        </Link>
+        {userRole && canManageClients(userRole) && (
+          <Link href="/dashboard/clients/new">
+            <Button size="lg">+ Nieuwe werkgever</Button>
+          </Link>
+        )}
       </div>
 
       {clients.length > 0 && (
@@ -373,7 +380,7 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  {userRole === 'admin' && (
+                  {userRole && canManageClients(userRole) && (
                     <Button
                       size="sm"
                       variant="destructive"

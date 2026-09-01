@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
 import {
   buildFunctiesIntro,
   buildVisieLoopbaanadviseurBlock,
@@ -61,8 +62,7 @@ Ik denk aan eventuele functies zoals:
 - lichte, zittende werkzaamheden zoals assemblage medewerker
 - medewerker planning`;
 
-const ADVIES_NB =
-  'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
+const ADVIES_NB = ADVIES_NB_NO_REPORT;
 
 describe('detectDocumentScenario', () => {
   it('returns ad_with_functies when AD document and named functions in advies', () => {

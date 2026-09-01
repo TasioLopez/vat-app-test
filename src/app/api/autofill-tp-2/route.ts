@@ -32,6 +32,11 @@ import {
   detectAdReportConceptFromText,
 } from '@/lib/tp/ad-report-wording';
 import {
+  applyExWerknemerFromText,
+  detectExWerknemerFromText,
+  intakeTextHasExWerknemerLabel,
+} from '@/lib/tp/ex-werknemer-wording';
+import {
   describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
@@ -117,7 +122,7 @@ async function extractFromDocument<T extends Record<string, unknown>>(
   }
 }
 
-async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
+async function loadIntakePlainText(intakeDoc: DocRow): Promise<string | null> {
   const downloaded = await downloadDocumentBuffer(intakeDoc);
   if (!downloaded) return null;
 
@@ -128,24 +133,40 @@ async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean 
       fallbackName || downloaded.path
     );
     if (wasConverted) {
-      console.log(`✅ TP2 intake normalized to PDF for Concept text (${analysisFilename})`);
+      console.log(`✅ TP2 intake normalized to PDF for checkbox text (${analysisFilename})`);
     }
 
-    const plainText = await extractPdfPlainTextWithGlyphFallback(pdfBuffer);
-    const meta = describeIntakePlainText(plainText);
-    console.log(
-      `📋 TP2 Concept plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
-    );
-
-    const detected = detectAdReportConceptFromText(plainText);
-    if (detected !== null) return detected;
-    // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
-    if (meta.hasConcept) return false;
-    return null;
+    return extractPdfPlainTextWithGlyphFallback(pdfBuffer);
   } catch (error) {
-    console.warn('⚠️ TP2 Concept checkbox text detection failed', error);
+    console.warn('⚠️ TP2 intake checkbox text extraction failed', error);
     return null;
   }
+}
+
+async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
+  const plainText = await loadIntakePlainText(intakeDoc);
+  if (!plainText) return null;
+
+  const meta = describeIntakePlainText(plainText);
+  console.log(
+    `📋 TP2 Concept plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
+  );
+
+  const detected = detectAdReportConceptFromText(plainText);
+  if (detected !== null) return detected;
+  // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
+  if (meta.hasConcept) return false;
+  return null;
+}
+
+async function resolveExWerknemerFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
+  const plainText = await loadIntakePlainText(intakeDoc);
+  if (!plainText) return null;
+
+  const detected = detectExWerknemerFromText(plainText);
+  if (detected !== null) return detected;
+  if (intakeTextHasExWerknemerLabel(plainText)) return false;
+  return null;
 }
 
 async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unknown>> {
@@ -173,6 +194,15 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
     merged.ad_report_concept = applyAdReportConceptFromText(
       merged.ad_report_concept,
       conceptFromText
+    );
+
+    const exWerknemerFromText = await resolveExWerknemerFromIntakeText(intakeDoc);
+    if (exWerknemerFromText !== null) {
+      console.log(`📋 TP2 Ex-werknemer checkbox from text: ${exWerknemerFromText}`);
+    }
+    merged.is_ex_werknemer = applyExWerknemerFromText(
+      merged.is_ex_werknemer,
+      exWerknemerFromText
     );
   } else {
     console.log('⚠️ No intake document found for TP2 extraction');

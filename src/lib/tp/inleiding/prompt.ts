@@ -18,6 +18,7 @@ ALGEMENE REGELS VOOR CONTENT
 - Geen medische diagnoses, behandelingen of specifieke beperkingen beschrijven.
 - Zakelijke rapportagestijl.
 - CONSISTENTIE NAAM: verwijs nooit naar werknemer met de volledige voornaam. Gebruik óf \"werknemer\" óf uitsluitend \"[voorletter]. [achternaam]\" (geen volledige voornaam).
+- Wanneer context.is_ex_werknemer true is: schrijf GEEN ex-werknemer disclaimer — die wordt server-side toegevoegd aan alinea 2 (uitval).
 
 VELDEN (JSON output)
 

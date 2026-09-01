@@ -181,3 +181,12 @@ describe('normalizeTp2ExtractedData — ad_report_concept', () => {
     assert.equal(result.intake_concept, undefined);
   });
 });
+
+describe('normalizeTp2ExtractedData — is_ex_werknemer', () => {
+  it('always emits is_ex_werknemer, defaulting missing/null to false', () => {
+    assert.equal(normalizeTp2ExtractedData({}).is_ex_werknemer, false);
+    assert.equal(normalizeTp2ExtractedData({ is_ex_werknemer: null }).is_ex_werknemer, false);
+    assert.equal(normalizeTp2ExtractedData({ is_ex_werknemer: false }).is_ex_werknemer, false);
+    assert.equal(normalizeTp2ExtractedData({ is_ex_werknemer: true }).is_ex_werknemer, true);
+  });
+});

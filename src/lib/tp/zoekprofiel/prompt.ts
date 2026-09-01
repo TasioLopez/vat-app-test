@@ -6,22 +6,25 @@ import {
   MIN_WORDS_TOTAL,
   NATURAL_FORMULATION_EXAMPLES,
   OPENING_NIVEAU_HINTS,
-  OPENING_PREFIX,
+  OPENING_PREFIX_PLURAL,
+  OPENING_PREFIX_SINGULAR,
   STYLE_REFERENCE_V13,
 } from './constants';
+import type { ZoekprofielScenarioResult } from './detect-scenario';
 
 const DOCUMENT_SCOPE_HINT = `
 DOCUMENTEN VOOR ZOEKPROFIEL:
-- Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel of Lijst arbeidsmogelijkheden en beperkingen (indien geüpload): leidende bron voor alinea 2; documentdatum bepaalt welk document leidend is
-- AD rapport (indien aanwezig): opleiding, werkervaring, expliciet werk- en denkniveau; én belastbaarheid wanneer er géén apart FML/IZP/LAB-document is geüpload
+- Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel, Lijst arbeidsmogelijkheden en beperkingen, belastbaarheidsprofiel (indien geüpload): leidende bron voor alinea 2; documentdatum bepaalt welk document leidend is
+- Spreekuurrapportage en artsenverduidelijking: voor actualisaties op de leidende belastbaarheidsbron (chronologisch in actualisaties-veld)
+- AD rapport (indien aanwezig): opleiding, werkervaring, expliciet werk- en denkniveau; belastbaarheid alleen wanneer type+datum overeenkomen met leidend document of wanneer geen apart belastbaarheidsdocument
 - Intakeformulier (indien aanwezig): opleiding, diploma's, werkervaring, functietitels
   • Sectie 2 Persoonsgegevens + blok "Algemene informatie"
 Bronprioriteit belastbaarheid:
-1. Meest recente FML / IZP / LAB wanneer aanwezig — het AD-rapport mag die vastgestelde belastbaarheid dan niet vervangen, aanpassen of verruimen
-2. Geen apart FML/IZP/LAB? Gebruik uitsluitend expliciete beperkingen en voorwaarden uit het AD-rapport (en zo nodig intake). Vraag NIET om een FML te uploaden; schrijf wél een zoekprofiel
+1. Meest recente FML / IZP / LAB / belastbaarheidsprofiel wanneer aanwezig
+2. Geen apart belastbaarheidsdocument? Gebruik uitsluitend expliciete beperkingen/voorwaarden uit het AD-rapport (scenario ad_embedded_belastbaarheid). Vraag NIET om een FML te uploaden.
+3. Verwar belastbaarheidsprofiel nooit met functieprofiel
 Bij meerdere documenten van hetzelfde type: gebruik het meest recente document.
-Ontbreekt noodzakelijke informatie (bijv. opleiding niet aantoonbaar afgerond) of spreken bronnen elkaar tegen? Stel dan een gerichte verduidelijkingsvraag (veld verduidelijkingsvraag) en schrijf GEEN zoekprofiel (alinea_1_kern en alinea_2 = null).
-Gebruik NIET: medische diagnoses, privé-informatie, niet-genoemde vaardigheden, aannames.
+Ontbreekt noodzakelijke informatie of spreken bronnen elkaar tegen? Stel dan een gerichte verduidelijkingsvraag (veld verduidelijkingsvraag) en schrijf GEEN zoekprofiel.
 `.trim();
 
 const ANTI_PATTERNS_VAT = `
@@ -73,9 +76,9 @@ Alinea 2 (positieve vertaling, geen cijfers):
 `.trim();
 
 /**
- * Zoekprofiel V1.3 masterprompt — PDF-aligned instructions.
+ * Zoekprofiel V3 masterprompt — contact PDF aligned.
  * Model generates alinea_1_kern + alinea_2 (or verduidelijkingsvraag);
- * server appends mandatory paragraph-1 closing with full document names.
+ * server appends mandatory paragraph-1 closing with full document names + actualisaties.
  */
 export const ZOEKPROFIEL_CONTENT_PROMPT = `
 ROL EN DOEL
@@ -94,14 +97,16 @@ Ontbreekt noodzakelijke informatie (zoals aantoonbaar afgeronde opleiding) of sp
 
 UITVOER
 Geef uitsluitend het definitieve zoekprofiel OF een verduidelijkingsvraag:
-- exact twee alinea's (via alinea_1_kern + alinea_2; slotzin alinea 1 wordt door het systeem toegevoegd);
-- ${MIN_WORDS_TOTAL} tot en met ${MAX_WORDS_TOTAL} woorden totaal na assemblage;
+- exact twee alinea's (via alinea_1_kern + alinea_2; slotzin alinea 1 + actualisaties worden door het systeem toegevoegd);
+- ${MIN_WORDS_TOTAL} tot en met ${MAX_WORDS_TOTAL} woorden totaal na assemblage is voorkeur; volledigheid gaat boven de woordlimiet;
 - zonder kopjes, opsommingen, tabellen, bronvermelding of toelichting.
 
-EERSTE ALINEA (alinea_1_kern — ZONDER afsluitende zin)
-Begin altijd exact met:
-"${OPENING_PREFIX} [niveau]."
-Vervang [niveau] door het niveau van de hoogst aantoonbaar afgeronde opleiding, bijvoorbeeld mbo-2 niveau, mbo-4 niveau of hbo-niveau. Leid nooit een hoger niveau af uit werkervaring, vaardigheden, een functietitel of een niet-afgeronde opleiding.
+EERSTE ALINEA (alinea_1_kern — ZONDER afsluitende zin en ZONDER actualisatie-clausule)
+Begin altijd met de V3-openingszin:
+- Eén hoogste opleiding: "${OPENING_PREFIX_SINGULAR} [niveau]."
+- Meerdere hoogste opleidingen opzelfde niveau: "${OPENING_PREFIX_PLURAL} [niveau]."
+Zet opening_variant op singular/plural/null dienovereenkomstig.
+Vervang [niveau] door het niveau van de hoogst aantoonbaar afgeronde opleiding. Leid nooit een hoger niveau af uit werkervaring, vaardigheden, functietitel of niet-afgeronde opleiding.
 
 ${OPENING_NIVEAU_HINTS}
 
@@ -118,9 +123,13 @@ Goed: "Hij heeft werkervaring opgedaan als maaltijdbezorger, webdeveloper en bev
 Goed: "Zij heeft werkervaring opgedaan als zorgmedewerker en als operator productie II binnen een bakkerij."
 Fout: "waar hij verantwoordelijk was voor receptie en cameratoezicht" (taken)
 
-Genereer NIET de afsluitende zin over de Functionele Mogelijkheden Lijst / het Inzetbaarheidsprofiel / de Lijst arbeidsmogelijkheden en beperkingen — die wordt door het systeem toegevoegd wanneer has_belastbaarheids_doc true is.
+Genereer NIET de afsluitende zin over belastbaarheidsdocumenten — die wordt door het systeem toegevoegd wanneer has_belastbaarheids_doc true is.
+Genereer NIET actualisatie-clausules — lever die via het veld actualisaties (type + datum_voluit, chronologisch).
 
-TWEEDE ALINEA (alinea_2)
+ACTUALISATIES (veld actualisaties)
+Wanneer spreekuurrapportage of artsenverduidelijking de leidende belastbaarheid actualiseert, vul actualisaties met type en datum voluit. Alleen wanneer inhoudelijk relevant voor het zoekprofiel.
+
+TWEEDE ALINEA (alinea_2) — VERTALING GRENZEN
 Vertaal alle arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete bijzondere voorwaarden uit de leidende belastbaarheidsbron naar concrete kenmerken van passend werk:
 - has_belastbaarheids_doc true → leidend FML/IZP/LAB
 - has_belastbaarheids_doc false → expliciete beperkingen/voorwaarden in het AD-rapport (en zo nodig intake)
@@ -145,7 +154,10 @@ Beschrijf omgevingsvoorwaarden waar nodig als een passende werkomgeving zonder r
 
 Gebruik concrete tijds- of frequentiegrenzen uitsluitend wanneer deze noodzakelijk zijn om een wezenlijke belastbaarheidsgrens correct te bewaken. Gebruik anders natuurlijke termen zoals kortdurend, incidenteel, regelmatig, afwisselend of in beperkte mate. Een natuurlijkere formulering mag een vastgestelde grens nooit verruimen, afzwakken of veranderen.
 
-Schrijf zoveel mogelijk positief. Vermijd een opeenvolging van "geen", "niet", "beperkt", "vermijden" en "uitgesloten". Een uitsluitende formulering is toegestaan wanneer de voorwaarde anders niet voldoende duidelijk of brongetrouw kan worden weergegeven.
+Schrijf zoveel mogelijk positief. Vermijd een opeenvolging van "geen", "niet", "beperkt", "vermijden" en "uitgesloten".
+
+WERK VS WERKNEMER
+Formuleer voorwaarden over het werk, niet over werknemer als persoon. Fout: "werknemer kan niet reizen met het OV". Goed: "werk waarbij reizen met het openbaar vervoer geen wezenlijk onderdeel vormt, is passend."
 
 NOOIT OPNEMEN
 Noem geen diagnoses, klachten, behandelingen, medicatie, medische oorzaken, prognoses, herstelverwachtingen, motivatie, interesses, hobby's, talen, computervaardigheden, vaardigheden, competenties, persoonskenmerken, certificaten, rijbewijzen, zoekrichtingen, voorbeeldfuncties, arbeidsmarktanalyses, benutbare mogelijkheden of duurzame inzetbaarheid.
@@ -196,25 +208,53 @@ ${STYLE_REFERENCE_V13}
 
 JSON OUTPUT
 Lever exact:
-- verduidelijkingsvraag: gerichte Nederlandse vraag wanneer bronnen ontoereikend of tegenstrijdig zijn; anders null. Wanneer gezet: alinea_1_kern en alinea_2 moeten null zijn.
-- alinea_1_kern: eerste alinea ZONDER afsluitende Functionele Mogelijkheden Lijst / Inzetbaarheidsprofiel / Lijst arbeidsmogelijkheden en beperkingen-zin; null bij verduidelijkingsvraag
-- alinea_2: volledige belastbaarheidsparagraaf (alleen afwijkend gescoorde items); null bij verduidelijkingsvraag
-- belastbaarheidsdocument_type: "fml" | "izp" | "lab" (meest recente / leidende document; bij AD-only best-effort of "fml")
-- belastbaarheidsdocument_datum_voluit: datum voluit (bijv. "19 januari 2026"), null indien niet gevonden of AD-only zonder datum
+- verduidelijkingsvraag: gerichte Nederlandse vraag wanneer bronnen ontoereikend of tegenstrijdig zijn; anders null
+- alinea_1_kern: eerste alinea ZONDER closing/actualisatie; null bij verduidelijkingsvraag
+- alinea_2: volledige belastbaarheidsparagraaf; null bij verduidelijkingsvraag
+- opening_variant: "singular" | "plural" | null
+- belastbaarheidsdocument_type: "fml" | "izp" | "lab" | "belastbaarheidsprofiel"
+- belastbaarheidsdocument_datum_voluit: datum voluit of null bij AD-only zonder apart document
+- actualisaties: array van { type: "spreekuurrapportage"|"artsenverduidelijking", datum_voluit } chronologisch, of null
 
 Geen sectiekop. Geen toelichting. Geen opsommingen.
 `.trim();
 
+export function buildZoekprofielScenarioContext(
+  scenario: ZoekprofielScenarioResult
+): Record<string, unknown> {
+  return {
+    scenario: scenario.scenario,
+    has_ad_narrative: scenario.hasAdNarrative,
+    has_separate_belast_doc: scenario.hasSeparateBelastDoc,
+    has_spreekuur_doc: scenario.hasSpreekuurDoc,
+  };
+}
+
+export function buildClarificationAnswerMessage(options: {
+  question: string;
+  answer: string;
+  history?: { question: string; answer: string }[];
+}): string {
+  const prior = (options.history ?? [])
+    .map((h, i) => `Vraag ${i + 1}: ${h.question}\nAntwoord ${i + 1}: ${h.answer}`)
+    .join('\n\n');
+  return `Eerdere verduidelijking:
+${prior ? `${prior}\n\n` : ''}Laatste vraag: ${options.question.trim()}
+Antwoord adviseur: ${options.answer.trim()}
+
+Genereer het zoekprofiel opnieuw met deze aanvullende informatie. Stel alleen een nieuwe verduidelijkingsvraag wanneer nog steeds onvoldoende informatie beschikbaar is.`;
+}
+
 export function buildZoekprofielRetryMessage(issueMessages: string[]): string {
   const list = issueMessages.map((m) => `- ${m}`).join('\n');
-  return `De vorige output voldeed niet aan de Zoekprofiel V1.3 regels. Corrigeer en genereer opnieuw.
+  return `De vorige output voldeed niet aan de Zoekprofiel V3 regels. Corrigeer en genereer opnieuw.
 
 Problemen:
 ${list}
 
-Volg strikt: korte alinea 1 (functies/sectoren/werkomgevingen), positieve vloeiende alinea 2 zonder FML-cijfers/lichaamsdelen/niet-vastgelegde urenopbouw, alleen afwijkend gescoorde beperkingen, ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden totaal. Slotzin met documentnaam alleen wanneer has_belastbaarheids_doc true (systeem).`;
+Volg strikt: V3-openingszin, korte alinea 1, positieve vloeiende alinea 2 zonder FML-cijfers/lichaamsdelen, werk-vs-werknemer formulering, voorkeur ${MIN_WORDS_TOTAL}–${MAX_WORDS_TOTAL} woorden (volledigheid voorrang). Slotzin + actualisaties alleen wanneer has_belastbaarheids_doc true (systeem).`;
 }
 
 export function buildZoekprofielContextMessage(context: Record<string, unknown>): string {
-  return `Context (has_belastbaarheids_doc + optioneel leidend FML/IZP/LAB; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
+  return `Context (scenario, has_belastbaarheids_doc, leidend document; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
 }

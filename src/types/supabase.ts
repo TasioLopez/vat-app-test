@@ -788,6 +788,7 @@ export type Database = {
           fml_izp_lab_date: string | null
           has_ad_report: boolean | null
           id: string
+          is_ex_werknemer: boolean | null
           inleiding: string | null
           inleiding_sub: string | null
           intake_date: string | null
@@ -830,6 +831,7 @@ export type Database = {
           fml_izp_lab_date?: string | null
           has_ad_report?: boolean | null
           id?: string
+          is_ex_werknemer?: boolean | null
           inleiding?: string | null
           inleiding_sub?: string | null
           intake_date?: string | null
@@ -872,6 +874,7 @@ export type Database = {
           fml_izp_lab_date?: string | null
           has_ad_report?: boolean | null
           id?: string
+          is_ex_werknemer?: boolean | null
           inleiding?: string | null
           inleiding_sub?: string | null
           intake_date?: string | null

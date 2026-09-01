@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
+import { ADVIES_NB_NO_REPORT, isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
 import { buildAdAdviesBlock, parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { ConfirmToEditBlock, TEXTAREA_CLASS } from '@/components/tp/ConfirmToEditBlock';
@@ -21,7 +21,7 @@ export function AdviesPassendeArbeidEditor({
     onSync: onChange,
   });
 
-  if (hasAdReport === false || draft.trimStart().startsWith('N.B.')) {
+  if (hasAdReport === false || isAdviesNbNoReport(draft)) {
     return (
       <div className="rounded-md border border-[#b8985c]/40 bg-muted/30 px-3 py-2">
         <span className="text-sm font-bold text-neutral-900">

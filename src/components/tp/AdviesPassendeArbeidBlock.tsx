@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
+import { ADVIES_DELIMITER, isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
 import { patchAdviesIntroForConcept } from '@/lib/tp/ad-report-wording';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
@@ -25,7 +25,7 @@ export function AdviesPassendeArbeidBlock({
 
   if (!text?.trim()) return null;
 
-  if (text.trim().startsWith('N.B.')) {
+  if (isAdviesNbNoReport(text)) {
     return (
       <div className={className}>
         <span className="text-[12px] font-bold text-neutral-900">{doc(text.trim())}</span>

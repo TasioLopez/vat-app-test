@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildInsufficientZoekprofielFields,
   buildPara1Closing,
   buildZoekprofielFields,
   hasV2OpeningSentence,
@@ -10,6 +11,7 @@ import {
   type ZoekprofielBuildContext,
 } from '../build-fields';
 import type { ZoekprofielContentResult } from '../schema';
+import { ZOEKPROFIEL_NB_NO_AD } from '../constants';
 
 const baseCtx: ZoekprofielBuildContext = {
   employee: { first_name: 'Jan', last_name: 'Jansen' },
@@ -24,8 +26,10 @@ const baseContent: ZoekprofielContentResult = {
   alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker en productiemedewerker in de logistiek en productie.`,
   alinea_2:
     'Passend zijn overzichtelijke en voorspelbare werkzaamheden met een duidelijke taakstructuur. Werkzaamheden waarbij langdurig staan geen wezenlijk onderdeel vormt zijn passend. Werkzaamheden met lichte fysieke belasting zijn passend. Beperkt fysiek belastend werk is passend. Een rustige werkomgeving is passend. Regelmatige werktijden en geen nachtdiensten zijn passend.',
+  opening_variant: 'singular',
   belastbaarheidsdocument_type: 'fml',
   belastbaarheidsdocument_datum_voluit: '3 februari 2026',
+  actualisaties: null,
 };
 
 describe('buildZoekprofielFields', () => {
@@ -150,6 +154,32 @@ describe('buildPara1Closing', () => {
       /Lijst arbeidsmogelijkheden en beperkingen van 19 januari 2026/
     );
   });
+
+  it('appends actualisatie suffix chronologically', () => {
+    const text = buildPara1Closing('fml', '14 april 2026', [
+      { type: 'spreekuurrapportage', datum_voluit: '2 mei 2026' },
+    ]);
+    assert.match(text, /Functionele Mogelijkheden Lijst van 14 april 2026/);
+    assert.match(text, /geactualiseerd in de spreekuurrapportage van 2 mei 2026/);
+  });
+});
+
+describe('buildInsufficientZoekprofielFields', () => {
+  it('returns N.B. standard line only', () => {
+    const { zoekprofiel } = buildInsufficientZoekprofielFields();
+    assert.equal(zoekprofiel, ZOEKPROFIEL_NB_NO_AD);
+  });
+});
+
+describe('buildZoekprofielFields insufficient scenario', () => {
+  it('returns N.B. without calling model content', () => {
+    const ctx = {
+      employee: {},
+      meta: { scenario: 'insufficient' as const },
+    };
+    const { zoekprofiel } = buildZoekprofielFields(ctx, baseContent);
+    assert.equal(zoekprofiel, ZOEKPROFIEL_NB_NO_AD);
+  });
 });
 
 describe('resolveBelastbaarheidsdatum', () => {
@@ -221,8 +251,10 @@ describe('parseZoekprofielContentResult', () => {
       verduidelijkingsvraag: null,
       alinea_1_kern: 'test',
       alinea_2: null,
+      opening_variant: null,
       belastbaarheidsdocument_type: 'unknown',
       belastbaarheidsdocument_datum_voluit: null,
+      actualisaties: null,
     });
     assert.equal(result.belastbaarheidsdocument_type, 'fml');
   });
@@ -233,8 +265,10 @@ describe('parseZoekprofielContentResult', () => {
       verduidelijkingsvraag: null,
       alinea_1_kern: 'test',
       alinea_2: null,
+      opening_variant: null,
       belastbaarheidsdocument_type: 'lab',
       belastbaarheidsdocument_datum_voluit: null,
+      actualisaties: null,
     });
     assert.equal(result.belastbaarheidsdocument_type, 'lab');
   });
@@ -245,8 +279,10 @@ describe('parseZoekprofielContentResult', () => {
       verduidelijkingsvraag: 'Welke opleiding is afgerond?',
       alinea_1_kern: 'should be cleared',
       alinea_2: 'also cleared',
+      opening_variant: null,
       belastbaarheidsdocument_type: 'fml',
       belastbaarheidsdocument_datum_voluit: null,
+      actualisaties: null,
     });
     assert.equal(result.verduidelijkingsvraag, 'Welke opleiding is afgerond?');
     assert.equal(result.alinea_1_kern, null);

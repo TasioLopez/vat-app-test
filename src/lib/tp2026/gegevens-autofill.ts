@@ -32,6 +32,7 @@ export const GEGEVENS_TP2_KEYS = [
   'tp_creation_date',
   'has_ad_report',
   'ad_report_concept',
+  'is_ex_werknemer',
   'ad_report_date',
   'occupational_doctor_name',
   'occupational_doctor_org',

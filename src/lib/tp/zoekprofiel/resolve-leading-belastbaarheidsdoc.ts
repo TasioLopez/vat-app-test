@@ -1,3 +1,4 @@
+import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import type { BelastbaarheidsdocumentType } from './constants';
 
 export type LeadingBelastbaarheidsDocInput = {
@@ -53,6 +54,12 @@ export function inferBelastbaarheidsdocumentType(
     t.includes('functionele mogelijkheden')
   ) {
     return 'fml';
+  }
+  if (
+    isSpreekReportageDocType(type) ||
+    t.includes('belastbaarheidsprofiel')
+  ) {
+    return 'belastbaarheidsprofiel';
   }
   return null;
 }

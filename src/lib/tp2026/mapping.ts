@@ -13,6 +13,8 @@ import {
 } from '@/lib/tp2026/basis-section-review';
 import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
 import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { isExWerknemer } from '@/lib/tp/ex-werknemer-wording';
+import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
 import {
   hasToelichtingOpener,
   updatePowMeterToelichting,
@@ -192,6 +194,11 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   if (isAdReportConcept(next) && next.has_ad_report !== false) {
     next.has_ad_report = false;
+  }
+
+  if (isExWerknemer(next) && (next.tp3_activities === null || next.tp3_activities === undefined)) {
+    const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
+    if (spoor2) next.tp3_activities = spoor2;
   }
 
   normalizePowMeterLegacyFields(next);

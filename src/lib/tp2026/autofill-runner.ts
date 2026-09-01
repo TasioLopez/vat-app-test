@@ -17,6 +17,7 @@ import {
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
 import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
+import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -190,9 +191,13 @@ async function runTp2AutofillStep(
     if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }
-    const next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
+    let next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
       overwrite: true,
     });
+    if (next.is_ex_werknemer === true) {
+      const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
+      if (spoor2) next.tp3_activities = spoor2;
+    }
     return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
@@ -254,10 +259,21 @@ export function resolveTp3AutofillJson(
       ? json.clarification_question.trim()
       : '';
 
-  // V1.3 zoekprofiel: clarification means do not overwrite existing field
+  // Zoekprofiel V3: clarification persists draft for interactive editor
   if (json.requires_clarification || clarification) {
+    const details =
+      json?.details && typeof json.details === 'object'
+        ? (json.details as Record<string, unknown>)
+        : {};
+    const draftRaw =
+      details.zoekprofiel_clarification_draft ??
+      (json as { draft?: unknown }).draft;
+    let next: Record<string, unknown> = { ...currentData };
+    if (draftRaw) {
+      next = { ...next, zoekprofiel_clarification_draft: draftRaw };
+    }
     return {
-      data: currentData,
+      data: ensureTP2026Shape(next),
       error: clarification || 'Verduidelijking nodig vóór het zoekprofiel',
     };
   }

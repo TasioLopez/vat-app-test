@@ -15,6 +15,7 @@ import {
   UNSOURCED_CONDITION_PATTERNS,
   type BelastbaarheidsdocumentType,
 } from './constants';
+import type { ZoekprofielScenario } from './detect-scenario';
 import type { ZoekprofielContentResult } from './schema';
 
 export type ZoekprofielBuildContext = {
@@ -24,6 +25,9 @@ export type ZoekprofielBuildContext = {
     has_belastbaarheids_doc?: boolean;
     leading_belastbaarheidsdocument_type?: BelastbaarheidsdocumentType | null;
     leading_belastbaarheidsdocument_datum_voluit?: string | null;
+    scenario?: ZoekprofielScenario | null;
+    has_ad_report?: boolean | null;
+    actualisatie_docs_present?: boolean | null;
   };
 };
 
@@ -99,13 +103,15 @@ export function validateZoekprofielOutput(
   if (wordCount < MIN_WORDS_TOTAL) {
     issues.push({
       code: 'word_count_low',
-      message: `Woordenaantal ${wordCount} onder minimum ${MIN_WORDS_TOTAL}`,
+      message: `Woordenaantal ${wordCount} onder voorkeursminimum ${MIN_WORDS_TOTAL}`,
+      warning: true,
     });
   }
   if (wordCount > MAX_WORDS_TOTAL) {
     issues.push({
       code: 'word_count_high',
-      message: `Woordenaantal ${wordCount} boven maximum ${MAX_WORDS_TOTAL}`,
+      message: `Woordenaantal ${wordCount} boven voorkeursmaximum ${MAX_WORDS_TOTAL}`,
+      warning: true,
     });
   }
 

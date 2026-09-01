@@ -25,8 +25,10 @@ const baseContent: ZoekprofielContentResult = {
   verduidelijkingsvraag: null,
   alinea_1_kern: `${v2Opening} Werknemer heeft de opleiding MBO-2 Facilitaire Dienstverlening afgerond.`,
   alinea_2: goodPara2,
+  opening_variant: 'singular',
   belastbaarheidsdocument_type: 'fml',
   belastbaarheidsdocument_datum_voluit: '12 december 2025',
+  actualisaties: null,
 };
 
 /** A/B fixtures — VAT (app) style outputs that should fail validation. */
@@ -150,11 +152,13 @@ describe('validateZoekprofielOutput — ChatGPT-style fixtures', () => {
     assert.ok(!result.issues.some((i) => i.code === 'forbidden_term'));
   });
 
-  it('flags over 225 words', () => {
+  it('warns (non-blocking) when over 225 words', () => {
     const longPara2 = `${goodPara2} ${goodPara2} ${goodPara2}`;
     const zoekprofiel = assemble(bepChatGptPara1, longPara2);
     const result = validateZoekprofielOutput(zoekprofiel, bepChatGptPara1, baseCtx, baseContent);
-    assert.ok(result.issues.some((i) => i.code === 'word_count_high'));
+    const high = result.issues.find((i) => i.code === 'word_count_high');
+    assert.ok(high);
+    assert.equal(high?.warning, true);
   });
 });
 
@@ -173,8 +177,10 @@ describe('buildZoekprofielFields — closing and validation', () => {
       verduidelijkingsvraag: null,
       alinea_1_kern: `${v2Opening} Werknemer heeft mbo-2 afgerond. Hij heeft werkervaring opgedaan als magazijnmedewerker.`,
       alinea_2: goodPara2,
+      opening_variant: 'singular',
       belastbaarheidsdocument_type: 'izp',
       belastbaarheidsdocument_datum_voluit: '5 december 2025',
+      actualisaties: null,
     };
     const ctx = {
       employee: {},
@@ -197,8 +203,10 @@ describe('buildZoekprofielFields — closing and validation', () => {
       verduidelijkingsvraag: null,
       alinea_1_kern: bepVatPara1,
       alinea_2: bepVatPara2,
+      opening_variant: 'singular',
       belastbaarheidsdocument_type: 'fml',
       belastbaarheidsdocument_datum_voluit: '12 december 2025',
+      actualisaties: null,
     };
 
     const { validationIssues } = buildZoekprofielFields(baseCtx, content);

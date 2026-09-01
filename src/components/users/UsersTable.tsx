@@ -26,6 +26,7 @@ import { SELECT_CLASS } from "@/lib/select-class";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFormDirty } from "@/hooks/useFormDirty";
 import ModalUnsavedGuard, { useGuardedModalClose } from "@/components/unsaved/ModalUnsavedGuard";
+import { roleLabel } from "@/lib/auth/roles";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -147,7 +148,7 @@ export default function UsersTable() {
       throw new Error("Voornaam en achternaam zijn verplicht.");
     }
 
-    if (!editedUser.role || !["admin", "user"].includes(editedUser.role)) {
+    if (!editedUser.role || !["admin", "user", "back_office"].includes(editedUser.role)) {
       throw new Error("Selecteer een geldige rol.");
     }
 
@@ -423,6 +424,7 @@ export default function UsersTable() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Beheerder</SelectItem>
+                      <SelectItem value="back_office">Back office</SelectItem>
                       <SelectItem value="user">Gebruiker</SelectItem>
                     </SelectContent>
                   </Select>
@@ -677,7 +679,7 @@ export default function UsersTable() {
                 <TableCell>{u.last_name}</TableCell>
                 <TableCell>
                   <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    {u.role}
+                    {roleLabel(u.role)}
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">

@@ -34,10 +34,17 @@ describe('formatTP2026CoverVoorName', () => {
 });
 
 describe('formatEmployeeName', () => {
-  it('trims names in bracket format', () => {
+  it('trims names in bracket format for female', () => {
     assert.equal(
       formatEmployeeName('Kim ', 'Baaijens ', 'Vrouw'),
       'Mevrouw K. Baaijens (Kim)'
+    );
+  });
+
+  it('uses De heer for male', () => {
+    assert.equal(
+      formatEmployeeName('Jan ', 'Jansen ', 'Man'),
+      'De heer J. Jansen (Jan)'
     );
   });
 });

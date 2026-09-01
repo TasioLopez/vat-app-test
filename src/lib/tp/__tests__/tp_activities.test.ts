@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import {
   formatSpoor2NotitieLabel,
   isSpoor2NotitieEligible,
+  materializeSpoor2ForExWerknemer,
   normalizeTp3Activities,
+  resolveSpoor2Selections,
   sanitizeSpoor2Selections,
+  SPOOR2_DETACHERING_ID,
   TP_ACTIVITIES,
 } from '../tp_activities';
 import { SPOOR2_NOTITIE_ELIGIBLE_IDS } from '@/lib/tp2026/basis-spoor2-begeleiding';
@@ -68,5 +71,28 @@ describe('sanitizeSpoor2Selections', () => {
     assert.equal(normalized.length, 2);
     assert.equal(normalized[0].subText, null);
     assert.equal(normalized[1].subText, null);
+  });
+});
+
+describe('ex-werknemer Spoor 2 rules', () => {
+  it('builds default selections without detachering when requested', () => {
+    const selections = materializeSpoor2ForExWerknemer(null, true);
+    assert.ok(selections);
+    assert.ok(selections!.length > 0);
+    assert.ok(!selections!.some((s) => s.id === SPOOR2_DETACHERING_ID));
+  });
+
+  it('removes detachering from existing selections for ex-werknemer', () => {
+    const raw = [{ id: 'netwerken' }, { id: SPOOR2_DETACHERING_ID }, { id: 'scholing' }];
+    const selections = materializeSpoor2ForExWerknemer(raw, true);
+    assert.ok(selections);
+    assert.deepEqual(
+      selections!.map((s) => s.id),
+      ['netwerken', 'scholing']
+    );
+  });
+
+  it('leaves selections unchanged when not ex-werknemer', () => {
+    assert.equal(materializeSpoor2ForExWerknemer(null, false), null);
   });
 });

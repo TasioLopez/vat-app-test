@@ -71,8 +71,8 @@ const userBasicSchema = z.object({
   last_name: commonValidators.required('Achternaam is verplicht')
     .transform((s) => s.trim())
     .and(commonValidators.maxLength(50, 'Achternaam mag maximaal 50 karakters zijn')),
-  role: z.enum(["admin", "user"], {
-    message: "Rol moet admin of user zijn",
+  role: z.enum(["admin", "user", "back_office"], {
+    message: "Rol moet admin, user of back_office zijn",
   }),
 });
 

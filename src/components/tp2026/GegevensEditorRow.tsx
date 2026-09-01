@@ -12,6 +12,7 @@ import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { resolveOccupationalDoctorLabel } from '@/lib/tp/format-context';
 import { hasFilledAdReportDate } from '@/lib/tp/intake-ad-presence';
+import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
   if (
@@ -100,6 +101,10 @@ export function GegevensEditorRow({
                 }
                 if (key === 'ad_report_concept' && v === true) {
                   updateField('has_ad_report', false);
+                }
+                if (key === 'is_ex_werknemer' && v === true) {
+                  const spoor2 = materializeSpoor2ForExWerknemer(data.tp3_activities, true);
+                  if (spoor2) updateField('tp3_activities', spoor2);
                 }
                 updateField(key, v);
               }}

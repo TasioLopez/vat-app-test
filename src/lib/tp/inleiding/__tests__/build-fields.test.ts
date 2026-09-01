@@ -73,6 +73,27 @@ describe('buildInleidingFields', () => {
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
+  it('appends ex-werknemer disclaimer to uitval paragraph when flagged', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      meta: { ...baseCtx.meta, is_ex_werknemer: true },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    const uitval = inleiding.split('\n\n')[1];
+    assert.match(uitval, /\*Werknemer is uit dienst bij Cordaan\./);
+    assert.match(uitval, /Omwille van leesbaarheid wordt de term "werknemer" gehanteerd/);
+  });
+
+  it('does not append ex-werknemer disclaimer when flag is false', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      meta: { ...baseCtx.meta, is_ex_werknemer: false },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    const uitval = inleiding.split('\n\n')[1];
+    assert.doesNotMatch(uitval, /uit dienst bij/);
+  });
+
   it('renders long verbatim intake functiebeschrijving without truncation', () => {
     const intakeQuote =
       'De activiteiten- en welzijnsbegeleider ondersteunt en coacht de teamleider en het multidisciplinaire team bij het bevorderen van het welzijn van onze klanten. Daarnaast levert de activiteiten- en welzijnsbegeleider een grote bijdrage aan de ontwikkeling van het welzijnsplan (waaronder (groeps)activiteiten) van de locatie en draagt bij aan de uitvoering. Het welzijn van klanten wordt bevorderd door in álle onderdelen van de dagelijkse zorgverlening het welzijn centraal te stellen.';

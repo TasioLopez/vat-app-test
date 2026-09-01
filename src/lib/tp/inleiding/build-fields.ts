@@ -9,6 +9,8 @@ import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-label
 import {
   AD_INTRO_SUFFIX,
   AD_INTRO_SUFFIX_LEGACY,
+  buildInleidingExWerknemerDisclaimer,
+  hasInleidingExWerknemerDisclaimer,
   INLEIDING_GEEN_AD,
   MEDISCHE_BEGELEIDING_ZINNEN,
   MEDISCHE_SITUATIE_OPENING,
@@ -31,6 +33,7 @@ export type InleidingBuildContext = {
     has_ad_report?: boolean | null;
     ad_report_date?: string | null;
     ad_report_concept?: boolean | null;
+    is_ex_werknemer?: boolean | null;
     occupational_doctor_name?: string | null;
     advies_ad_passende_arbeid?: string | null;
   };
@@ -166,7 +169,14 @@ function buildUitval(ctx: InleidingBuildContext): string {
   const employer = coerceText(ctx.client.name, '[werkgever]');
   const sickDay = nlDate(ctx.meta.first_sick_day) || '[eerste ziektedag]';
   const hours = coerceText(ctx.details.contract_hours, '[uren]');
-  return `Werknemer is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
+  let paragraph = `Werknemer is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
+  if (
+    ctx.meta.is_ex_werknemer === true &&
+    !hasInleidingExWerknemerDisclaimer(paragraph)
+  ) {
+    paragraph += ` ${buildInleidingExWerknemerDisclaimer(employer)}`;
+  }
+  return paragraph;
 }
 
 function buildFunctieomschrijving(ctx: InleidingBuildContext, body: string): string {

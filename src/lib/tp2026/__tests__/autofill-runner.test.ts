@@ -57,22 +57,27 @@ describe('resolveTp3AutofillJson', () => {
     assert.equal(result.data.zoekprofiel, 'AD-only profiel');
   });
 
-  it('does not overwrite zoekprofiel when clarification is required', () => {
+  it('persists clarification draft without overwriting zoekprofiel', () => {
     const current = { zoekprofiel: 'bestaand zoekprofiel' };
+    const draft = {
+      version: 1,
+      status: 'awaiting_answer',
+      pendingQuestion: 'Welke opleiding?',
+      answerHistory: [],
+      generationRound: 1,
+    };
     const result = resolveTp3AutofillJson(
       {
         requires_clarification: true,
-        clarification_question: 'Welke opleiding heeft werknemer aantoonbaar afgerond?',
-        details: {},
+        clarification_question: 'Welke opleiding?',
+        details: { zoekprofiel_clarification_draft: draft },
       },
       current
     );
 
-    assert.equal(
-      result.error,
-      'Welke opleiding heeft werknemer aantoonbaar afgerond?'
-    );
+    assert.equal(result.error, 'Welke opleiding?');
     assert.equal(result.data.zoekprofiel, 'bestaand zoekprofiel');
+    assert.deepEqual(result.data.zoekprofiel_clarification_draft, draft);
   });
 });
 

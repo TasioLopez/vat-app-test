@@ -1,19 +1,37 @@
 /** Default model — override with OPENAI_ZOEKPROFIEL_MODEL. */
 export const DEFAULT_ZOEKPROFIEL_MODEL = 'gpt-5.6-sol';
 
-/** Zoekprofiel V1.3 — total word count (both paragraphs combined). */
+/** Zoekprofiel V3 — total word count (both paragraphs combined). */
 export const MIN_WORDS_TOTAL = 150;
 
 export const MAX_WORDS_TOTAL = 225;
 
-/** Mandatory V1.3 opening — [niveau] filled by model (e.g. mbo-2 niveau, hbo niveau). */
-export const OPENING_PREFIX =
-  'Op basis van de afgeronde opleiding(en) en werkervaring is werknemer aangewezen op functies op maximaal';
+/** V3 opening — singular hoogste opleiding. */
+export const OPENING_PREFIX_SINGULAR =
+  'Op basis van de hoogst afgeronde opleiding en de werkervaring is werknemer aangewezen op functies op maximaal';
 
+/** V3 opening — plural hoogste opleidingen. */
+export const OPENING_PREFIX_PLURAL =
+  'Op basis van de hoogst afgeronde opleidingen en de werkervaring is werknemer aangewezen op functies op maximaal';
+
+/** @deprecated Use OPENING_PREFIX_SINGULAR — kept for legacy tests. */
+export const OPENING_PREFIX = OPENING_PREFIX_SINGULAR;
+
+/** Accepts V3 singular/plural and legacy V1.3 opening. */
 export const OPENING_PATTERN =
-  /^Op basis van de afgeronde opleiding\(en\) en werkervaring is werknemer aangewezen op functies op maximaal\s+.+\.$/i;
+  /^Op basis van de (?:hoogst afgeronde opleiding(?:en)?|afgeronde opleiding\(en\)) en (?:de )?werkervaring is werknemer aangewezen op functies op maximaal\s+.+\.$/i;
 
-export type BelastbaarheidsdocumentType = 'fml' | 'izp' | 'lab';
+export type BelastbaarheidsdocumentType =
+  | 'fml'
+  | 'izp'
+  | 'lab'
+  | 'belastbaarheidsprofiel';
+
+export type ActualisatieType = 'spreekuurrapportage' | 'artsenverduidelijking';
+
+/** N.B. when no AD and no belastbaarheidsbron — zoekprofiel-specific. */
+export const ZOEKPROFIEL_NB_NO_AD =
+  'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
 
 /**
  * Server-appended closing for paragraph 1 — [datum] replaced at assembly time.
@@ -26,7 +44,32 @@ export const PARA1_CLOSING_TEMPLATES: Record<BelastbaarheidsdocumentType, string
     'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in het Inzetbaarheidsprofiel van [datum].',
   lab:
     'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in de Lijst arbeidsmogelijkheden en beperkingen van [datum].',
+  belastbaarheidsprofiel:
+    'Bij de zoektocht naar passende arbeid zal naast het persoonlijk profiel van werknemer rekening worden gehouden met de beperkingen en voorwaarden zoals vastgelegd in het belastbaarheidsprofiel van [datum].',
 };
+
+const ACTUALISATIE_LABELS: Record<ActualisatieType, string> = {
+  spreekuurrapportage: 'spreekuurrapportage',
+  artsenverduidelijking: 'artsenverduidelijking',
+};
+
+export type ActualisatieEntry = {
+  type: ActualisatieType;
+  datum_voluit: string;
+};
+
+/** Build V3 actualisatie suffix appended to para 1 closing. */
+export function buildActualisatieSuffix(actualisaties: ActualisatieEntry[]): string {
+  if (!actualisaties.length) return '';
+  const parts = actualisaties
+    .filter((a) => a.datum_voluit.trim())
+    .map(
+      (a) =>
+        `en geactualiseerd in de ${ACTUALISATIE_LABELS[a.type]} van ${a.datum_voluit.trim()}`
+    );
+  if (!parts.length) return '';
+  return ` ${parts.join(' ')}`;
+}
 
 /** Style reference — length and tone; do not copy content verbatim. */
 export const STYLE_REFERENCE_V13 = `

@@ -17,6 +17,7 @@ INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/
   • Linker: Naam ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA (volgende arts; Anios ≠ Aios) | Rechter: Datum AD-rapport
   • Onder "AD-rapport:" staat checkbox ☐ Concept (Juni V6) — alleen ☒/☑ = concept; ☐ = niet-concept
   • Linker: OSV ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA (onder supervisie van — superviserend arts/BA/VA; Anios ≠ Aios) | Rechter: Naam AD
+  • Checkbox ☐ Ex-werknemer (Juni V6, sectie 6 header) — alleen ☒/☑ = ex-werknemer; ☐ = niet ex-werknemer
 - Sectie 7 Arbeidsdeskundig rapport:
   • Naam arbeidsdeskundige
   • Quote advies spoor 2 (inleiding) — adviesparagraaf over 2e spoor

@@ -29,6 +29,7 @@ import { BelastbaarheidsprofielBlock } from '@/components/tp/Belastbaarheidsprof
 import { BelastbaarheidsprofielEditor } from '@/components/tp/BelastbaarheidsprofielEditor';
 import { PowInschalingEditor } from '@/components/tp/PowInschalingEditor';
 import { VisieLoopbaanadviseurEditor } from '@/components/tp/VisieLoopbaanadviseurEditor';
+import { ZoekprofielEditor } from '@/components/tp/ZoekprofielEditor';
 import { BasisValidationProgress } from '@/components/tp2026/BasisValidationProgress';
 import { Button } from '@/components/ui/button';
 import {
@@ -414,6 +415,14 @@ function BasisFieldEditorRow({
           raw={String(data[field.key] ?? '')}
           hasAdReport={data.has_ad_report}
           onChange={(md) => updateField(field.key, md)}
+        />
+      ) : field.key === 'zoekprofiel' ? (
+        <ZoekprofielEditor
+          raw={String(data[field.key] ?? '')}
+          draft={data.zoekprofiel_clarification_draft}
+          employeeId={employeeId}
+          onChange={(md) => updateField(field.key, md)}
+          onDraftChange={(next) => updateField('zoekprofiel_clarification_draft', next)}
         />
       ) : field.key === 'visie_loopbaanadviseur' ? (
         <VisieLoopbaanadviseurEditor

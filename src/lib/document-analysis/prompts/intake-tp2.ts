@@ -52,6 +52,12 @@ PERSOONSVELDEN:
    - Een ingevulde "Datum AD-rapport" of sectie 7-inhoud maakt Concept NIET true
    - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage); default is niet-concept (false)
 
+11. is_ex_werknemer — boolean: ALLEEN true wanneer het vakje naast "Ex-werknemer" (sectie 6 header / OSV-gebied, Juni V6) duidelijk is AANGEVINKT
+   - Lees UITSLUITEND de checkbox-status naast het label "Ex-werknemer":
+     • ☒ / ☑ / [x] naast Ex-werknemer → true
+     • ☐ / □ / [ ] naast Ex-werknemer → false
+   - Unchecked, leeg, of onduidelijk → false (NOOIT null, NOOIT true bij twijfel)
+
 HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult
 - Gebruik NOOIT een FML/IZP-datum voor aanmelding of intake
@@ -74,7 +80,7 @@ Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.
 `.trim();
 
 export const INTAKE_TP2_USER_MESSAGE =
-  'Analyseer dit intakeformulier visueel. Voor ad_report_concept: bekijk ALLEEN of het Concept-vakje gevuld is (☒=true, ☐=false). Twijfel → false.';
+  'Analyseer dit intakeformulier visueel. Voor ad_report_concept: bekijk ALLEEN of het Concept-vakje gevuld is (☒=true, ☐=false). Voor is_ex_werknemer: bekijk ALLEEN of het Ex-werknemer-vakje gevuld is (☒=true, ☐=false). Twijfel → false.';
 
 export const AD_TP2_DATE_PROMPT = `
 Extract ALLEEN ad_report_date (YYYY-MM-DD) uit dit arbeidsdeskundig rapport.

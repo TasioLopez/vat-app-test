@@ -1,5 +1,6 @@
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { normalizeExWerknemer } from '@/lib/tp/ex-werknemer-wording';
 import {
   buildSupervisiePhrase,
   DOCTOR_ROLE_PREFIXES,
@@ -139,6 +140,7 @@ export function normalizeTp2ExtractedData(
   out.ad_report_concept = normalizeAdReportConcept(
     out.ad_report_concept ?? out.intake_concept
   );
+  out.is_ex_werknemer = normalizeExWerknemer(out.is_ex_werknemer);
   delete out.intake_concept;
 
   delete out.doctor_role;

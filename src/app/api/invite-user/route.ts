@@ -35,7 +35,10 @@ export async function POST(req: NextRequest) {
 
     const { email, first_name, last_name, role } = await req.json();
     const emailNorm = String(email ?? "").trim().toLowerCase();
-    const roleNorm = role === "admin" ? "admin" : "user";
+    const roleNorm =
+      role === "admin" ? "admin" :
+      role === "back_office" ? "back_office" :
+      "user";
     const firstNameNorm = String(first_name ?? "").trim();
     const lastNameNorm = String(last_name ?? "").trim();
 

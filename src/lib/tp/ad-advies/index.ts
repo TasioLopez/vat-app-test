@@ -3,8 +3,10 @@ export {
   ADVIES_INTRO_SUFFIX,
   ADVIES_INTRO_NO_FUNCTIES_SUFFIX,
   ADVIES_NB_NO_REPORT,
+  ADVIES_NB_NO_REPORT_LEGACY,
   DEFAULT_AD_ADVIES_MODEL,
   GENERATION_FALLBACK,
+  isAdviesNbNoReport,
 } from './constants';
 export {
   buildAdAdviesBlock,

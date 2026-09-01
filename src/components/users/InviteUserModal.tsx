@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { SELECT_CLASS } from "@/lib/select-class";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { AppRole } from "@/lib/auth/roles";
 
 export default function InviteUserModal({
   open,
@@ -15,7 +16,7 @@ export default function InviteUserModal({
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
+  const [role, setRole] = useState<AppRole>("user");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<"form" | "success">("form");
@@ -85,12 +86,13 @@ export default function InviteUserModal({
               onChange={(e) => setLastName(e.target.value)}
               className="mb-2 w-full border px-3 py-2 rounded"
             />
-            <Select value={role} onValueChange={(v) => setRole(v as "user" | "admin")}>
+            <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
               <SelectTrigger className={cn("mb-4", SELECT_CLASS)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Gebruiker</SelectItem>
+                <SelectItem value="back_office">Back office</SelectItem>
                 <SelectItem value="admin">Beheerder</SelectItem>
               </SelectContent>
             </Select>

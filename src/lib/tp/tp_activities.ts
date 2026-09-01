@@ -14,6 +14,40 @@ export type TPActivity = {
 
 export { isSpoor2NotitieEligible };
 
+export const SPOOR2_DETACHERING_ID = 'detachering';
+
+/** Default Spoor 2 subsection selections for editor/persist. */
+export function buildDefaultSpoor2Selections(options?: {
+  excludeDetachering?: boolean;
+}): TPActivitySelection[] {
+  return TP_SPOOR2_SUBSECTIONS.filter(
+    (s) => !(options?.excludeDetachering && s.id === SPOOR2_DETACHERING_ID)
+  ).map((s) => ({ id: s.id, subText: null }));
+}
+
+export function applyExWerknemerSpoor2Rule(
+  selections: TPActivitySelection[],
+  isExWerknemer: boolean
+): TPActivitySelection[] {
+  if (!isExWerknemer) return selections;
+  return selections.filter((s) => s.id !== SPOOR2_DETACHERING_ID);
+}
+
+/**
+ * Materialize tp3_activities when ex-werknemer is true.
+ * null/undefined raw → explicit all-subsection list minus detachering.
+ */
+export function materializeSpoor2ForExWerknemer(
+  currentRaw: unknown,
+  isExWerknemer: boolean
+): TPActivitySelection[] | null {
+  if (!isExWerknemer) return null;
+  if (currentRaw === null || currentRaw === undefined) {
+    return buildDefaultSpoor2Selections({ excludeDetachering: true });
+  }
+  return applyExWerknemerSpoor2Rule(resolveSpoor2Selections(currentRaw), true);
+}
+
 /** Truncate template text for notitie dropdown labels. */
 export function formatSpoor2NotitieLabel(text: string, maxLen = 55): string {
   const cleaned = text.replace(/\s+/g, ' ').trim();

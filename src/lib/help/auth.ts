@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { isAdmin as checkIsAdmin, type AppRole } from "@/lib/auth/roles";
 
-export type UserRole = "admin" | string;
+export type UserRole = AppRole | string;
 
 export async function getSessionUserWithRole(): Promise<{
   userId: string;
@@ -27,5 +28,8 @@ export async function getSessionUserWithRole(): Promise<{
 }
 
 export function isAdmin(role: string): boolean {
-  return role === "admin";
+  return checkIsAdmin(role);
 }
+
+export { canManageClients, isBackOffice, isStandardUser, roleLabel } from "@/lib/auth/roles";
+export type { AppRole } from "@/lib/auth/roles";

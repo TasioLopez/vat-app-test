@@ -187,9 +187,12 @@ WHERE e.owner_id IS NOT NULL
   );
 
 -- Also ensure every activity participant has an assignment row (multi-user dossiers).
+-- Skip orphaned activity rows whose employee (or user) no longer exists.
 INSERT INTO public.employee_users (user_id, employee_id, assigned_at)
 SELECT a.user_id, a.entity_id, COALESCE(a.last_modified_at, a.last_accessed_at, now())
 FROM public.user_entity_activity a
+JOIN public.employees e ON e.id = a.entity_id
+JOIN public.users u ON u.id = a.user_id
 WHERE a.entity_type = 'employee'
   AND a.entity_id IS NOT NULL
   AND a.user_id IS NOT NULL

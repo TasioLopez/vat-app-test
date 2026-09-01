@@ -1,6 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
+import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
   buildZoekprofielFields,
@@ -14,9 +15,11 @@ import {
 } from './constants';
 import {
   ZOEKPROFIEL_CONTENT_PROMPT,
+  buildClarificationAnswerMessage,
   buildZoekprofielContextMessage,
   buildZoekprofielRetryMessage,
 } from './prompt';
+import type { ZoekprofielScenario } from './detect-scenario';
 import {
   ZOEKPROFIEL_CONTENT_JSON_SCHEMA,
   parseZoekprofielContentResult,
@@ -35,12 +38,13 @@ export type EmployeeDoc = {
   documentDate?: string | null;
 };
 
-type DocCategory = 'belastbaarheid' | 'ad' | 'intake';
+type DocCategory = 'belastbaarheid' | 'spreekuur' | 'ad' | 'intake';
 
 const CATEGORY_PRIORITY: Record<DocCategory, number> = {
   belastbaarheid: 1,
-  ad: 2,
-  intake: 3,
+  spreekuur: 2,
+  ad: 3,
+  intake: 4,
 };
 
 export function getZoekprofielDocCategory(type: string | null | undefined): DocCategory | null {
@@ -55,6 +59,9 @@ export function getZoekprofielDocCategory(type: string | null | undefined): DocC
   ) {
     return 'belastbaarheid';
   }
+  if (isSpreekReportageDocType(type)) {
+    return 'spreekuur';
+  }
   if (t.includes('ad_rapport') || t.includes('ad_rapportage') || t.includes('arbeidsdeskundig')) {
     return 'ad';
   }
@@ -66,6 +73,10 @@ export function getZoekprofielDocCategory(type: string | null | undefined): DocC
 
 export function isBelastbaarheidsDoc(type: string | null | undefined): boolean {
   return getZoekprofielDocCategory(type) === 'belastbaarheid';
+}
+
+export function isLeadingBelastbaarheidsSource(type: string | null | undefined): boolean {
+  return isBelastbaarheidsDoc(type) || isSpreekReportageDocType(type);
 }
 
 export function filterZoekprofielDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
@@ -136,13 +147,21 @@ function buildApiContext(ctx: ZoekprofielBuildContext): Record<string, unknown> 
         ctx.meta.leading_belastbaarheidsdocument_type || null,
       leading_belastbaarheidsdocument_datum_voluit:
         ctx.meta.leading_belastbaarheidsdocument_datum_voluit || null,
+      scenario: ctx.meta.scenario || null,
+      has_ad_report: ctx.meta.has_ad_report ?? null,
+      actualisatie_docs_present: ctx.meta.actualisatie_docs_present ?? null,
     },
   };
 }
 
-type GenerateContentOptions = {
+export type GenerateZoekprofielOptions = {
   retryHints?: string;
+  clarificationHistory?: { question: string; answer: string }[];
+  userAnswer?: string;
+  pendingQuestion?: string;
 };
+
+type GenerateContentOptions = GenerateZoekprofielOptions;
 
 async function callZoekprofielModel(
   openai: OpenAI,
@@ -163,6 +182,17 @@ async function callZoekprofielModel(
 
   if (options?.retryHints) {
     userContent.push({ type: 'input_text', text: options.retryHints });
+  }
+
+  if (options?.userAnswer?.trim() && options.pendingQuestion?.trim()) {
+    userContent.push({
+      type: 'input_text',
+      text: buildClarificationAnswerMessage({
+        question: options.pendingQuestion,
+        answer: options.userAnswer,
+        history: options.clarificationHistory,
+      }),
+    });
   }
 
   const reasoningEffort = getReasoningEffort();
@@ -221,11 +251,15 @@ function pickBetterFields(
   return first;
 }
 
+function leadingBelastDocs(docs: EmployeeDoc[]): EmployeeDoc[] {
+  return docs.filter((d) => isLeadingBelastbaarheidsSource(d.type));
+}
+
 function applyLeadingDocToContext(
   ctx: ZoekprofielBuildContext,
   docs: EmployeeDoc[]
 ): ZoekprofielBuildContext {
-  const belastbaarheidDocs = docs.filter((d) => isBelastbaarheidsDoc(d.type));
+  const belastbaarheidDocs = leadingBelastDocs(docs);
   const leading = resolveLeadingBelastbaarheidsdoc({
     docs: belastbaarheidDocs,
     metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
@@ -250,7 +284,7 @@ function refineLeadingFromModel(
   content: ZoekprofielContentResult,
   docs: EmployeeDoc[]
 ): ZoekprofielBuildContext {
-  const belastbaarheidDocs = docs.filter((d) => isBelastbaarheidsDoc(d.type));
+  const belastbaarheidDocs = leadingBelastDocs(docs);
   const leading = resolveLeadingBelastbaarheidsdoc({
     docs: belastbaarheidDocs,
     metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
@@ -274,14 +308,12 @@ export async function generateZoekprofiel(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: ZoekprofielBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  options?: GenerateZoekprofielOptions
 ): Promise<ZoekprofielFields> {
-  // FML/IZP/LAB preferred when present; AD-only (or intake) still generates.
-  // has_belastbaarheids_doc=false omits the FML/IZP/LAB para-1 closing and
-  // tells the model to use explicit AD belastbaarheid instead of blocking.
   let workingCtx = applyLeadingDocToContext(ctx, docs);
 
-  const content = await generateZoekprofielContent(openai, supabase, workingCtx, docs);
+  const content = await generateZoekprofielContent(openai, supabase, workingCtx, docs, options);
   workingCtx = refineLeadingFromModel(workingCtx, content, docs);
   let fields = buildZoekprofielFields(workingCtx, content);
 
@@ -298,6 +330,7 @@ export async function generateZoekprofiel(
 
     try {
       const retryContent = await generateZoekprofielContent(openai, supabase, workingCtx, docs, {
+        ...options,
         retryHints,
       });
       workingCtx = refineLeadingFromModel(workingCtx, retryContent, docs);
@@ -320,6 +353,9 @@ export function buildZoekprofielContextFromMeta(
     hasBelastbaarheidsDoc?: boolean;
     leadingType?: BelastbaarheidsdocumentType | null;
     leadingDatumVoluit?: string | null;
+    scenario?: ZoekprofielScenario | null;
+    hasAdReport?: boolean | null;
+    actualisatieDocsPresent?: boolean | null;
   }
 ): ZoekprofielBuildContext {
   const dateVoluit = nlDate(fmlIzpLabDate) || options?.leadingDatumVoluit || null;
@@ -331,6 +367,9 @@ export function buildZoekprofielContextFromMeta(
       leading_belastbaarheidsdocument_type: options?.leadingType ?? null,
       leading_belastbaarheidsdocument_datum_voluit:
         options?.leadingDatumVoluit ?? dateVoluit,
+      scenario: options?.scenario ?? null,
+      has_ad_report: options?.hasAdReport ?? null,
+      actualisatie_docs_present: options?.actualisatieDocsPresent ?? null,
     },
   };
 }
