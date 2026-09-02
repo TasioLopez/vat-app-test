@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 import { redirectIfBackOfficeBlockedFromDossier } from "@/lib/auth/redirect-back-office-dossier";
 
 export const metadata: Metadata = {
-  title: "Nieuwe werknemer",
+  title: "VGR",
 };
 
-export default async function NewEmployeeLayout({ children }: { children: ReactNode }) {
+export default async function VgrEmployeeLayout({ children }: { children: ReactNode }) {
   await redirectIfBackOfficeBlockedFromDossier();
   return children;
 }

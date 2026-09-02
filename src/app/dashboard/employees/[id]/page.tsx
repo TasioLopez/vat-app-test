@@ -22,7 +22,7 @@ import {
     Files,
     IdCard,
     CheckCircle2,
-    CircleDashed,
+    UserRoundX,
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { useToastHelpers } from '@/components/ui/Toast';
@@ -127,6 +127,7 @@ type EmployeeDetails = {
     computer_skills_description?: string;
     contract_hours?: number;
     other_employers?: string;
+    is_ex_werknemer?: boolean;
     autofilled_fields?: string[];
     field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
     field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
@@ -173,6 +174,7 @@ const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'computer_skills_description',
     'contract_hours',
     'other_employers',
+    'is_ex_werknemer',
     'autofilled_fields',
   'field_review_status',
   'field_content_hash',
@@ -695,6 +697,23 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         return { type: 'details' as const, error };
                     })()
                 );
+                // Dual-write ex-werknemer to tp_meta so TP / inleiding stay aligned.
+                if (typeof currentDetailsPayload.is_ex_werknemer === 'boolean') {
+                    operations.push(
+                        (async () => {
+                            const { error } = await supabase.from('tp_meta').upsert(
+                                [
+                                    {
+                                        employee_id: employeeId,
+                                        is_ex_werknemer: currentDetailsPayload.is_ex_werknemer,
+                                    },
+                                ],
+                                { onConflict: 'employee_id' }
+                            );
+                            return { type: 'details' as const, error };
+                        })()
+                    );
+                }
             }
 
             const results = await Promise.all(operations);
@@ -1629,11 +1648,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                 </div>
 
-                {/* Checkboxes for drivers_license and has_computer */}
-                <div className='flex gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
+                {/* Checkboxes for drivers_license, has_computer, is_ex_werknemer */}
+                <div className='flex flex-wrap gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
                     {([
                         { key: 'drivers_license', label: 'Rijbewijs', Icon: Car },
-                        { key: 'has_computer', label: 'Heeft PC', Icon: Computer }
+                        { key: 'has_computer', label: 'Heeft PC', Icon: Computer },
+                        { key: 'is_ex_werknemer', label: 'Ex-werknemer', Icon: UserRoundX },
                     ] as const).map(({ key, label, Icon }) => (
                         <label 
                             key={key} 

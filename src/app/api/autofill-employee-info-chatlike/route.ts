@@ -10,6 +10,7 @@ import {
   GotenbergConversionError,
 } from '@/lib/document-analysis';
 import { extractEmployeeDetailsChatlike } from '@/lib/document-analysis/extractEmployeeDetailsChatlike';
+import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
 import { stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
@@ -123,6 +124,7 @@ export async function GET(req: NextRequest) {
     const extraction = await extractEmployeeDetailsChatlike(openai, chatlikeDocs);
     const cleaned = stripAssistantArtifactsFromRecord(extraction.raw);
     const mapped = mapAndValidateEmployeeDetails(cleaned);
+    applyIntakeCheckboxTextOverrides(mapped, extraction.intakePlainText);
     const referent = extractReferentFromRaw({
       ...cleaned,
       ...extraction.referentFields,

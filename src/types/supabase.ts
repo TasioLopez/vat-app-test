@@ -353,6 +353,7 @@ export type Database = {
           has_computer: boolean | null
           has_transport: boolean | null
           id: string
+          is_ex_werknemer: boolean | null
           other_employers: string | null
           phone: string | null
           transport_type: string[] | null
@@ -381,6 +382,7 @@ export type Database = {
           has_computer?: boolean | null
           has_transport?: boolean | null
           id?: string
+          is_ex_werknemer?: boolean | null
           other_employers?: string | null
           phone?: string | null
           transport_type?: string[] | null
@@ -409,6 +411,7 @@ export type Database = {
           has_computer?: boolean | null
           has_transport?: boolean | null
           id?: string
+          is_ex_werknemer?: boolean | null
           other_employers?: string | null
           phone?: string | null
           transport_type?: string[] | null
@@ -1367,6 +1370,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      set_employee_owner: {
+        Args: {
+          p_employee_id: string
+          p_owner_id: string | null
+        }
+        Returns: undefined
+      }
       list_org_users: {
         Args: Record<PropertyKey, never>
         Returns: {

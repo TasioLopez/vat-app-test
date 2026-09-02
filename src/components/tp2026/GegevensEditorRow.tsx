@@ -12,7 +12,11 @@ import type { TP2026FieldDef } from '@/lib/tp2026/schema';
 import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { resolveOccupationalDoctorLabel } from '@/lib/tp/format-context';
 import { hasFilledAdReportDate } from '@/lib/tp/intake-ad-presence';
-import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
+import {
+  applyExWerknemerBijlage1Rule,
+  materializeSpoor2ForExWerknemer,
+} from '@/lib/tp/tp_activities';
+import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
   if (
@@ -105,6 +109,12 @@ export function GegevensEditorRow({
                 if (key === 'is_ex_werknemer' && v === true) {
                   const spoor2 = materializeSpoor2ForExWerknemer(data.tp3_activities, true);
                   if (spoor2) updateField('tp3_activities', spoor2);
+                  if (Array.isArray(data.bijlage1_phases)) {
+                    updateField(
+                      'bijlage1_phases',
+                      applyExWerknemerBijlage1Rule(data.bijlage1_phases as TP2026Bijlage1Phase[], true)
+                    );
+                  }
                 }
                 updateField(key, v);
               }}

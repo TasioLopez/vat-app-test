@@ -37,6 +37,11 @@ import {
   Bijlage1Editor,
 } from '@/components/tp2026/sections/Bijlage1Section';
 import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import {
+  applyExWerknemerBijlage1Rule,
+  materializeSpoor2ForExWerknemer,
+} from '@/lib/tp/tp_activities';
+import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import { getTrajectoryDateUpdates, isLowTpLeadTime, parseTpLeadTimeWeeks } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
@@ -297,6 +302,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           setPhases={(next) => updateField('bijlage1_phases', next)}
           planStartDate={tpData.tp_start_date || tpData.intake_date}
           planEndDate={tpData.tp_end_date}
+          isExWerknemer={tpData.is_ex_werknemer === true}
         />
       ),
       renderPreview: () => (
@@ -362,6 +368,17 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
         const shaped = ensureTP2026Shape(merged as Record<string, any>);
         const next = applyTPProfileContext(shaped, profileContext) as Record<string, any>;
+
+        if (next.is_ex_werknemer === true) {
+          const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
+          if (spoor2) next.tp3_activities = spoor2;
+          if (Array.isArray(next.bijlage1_phases)) {
+            next.bijlage1_phases = applyExWerknemerBijlage1Rule(
+              next.bijlage1_phases as TP2026Bijlage1Phase[],
+              true
+            );
+          }
+        }
 
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;

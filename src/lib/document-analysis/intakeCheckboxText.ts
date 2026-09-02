@@ -3,6 +3,10 @@ import {
   DRIVERS_LICENSE_TYPE_VALUES,
   TRANSPORT_TYPE_OPTIONS,
 } from '@/lib/tp2026/gegevens-field-options';
+import {
+  applyExWerknemerFromText,
+  detectExWerknemerFromText,
+} from '@/lib/tp/ex-werknemer-wording';
 
 const CHECKED = String.raw`[☒☑✓✔]|\[(?:x|X)\]|\((?:x|X)\)`;
 const UNCHECKED = String.raw`[☐□]|\[\s*\]|\(\s*\)`;
@@ -117,6 +121,7 @@ export type CheckboxFieldSource = 'text' | 'cleared' | 'absent';
 export type IntakeCheckboxOverrideResult = {
   transportSource: CheckboxFieldSource;
   licenseSource: CheckboxFieldSource;
+  exWerknemerSource: CheckboxFieldSource;
 };
 
 export function applyIntakeCheckboxTextOverrides(
@@ -147,7 +152,19 @@ export function applyIntakeCheckboxTextOverrides(
     licenseSource = hasText ? 'cleared' : 'absent';
   }
 
-  return { transportSource, licenseSource };
+  const exFromText = detectExWerknemerFromText(text);
+  let exWerknemerSource: CheckboxFieldSource;
+  if (exFromText !== null) {
+    mapped.is_ex_werknemer = applyExWerknemerFromText(mapped.is_ex_werknemer, exFromText);
+    exWerknemerSource = 'text';
+  } else if (hasText) {
+    // Label absent or inconclusive: do not invent; leave model value if present.
+    exWerknemerSource = 'absent';
+  } else {
+    exWerknemerSource = 'absent';
+  }
+
+  return { transportSource, licenseSource, exWerknemerSource };
 }
 
 export function filterAllowedDriversLicenseTypes(values: unknown[]): string[] {

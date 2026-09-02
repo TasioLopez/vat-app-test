@@ -17,7 +17,11 @@ import {
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
 import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
-import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
+import {
+  applyExWerknemerBijlage1Rule,
+  materializeSpoor2ForExWerknemer,
+} from '@/lib/tp/tp_activities';
+import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -198,7 +202,14 @@ async function runTp2AutofillStep(
       const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
       if (spoor2) next.tp3_activities = spoor2;
     }
-    return { data: ensureTP2026Shape(applyTrajectoryDateDerivations(next)) };
+    const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(next));
+    if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
+      shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
+        shaped.bijlage1_phases as TP2026Bijlage1Phase[],
+        true
+      );
+    }
+    return { data: shaped };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {

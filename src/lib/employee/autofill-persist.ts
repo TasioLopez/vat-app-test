@@ -27,6 +27,7 @@ export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'computer_skills_description',
   'contract_hours',
   'other_employers',
+  'is_ex_werknemer',
   'field_review_status',
   'field_content_hash',
   'autofilled_fields',
@@ -52,6 +53,7 @@ export type EmployeeDetailsPersist = {
   computer_skills_description?: string;
   contract_hours?: number;
   other_employers?: string;
+  is_ex_werknemer?: boolean;
   field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
   field_content_hash?: Partial<Record<EmployeeDetailFieldKey, string>> | null;
   autofilled_fields?: string[];
@@ -203,6 +205,16 @@ export async function applyEmployeeAutofillDetails(
       autofilledFields,
       error: persistError.message,
     };
+  }
+
+  if (typeof toPersist.is_ex_werknemer === 'boolean') {
+    const { error: metaError } = await supabase.from('tp_meta').upsert(
+      [{ employee_id: employeeId, is_ex_werknemer: toPersist.is_ex_werknemer }],
+      { onConflict: 'employee_id' }
+    );
+    if (metaError) {
+      console.warn('⚠️ Failed to sync is_ex_werknemer to tp_meta', metaError.message);
+    }
   }
 
   return {

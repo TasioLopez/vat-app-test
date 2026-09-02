@@ -27,6 +27,7 @@ import {
 import type { TP2026Bijlage1Activity, TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
+import { applyExWerknemerBijlage1Rule } from '@/lib/tp/tp_activities';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
 import {
   TP2026_CELL_BG_WARM_CLASS,
@@ -293,11 +294,13 @@ export function Bijlage1Editor({
   setPhases,
   planStartDate,
   planEndDate,
+  isExWerknemer = false,
 }: {
   phases: TP2026Bijlage1Phase[];
   setPhases: (next: TP2026Bijlage1Phase[]) => void;
   planStartDate?: string;
   planEndDate?: string;
+  isExWerknemer?: boolean;
 }) {
   const [activePhaseIdx, setActivePhaseIdx] = useState(0);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -322,7 +325,8 @@ export function Bijlage1Editor({
 
   const applyTemplate = (templateKey: '2-fases' | '3-fases') => {
     if (!planStartDate || !planEndDate) return;
-    setPhases(createTemplates(planStartDate, planEndDate)[templateKey]);
+    const templates = createTemplates(planStartDate, planEndDate)[templateKey];
+    setPhases(applyExWerknemerBijlage1Rule(templates, isExWerknemer));
     setActivePhaseIdx(0);
   };
 

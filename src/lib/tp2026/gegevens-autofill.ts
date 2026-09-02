@@ -22,6 +22,7 @@ export const GEGEVENS_EMPLOYEE_KEYS = [
   'computer_skills_description',
   'contract_hours',
   'other_employers',
+  'is_ex_werknemer',
 ] as const;
 
 /** TP metadata fields on step 2 filled by `/api/autofill-tp-2`. */

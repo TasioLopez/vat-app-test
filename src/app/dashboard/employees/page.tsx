@@ -29,6 +29,11 @@ import {
   orgUsersById,
   type OrgDirectoryUser,
 } from '@/lib/users/org-directory';
+import {
+  canAssignEmployeeOwner,
+  canOpenEmployeeDossier,
+  isBackOffice,
+} from '@/lib/auth/roles';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
@@ -120,8 +125,12 @@ export default function EmployeesPage() {
     setUserRole(role);
 
     // Admins previously defaulted to "Mijn dossiers", which hid most rows (null owner_id).
-    if (role === 'admin') {
+    // Back office manages the full catalog and should always start from "all".
+    if (role === 'admin' || isBackOffice(role)) {
       setOwnerFilterMode((prev) => (prev === 'mine' ? 'all' : prev));
+    }
+    if (isBackOffice(role)) {
+      setViewMode('table');
     }
 
     const { data, error } = await supabase
@@ -151,6 +160,28 @@ export default function EmployeesPage() {
     if (!ownerId) return '—';
     const u = ownerById.get(ownerId);
     return u ? formatOrgUserDisplayName(u) : '—';
+  };
+
+  const isBackOfficeUser = !!userRole && isBackOffice(userRole);
+  const canOpenDossier = !userRole || canOpenEmployeeDossier(userRole);
+  const canEditOwnerInline = !!userRole && canAssignEmployeeOwner(userRole) && isBackOfficeUser;
+  const effectiveViewMode: ViewMode = isBackOfficeUser ? 'table' : viewMode;
+
+  const handleOwnerChange = async (employeeId: string, ownerId: string | null) => {
+    setEmployees((prev) =>
+      prev.map((emp) => (emp.id === employeeId ? { ...emp, owner_id: ownerId } : emp))
+    );
+    const { error } = await supabase.rpc('set_employee_owner', {
+      p_employee_id: employeeId,
+      p_owner_id: ownerId,
+    });
+    if (error) {
+      console.error('set_employee_owner failed:', error);
+      showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
+      void fetchEmployees();
+      return;
+    }
+    showSuccess('Dossier-eigenaar bijgewerkt.');
   };
 
   const handleDelete = async () => {
@@ -302,9 +333,11 @@ export default function EmployeesPage() {
             Beheer werknemers en hun gegevens ({filteredAndSortedEmployees.length} {filteredAndSortedEmployees.length === 1 ? 'werknemer' : 'werknemers'})
           </p>
         </div>
-        <Link href="/dashboard/employees/new">
-          <Button size="lg">+ Werknemer toevoegen</Button>
-        </Link>
+        {canOpenDossier && (
+          <Link href="/dashboard/employees/new">
+            <Button size="lg">+ Werknemer toevoegen</Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters and View Toggle */}
@@ -370,27 +403,29 @@ export default function EmployeesPage() {
           ) : null}
         </div>
 
-        {/* View Toggle */}
-        <div className="flex gap-2 border-2 border-purple-200 rounded-lg p-1">
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className="gap-2"
-          >
-            <List className="w-4 h-4" />
-            Tabel
-          </Button>
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-            className="gap-2"
-          >
-            <Grid className="w-4 h-4" />
-            Kaarten
-          </Button>
-        </div>
+        {/* View Toggle — back office is table-only */}
+        {!isBackOfficeUser && (
+          <div className="flex gap-2 border-2 border-purple-200 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="gap-2"
+            >
+              <List className="w-4 h-4" />
+              Tabel
+            </Button>
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="gap-2"
+            >
+              <Grid className="w-4 h-4" />
+              Kaarten
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -402,7 +437,7 @@ export default function EmployeesPage() {
               : 'Geen werknemers om te tonen.'}
           </p>
         </div>
-      ) : viewMode === 'table' ? (
+      ) : effectiveViewMode === 'table' ? (
         /* Table View */
         <Table>
           <TableHeader>
@@ -429,7 +464,7 @@ export default function EmployeesPage() {
                 className="cursor-pointer hover:bg-purple-100/50"
                 onClick={() => handleSort('owner')}
               >
-                Eigenaar <SortIcon field="owner" />
+                Dossier-eigenaar <SortIcon field="owner" />
               </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-purple-100/50"
@@ -437,50 +472,72 @@ export default function EmployeesPage() {
               >
                 Toegevoegd <SortIcon field="created_at" />
               </TableHead>
-              <TableHead className="text-right">Acties</TableHead>
+              {canOpenDossier && <TableHead className="text-right">Acties</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredAndSortedEmployees.map((employee) => (
               <TableRow 
                 key={employee.id}
-                className="cursor-pointer"
-                onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                className={canOpenDossier ? 'cursor-pointer' : undefined}
+                onClick={
+                  canOpenDossier
+                    ? () => router.push(`/dashboard/employees/${employee.id}`)
+                    : undefined
+                }
               >
                 <TableCell className="font-semibold">
                       {employee.first_name} {employee.last_name}
                 </TableCell>
                 <TableCell>{employee.email}</TableCell>
                 <TableCell>{employee.clients?.name || '—'}</TableCell>
-                <TableCell>{ownerDisplayName(employee.owner_id)}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {canEditOwnerInline ? (
+                    <OrgUserSelect
+                      supabase={supabase}
+                      users={orgUsers}
+                      value={employee.owner_id}
+                      currentUserId={currentUserId}
+                      allowNone
+                      noneLabel="— Geen eigenaar —"
+                      placeholder="Selecteer eigenaar"
+                      className="w-full min-w-[12rem] max-w-xs"
+                      onChange={(ownerId) => void handleOwnerChange(employee.id, ownerId)}
+                    />
+                  ) : (
+                    ownerDisplayName(employee.owner_id)
+                  )}
+                </TableCell>
                 <TableCell>
                   {employee.created_at 
                     ? new Date(employee.created_at).toLocaleDateString('nl-NL')
                     : '—'}
                 </TableCell>
-                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                    >
-                      <Eye className="w-4 h-4 mr-2" /> Bekijk
-                    </Button>
-                    {userRole === 'admin' && (
+                {canOpenDossier && (
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end gap-2">
                       <Button
                         size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setSelectedEmployeeId(employee.id);
-                          setShowDeleteModal(true);
-                        }}
+                        variant="outline"
+                        onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Eye className="w-4 h-4 mr-2" /> Bekijk
                       </Button>
-                    )}
-                  </div>
-                </TableCell>
+                      {userRole === 'admin' && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setSelectedEmployeeId(employee.id);
+                            setShowDeleteModal(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

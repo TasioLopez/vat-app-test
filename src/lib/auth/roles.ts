@@ -12,6 +12,19 @@ export function canManageClients(role: string): boolean {
   return isAdmin(role) || isBackOffice(role);
 }
 
+export function canDeleteClients(role: string): boolean {
+  return isAdmin(role);
+}
+
+export function canAssignEmployeeOwner(role: string): boolean {
+  return isAdmin(role) || isBackOffice(role);
+}
+
+/** Back office may list employees but must not open dossiers. */
+export function canOpenEmployeeDossier(role: string): boolean {
+  return !isBackOffice(role);
+}
+
 export function isStandardUser(role: string): boolean {
   return role === 'user' || role === 'back_office';
 }

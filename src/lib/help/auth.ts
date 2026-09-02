@@ -31,5 +31,13 @@ export function isAdmin(role: string): boolean {
   return checkIsAdmin(role);
 }
 
-export { canManageClients, isBackOffice, isStandardUser, roleLabel } from "@/lib/auth/roles";
+export {
+  canManageClients,
+  canDeleteClients,
+  canAssignEmployeeOwner,
+  canOpenEmployeeDossier,
+  isBackOffice,
+  isStandardUser,
+  roleLabel,
+} from "@/lib/auth/roles";
 export type { AppRole } from "@/lib/auth/roles";

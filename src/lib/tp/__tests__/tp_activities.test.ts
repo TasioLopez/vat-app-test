@@ -1,11 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyExWerknemerBijlage1Rule,
+  BIJLAGE1_DETACHERING_NAME,
   formatSpoor2NotitieLabel,
   isSpoor2NotitieEligible,
   materializeSpoor2ForExWerknemer,
   normalizeTp3Activities,
-  resolveSpoor2Selections,
   sanitizeSpoor2Selections,
   SPOOR2_DETACHERING_ID,
   TP_ACTIVITIES,
@@ -94,5 +95,39 @@ describe('ex-werknemer Spoor 2 rules', () => {
 
   it('leaves selections unchanged when not ex-werknemer', () => {
     assert.equal(materializeSpoor2ForExWerknemer(null, false), null);
+  });
+});
+
+describe('ex-werknemer Bijlage 1 rules', () => {
+  it('removes Detachering onderzoeken from phases for ex-werknemer', () => {
+    const phases = [
+      {
+        title: 'Betaald werk',
+        period_from: '',
+        period_to: '',
+        activities: [
+          { name: 'Jobhunten', status: 'P' as const },
+          { name: BIJLAGE1_DETACHERING_NAME, status: 'P' as const },
+          { name: 'Begeleiding WIA', status: 'P' as const },
+        ],
+      },
+    ];
+    const next = applyExWerknemerBijlage1Rule(phases, true);
+    assert.deepEqual(
+      next[0].activities.map((a) => a.name),
+      ['Jobhunten', 'Begeleiding WIA']
+    );
+  });
+
+  it('leaves phases unchanged when not ex-werknemer', () => {
+    const phases = [
+      {
+        title: 'Betaald werk',
+        period_from: '',
+        period_to: '',
+        activities: [{ name: BIJLAGE1_DETACHERING_NAME, status: 'P' as const }],
+      },
+    ];
+    assert.deepEqual(applyExWerknemerBijlage1Rule(phases, false), phases);
   });
 });

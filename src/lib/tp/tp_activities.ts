@@ -2,6 +2,7 @@ import {
   isSpoor2NotitieEligible,
   TP_SPOOR2_SUBSECTIONS,
 } from '@/lib/tp2026/basis-spoor2-begeleiding';
+import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 
 export type TPActivitySelection = { id: string; subText?: string | null };
 
@@ -46,6 +47,20 @@ export function materializeSpoor2ForExWerknemer(
     return buildDefaultSpoor2Selections({ excludeDetachering: true });
   }
   return applyExWerknemerSpoor2Rule(resolveSpoor2Selections(currentRaw), true);
+}
+
+export const BIJLAGE1_DETACHERING_NAME = 'Detachering onderzoeken';
+
+/** Remove Detachering from Bijlage 1 phases so it returns to Beschikbare activiteiten. */
+export function applyExWerknemerBijlage1Rule(
+  phases: TP2026Bijlage1Phase[],
+  isExWerknemer: boolean
+): TP2026Bijlage1Phase[] {
+  if (!isExWerknemer || !Array.isArray(phases)) return phases;
+  return phases.map((phase) => ({
+    ...phase,
+    activities: (phase.activities ?? []).filter((a) => a.name !== BIJLAGE1_DETACHERING_NAME),
+  }));
 }
 
 /** Truncate template text for notitie dropdown labels. */

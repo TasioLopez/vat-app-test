@@ -27,6 +27,7 @@ export type EmployeeChatlikeExtractionResult = {
   documentLabels: string[];
   mode: 'freeform';
   intakeTextLen: number;
+  intakePlainText: string;
 };
 
 function docSortKey(docType: string | null | undefined): number {
@@ -147,6 +148,7 @@ export async function extractEmployeeDetailsChatlike(
       documentLabels: [],
       mode: 'freeform',
       intakeTextLen: 0,
+      intakePlainText: '',
     };
   }
 
@@ -182,8 +184,10 @@ export async function extractEmployeeDetailsChatlike(
 
   let intakeTextLen = 0;
   let intakeExcerpt = '';
+  let intakePlainText = '';
   if (intakePdfBuffer) {
     const plain = await extractPdfPlainTextWithGlyphFallback(intakePdfBuffer);
+    intakePlainText = plain;
     intakeTextLen = plain.length;
     intakeExcerpt = buildIntakeTextExcerptForChatlike(plain);
     console.log(
@@ -224,5 +228,6 @@ export async function extractEmployeeDetailsChatlike(
     documentLabels,
     mode: 'freeform',
     intakeTextLen,
+    intakePlainText,
   };
 }

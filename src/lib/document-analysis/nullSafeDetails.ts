@@ -37,6 +37,7 @@ const VALID_EMPLOYEE_DETAILS_FIELDS = new Set([
   'gender',
   'date_of_birth',
   'phone',
+  'is_ex_werknemer',
 ]);
 
 function isPresent(value: unknown): boolean {
@@ -174,7 +175,7 @@ export function mapAndValidateEmployeeDetails(
       continue;
     }
 
-    if (mappedKey === 'has_computer') {
+    if (mappedKey === 'has_computer' || mappedKey === 'is_ex_werknemer') {
       if (typeof rawValue === 'boolean') mappedData[mappedKey] = rawValue;
       else if (typeof rawValue === 'string') {
         const s = rawValue.toLowerCase().trim();

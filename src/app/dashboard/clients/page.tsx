@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { canManageClients, type AppRole } from '@/lib/auth/roles';
+import { canDeleteClients, canManageClients, type AppRole } from '@/lib/auth/roles';
 
 type SortField = 'name' | 'industry';
 type SortDirection = 'asc' | 'desc';
@@ -178,7 +178,7 @@ export default function ClientsPage() {
   };
 
   const handleDeleteClick = (client: Client) => {
-    if (!userRole || !canManageClients(userRole)) return;
+    if (!userRole || !canDeleteClients(userRole)) return;
     setClientToDelete(client);
     setShowDeleteModal(true);
   };
@@ -380,7 +380,7 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  {userRole && canManageClients(userRole) && (
+                  {userRole && canDeleteClients(userRole) && (
                     <Button
                       size="sm"
                       variant="destructive"

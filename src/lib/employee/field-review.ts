@@ -22,7 +22,8 @@ export type EmployeeDetailFieldKey =
   | 'computer_skills'
   | 'computer_skills_description'
   | 'contract_hours'
-  | 'other_employers';
+  | 'other_employers'
+  | 'is_ex_werknemer';
 
 export const EMPLOYEE_DETAIL_FIELD_KEYS: EmployeeDetailFieldKey[] = [
   'gender',
@@ -43,6 +44,7 @@ export const EMPLOYEE_DETAIL_FIELD_KEYS: EmployeeDetailFieldKey[] = [
   'computer_skills_description',
   'contract_hours',
   'other_employers',
+  'is_ex_werknemer',
 ];
 
 const FIELD_KEY_SET = new Set<string>([
@@ -64,6 +66,7 @@ const FIELD_KEY_SET = new Set<string>([
   'computer_skills_description',
   'contract_hours',
   'other_employers',
+  'is_ex_werknemer',
 ]);
 
 export function normalizeEmployeeFieldReviewStatus(
@@ -138,7 +141,8 @@ function normalizeFieldValue(
       return null;
     }
     case 'drivers_license':
-    case 'has_computer': {
+    case 'has_computer':
+    case 'is_ex_werknemer': {
       if (value === null || value === undefined) return null;
       return Boolean(value);
     }

@@ -105,5 +105,17 @@ describe('applyIntakeCheckboxTextOverrides', () => {
     assert.equal('transport_type' in mapped, false);
     assert.equal(sources.transportSource, 'absent');
     assert.equal(sources.licenseSource, 'absent');
+    assert.equal(sources.exWerknemerSource, 'absent');
+  });
+
+  it('sets is_ex_werknemer from Ex-werknemer checkbox text', () => {
+    const mapped: Record<string, unknown> = { is_ex_werknemer: false };
+    const sources = applyIntakeCheckboxTextOverrides(mapped, '☒ Ex-werknemer');
+    assert.equal(mapped.is_ex_werknemer, true);
+    assert.equal(sources.exWerknemerSource, 'text');
+
+    const mappedOff: Record<string, unknown> = { is_ex_werknemer: true };
+    applyIntakeCheckboxTextOverrides(mappedOff, '☐ Ex-werknemer');
+    assert.equal(mappedOff.is_ex_werknemer, false);
   });
 });
