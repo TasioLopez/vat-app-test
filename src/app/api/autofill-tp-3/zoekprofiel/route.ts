@@ -77,7 +77,8 @@ function buildGenerationContext(loaded: LoadedZoekprofielContext) {
       {
         hasBelastbaarheidsDoc: hasBelastClosing,
         scenario: scenarioResult.scenario,
-        hasAdReport: meta?.has_ad_report ?? null,
+        hasAdReport:
+          typeof meta?.has_ad_report === 'boolean' ? meta.has_ad_report : null,
         actualisatieDocsPresent: hasSpreekuurDoc(loaded.docs),
       }
     ),

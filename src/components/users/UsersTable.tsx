@@ -309,7 +309,11 @@ export default function UsersTable() {
           onSave={saveUserForGuard}
           onClose={closeEditModal}
         />
-        <div className="bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-w-4xl max-h-[90vh] flex flex-col">
+        <div
+          className={`bg-card border border-border p-6 rounded-lg shadow-xl w-[90%] max-h-[90vh] flex flex-col ${
+            editModalTab === "profiel" ? "max-w-md" : "max-w-4xl"
+          }`}
+        >
           <h2 className="text-2xl font-semibold mb-4 text-card-foreground shrink-0">
             Gebruiker bewerken
           </h2>
@@ -353,7 +357,7 @@ export default function UsersTable() {
                 id="edit-modal-profiel"
                 role="tabpanel"
                 aria-labelledby="tab-profiel"
-                className="max-w-md space-y-4"
+                className="space-y-4"
               >
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-1 block">
