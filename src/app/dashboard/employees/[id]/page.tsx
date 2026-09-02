@@ -22,6 +22,7 @@ import {
     Files,
     IdCard,
     CheckCircle2,
+    CircleDashed,
     UserRoundX,
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
