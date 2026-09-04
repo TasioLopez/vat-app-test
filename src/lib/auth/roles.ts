@@ -29,6 +29,16 @@ export function isStandardUser(role: string): boolean {
   return role === 'user' || role === 'back_office';
 }
 
+/** Admin and back office can switch between personal and org-wide dashboard stats. */
+export function canViewOverallDashboardStats(role: string): boolean {
+  return isAdmin(role) || isBackOffice(role);
+}
+
+/** Total users card: overall scope only, admin and back office. */
+export function canViewTotalUsersStat(role: string): boolean {
+  return isAdmin(role) || isBackOffice(role);
+}
+
 export function roleLabel(role: string): string {
   switch (role) {
     case 'admin':
