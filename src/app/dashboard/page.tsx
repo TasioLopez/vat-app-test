@@ -162,6 +162,10 @@ export default async function DashboardPage(props: {
         />
         <StatCard title="TP concepten" value={stats.tpDraftsCount} />
         <StatCard title="Werknemers zonder TP" value={stats.employeesWithoutTp} />
+        <StatCard title="CV documenten" value={stats.cvDocumentsCount} />
+        <StatCard title="CVs deze maand" value={stats.cvDocumentsThisMonth} />
+        <StatCard title="Actieve CV-shares" value={stats.cvActiveSharesCount} />
+        <StatCard title="CV-shares deze maand" value={stats.cvSharesThisMonth} />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">

@@ -17,6 +17,12 @@ export type DashboardStats = {
   tpDocumentsThisMonth: number;
   tpDraftsCount: number;
   employeesWithoutTp: number;
+  /** Advisor-owned CV docs only (`parent_cv_id` is null — excludes share child clones). */
+  cvDocumentsCount: number;
+  cvDocumentsThisMonth: number;
+  /** Share links that are not revoked and not expired. */
+  cvActiveSharesCount: number;
+  cvSharesThisMonth: number;
 };
 
 /** Instant of local midnight in Europe/Amsterdam for the given calendar Y-M-D. */
@@ -133,6 +139,10 @@ async function countEmployeesWithoutTp(
   return ids.filter((id) => !withTp.has(id)).length;
 }
 
+function emptyCount(): Promise<{ count: number }> {
+  return Promise.resolve({ count: 0 });
+}
+
 export async function getDashboardStats(opts: {
   supabase: SupabaseClient;
   userId: string;
@@ -141,49 +151,93 @@ export async function getDashboardStats(opts: {
 }): Promise<DashboardStats> {
   const { supabase, userId, role, scope } = opts;
   const { startIso, endIso } = getAmsterdamMonthRange();
+  const nowIso = new Date().toISOString();
 
   if (scope === 'mine') {
     const myEmployeeIds = await getMyEmployeeIds(supabase, userId);
+    const hasEmployees = myEmployeeIds.length > 0;
 
-    const [clientsRes, newEmployeesRes, tpTotalRes, tpMonthRes, draftsRes, withoutTp] =
-      await Promise.all([
-        supabase
-          .from('user_clients')
-          .select('client_id', { count: 'exact', head: true })
-          .eq('user_id', userId),
-        myEmployeeIds.length === 0
-          ? Promise.resolve({ count: 0 })
-          : supabase
-              .from('employees')
-              .select('id', { count: 'exact', head: true })
-              .in('id', myEmployeeIds)
-              .gte('created_at', startIso)
-              .lt('created_at', endIso),
-        myEmployeeIds.length === 0
-          ? Promise.resolve({ count: 0 })
-          : supabase
-              .from('documents')
-              .select('id', { count: 'exact', head: true })
-              .eq('type', 'tp')
-              .in('employee_id', myEmployeeIds),
-        myEmployeeIds.length === 0
-          ? Promise.resolve({ count: 0 })
-          : supabase
-              .from('documents')
-              .select('id', { count: 'exact', head: true })
-              .eq('type', 'tp')
-              .in('employee_id', myEmployeeIds)
-              .gte('uploaded_at', startIso)
-              .lt('uploaded_at', endIso),
-        myEmployeeIds.length === 0
-          ? Promise.resolve({ count: 0 })
-          : supabase
-              .from('tp_instances')
-              .select('id', { count: 'exact', head: true })
-              .eq('status', 'draft')
-              .in('employee_id', myEmployeeIds),
-        countEmployeesWithoutTp(supabase, myEmployeeIds),
-      ]);
+    const [
+      clientsRes,
+      newEmployeesRes,
+      tpTotalRes,
+      tpMonthRes,
+      draftsRes,
+      withoutTp,
+      cvTotalRes,
+      cvMonthRes,
+      cvActiveSharesRes,
+      cvSharesMonthRes,
+    ] = await Promise.all([
+      supabase
+        .from('user_clients')
+        .select('client_id', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      hasEmployees
+        ? supabase
+            .from('employees')
+            .select('id', { count: 'exact', head: true })
+            .in('id', myEmployeeIds)
+            .gte('created_at', startIso)
+            .lt('created_at', endIso)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('type', 'tp')
+            .in('employee_id', myEmployeeIds)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('type', 'tp')
+            .in('employee_id', myEmployeeIds)
+            .gte('uploaded_at', startIso)
+            .lt('uploaded_at', endIso)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('tp_instances')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'draft')
+            .in('employee_id', myEmployeeIds)
+        : emptyCount(),
+      countEmployeesWithoutTp(supabase, myEmployeeIds),
+      hasEmployees
+        ? supabase
+            .from('cv_documents')
+            .select('id', { count: 'exact', head: true })
+            .is('parent_cv_id', null)
+            .in('employee_id', myEmployeeIds)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('cv_documents')
+            .select('id', { count: 'exact', head: true })
+            .is('parent_cv_id', null)
+            .in('employee_id', myEmployeeIds)
+            .gte('created_at', startIso)
+            .lt('created_at', endIso)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('cv_share_links')
+            .select('id', { count: 'exact', head: true })
+            .in('employee_id', myEmployeeIds)
+            .is('revoked_at', null)
+            .gt('expires_at', nowIso)
+        : emptyCount(),
+      hasEmployees
+        ? supabase
+            .from('cv_share_links')
+            .select('id', { count: 'exact', head: true })
+            .in('employee_id', myEmployeeIds)
+            .gte('created_at', startIso)
+            .lt('created_at', endIso)
+        : emptyCount(),
+    ]);
 
     return {
       scope,
@@ -195,40 +249,73 @@ export async function getDashboardStats(opts: {
       tpDocumentsThisMonth: countOrZero(tpMonthRes.count),
       tpDraftsCount: countOrZero(draftsRes.count),
       employeesWithoutTp: withoutTp,
+      cvDocumentsCount: countOrZero(cvTotalRes.count),
+      cvDocumentsThisMonth: countOrZero(cvMonthRes.count),
+      cvActiveSharesCount: countOrZero(cvActiveSharesRes.count),
+      cvSharesThisMonth: countOrZero(cvSharesMonthRes.count),
     };
   }
 
   // scope === 'all'
   const showTotalUsers = canViewTotalUsersStat(role);
 
-  const [usersRes, clientsRes, employeesRes, newEmployeesRes, tpTotalRes, tpMonthRes, draftsRes, withoutTp] =
-    await Promise.all([
-      showTotalUsers
-        ? supabase.from('users').select('id', { count: 'exact', head: true })
-        : Promise.resolve({ count: null as number | null }),
-      supabase.from('clients').select('id', { count: 'exact', head: true }),
-      supabase.from('employees').select('id', { count: 'exact', head: true }),
-      supabase
-        .from('employees')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', startIso)
-        .lt('created_at', endIso),
-      supabase
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-        .eq('type', 'tp'),
-      supabase
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-        .eq('type', 'tp')
-        .gte('uploaded_at', startIso)
-        .lt('uploaded_at', endIso),
-      supabase
-        .from('tp_instances')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'draft'),
-      countEmployeesWithoutTp(supabase, null),
-    ]);
+  const [
+    usersRes,
+    clientsRes,
+    employeesRes,
+    newEmployeesRes,
+    tpTotalRes,
+    tpMonthRes,
+    draftsRes,
+    withoutTp,
+    cvTotalRes,
+    cvMonthRes,
+    cvActiveSharesRes,
+    cvSharesMonthRes,
+  ] = await Promise.all([
+    showTotalUsers
+      ? supabase.from('users').select('id', { count: 'exact', head: true })
+      : Promise.resolve({ count: null as number | null }),
+    supabase.from('clients').select('id', { count: 'exact', head: true }),
+    supabase.from('employees').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('employees')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', startIso)
+      .lt('created_at', endIso),
+    supabase.from('documents').select('id', { count: 'exact', head: true }).eq('type', 'tp'),
+    supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'tp')
+      .gte('uploaded_at', startIso)
+      .lt('uploaded_at', endIso),
+    supabase
+      .from('tp_instances')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'draft'),
+    countEmployeesWithoutTp(supabase, null),
+    supabase
+      .from('cv_documents')
+      .select('id', { count: 'exact', head: true })
+      .is('parent_cv_id', null),
+    supabase
+      .from('cv_documents')
+      .select('id', { count: 'exact', head: true })
+      .is('parent_cv_id', null)
+      .gte('created_at', startIso)
+      .lt('created_at', endIso),
+    supabase
+      .from('cv_share_links')
+      .select('id', { count: 'exact', head: true })
+      .is('revoked_at', null)
+      .gt('expires_at', nowIso),
+    supabase
+      .from('cv_share_links')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', startIso)
+      .lt('created_at', endIso),
+  ]);
 
   return {
     scope,
@@ -240,5 +327,9 @@ export async function getDashboardStats(opts: {
     tpDocumentsThisMonth: countOrZero(tpMonthRes.count),
     tpDraftsCount: countOrZero(draftsRes.count),
     employeesWithoutTp: withoutTp,
+    cvDocumentsCount: countOrZero(cvTotalRes.count),
+    cvDocumentsThisMonth: countOrZero(cvMonthRes.count),
+    cvActiveSharesCount: countOrZero(cvActiveSharesRes.count),
+    cvSharesThisMonth: countOrZero(cvSharesMonthRes.count),
   };
 }
