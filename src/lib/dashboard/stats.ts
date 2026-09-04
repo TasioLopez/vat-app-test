@@ -16,7 +16,14 @@ export type DashboardStats = {
   tpDocumentsCount: number;
   tpDocumentsThisMonth: number;
   tpDraftsCount: number;
+  /** Distinct werknemers with at least one TP document. */
+  employeesWithTp: number;
   employeesWithoutTp: number;
+  /** PDF export / download events (`tp_exports`). */
+  tpDownloadsCount: number;
+  tpDownloadsThisMonth: number;
+  /** Distinct werknemers with at least one TP export/download. */
+  employeesWithTpDownload: number;
   /** Advisor-owned CV docs only (`parent_cv_id` is null — excludes share child clones). */
   cvDocumentsCount: number;
   cvDocumentsThisMonth: number;
@@ -112,20 +119,21 @@ function countOrZero(count: number | null): number {
   return count ?? 0;
 }
 
-async function countEmployeesWithoutTp(
+async function resolveEmployeeIds(
   supabase: SupabaseClient,
   employeeIds: string[] | null
-): Promise<number> {
-  // null = all employees visible under RLS
-  let ids: string[];
-  if (employeeIds === null) {
-    const { data } = await supabase.from('employees').select('id');
-    ids = (data ?? []).map((r) => r.id).filter(Boolean);
-  } else {
-    ids = employeeIds;
-  }
+): Promise<string[]> {
+  if (employeeIds !== null) return employeeIds;
+  const { data } = await supabase.from('employees').select('id');
+  return (data ?? []).map((r) => r.id).filter(Boolean);
+}
 
-  if (ids.length === 0) return 0;
+async function countEmployeesTpCoverage(
+  supabase: SupabaseClient,
+  employeeIds: string[] | null
+): Promise<{ withTp: number; withoutTp: number }> {
+  const ids = await resolveEmployeeIds(supabase, employeeIds);
+  if (ids.length === 0) return { withTp: 0, withoutTp: 0 };
 
   const { data: tpRows } = await supabase
     .from('documents')
@@ -136,7 +144,88 @@ async function countEmployeesWithoutTp(
   const withTp = new Set(
     (tpRows ?? []).map((r) => r.employee_id).filter((id): id is string => Boolean(id))
   );
-  return ids.filter((id) => !withTp.has(id)).length;
+  return {
+    withTp: ids.filter((id) => withTp.has(id)).length,
+    withoutTp: ids.filter((id) => !withTp.has(id)).length,
+  };
+}
+
+async function getTpInstanceIdsForEmployees(
+  supabase: SupabaseClient,
+  employeeIds: string[]
+): Promise<string[]> {
+  if (employeeIds.length === 0) return [];
+  const { data } = await supabase
+    .from('tp_instances')
+    .select('id')
+    .in('employee_id', employeeIds);
+  return (data ?? []).map((r) => r.id).filter(Boolean);
+}
+
+async function countTpDownloads(
+  supabase: SupabaseClient,
+  opts: {
+    employeeIds: string[] | null;
+    startIso?: string;
+    endIso?: string;
+  }
+): Promise<number> {
+  const { employeeIds, startIso, endIso } = opts;
+
+  if (employeeIds !== null) {
+    if (employeeIds.length === 0) return 0;
+    const instanceIds = await getTpInstanceIdsForEmployees(supabase, employeeIds);
+    if (instanceIds.length === 0) return 0;
+    let q = supabase
+      .from('tp_exports')
+      .select('id', { count: 'exact', head: true })
+      .in('tp_instance_id', instanceIds);
+    if (startIso && endIso) {
+      q = q.gte('created_at', startIso).lt('created_at', endIso);
+    }
+    const { count } = await q;
+    return countOrZero(count);
+  }
+
+  let q = supabase.from('tp_exports').select('id', { count: 'exact', head: true });
+  if (startIso && endIso) {
+    q = q.gte('created_at', startIso).lt('created_at', endIso);
+  }
+  const { count } = await q;
+  return countOrZero(count);
+}
+
+async function countEmployeesWithTpDownload(
+  supabase: SupabaseClient,
+  employeeIds: string[] | null
+): Promise<number> {
+  const ids = await resolveEmployeeIds(supabase, employeeIds);
+  if (ids.length === 0) return 0;
+
+  const instanceIds = await getTpInstanceIdsForEmployees(supabase, ids);
+  if (instanceIds.length === 0) return 0;
+
+  const { data: exportRows } = await supabase
+    .from('tp_exports')
+    .select('tp_instance_id')
+    .in('tp_instance_id', instanceIds);
+
+  const exportedInstanceIds = new Set(
+    (exportRows ?? []).map((r) => r.tp_instance_id).filter(Boolean)
+  );
+  if (exportedInstanceIds.size === 0) return 0;
+
+  const { data: instances } = await supabase
+    .from('tp_instances')
+    .select('employee_id')
+    .in('id', Array.from(exportedInstanceIds));
+
+  const employees = new Set(
+    (instances ?? [])
+      .map((r) => r.employee_id)
+      .filter((id): id is string => Boolean(id) && ids.includes(id))
+  );
+  return employees.size;
 }
 
 function emptyCount(): Promise<{ count: number }> {
@@ -156,6 +245,7 @@ export async function getDashboardStats(opts: {
   if (scope === 'mine') {
     const myEmployeeIds = await getMyEmployeeIds(supabase, userId);
     const hasEmployees = myEmployeeIds.length > 0;
+    const employeeScope = myEmployeeIds;
 
     const [
       clientsRes,
@@ -163,7 +253,10 @@ export async function getDashboardStats(opts: {
       tpTotalRes,
       tpMonthRes,
       draftsRes,
-      withoutTp,
+      tpCoverage,
+      tpDownloadsCount,
+      tpDownloadsThisMonth,
+      employeesWithTpDownload,
       cvTotalRes,
       cvMonthRes,
       cvActiveSharesRes,
@@ -204,7 +297,10 @@ export async function getDashboardStats(opts: {
             .eq('status', 'draft')
             .in('employee_id', myEmployeeIds)
         : emptyCount(),
-      countEmployeesWithoutTp(supabase, myEmployeeIds),
+      countEmployeesTpCoverage(supabase, employeeScope),
+      countTpDownloads(supabase, { employeeIds: employeeScope }),
+      countTpDownloads(supabase, { employeeIds: employeeScope, startIso, endIso }),
+      countEmployeesWithTpDownload(supabase, employeeScope),
       hasEmployees
         ? supabase
             .from('cv_documents')
@@ -248,7 +344,11 @@ export async function getDashboardStats(opts: {
       tpDocumentsCount: countOrZero(tpTotalRes.count),
       tpDocumentsThisMonth: countOrZero(tpMonthRes.count),
       tpDraftsCount: countOrZero(draftsRes.count),
-      employeesWithoutTp: withoutTp,
+      employeesWithTp: tpCoverage.withTp,
+      employeesWithoutTp: tpCoverage.withoutTp,
+      tpDownloadsCount,
+      tpDownloadsThisMonth,
+      employeesWithTpDownload,
       cvDocumentsCount: countOrZero(cvTotalRes.count),
       cvDocumentsThisMonth: countOrZero(cvMonthRes.count),
       cvActiveSharesCount: countOrZero(cvActiveSharesRes.count),
@@ -267,7 +367,10 @@ export async function getDashboardStats(opts: {
     tpTotalRes,
     tpMonthRes,
     draftsRes,
-    withoutTp,
+    tpCoverage,
+    tpDownloadsCount,
+    tpDownloadsThisMonth,
+    employeesWithTpDownload,
     cvTotalRes,
     cvMonthRes,
     cvActiveSharesRes,
@@ -294,7 +397,10 @@ export async function getDashboardStats(opts: {
       .from('tp_instances')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'draft'),
-    countEmployeesWithoutTp(supabase, null),
+    countEmployeesTpCoverage(supabase, null),
+    countTpDownloads(supabase, { employeeIds: null }),
+    countTpDownloads(supabase, { employeeIds: null, startIso, endIso }),
+    countEmployeesWithTpDownload(supabase, null),
     supabase
       .from('cv_documents')
       .select('id', { count: 'exact', head: true })
@@ -326,7 +432,11 @@ export async function getDashboardStats(opts: {
     tpDocumentsCount: countOrZero(tpTotalRes.count),
     tpDocumentsThisMonth: countOrZero(tpMonthRes.count),
     tpDraftsCount: countOrZero(draftsRes.count),
-    employeesWithoutTp: withoutTp,
+    employeesWithTp: tpCoverage.withTp,
+    employeesWithoutTp: tpCoverage.withoutTp,
+    tpDownloadsCount,
+    tpDownloadsThisMonth,
+    employeesWithTpDownload,
     cvDocumentsCount: countOrZero(cvTotalRes.count),
     cvDocumentsThisMonth: countOrZero(cvMonthRes.count),
     cvActiveSharesCount: countOrZero(cvActiveSharesRes.count),

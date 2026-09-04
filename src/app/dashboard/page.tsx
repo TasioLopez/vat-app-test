@@ -154,14 +154,29 @@ export default async function DashboardPage(props: {
         )}
         <StatCard title={clientsLabel} value={stats.clientsCount} />
         <StatCard title="Werknemers" value={stats.employeesCount} />
-        <StatCard title="TP Documenten" value={stats.tpDocumentsCount} />
+        <StatCard
+          title="TP Documenten"
+          value={stats.tpDocumentsCount}
+          description="Inclusief regeneraties"
+        />
         <StatCard title="TPs deze maand" value={stats.tpDocumentsThisMonth} />
         <StatCard
           title="Nieuwe werknemers deze maand"
           value={stats.newEmployeesThisMonth}
         />
         <StatCard title="TP concepten" value={stats.tpDraftsCount} />
+        <StatCard title="Werknemers met TP" value={stats.employeesWithTp} />
         <StatCard title="Werknemers zonder TP" value={stats.employeesWithoutTp} />
+        <StatCard
+          title="TP downloads"
+          value={stats.tpDownloadsCount}
+          description="Geëxporteerde PDF's"
+        />
+        <StatCard title="TP downloads deze maand" value={stats.tpDownloadsThisMonth} />
+        <StatCard
+          title="Werknemers met TP-download"
+          value={stats.employeesWithTpDownload}
+        />
         <StatCard title="CV documenten" value={stats.cvDocumentsCount} />
         <StatCard title="CVs deze maand" value={stats.cvDocumentsThisMonth} />
         <StatCard title="Actieve CV-shares" value={stats.cvActiveSharesCount} />
