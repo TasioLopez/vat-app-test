@@ -231,6 +231,26 @@ function toEditableEmployeePayload(employee: Employee): EditableEmployeePayload 
     };
 }
 
+function mapEmployeeRow(data: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    client_id: string | null;
+    referent_id: string | null;
+    owner_id: string | null;
+}): Employee {
+    return {
+        id: data.id,
+        first_name: normalizePersonName(data.first_name) ?? '',
+        last_name: normalizePersonName(data.last_name) ?? '',
+        email: data.email ?? '',
+        client_id: data.client_id ?? '',
+        referent_id: data.referent_id,
+        owner_id: data.owner_id,
+    };
+}
+
 function toEmployeeDetailsPayload(
     details: Partial<EmployeeDetails> | null | undefined,
     employeeId: string
@@ -377,12 +397,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             return;
         }
 
-        setEmployee({
-            ...data,
-            first_name: normalizePersonName(data.first_name) ?? '',
-            last_name: normalizePersonName(data.last_name) ?? '',
-        });
-        setSavedEmployeeSnapshot(toEditableEmployeePayload(data));
+        const mapped = mapEmployeeRow(data);
+        setEmployee(mapped);
+        setSavedEmployeeSnapshot(toEditableEmployeePayload(mapped));
         if (data.client_id) {
             fetchClient(data.client_id);
             fetchReferents(data.client_id);
@@ -393,7 +410,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     const fetchReferents = async (clientId: string) => {
         const { data, error } = await supabase
-            .from('referents' as any)
+            .from('referents')
             .select('id, first_name, last_name, referent_function, phone, email, gender')
             .eq('client_id', clientId)
             .order('display_order', { ascending: true, nullsFirst: false });
@@ -403,7 +420,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             setReferents([]);
             return;
         }
-        setReferents(data || []);
+        setReferents((data as Referent[]) || []);
     };
 
     const fetchEmployeeDetails = async () => {
@@ -419,30 +436,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
 
         if (data) {
-            // Parse work_experience if it's a JSON array string
-            // Parse drivers_license_type if it's a JSON array string
-            let parsedLicenseType = data.drivers_license_type;
-            if (parsedLicenseType && typeof parsedLicenseType === 'string') {
-                try {
-                    const parsed = JSON.parse(parsedLicenseType);
-                    if (Array.isArray(parsed)) {
-                        parsedLicenseType = parsed;
-                    }
-                } catch {
-                    // Not a JSON string, keep as is (might be a single string value)
-                    parsedLicenseType = parsedLicenseType ? [parsedLicenseType] : null;
-                }
-            }
-            
-            const parsedData = {
-                ...data,
-                phone: normalizePhoneForStorage(data.phone) ?? data.phone,
-                work_experience: data.work_experience ? parseWorkExperience(data.work_experience) : data.work_experience,
-                drivers_license_type: parsedLicenseType,
-                other_employers: isAbsentText(data.other_employers) ? 'Geen' : data.other_employers,
-                field_review_status: undefined as any,
-                field_content_hash: undefined as any,
-            };
+            const repairedEducation = repairEmployeeEducationFields(
+                data.education_level,
+                data.education_name
+            );
 
             const normalizedReviewStatus = normalizeEmployeeFieldReviewStatus((data as any).field_review_status);
             const normalizedContentHash = normalizeEmployeeFieldContentHash((data as any).field_content_hash);
@@ -460,20 +457,46 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 }
             }
 
-            parsedData.field_review_status = hasReviewMetadata ? normalizedReviewStatus : legacyReviewStatus;
-            parsedData.field_content_hash = normalizedContentHash;
-            const repairedEducation = repairEmployeeEducationFields(
-                parsedData.education_level,
-                parsedData.education_name
+            const details = toNormalizedDetailsPayload(
+                {
+                    gender: data.gender ?? undefined,
+                    phone: normalizePhoneForStorage(data.phone) ?? data.phone ?? undefined,
+                    date_of_birth: data.date_of_birth ?? undefined,
+                    current_job: data.current_job ?? undefined,
+                    work_experience: data.work_experience
+                        ? parseWorkExperience(data.work_experience)
+                        : undefined,
+                    education_level:
+                        repairedEducation.education_level !== undefined
+                            ? repairedEducation.education_level
+                            : data.education_level ?? undefined,
+                    education_name:
+                        repairedEducation.education_name !== undefined
+                            ? repairedEducation.education_name
+                            : data.education_name ?? undefined,
+                    drivers_license: data.drivers_license ?? undefined,
+                    drivers_license_type: normalizeStringArray(data.drivers_license_type),
+                    transport_type: normalizeStringArray(data.transport_type),
+                    dutch_speaking: data.dutch_speaking ?? undefined,
+                    dutch_writing: data.dutch_writing ?? undefined,
+                    dutch_reading: data.dutch_reading ?? undefined,
+                    has_computer: data.has_computer ?? undefined,
+                    computer_skills: data.computer_skills ?? undefined,
+                    computer_skills_description: data.computer_skills_description ?? undefined,
+                    contract_hours: data.contract_hours,
+                    other_employers: isAbsentText(data.other_employers)
+                        ? 'Geen'
+                        : data.other_employers ?? undefined,
+                    is_ex_werknemer: data.is_ex_werknemer ?? undefined,
+                    autofilled_fields: data.autofilled_fields ?? undefined,
+                    field_review_status: hasReviewMetadata ? normalizedReviewStatus : legacyReviewStatus,
+                    field_content_hash: normalizedContentHash,
+                },
+                employeeId
             );
-            if (repairedEducation.education_level !== undefined) {
-                parsedData.education_level = repairedEducation.education_level;
-            }
-            if (repairedEducation.education_name !== undefined) {
-                parsedData.education_name = repairedEducation.education_name;
-            }
-            setEmployeeDetails(parsedData);
-            setSavedDetailsSnapshot(toNormalizedDetailsPayload(parsedData, employeeId));
+
+            setEmployeeDetails(details);
+            setSavedDetailsSnapshot(details);
             if (data.autofilled_fields) {
                 setAutofilledFields(new Set(data.autofilled_fields));
             }
@@ -994,10 +1017,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         if (!suggestedReferent || !employee?.client_id) return;
         setUpdating(true);
         try {
-            const { data: existingList } = await supabase.from('referents' as any).select('id').eq('client_id', employee.client_id);
+            const { data: existingList } = await supabase.from('referents').select('id').eq('client_id', employee.client_id);
             const isFirst = !existingList || existingList.length === 0;
             const { data: newRef, error: insertErr } = await supabase
-                .from('referents' as any)
+                .from('referents')
                 .insert({
                     client_id: employee.client_id,
                     first_name: normalizePersonName(suggestedReferent.first_name),
@@ -1011,6 +1034,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 .select('id')
                 .single();
             if (insertErr) {
+                showError('Fout', 'Kon contactpersoon niet aanmaken.');
+                return;
+            }
+            if (!newRef?.id) {
                 showError('Fout', 'Kon contactpersoon niet aanmaken.');
                 return;
             }

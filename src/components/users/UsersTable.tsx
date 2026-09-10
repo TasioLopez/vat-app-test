@@ -118,22 +118,27 @@ export default function UsersTable() {
       try {
         const [userRows, clientRows, employeeRows, userClientRows, empUserRows] =
           await Promise.all([
-            fetchAllPaged<User>((from, to) =>
-              supabase.from("users").select("*").range(from, to)
-            ),
-            fetchAllPaged<Client>((from, to) =>
+            fetchAllPaged<User>(async (from, to) => {
+              const { data, error } = await supabase
+                .from("users")
+                .select("*")
+                .range(from, to);
+              return { data: (data ?? []) as User[], error };
+            }),
+            fetchAllPaged<Client>(async (from, to) =>
               supabase.from("clients").select("id, name").range(from, to)
             ),
-            fetchAllPaged<Employee>((from, to) =>
-              supabase
+            fetchAllPaged<Employee>(async (from, to) => {
+              const { data, error } = await supabase
                 .from("employees")
                 .select("id, first_name, last_name, client_id, owner_id")
-                .range(from, to)
-            ),
-            fetchAllPaged<{ user_id: string; client_id: string }>((from, to) =>
+                .range(from, to);
+              return { data: (data ?? []) as Employee[], error };
+            }),
+            fetchAllPaged<{ user_id: string; client_id: string }>(async (from, to) =>
               supabase.from("user_clients").select("user_id, client_id").range(from, to)
             ),
-            fetchAllPaged<{ user_id: string; employee_id: string }>((from, to) =>
+            fetchAllPaged<{ user_id: string; employee_id: string }>(async (from, to) =>
               supabase.from("employee_users").select("user_id, employee_id").range(from, to)
             ),
           ]);
