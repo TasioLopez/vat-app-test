@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { supabase } from "@/lib/supabase/client";
 import PhoneInput from "react-phone-input-2";
 import {
   Table,
@@ -33,11 +33,6 @@ import {
   hasUnrestrictedOrgAccess,
 } from "@/lib/users/effective-access";
 import { Pencil, Trash2 } from "lucide-react";
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type User = {
   id: string;
