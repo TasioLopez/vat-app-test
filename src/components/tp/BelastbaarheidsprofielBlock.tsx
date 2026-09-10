@@ -74,7 +74,7 @@ export function BelastbaarheidsprofielBlock({
         <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{doc(spreekuurIntro)}</p>
       ) : null}
       {quote ? (
-        <div className="mt-4 italic">
+        <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
         </div>
       ) : null}
