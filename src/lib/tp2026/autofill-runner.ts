@@ -270,7 +270,7 @@ export function resolveTp3AutofillJson(
       ? json.clarification_question.trim()
       : '';
 
-  // Zoekprofiel V3: clarification persists draft for interactive editor
+  // Zoekprofiel V3: clarification persists draft for interactive editor (soft — not Autofill mislukt)
   if (json.requires_clarification || clarification) {
     const details =
       json?.details && typeof json.details === 'object'
@@ -285,7 +285,7 @@ export function resolveTp3AutofillJson(
     }
     return {
       data: ensureTP2026Shape(next),
-      error: clarification || 'Verduidelijking nodig vóór het zoekprofiel',
+      // Soft outcome: draft is available in ZoekprofielEditor; do not fail the autofill run
     };
   }
 

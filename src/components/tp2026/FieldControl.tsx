@@ -419,6 +419,7 @@ export default function FieldControl({
   if (field.type === 'select' && field.options?.length) {
     const isComputerSkills = field.key === 'computer_skills';
     const isEducationLevel = field.key === 'education_level';
+    const isFmlIzpLabKind = field.key === 'fml_izp_lab_kind';
 
     if (isEducationLevel) {
       return (
@@ -442,9 +443,18 @@ export default function FieldControl({
           value: o.value,
           label: `${o.value} - ${o.label}`,
         }))
-      : field.options.map((opt) => ({ value: opt, label: opt }));
+      : isFmlIzpLabKind
+        ? field.options.map((opt) => ({
+            value: opt.toLowerCase(),
+            label: opt.toUpperCase(),
+          }))
+        : field.options.map((opt) => ({ value: opt, label: opt }));
 
-    const selectValue = value || undefined;
+    const selectValue = isFmlIzpLabKind
+      ? String(value || '')
+          .trim()
+          .toLowerCase() || undefined
+      : value || undefined;
 
     return (
       <FieldShell

@@ -75,7 +75,8 @@ describe('resolveTp3AutofillJson', () => {
       current
     );
 
-    assert.equal(result.error, 'Welke opleiding?');
+    // Soft outcome — does not fail autofill / Autofill mislukt
+    assert.equal(result.error, undefined);
     assert.equal(result.data.zoekprofiel, 'bestaand zoekprofiel');
     assert.deepEqual(result.data.zoekprofiel_clarification_draft, draft);
   });

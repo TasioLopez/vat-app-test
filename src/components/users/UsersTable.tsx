@@ -27,6 +27,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useFormDirty } from "@/hooks/useFormDirty";
 import ModalUnsavedGuard, { useGuardedModalClose } from "@/components/unsaved/ModalUnsavedGuard";
 import { roleLabel } from "@/lib/auth/roles";
+import {
+  buildEffectiveAccessMaps,
+  fetchAllPaged,
+  hasUnrestrictedOrgAccess,
+} from "@/lib/users/effective-access";
+import { Pencil, Trash2 } from "lucide-react";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +57,8 @@ type Employee = {
   id: string;
   first_name: string;
   last_name: string;
-  client_id: string;
+  client_id: string | null;
+  owner_id: string | null;
 };
 
 function sortedIds(ids: string[] | undefined): string {
@@ -75,6 +82,17 @@ export default function UsersTable() {
   const [editModalTab, setEditModalTab] = useState<"profiel" | "toegang">("profiel");
   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"werkgevers" | "werknemers" | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const { effectiveClients, effectiveEmployees } = useMemo(
+    () =>
+      buildEffectiveAccessMaps({
+        employees,
+        userClients,
+        userEmployees,
+      }),
+    [employees, userClients, userEmployees]
+  );
 
   const profileDirty = useFormDirty(editedUser, userSnapshot);
   const assignmentsDirty =
@@ -101,31 +119,50 @@ export default function UsersTable() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const [userRes, clientRes, employeeRes, userClientRes, empUserRes] = await Promise.all([
-        supabase.from("users").select("*"),
-        supabase.from("clients").select("id, name"),
-        supabase.from("employees").select("id, first_name, last_name, client_id"),
-        supabase.from("user_clients").select("user_id, client_id"),
-        supabase.from("employee_users").select("user_id, employee_id"),
-      ]);
+      setLoadError(null);
+      try {
+        const [userRows, clientRows, employeeRows, userClientRows, empUserRows] =
+          await Promise.all([
+            fetchAllPaged<User>((from, to) =>
+              supabase.from("users").select("*").range(from, to)
+            ),
+            fetchAllPaged<Client>((from, to) =>
+              supabase.from("clients").select("id, name").range(from, to)
+            ),
+            fetchAllPaged<Employee>((from, to) =>
+              supabase
+                .from("employees")
+                .select("id, first_name, last_name, client_id, owner_id")
+                .range(from, to)
+            ),
+            fetchAllPaged<{ user_id: string; client_id: string }>((from, to) =>
+              supabase.from("user_clients").select("user_id, client_id").range(from, to)
+            ),
+            fetchAllPaged<{ user_id: string; employee_id: string }>((from, to) =>
+              supabase.from("employee_users").select("user_id, employee_id").range(from, to)
+            ),
+          ]);
 
-      if (userRes.data) setUsers(userRes.data as User[]);
-      if (clientRes.data) setClients(clientRes.data as Client[]);
-      if (employeeRes.data) setEmployees(employeeRes.data as Employee[]);
+        setUsers(userRows);
+        setClients(clientRows);
+        setEmployees(employeeRows);
 
-      const clientMap: Record<string, string[]> = {};
-      userClientRes.data?.forEach((rel) => {
-        clientMap[rel.user_id] = [...(clientMap[rel.user_id] || []), rel.client_id];
-      });
-      setUserClients(clientMap);
+        const clientMap: Record<string, string[]> = {};
+        for (const rel of userClientRows) {
+          clientMap[rel.user_id] = [...(clientMap[rel.user_id] || []), rel.client_id];
+        }
+        setUserClients(clientMap);
 
-      const empMap: Record<string, string[]> = {};
-      empUserRes.data?.forEach((rel) => {
-        empMap[rel.user_id] = [...(empMap[rel.user_id] || []), rel.employee_id];
-      });
-      setUserEmployees(empMap);
-
-      setLoading(false);
+        const empMap: Record<string, string[]> = {};
+        for (const rel of empUserRows) {
+          empMap[rel.user_id] = [...(empMap[rel.user_id] || []), rel.employee_id];
+        }
+        setUserEmployees(empMap);
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "Laden mislukt");
+      } finally {
+        setLoading(false);
+      }
     };
     void fetchAll();
   }, []);
@@ -251,7 +288,7 @@ export default function UsersTable() {
       ...prev,
       [userId]: (prev[userId] || []).filter((eid) => {
         const emp = employees.find((e) => e.id === eid);
-        return emp && newSelected.includes(emp.client_id);
+        return emp?.client_id != null && newSelected.includes(emp.client_id);
       }),
     }));
   };
@@ -284,7 +321,10 @@ export default function UsersTable() {
   }, [clients, editingId, userClients, editClientSearch]);
 
   const selectableEmployeesForEdit = useMemo(
-    () => employees.filter((e) => selectedClientsForEdit.includes(e.client_id)),
+    () =>
+      employees.filter(
+        (e) => e.client_id != null && selectedClientsForEdit.includes(e.client_id)
+      ),
     [employees, selectedClientsForEdit]
   );
 
@@ -443,9 +483,9 @@ export default function UsersTable() {
                 aria-labelledby="tab-toegang"
                 className="space-y-6"
               >
-                {editedUser.role === "admin" ? (
+                {hasUnrestrictedOrgAccess(editedUser.role) ? (
                   <p className="text-sm text-muted-foreground">
-                    Beheerders hebben toegang tot alle klanten en werknemers.
+                    Beheerders en back office hebben toegang tot alle klanten en werknemers.
                   </p>
                 ) : (
                   <>
@@ -636,17 +676,17 @@ export default function UsersTable() {
   const previewUser = previewUserId ? users.find((u) => u.id === previewUserId) : null;
   const previewWerkgeverNames =
     previewUser && previewKind === "werkgevers"
-      ? previewUser.role === "admin"
+      ? hasUnrestrictedOrgAccess(previewUser.role)
         ? clients.map((c) => c.name)
-        : ((userClients[previewUserId!] || [])
+        : ((effectiveClients[previewUserId!] || [])
             .map((cid) => clients.find((c) => c.id === cid)?.name)
             .filter(Boolean) as string[])
       : [];
   const previewWerknemerNames =
     previewUser && previewKind === "werknemers"
-      ? previewUser.role === "admin"
+      ? hasUnrestrictedOrgAccess(previewUser.role)
         ? employees.map((e) => `${e.first_name} ${e.last_name}`)
-        : ((userEmployees[previewUserId!] || [])
+        : ((effectiveEmployees[previewUserId!] || [])
             .map((eid) => {
               const emp = employees.find((e) => e.id === eid);
               return emp ? `${emp.first_name} ${emp.last_name}` : null;
@@ -655,6 +695,13 @@ export default function UsersTable() {
       : [];
 
   if (loading) return <p className="text-muted-foreground p-4">Laden...</p>;
+  if (loadError) {
+    return (
+      <p className="text-destructive p-4">
+        Gebruikersgegevens laden mislukt: {loadError}
+      </p>
+    );
+  }
 
   return (
     <div className="rounded-md border border-border">
@@ -672,10 +719,11 @@ export default function UsersTable() {
         </TableHeader>
         <TableBody>
           {users.map((u) => {
-            const werkgeverCount = u.role === "admin" ? null : (userClients[u.id] || []).length;
-            const werknemerCount = u.role === "admin" ? null : (userEmployees[u.id] || []).length;
-            const hasWerkgevers = u.role === "admin" || (werkgeverCount ?? 0) > 0;
-            const hasWerknemers = u.role === "admin" || (werknemerCount ?? 0) > 0;
+            const unrestricted = hasUnrestrictedOrgAccess(u.role);
+            const werkgeverCount = unrestricted ? null : (effectiveClients[u.id] || []).length;
+            const werknemerCount = unrestricted ? null : (effectiveEmployees[u.id] || []).length;
+            const hasWerkgevers = unrestricted || (werkgeverCount ?? 0) > 0;
+            const hasWerknemers = unrestricted || (werknemerCount ?? 0) > 0;
             return (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.email}</TableCell>
@@ -693,10 +741,10 @@ export default function UsersTable() {
                       onClick={() => openPreview(u.id, "werkgevers")}
                       className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
                     >
-                      {u.role === "admin" ? "ALLE" : werkgeverCount}
+                      {unrestricted ? "ALLE" : werkgeverCount}
                     </button>
                   ) : (
-                    "—"
+                    "0"
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
@@ -706,19 +754,31 @@ export default function UsersTable() {
                       onClick={() => openPreview(u.id, "werknemers")}
                       className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded"
                     >
-                      {u.role === "admin" ? "ALLE" : werknemerCount}
+                      {unrestricted ? "ALLE" : werknemerCount}
                     </button>
                   ) : (
-                    "—"
+                    "0"
                   )}
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(u)}>
-                      Bewerken
+                <TableCell className="w-[1%] whitespace-nowrap">
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(u)}
+                      title="Bewerken"
+                      aria-label="Bewerken"
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(u.id)}>
-                      Verwijderen
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(u.id)}
+                      title="Verwijderen"
+                      aria-label="Verwijderen"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                   {editingId === u.id && renderModal(u)}

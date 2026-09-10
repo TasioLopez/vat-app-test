@@ -44,7 +44,7 @@ async function loadZoekprofielContext(employeeId: string): Promise<LoadedZoekpro
 
   const { data: meta } = await supabase
     .from('tp_meta')
-    .select('fml_izp_lab_date, has_ad_report, ad_report_concept')
+    .select('fml_izp_lab_date, fml_izp_lab_kind, has_ad_report, ad_report_concept')
     .eq('employee_id', employeeId)
     .single();
 
@@ -77,6 +77,8 @@ function buildGenerationContext(loaded: LoadedZoekprofielContext) {
       {
         hasBelastbaarheidsDoc: hasBelastClosing,
         scenario: scenarioResult.scenario,
+        fmlIzpLabKind:
+          typeof meta?.fml_izp_lab_kind === 'string' ? meta.fml_izp_lab_kind : null,
         hasAdReport:
           typeof meta?.has_ad_report === 'boolean' ? meta.has_ad_report : null,
         actualisatieDocsPresent: hasSpreekuurDoc(loaded.docs),

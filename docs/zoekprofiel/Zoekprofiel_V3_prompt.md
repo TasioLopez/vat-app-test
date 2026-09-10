@@ -10,7 +10,8 @@ Runtime implementation: `src/lib/tp/zoekprofiel/prompt.ts` (`ZOEKPROFIEL_CONTENT
 - **Paragraph 1 closing** (FML/IZP/LAB/belastbaarheidsprofiel + optional actualisatie) is **server-built**, not model-generated.
 - **Actualisaties:** spreekuurrapportage / artsenverduidelijking chronologically appended when relevant.
 - **Scenarios:** insufficient → N.B. only; separate belast doc → closing; AD-only → no FML closing, para 2 from AD.
-- **Clarification loop:** model may return `verduidelijkingsvraag`; advisor answers via `ZoekprofielEditor` POST flow.
+- **Clarification loop:** model may return `verduidelijkingsvraag` for real gaps (e.g. unclear education); advisor answers via `ZoekprofielEditor` POST flow. Do **not** clarify FML vs IZP / leading date when `leading_source` is intake/meta.
+- **Leading belastbaarheid:** intake checkbox (FML/IZP) + date first; else uploaded FML/IZP/LAB document date — never upload timestamp.
 - **Paragraph 2:** translate afwijkende beperkingen; formulate conditions about **work**, not the person (werk vs werknemer).
 
 ## Standard lines

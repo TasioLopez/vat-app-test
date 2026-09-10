@@ -22,9 +22,11 @@ export type ZoekprofielBuildContext = {
   employee: { first_name?: string | null; last_name?: string | null };
   meta: {
     fml_izp_lab_date_voluit?: string | null;
+    fml_izp_lab_kind?: string | null;
     has_belastbaarheids_doc?: boolean;
     leading_belastbaarheidsdocument_type?: BelastbaarheidsdocumentType | null;
     leading_belastbaarheidsdocument_datum_voluit?: string | null;
+    leading_source?: 'intake' | 'document' | null;
     scenario?: ZoekprofielScenario | null;
     has_ad_report?: boolean | null;
     actualisatie_docs_present?: boolean | null;

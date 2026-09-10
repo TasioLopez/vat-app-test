@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { PROGNOSE_DELIMITER } from '@/lib/tp/belastbaarheidsprofiel/constants';
-import { BasisToelichtingHeading } from '@/components/tp2026/primitives';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
@@ -38,7 +37,7 @@ function splitAfterRubrieken(rest: string): { bullets: string; spreekuurIntro: s
 }
 
 /**
- * Renders Belastbaarheidsprofiel: FML intro + rubrieken + spreekuur intro + Prognose block.
+ * Renders Belastbaarheidsprofiel: FML intro + rubrieken + spreekuur intro + prognose quote.
  */
 export function BelastbaarheidsprofielBlock({
   text,
@@ -75,11 +74,8 @@ export function BelastbaarheidsprofielBlock({
         <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{doc(spreekuurIntro)}</p>
       ) : null}
       {quote ? (
-        <div className="mt-4">
-          <BasisToelichtingHeading label="Prognose:" />
-          <div className="mt-2 italic">
-            <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
-          </div>
+        <div className="mt-4 italic">
+          <Basis2026MarkdownBody markdown={quote} withInlineQuotes />
         </div>
       ) : null}
     </div>

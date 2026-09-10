@@ -147,6 +147,7 @@ function buildApiContext(ctx: ZoekprofielBuildContext): Record<string, unknown> 
         ctx.meta.leading_belastbaarheidsdocument_type || null,
       leading_belastbaarheidsdocument_datum_voluit:
         ctx.meta.leading_belastbaarheidsdocument_datum_voluit || null,
+      leading_source: ctx.meta.leading_source || null,
       scenario: ctx.meta.scenario || null,
       has_ad_report: ctx.meta.has_ad_report ?? null,
       actualisatie_docs_present: ctx.meta.actualisatie_docs_present ?? null,
@@ -260,12 +261,20 @@ function applyLeadingDocToContext(
   docs: EmployeeDoc[]
 ): ZoekprofielBuildContext {
   const belastbaarheidDocs = leadingBelastDocs(docs);
+  const metaKind = ctx.meta.fml_izp_lab_kind ?? null;
   const leading = resolveLeadingBelastbaarheidsdoc({
     docs: belastbaarheidDocs,
     metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
+    metaKind,
   });
 
   if (!leading) return ctx;
+
+  const fromMetaKindAndDate = Boolean(
+    metaKind &&
+      ctx.meta.fml_izp_lab_date_voluit &&
+      leading.type === String(metaKind).toLowerCase()
+  );
 
   return {
     ...ctx,
@@ -273,8 +282,10 @@ function applyLeadingDocToContext(
       ...ctx.meta,
       leading_belastbaarheidsdocument_type: leading.type,
       leading_belastbaarheidsdocument_datum_voluit: leading.datumVoluit || null,
+      leading_source: fromMetaKindAndDate ? 'intake' : 'document',
+      // Prefer intake meta date; only fill blank from resolved leading
       fml_izp_lab_date_voluit:
-        leading.datumVoluit || ctx.meta.fml_izp_lab_date_voluit || null,
+        ctx.meta.fml_izp_lab_date_voluit || leading.datumVoluit || null,
     },
   };
 }
@@ -284,10 +295,16 @@ function refineLeadingFromModel(
   content: ZoekprofielContentResult,
   docs: EmployeeDoc[]
 ): ZoekprofielBuildContext {
+  // Intake meta already authoritative — do not override with model guesses
+  if (ctx.meta.leading_source === 'intake' && ctx.meta.leading_belastbaarheidsdocument_type) {
+    return ctx;
+  }
+
   const belastbaarheidDocs = leadingBelastDocs(docs);
   const leading = resolveLeadingBelastbaarheidsdoc({
     docs: belastbaarheidDocs,
     metaDateIsoOrVoluit: ctx.meta.fml_izp_lab_date_voluit,
+    metaKind: ctx.meta.fml_izp_lab_kind ?? null,
     modelType: content.belastbaarheidsdocument_type,
     modelDatumVoluit: content.belastbaarheidsdocument_datum_voluit,
   });
@@ -300,6 +317,7 @@ function refineLeadingFromModel(
       ...ctx.meta,
       leading_belastbaarheidsdocument_type: leading.type,
       leading_belastbaarheidsdocument_datum_voluit: leading.datumVoluit || null,
+      leading_source: ctx.meta.leading_source || 'document',
     },
   };
 }
@@ -353,20 +371,28 @@ export function buildZoekprofielContextFromMeta(
     hasBelastbaarheidsDoc?: boolean;
     leadingType?: BelastbaarheidsdocumentType | null;
     leadingDatumVoluit?: string | null;
+    fmlIzpLabKind?: string | null;
     scenario?: ZoekprofielScenario | null;
     hasAdReport?: boolean | null;
     actualisatieDocsPresent?: boolean | null;
   }
 ): ZoekprofielBuildContext {
   const dateVoluit = nlDate(fmlIzpLabDate) || options?.leadingDatumVoluit || null;
+  const kindRaw = options?.fmlIzpLabKind?.trim().toLowerCase() || null;
+  const kind =
+    kindRaw === 'fml' || kindRaw === 'izp' || kindRaw === 'lab'
+      ? kindRaw
+      : null;
   return {
     employee: {},
     meta: {
       fml_izp_lab_date_voluit: dateVoluit,
+      fml_izp_lab_kind: kind,
       has_belastbaarheids_doc: options?.hasBelastbaarheidsDoc ?? true,
-      leading_belastbaarheidsdocument_type: options?.leadingType ?? null,
+      leading_belastbaarheidsdocument_type: options?.leadingType ?? kind ?? null,
       leading_belastbaarheidsdocument_datum_voluit:
         options?.leadingDatumVoluit ?? dateVoluit,
+      leading_source: kind && dateVoluit ? 'intake' : null,
       scenario: options?.scenario ?? null,
       has_ad_report: options?.hasAdReport ?? null,
       actualisatie_docs_present: options?.actualisatieDocsPresent ?? null,

@@ -14,17 +14,19 @@ import type { ZoekprofielScenarioResult } from './detect-scenario';
 
 const DOCUMENT_SCOPE_HINT = `
 DOCUMENTEN VOOR ZOEKPROFIEL:
-- Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel, Lijst arbeidsmogelijkheden en beperkingen, belastbaarheidsprofiel (indien geüpload): leidende bron voor alinea 2; documentdatum bepaalt welk document leidend is
+- Functionele Mogelijkheden Lijst, Inzetbaarheidsprofiel, Lijst arbeidsmogelijkheden en beperkingen, belastbaarheidsprofiel (indien geüpload): leidende bron voor alinea 2
 - Spreekuurrapportage en artsenverduidelijking: voor actualisaties op de leidende belastbaarheidsbron (chronologisch in actualisaties-veld)
 - AD rapport (indien aanwezig): opleiding, werkervaring, expliciet werk- en denkniveau; belastbaarheid alleen wanneer type+datum overeenkomen met leidend document of wanneer geen apart belastbaarheidsdocument
 - Intakeformulier (indien aanwezig): opleiding, diploma's, werkervaring, functietitels
   • Sectie 2 Persoonsgegevens + blok "Algemene informatie"
+  • Sectie 6: aangevinkt type (FML/IZP) + datum naast die cel is leidend voor type én datum van de belastbaarheidsbron
 Bronprioriteit belastbaarheid:
-1. Meest recente FML / IZP / LAB / belastbaarheidsprofiel wanneer aanwezig
-2. Geen apart belastbaarheidsdocument? Gebruik uitsluitend expliciete beperkingen/voorwaarden uit het AD-rapport (scenario ad_embedded_belastbaarheid). Vraag NIET om een FML te uploaden.
-3. Verwar belastbaarheidsprofiel nooit met functieprofiel
-Bij meerdere documenten van hetzelfde type: gebruik het meest recente document.
-Ontbreekt noodzakelijke informatie of spreken bronnen elkaar tegen? Stel dan een gerichte verduidelijkingsvraag (veld verduidelijkingsvraag) en schrijf GEEN zoekprofiel.
+1. Intake/gegevens: leading_belastbaarheidsdocument_type + leading_belastbaarheidsdocument_datum_voluit wanneer leading_source = "intake" (checkbox + datum). Dit is autoritatief.
+2. Anders: meest recente FML / IZP / LAB / belastbaarheidsprofiel op documentdatum (niet uploaddatum)
+3. Geen apart belastbaarheidsdocument? Gebruik uitsluitend expliciete beperkingen/voorwaarden uit het AD-rapport (scenario ad_embedded_belastbaarheid). Vraag NIET om een FML te uploaden.
+4. Verwar belastbaarheidsprofiel nooit met functieprofiel
+Stel GEEN verduidelijkingsvraag over FML vs IZP of over die datum wanneer leading_source = "intake" of wanneer leading_type + leading_datum in de context staan — volg die context.
+Ontbreekt noodzakelijke informatie (bijv. onduidelijke hoogst afgeronde opleiding) of spreken bronnen elkaar inhoudelijk tegen op andere punten? Stel dan een gerichte verduidelijkingsvraag (veld verduidelijkingsvraag) en schrijf GEEN zoekprofiel.
 `.trim();
 
 const ANTI_PATTERNS_VAT = `
@@ -91,9 +93,10 @@ ${DOCUMENT_SCOPE_HINT}
 BRONNEN EN BRONVOLGORDE
 Gebruik uitsluitend expliciete informatie uit het intakeformulier, arbeidsdeskundig rapport, de Functionele Mogelijkheden Lijst, het Inzetbaarheidsprofiel en de Lijst arbeidsmogelijkheden en beperkingen. Voeg geen aannames, interpretaties, medische verklaringen, conclusies of algemeen gebruikelijke voorwaarden toe.
 Bekijk has_belastbaarheids_doc in de context:
-- true: leidend is het meest recente FML/IZP/LAB (documentdatum). Het AD-rapport mag die vastgestelde belastbaarheid niet vervangen, aanpassen of verruimen. Volg leading_belastbaarheidsdocument_type en leading_belastbaarheidsdocument_datum_voluit wanneer aanwezig. Het systeem voegt de slotzin van alinea 1 toe.
+- true: leidend is FML/IZP/LAB volgens leading_belastbaarheidsdocument_type en leading_belastbaarheidsdocument_datum_voluit wanneer aanwezig (leading_source "intake" = intake-checkbox + datum; anders document). Het AD-rapport mag die vastgestelde belastbaarheid niet vervangen, aanpassen of verruimen. Het systeem voegt de slotzin van alinea 1 toe.
 - false: er is geen apart FML/IZP/LAB geüpload. Gebruik dan expliciete belastbaarheid/beperkingen/voorwaarden uit het AD-rapport (en intake). Stel GEEN verduidelijkingsvraag om een FML/IZP/LAB te uploaden. Het systeem voegt géén FML/IZP/LAB-slotzin toe.
-Ontbreekt noodzakelijke informatie (zoals aantoonbaar afgeronde opleiding) of spreken bronnen elkaar tegen? Stel dan eerst een gerichte verduidelijkingsvraag. Schrijf in dat geval nog geen zoekprofiel (alinea_1_kern = null, alinea_2 = null, verduidelijkingsvraag = de vraag).
+Stel GEEN verduidelijkingsvraag over welk document leidend is (FML vs IZP) of over de leidende datum wanneer die al in de context staan.
+Ontbreekt noodzakelijke informatie (zoals aantoonbaar afgeronde opleiding) of spreken bronnen elkaar inhoudelijk tegen? Stel dan eerst een gerichte verduidelijkingsvraag. Schrijf in dat geval nog geen zoekprofiel (alinea_1_kern = null, alinea_2 = null, verduidelijkingsvraag = de vraag).
 
 UITVOER
 Geef uitsluitend het definitieve zoekprofiel OF een verduidelijkingsvraag:
@@ -256,5 +259,5 @@ Volg strikt: V3-openingszin, korte alinea 1, positieve vloeiende alinea 2 zonder
 }
 
 export function buildZoekprofielContextMessage(context: Record<string, unknown>): string {
-  return `Context (scenario, has_belastbaarheids_doc, leidend document; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
+  return `Context (scenario, has_belastbaarheids_doc, leidend document; leading_source "intake" = autoritatief uit intake-checkbox+datum — genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
 }

@@ -1,7 +1,7 @@
 import { formatEmployeeName, isAbsentText, normalizePersonName, normalizeStringArrayField } from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
-import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';
-import type {
+import { normalizeFmlIzpLabKind } from '@/lib/document-analysis/schemas/tp2-date-schema';
+import { VISIE_LOOPBAANADVISEUR_BASIS, WETTELIJKE_KADERS } from '@/lib/tp/static';import type {
   TP2026Bijlage1Activity,
   TP2026Bijlage1Phase,
 } from './schema';
@@ -194,6 +194,12 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
 
   if (isAdReportConcept(next) && next.has_ad_report !== false) {
     next.has_ad_report = false;
+  }
+
+  if (next.fml_izp_lab_kind != null && next.fml_izp_lab_kind !== '') {
+    const kind = normalizeFmlIzpLabKind(next.fml_izp_lab_kind);
+    if (kind) next.fml_izp_lab_kind = kind;
+    else next.fml_izp_lab_kind = '';
   }
 
   if (isExWerknemer(next) && (next.tp3_activities === null || next.tp3_activities === undefined)) {

@@ -2,324 +2,360 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Upload,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Download,
+  Trash2,
+} from 'lucide-react';
 import type { Database } from '@/types/supabase';
+import { getEmployeeDocLabel } from '@/lib/documents/employee-doc-types';
+import { signStorageUrl } from '@/lib/documents/sign-storage-url';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 
 type Props = {
-    type: string;
-    employeeId: string;
-    existingDoc: Document | null;
-    onClose: () => void;
-    onUploaded: () => void;
-    onDeleted: () => void;
+  type: string;
+  employeeId: string;
+  existingDoc: Document | null;
+  onClose: () => void;
+  onUploaded: () => void;
+  onDeleted: () => void;
 };
 
 export default function DocumentModal({
-    type,
-    employeeId,
-    existingDoc,
-    onClose,
-    onUploaded,
-    onDeleted,
+  type,
+  employeeId,
+  existingDoc,
+  onClose,
+  onUploaded,
+  onDeleted,
 }: Props) {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploading, setUploading] = useState(false);
-    const [opening, setOpening] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
-    const [dragActive, setDragActive] = useState(false);
-    const [status, setStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        document.addEventListener('keydown', handleEscape);
-        return () => document.removeEventListener('keydown', handleEscape);
-    }, [onClose]);
+  const title = getEmployeeDocLabel(type);
+  const busy = uploading || opening || deleting;
 
-    const processFile = async (file: File) => {
-        if (!file) return;
-
-        setUploading(true);
-        setError(null);
-        setSuccess(false);
-        setStatus('Preparing upload...');
-
-        try {
-            // If an existing document exists, delete it first
-            if (existingDoc) {
-                setStatus('Deleting existing document...');
-                const deleteRes = await fetch('/api/documents/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: existingDoc.id,
-                        url: existingDoc.url,
-                    }),
-                });
-
-                const deleteResult = await deleteRes.json();
-
-                if (!deleteRes.ok || !deleteResult.success) {
-                    throw new Error(`Failed to delete existing document: ${deleteResult.error}`);
-                }
-            }
-
-            setStatus('Uploading file...');
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('employee_id', employeeId);
-            formData.append('type', type);
-            formData.append('name', file.name);
-
-            // Step 1: Upload file to Supabase Storage
-            const uploadRes = await fetch('/api/documents/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const uploadData = await uploadRes.json();
-
-            if (!uploadRes.ok || !uploadData.success) {
-                throw new Error(`Upload failed: ${uploadData.error}`);
-            }
-
-            const uploadedPath = uploadData.path;
-
-            setStatus('Saving document information...');
-
-            // Step 2: Save metadata in Supabase `documents` table
-            const metadataRes = await fetch('/api/documents/metadata', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    employee_id: employeeId,
-                    type,
-                    name: file.name,
-                    url: uploadedPath,
-                }),
-            });
-
-            const metadataData = await metadataRes.json();
-
-            if (!metadataRes.ok) {
-                throw new Error(`Failed to save document information: ${metadataData.error}`);
-            }
-
-            setStatus('Upload completed successfully!');
-            setSuccess(true);
-            
-            // Show success message briefly, then close and refresh
-            setTimeout(() => {
-                onUploaded();
-                onClose();
-            }, 1500);
-
-        } catch (err: any) {
-            console.error('❌ Upload failed:', err);
-            setError(err.message || 'Upload failed. Please try again.');
-            setStatus(null);
-        } finally {
-            setUploading(false);
-        }
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose();
     };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose, busy]);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            await processFile(file);
-        }
-    };
+  const processFile = async (file: File) => {
+    if (!file) return;
 
-    // Drag and drop handlers
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
+    setUploading(true);
+    setError(null);
+    setSuccess(false);
+    setStatus('Upload voorbereiden…');
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        
-        const file = e.dataTransfer.files?.[0];
-        if (file) {
-            processFile(file);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!existingDoc?.url || !existingDoc.id) return;
-
-        const res = await fetch('/api/documents/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id: existingDoc.id,
-                url: existingDoc.url,
-            }),
+    try {
+      if (existingDoc) {
+        setStatus('Bestaand document verwijderen…');
+        const deleteRes = await fetch('/api/documents/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: existingDoc.id,
+            url: existingDoc.url,
+          }),
         });
 
-        const result = await res.json();
+        const deleteResult = await deleteRes.json();
 
-        if (!res.ok || !result.success) {
-            console.error('Failed to delete document:', result.error);
-            return;
+        if (!deleteRes.ok || !deleteResult.success) {
+          throw new Error(
+            `Kon bestaand document niet verwijderen: ${deleteResult.error}`
+          );
         }
+      }
 
-        onDeleted();
-    };
+      setStatus('Bestand uploaden…');
 
-    const openExistingDocument = async () => {
-        if (!existingDoc?.url || opening || uploading) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('employee_id', employeeId);
+      formData.append('type', type);
+      formData.append('name', file.name);
 
-        setOpening(true);
-        setError(null);
-        setStatus('Opening document...');
+      const uploadRes = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-        try {
-            const res = await fetch('/api/storage/sign-url', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: existingDoc.url }),
-            });
-            const data = await res.json();
-            if (!res.ok || typeof data?.url !== 'string') {
-                throw new Error(data?.error || 'Failed to open document');
-            }
-            window.open(data.url, '_blank', 'noopener,noreferrer');
-            setStatus(null);
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Failed to open document';
-            setError(message);
-            setStatus(null);
-        } finally {
-            setOpening(false);
-        }
-    };
+      const uploadData = await uploadRes.json();
 
-    return typeof window !== 'undefined'
-        ? createPortal(
-            <div
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
-                onClick={onClose}
+      if (!uploadRes.ok || !uploadData.success) {
+        throw new Error(`Upload mislukt: ${uploadData.error}`);
+      }
+
+      const uploadedPath = uploadData.path;
+
+      setStatus('Documentgegevens opslaan…');
+
+      const metadataRes = await fetch('/api/documents/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: employeeId,
+          type,
+          name: file.name,
+          url: uploadedPath,
+        }),
+      });
+
+      const metadataData = await metadataRes.json();
+
+      if (!metadataRes.ok) {
+        throw new Error(`Kon documentgegevens niet opslaan: ${metadataData.error}`);
+      }
+
+      setStatus('Upload voltooid!');
+      setSuccess(true);
+
+      setTimeout(() => {
+        onUploaded();
+        onClose();
+      }, 1500);
+    } catch (err: unknown) {
+      console.error('❌ Upload failed:', err);
+      setError(err instanceof Error ? err.message : 'Upload mislukt. Probeer het opnieuw.');
+      setStatus(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await processFile(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      void processFile(file);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!existingDoc?.url || !existingDoc.id || busy) return;
+    if (!confirm('Weet je zeker dat je dit document wilt verwijderen?')) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/documents/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: existingDoc.id,
+          url: existingDoc.url,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Verwijderen mislukt');
+      }
+
+      onDeleted();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Verwijderen mislukt');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openOrDownloadExisting = async () => {
+    if (!existingDoc?.url || busy) return;
+
+    setOpening(true);
+    setError(null);
+    setStatus('Document openen…');
+
+    try {
+      const url = await signStorageUrl(existingDoc.url);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setStatus(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Kon document niet openen');
+      setStatus(null);
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  return typeof window !== 'undefined'
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => {
+            if (!busy) onClose();
+          }}
+        >
+          <div
+            className="relative z-50 w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={onClose}
+              disabled={busy}
+              aria-label="Sluiten"
             >
-                <div
-                    className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative z-50"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={onClose}
-                        disabled={uploading || opening}
-                        aria-label="Close"
-                    >
-                        <X />
-                    </button>
+              <X />
+            </button>
 
-                    <h2 className="text-lg font-bold mb-4">{type.toUpperCase()}</h2>
+            <h2 className="mb-4 text-lg font-bold text-gray-900">{title}</h2>
 
-                    {existingDoc ? (
-                        <div className="mb-4">
-                            <p className="text-sm mb-1 text-gray-700">Current file:</p>
-                            <button
-                                type="button"
-                                onClick={openExistingDocument}
-                                disabled={opening || uploading}
-                                className="text-left text-blue-600 underline break-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {opening ? 'Opening…' : existingDoc.name}
-                            </button>
-                        </div>
+            {existingDoc ? (
+              <div className="mb-4 space-y-2">
+                <p className="text-sm text-gray-700">Huidig bestand:</p>
+                <div className="flex items-start gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openOrDownloadExisting()}
+                    disabled={busy}
+                    className="min-w-0 flex-1 break-all text-left text-sm text-blue-600 underline disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {opening ? 'Openen…' : existingDoc.name || 'Document'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void openOrDownloadExisting()}
+                    disabled={busy}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Downloaden"
+                    aria-label="Downloaden"
+                  >
+                    <Download className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    disabled={busy}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-red-600 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    title="Verwijderen"
+                    aria-label="Verwijderen"
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                        <p className="mb-4 text-sm text-gray-600">No file uploaded yet.</p>
+                      <Trash2 className="h-4 w-4" />
                     )}
-
-                    {/* Status Messages */}
-                    {status && (
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                            <div className="flex items-center">
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-600 mr-2" />
-                                <p className="text-sm text-blue-800">{status}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {success && (
-                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                            <div className="flex items-center">
-                                <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                                <p className="text-sm text-green-800">Upload completed successfully!</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <div className="flex items-center">
-                                <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    <div
-                        className={`border border-dashed rounded p-6 text-center transition-colors ${
-                            dragActive 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-400 hover:bg-gray-50'
-                        } ${uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                        onClick={() => !uploading && fileInputRef.current?.click()}
-                        onDragEnter={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDragOver={handleDrag}
-                        onDrop={handleDrop}
-                    >
-                        {uploading ? (
-                            <div className="flex flex-col items-center">
-                                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
-                                <p className="text-sm text-gray-600">Uploading...</p>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center">
-                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                                <p className="text-sm text-gray-700 mb-1">
-                                    {dragActive ? 'Drop file here' : 'Click or drop a file here'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    Supports: PDF, DOC, DOCX, PNG, JPG
-                                </p>
-                            </div>
-                        )}
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.png,.jpg"
-                            onChange={handleFileChange}
-                            disabled={uploading}
-                        />
-                    </div>
-
-                    <button
-                        onClick={handleDelete}
-                        className="mt-4 text-sm text-red-600 underline hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!existingDoc || uploading || opening}
-                    >
-                        Delete Document
-                    </button>
+                  </button>
                 </div>
-            </div>,
-            document.body
-        )
-        : null;
+                <p className="text-xs text-gray-500">
+                  Je kunt het huidige bestand vervangen door hieronder een nieuw bestand te
+                  uploaden.
+                </p>
+              </div>
+            ) : (
+              <p className="mb-4 text-sm text-gray-600">Nog geen bestand geüpload.</p>
+            )}
+
+            {status && (
+              <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+                <div className="flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-600" />
+                  <p className="text-sm text-blue-800">{status}</p>
+                </div>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-3">
+                <div className="flex items-center">
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                  <p className="text-sm text-green-800">Upload voltooid!</p>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3">
+                <div className="flex items-center">
+                  <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`rounded border border-dashed p-6 text-center transition-colors ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-400 hover:bg-gray-50'
+              } ${uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center">
+                  <Loader2 className="mb-2 h-8 w-8 animate-spin text-blue-600" />
+                  <p className="text-sm text-gray-600">Uploaden…</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <Upload className="mb-2 h-8 w-8 text-gray-400" />
+                  <p className="mb-1 text-sm text-gray-700">
+                    {dragActive
+                      ? 'Laat het bestand hier los'
+                      : 'Klik of sleep een bestand hierheen'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Ondersteund: PDF, DOC, DOCX, PNG, JPG
+                  </p>
+                </div>
+              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".pdf,.doc,.docx,.png,.jpg"
+                onChange={handleFileChange}
+                disabled={uploading}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
 }

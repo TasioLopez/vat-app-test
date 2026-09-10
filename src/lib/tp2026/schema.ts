@@ -56,6 +56,12 @@ export const TP2026GegevensFields: TP2026FieldDef[] = [
   { key: 'ad_report_date', label: 'Datum AD rapportage', type: 'date' },
   { key: 'occupational_doctor_name', label: 'Arbeidsdeskundige', type: 'text' },
   { key: 'occupational_doctor_org', label: 'Bedrijfsarts', type: 'text' },
+  {
+    key: 'fml_izp_lab_kind',
+    label: 'Type FML/IZP/LAB',
+    type: 'select',
+    options: ['FML', 'IZP', 'LAB'],
+  },
   { key: 'fml_izp_lab_date', label: 'Datum FML/IZP/LAB', type: 'date' },
   { key: 'client_referent_name', label: 'Contactpersoon opdrachtgever', type: 'text' },
   { key: 'client_referent_phone', label: 'Telefoon opdrachtgever', type: 'text' },

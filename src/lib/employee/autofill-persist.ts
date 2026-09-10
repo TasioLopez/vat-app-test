@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { isAbsentText } from '@/lib/utils';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
+import { parseContractHours } from '@/lib/employee/contract-hours';
 import {
   applyEmployeeAutofillReviewMarks,
   type EmployeeDetailFieldKey,
@@ -51,7 +52,7 @@ export type EmployeeDetailsPersist = {
   has_computer?: boolean;
   computer_skills?: string;
   computer_skills_description?: string;
-  contract_hours?: number;
+  contract_hours?: number | null;
   other_employers?: string;
   is_ex_werknemer?: boolean;
   field_review_status?: Partial<Record<EmployeeDetailFieldKey, EmployeeFieldReviewStatus>> | null;
@@ -132,6 +133,10 @@ export function normalizeEmployeeDetailsPayload(
       work_experience: normalizedWorkExperience,
       transport_type: normalizeStringArray(details?.transport_type),
       drivers_license_type: normalizeStringArray(details?.drivers_license_type),
+      contract_hours:
+        details?.contract_hours === undefined
+          ? undefined
+          : parseContractHours(details.contract_hours),
       // Default "Geen" when empty / Nee / etc.; only real employer names stay.
       other_employers: isAbsentText(details?.other_employers)
         ? 'Geen'

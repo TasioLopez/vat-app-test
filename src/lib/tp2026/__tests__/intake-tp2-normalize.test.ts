@@ -33,6 +33,22 @@ describe('normalizeTp2ExtractedData — Calvin case dates', () => {
     assert.equal(result.fml_izp_lab_date, '2026-01-19');
     assert.equal(result.registration_date, undefined);
   });
+
+  it('normalizes fml_izp_lab_kind from intake checkbox', () => {
+    const result = normalizeTp2ExtractedData({
+      fml_izp_lab_date: '9-6-2026',
+      fml_izp_lab_kind: 'FML',
+    });
+    assert.equal(result.fml_izp_lab_date, '2026-06-09');
+    assert.equal(result.fml_izp_lab_kind, 'fml');
+  });
+
+  it('drops invalid fml_izp_lab_kind', () => {
+    const result = normalizeTp2ExtractedData({
+      fml_izp_lab_kind: 'unknown',
+    });
+    assert.equal(result.fml_izp_lab_kind, undefined);
+  });
 });
 
 describe('formatOccupationalDoctorOrg', () => {

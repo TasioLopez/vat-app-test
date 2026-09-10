@@ -46,7 +46,8 @@ export default function NewEmployeePage() {
 
             const { data: allClients, error: allError } = await supabase
                 .from('clients')
-                .select('*');
+                .select('*')
+                .order('name');
 
             if (allError || !allClients) {
                 setError('Failed to fetch clients');

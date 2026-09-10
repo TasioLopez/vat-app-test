@@ -24,8 +24,12 @@ import {
     CheckCircle2,
     CircleDashed,
     UserRoundX,
+    Eye,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
+import { DocumentPreviewDialog } from '@/components/DocumentPreviewDialog';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
 import { INPUT_CLASS, SELECT_CLASS } from '@/lib/select-class';
@@ -56,6 +60,10 @@ import {
     normalizeEmployeeDetailsPayload,
     processEmployeeAutofillRawDetails,
 } from '@/lib/employee/autofill-persist';
+import {
+    isIncompleteContractHoursInput,
+    parseContractHours,
+} from '@/lib/employee/contract-hours';
 import {
   EMPLOYEE_DETAIL_FIELD_KEYS,
   computeEmployeeFieldHash,
@@ -126,7 +134,7 @@ type EmployeeDetails = {
     has_computer?: boolean;
     computer_skills?: string;
     computer_skills_description?: string;
-    contract_hours?: number;
+    contract_hours?: number | null;
     other_employers?: string;
     is_ex_werknemer?: boolean;
     autofilled_fields?: string[];
@@ -155,6 +163,15 @@ type Document = {
 
 const DOC_TYPES = [...EMPLOYEE_DOC_TYPES] as EmployeeDocType[];
 const DOC_LABELS = EMPLOYEE_DOC_LABELS;
+
+const DOC_ACCENT: Record<EmployeeDocType, string> = {
+    intakeformulier: 'bg-emerald-500',
+    ad_rapportage: 'bg-violet-500',
+    fml_izp: 'bg-sky-500',
+    cv: 'bg-amber-500',
+    spreek_reportage: 'bg-rose-500',
+    extra: 'bg-slate-500',
+};
 
 const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'gender',
@@ -287,6 +304,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
+    const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [tpOpening, setTpOpening] = useState(false);
@@ -294,13 +312,23 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [customTransportDraft, setCustomTransportDraft] = useState('');
     const [customEducationDraft, setCustomEducationDraft] = useState('');
     const [educationAndereOpen, setEducationAndereOpen] = useState(false);
+    const [previewDoc, setPreviewDoc] = useState<{
+        title: string;
+        url: string;
+    } | null>(null);
+
+    const uploadedSourceDocs = useMemo(
+        () =>
+            DOC_TYPES.map((type) => {
+                const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
+                return doc ? { type, doc } : null;
+            }).filter(Boolean) as { type: EmployeeDocType; doc: Document }[],
+        [documents]
+    );
 
     const uploadedSourcesCount = useMemo(
-        () =>
-            DOC_TYPES.filter((type) =>
-                documents.some((d) => d.type?.toLowerCase().trim() === type)
-            ).length,
-        [documents]
+        () => uploadedSourceDocs.length,
+        [uploadedSourceDocs]
     );
 
     useEffect(() => {
@@ -461,7 +489,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const fetchClients = async () => {
         const { data, error } = await supabase
             .from('clients')
-            .select('*');
+            .select('*')
+            .order('name');
 
         if (error) {
             console.error('Error fetching clients:', error);
@@ -520,6 +549,26 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             setDocuments(data || []);
         } catch (err) {
             console.error('Fout bij ophalen documenten:', err);
+        }
+    };
+
+    const deleteSourceDocument = async (doc: Document) => {
+        if (!confirm('Weet je zeker dat je dit document wilt verwijderen?')) return;
+        try {
+            const res = await fetch('/api/documents/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: doc.id, url: doc.url }),
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) {
+                throw new Error(result.error || 'Verwijderen mislukt');
+            }
+            await fetchDocuments();
+            showSuccess('Document verwijderd');
+        } catch (err) {
+            console.error(err);
+            showError(err instanceof Error ? err.message : 'Verwijderen mislukt');
         }
     };
 
@@ -1314,35 +1363,84 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         {DOC_TYPES.map((type) => {
                                             const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
                                             return (
-                                                <button
+                                                <div
                                                     key={type}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSourcesModalOpen(false);
-                                                        setActiveDocType(type);
-                                                    }}
                                                     className={cn(
-                                                        'rounded-xl p-4 text-left text-sm transition-colors',
-                                                        'border-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2',
+                                                        'group relative rounded-xl p-4 text-left text-sm transition-colors',
+                                                        'border-2',
                                                         doc
-                                                            ? 'border-emerald-500 bg-emerald-50/60 hover:bg-emerald-50'
+                                                            ? 'border-emerald-500 bg-emerald-50/60'
                                                             : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
                                                     )}
                                                 >
-                                                    <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSourcesModalOpen(false);
+                                                            setActiveDocType(type);
+                                                        }}
+                                                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 rounded-lg"
+                                                    >
+                                                        <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
+                                                            {doc ? (
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                                            ) : (
+                                                                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                            )}
+                                                            {DOC_LABELS[type]}
+                                                        </p>
                                                         {doc ? (
-                                                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                                            <p className="text-xs text-emerald-700">Geüpload</p>
                                                         ) : (
-                                                            <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                            <p className="text-xs text-gray-500">Niet geüpload</p>
                                                         )}
-                                                        {DOC_LABELS[type]}
-                                                    </p>
+                                                    </button>
                                                     {doc ? (
-                                                        <p className="text-xs text-emerald-700">Geüpload</p>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-500">Niet geüpload</p>
-                                                    )}
-                                                </button>
+                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                                                            <button
+                                                                type="button"
+                                                                title="Bekijken"
+                                                                aria-label="Bekijken"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setPreviewDoc({
+                                                                        title: doc.name || DOC_LABELS[type],
+                                                                        url: doc.url,
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Bewerken"
+                                                                aria-label="Bewerken"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setActiveDocType(type);
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Verwijderen"
+                                                                aria-label="Verwijderen"
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    void deleteSourceDocument(doc);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
                                             );
                                         })}
                                     </div>
@@ -1428,6 +1526,67 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     </div>
                                 </DialogContent>
                             </Dialog>
+
+                            {uploadedSourceDocs.length > 0 ? (
+                                <ul className="space-y-1.5 pt-1">
+                                    {uploadedSourceDocs.map(({ type, doc }) => (
+                                        <li
+                                            key={doc.id}
+                                            className="group relative flex items-center gap-2.5 rounded-lg border border-gray-100 bg-gray-50/80 px-2.5 py-2"
+                                        >
+                                            <span
+                                                className={cn(
+                                                    'h-3.5 w-3.5 shrink-0 rounded-sm',
+                                                    DOC_ACCENT[type]
+                                                )}
+                                                aria-hidden
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium text-gray-900">
+                                                    {DOC_LABELS[type]}
+                                                </p>
+                                                <p className="truncate text-xs text-gray-500">
+                                                    {doc.name || 'Bestand'}
+                                                </p>
+                                            </div>
+                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-end gap-1 rounded-lg bg-white/70 px-2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                                                <button
+                                                    type="button"
+                                                    title="Bekijken"
+                                                    aria-label={`Bekijken: ${DOC_LABELS[type]}`}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:text-purple-700"
+                                                    onClick={() =>
+                                                        setPreviewDoc({
+                                                            title: doc.name || DOC_LABELS[type],
+                                                            url: doc.url,
+                                                        })
+                                                    }
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Bewerken"
+                                                    aria-label={`Bewerken: ${DOC_LABELS[type]}`}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:text-purple-700"
+                                                    onClick={() => setActiveDocType(type)}
+                                                >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Verwijderen"
+                                                    aria-label={`Verwijderen: ${DOC_LABELS[type]}`}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:text-red-700"
+                                                    onClick={() => void deleteSourceDocument(doc)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : null}
 
                         </div>
                     </div>
@@ -2041,10 +2200,48 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     >
                         <Input
                             className={cn(fieldClass('contract_hours'), 'pr-10')}
-                            type="number"
-                            placeholder="Bijv. 40"
-                            value={employeeDetails?.contract_hours || ''}
-                            onChange={e => handleDetailChange('contract_hours', Number(e.target.value))}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Bijv. 36.5"
+                            value={
+                                contractHoursText !== null
+                                    ? contractHoursText
+                                    : employeeDetails?.contract_hours != null
+                                      ? String(employeeDetails.contract_hours)
+                                      : ''
+                            }
+                            onFocus={() => {
+                                setContractHoursText(
+                                    employeeDetails?.contract_hours != null
+                                        ? String(employeeDetails.contract_hours)
+                                        : ''
+                                );
+                            }}
+                            onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
+                                setContractHoursText(raw);
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                if (isIncompleteContractHoursInput(raw)) return;
+                                const parsed = parseContractHours(raw);
+                                if (parsed != null) {
+                                    handleDetailChange('contract_hours', parsed);
+                                }
+                            }}
+                            onBlur={() => {
+                                const raw = contractHoursText;
+                                setContractHoursText(null);
+                                if (raw == null) return;
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                const parsed = parseContractHours(raw);
+                                handleDetailChange('contract_hours', parsed);
+                            }}
                         />
                     </ValidatableField>
                 </div>
@@ -2112,6 +2309,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     }}
                 />
             )}
+
+            <DocumentPreviewDialog
+                open={!!previewDoc}
+                onOpenChange={(open) => {
+                    if (!open) setPreviewDoc(null);
+                }}
+                title={previewDoc?.title || 'Document'}
+                storagePath={previewDoc?.url || null}
+            />
         </div>
     );
 }

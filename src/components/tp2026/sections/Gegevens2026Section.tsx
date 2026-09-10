@@ -378,6 +378,14 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
                   : '—'
               }
             />
+            <DataRow
+              label="Type FML/IZP/LAB"
+              value={
+                data.fml_izp_lab_kind
+                  ? String(data.fml_izp_lab_kind).toUpperCase()
+                  : '—'
+              }
+            />
             <DataRow label="Datum FML/IZP/LAB" value={formatNLDateForDoc(data.fml_izp_lab_date)} />
           </TP2026FieldTable>
         </div>

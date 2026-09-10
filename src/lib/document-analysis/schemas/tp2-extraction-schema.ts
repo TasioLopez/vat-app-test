@@ -2,6 +2,8 @@ export type Tp2ExtractionResult = Record<string, unknown>;
 
 const DOCTOR_ROLE_ENUM = ['Arts', 'Anios', 'Aios', 'BA', 'VA', null] as const;
 const OSV_ROLE_ENUM = ['Arts', 'Anios', 'Aios', 'BA', 'VA', null] as const;
+/** Intake only has FML/IZP checkboxes — LAB is never extracted from intake. */
+const FML_IZP_KIND_ENUM = ['fml', 'izp', null] as const;
 
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
@@ -19,6 +21,12 @@ export const TP2_EXTRACTION_JSON_SCHEMA = {
     registration_date: nullableString('Aanmelddatum YYYY-MM-DD'),
     tp_start_date: nullableString('Startdatum traject YYYY-MM-DD'),
     fml_izp_lab_date: nullableString('Datum FML/IZP YYYY-MM-DD'),
+    fml_izp_lab_kind: {
+      type: ['string', 'null'] as const,
+      enum: FML_IZP_KIND_ENUM,
+      description:
+        'Which checkbox is checked next to Datum FML/IZP in sectie 6: fml or izp; null if both/neither/unclear',
+    },
     tp_end_date: nullableString('Einddatum traject YYYY-MM-DD'),
     ad_report_date: nullableString('Datum AD-rapport YYYY-MM-DD'),
     occupational_doctor_org: nullableString(
@@ -49,6 +57,7 @@ export const TP2_EXTRACTION_JSON_SCHEMA = {
     'registration_date',
     'tp_start_date',
     'fml_izp_lab_date',
+    'fml_izp_lab_kind',
     'tp_end_date',
     'ad_report_date',
     'occupational_doctor_org',

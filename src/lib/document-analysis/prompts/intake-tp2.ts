@@ -23,6 +23,11 @@ DATUMVELDEN (YYYY-MM-DD):
 3. registration_date — ALLEEN linker cel "Aanmelddatum:" in sectie 6 (NOOIT de FML/IZP-datum)
 4. tp_start_date — ALLEEN rechter cel "Startdatum:" in sectie 6
 5. fml_izp_lab_date — ALLEEN linker cel bij "Datum ☐ FML ☐ IZP:" in sectie 6
+5b. fml_izp_lab_kind — welk vakje is AANGEVINKT naast die datumcel:
+   - ☒ FML (en ☐ IZP) → "fml"
+   - ☒ IZP (en ☐ FML) → "izp"
+   - beide aangevinkt, beide leeg, of onduidelijk → null
+   - NOOIT "lab" uit intake (er is geen LAB-checkbox op het formulier)
 6. tp_end_date — ALLEEN rechter cel "Einddatum:" in sectie 6
 7. ad_report_date — ALLEEN rechter cel "Datum AD-rapport" in sectie 6 (niet FML-datum)
 
@@ -68,7 +73,8 @@ Voorbeelden:
 - "Datum gesprek: 5 juni 2026" → intake_date: "2026-06-05"
 - "Aanmelddatum: 4-2-2026" → registration_date: "2026-02-04"
 - "Startdatum: 5-6-2026" → tp_start_date: "2026-06-05"
-- "Datum FML: 19-1-2026" → fml_izp_lab_date: "2026-01-19"
+- "Datum ☒ FML ☐ IZP: 19-1-2026" → fml_izp_lab_date: "2026-01-19", fml_izp_lab_kind: "fml"
+- "Datum ☐ FML ☒ IZP: 5-12-2025" → fml_izp_lab_date: "2025-12-05", fml_izp_lab_kind: "izp"
 - "Einddatum: 5-7-2027" → tp_end_date: "2027-07-05"
 - "Datum AD-rapport: 2-2-2026" → ad_report_date: "2026-02-02"
 - VA aangevinkt, naam "A.J. Karim" → occupational_doctor_org: "A.J. Karim", doctor_role: "VA"
@@ -90,8 +96,15 @@ Zoek "Datum rapport:" of vergelijkbaar. Gebruik null als de datum niet gevonden 
 export const AD_TP2_DATE_USER_MESSAGE = 'Extract de rapportdatum uit dit AD-document.';
 
 export const FML_TP2_DATE_PROMPT = `
-Extract ALLEEN fml_izp_lab_date (YYYY-MM-DD) uit dit FML/IZP/LAB document.
-Zoek "Datum FML:", "Datum IZP:" of documentdatum. Gebruik null als de datum niet gevonden wordt.
+Extract fml_izp_lab_date (YYYY-MM-DD) en fml_izp_lab_kind uit dit FML/IZP/LAB document.
+- Datum: zoek "Datum FML:", "Datum IZP:", "Opgesteld op", ondertekeningsdatum of documentdatum.
+- Kind: uit titel/documenttype:
+  • Functionele Mogelijkheden Lijst / FML → "fml"
+  • Inzetbaarheidsprofiel / IZP → "izp"
+  • Lijst arbeidsmogelijkheden en beperkingen / LAB → "lab"
+  • onduidelijk → null
+Gebruik null voor velden die niet gevonden worden.
 `.trim();
 
-export const FML_TP2_DATE_USER_MESSAGE = 'Extract de FML/IZP datum uit dit document.';
+export const FML_TP2_DATE_USER_MESSAGE =
+  'Extract de FML/IZP/LAB datum en het documenttype (fml/izp/lab) uit dit document.';

@@ -789,6 +789,7 @@ export type Database = {
           employee_id: string | null
           first_sick_day: string | null
           fml_izp_lab_date: string | null
+          fml_izp_lab_kind: string | null
           has_ad_report: boolean | null
           id: string
           is_ex_werknemer: boolean | null
@@ -832,6 +833,7 @@ export type Database = {
           employee_id?: string | null
           first_sick_day?: string | null
           fml_izp_lab_date?: string | null
+          fml_izp_lab_kind?: string | null
           has_ad_report?: boolean | null
           id?: string
           is_ex_werknemer?: boolean | null
@@ -875,6 +877,7 @@ export type Database = {
           employee_id?: string | null
           first_sick_day?: string | null
           fml_izp_lab_date?: string | null
+          fml_izp_lab_kind?: string | null
           has_ad_report?: boolean | null
           id?: string
           is_ex_werknemer?: boolean | null

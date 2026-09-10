@@ -1,5 +1,6 @@
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
+import { parseContractHours } from '@/lib/employee/contract-hours';
 
 export type EmployeeFieldReviewStatus = 'review' | 'validated';
 export type EmployeeFieldDisplayStatus = 'empty' | EmployeeFieldReviewStatus;
@@ -132,13 +133,7 @@ function normalizeFieldValue(
       return normalizeStringArray(value);
     }
     case 'contract_hours': {
-      if (value === null || value === undefined) return null;
-      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-      if (typeof value === 'string') {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : null;
-      }
-      return null;
+      return parseContractHours(value);
     }
     case 'drivers_license':
     case 'has_computer':

@@ -250,6 +250,15 @@ describe('buildInleidingFields', () => {
     assert.match(inleiding, /urenomvang van 32 uur per week/);
   });
 
+  it('preserves half hours in urenomvang', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      details: { ...baseCtx.details, contract_hours: 36.5 },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    assert.match(inleiding, /urenomvang van 36\.5 uur per week/);
+  });
+
   it('formats AD author name as initial + last name in inleiding_sub', () => {
     const ctx: InleidingBuildContext = {
       ...baseCtx,

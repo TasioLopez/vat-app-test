@@ -222,8 +222,8 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
     }
   }
 
-  if (!isFilled(merged.fml_izp_lab_date) && fmlDoc) {
-    console.log('📋 TP2 fallback: FML/IZP date');
+  if ((!isFilled(merged.fml_izp_lab_date) || !isFilled(merged.fml_izp_lab_kind)) && fmlDoc) {
+    console.log('📋 TP2 fallback: FML/IZP date/kind');
     const fmlParsed = await extractFromDocument(fmlDoc, {
       schemaName: 'fml_izp_date',
       schema: FML_IZP_DATE_JSON_SCHEMA as Record<string, unknown>,
@@ -231,8 +231,11 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
       instructions: FML_TP2_DATE_PROMPT,
       userMessage: FML_TP2_DATE_USER_MESSAGE,
     });
-    if (isFilled(fmlParsed.fml_izp_lab_date)) {
+    if (!isFilled(merged.fml_izp_lab_date) && isFilled(fmlParsed.fml_izp_lab_date)) {
       merged.fml_izp_lab_date = fmlParsed.fml_izp_lab_date;
+    }
+    if (!isFilled(merged.fml_izp_lab_kind) && isFilled(fmlParsed.fml_izp_lab_kind)) {
+      merged.fml_izp_lab_kind = fmlParsed.fml_izp_lab_kind;
     }
   }
 

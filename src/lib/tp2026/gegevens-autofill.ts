@@ -38,6 +38,7 @@ export const GEGEVENS_TP2_KEYS = [
   'occupational_doctor_name',
   'occupational_doctor_org',
   'fml_izp_lab_date',
+  'fml_izp_lab_kind',
   'tp_lead_time',
   'tp_start_date',
   'tp_end_date',

@@ -57,6 +57,15 @@ describe('parseTp2ExtractionResult', () => {
     assert.equal(result.osv_doctor_role, 'Aios');
     assert.equal(result.osv_doctor_name, 'K. Julien');
   });
+
+  it('keeps fml_izp_lab_kind from intake checkboxes', () => {
+    const result = parseTp2ExtractionResult({
+      fml_izp_lab_date: '2026-06-09',
+      fml_izp_lab_kind: 'fml',
+    });
+    assert.equal(result.fml_izp_lab_date, '2026-06-09');
+    assert.equal(result.fml_izp_lab_kind, 'fml');
+  });
 });
 
 describe('parseAdReportDateResult', () => {
@@ -77,6 +86,27 @@ describe('parseFmlIzpDateResult', () => {
   it('returns parsed fml date', () => {
     assert.deepEqual(parseFmlIzpDateResult({ fml_izp_lab_date: '2026-01-19' }), {
       fml_izp_lab_date: '2026-01-19',
+      fml_izp_lab_kind: null,
     });
+  });
+
+  it('returns date and kind together', () => {
+    assert.deepEqual(
+      parseFmlIzpDateResult({ fml_izp_lab_date: '2026-06-09', fml_izp_lab_kind: 'fml' }),
+      {
+        fml_izp_lab_date: '2026-06-09',
+        fml_izp_lab_kind: 'fml',
+      }
+    );
+  });
+
+  it('normalizes uppercase kind', () => {
+    assert.deepEqual(
+      parseFmlIzpDateResult({ fml_izp_lab_date: '2026-06-09', fml_izp_lab_kind: 'IZP' }),
+      {
+        fml_izp_lab_date: '2026-06-09',
+        fml_izp_lab_kind: 'izp',
+      }
+    );
   });
 });

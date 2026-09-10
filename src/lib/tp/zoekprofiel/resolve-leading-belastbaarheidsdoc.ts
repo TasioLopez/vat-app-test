@@ -5,6 +5,7 @@ export type LeadingBelastbaarheidsDocInput = {
   type: string | null | undefined;
   /** ISO date string from document metadata or extracted document date, if known */
   documentDate?: string | null;
+  /** Upload timestamp — never used as document date for leading resolution */
   uploaded_at?: string | null;
 };
 
@@ -30,26 +31,37 @@ const NL_MONTHS: Record<string, number> = {
   december: 11,
 };
 
-/** Infer fml | izp | lab from a document type label. */
+/**
+ * Infer fml | izp | lab from a document type label.
+ * Combined storage bucket `fml_izp` is ambiguous → null (never treat as IZP).
+ */
 export function inferBelastbaarheidsdocumentType(
   type: string | null | undefined
 ): BelastbaarheidsdocumentType | null {
-  const t = (type || '').toLowerCase();
+  const t = (type || '').toLowerCase().trim();
   if (!t) return null;
-  if (
-    t.includes('izp') ||
-    t.includes('inzetbaarheidsprofiel')
-  ) {
+
+  // Exact / reserved combined upload type — ambiguous FML vs IZP
+  if (t === 'fml_izp' || t === 'fml/izp') {
+    return null;
+  }
+
+  if (t === 'izp' || t.includes('inzetbaarheidsprofiel')) {
+    return 'izp';
+  }
+  // Substring "izp" only when not part of the combined fml_izp bucket (already handled)
+  if (t.includes('izp') && !t.includes('fml')) {
     return 'izp';
   }
   if (
+    t === 'lab' ||
     t.includes('lab') ||
     t.includes('lijst arbeidsmogelijkheden')
   ) {
     return 'lab';
   }
   if (
-    t.includes('fml') ||
+    t === 'fml' ||
     t.includes('functiemogelijkhedenlijst') ||
     t.includes('functionele mogelijkheden')
   ) {
@@ -69,9 +81,14 @@ export function parseDutchOrIsoDate(value: string | null | undefined): Date | nu
   if (!value?.trim()) return null;
   const trimmed = value.trim();
 
-  const iso = new Date(trimmed);
-  if (!Number.isNaN(iso.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    return iso;
+  // Upload timestamps must never count as document dates
+  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed) || /^\d{4}-\d{2}-\d{2}\s/.test(trimmed)) {
+    const iso = new Date(trimmed.slice(0, 10));
+    if (!Number.isNaN(iso.getTime())) return iso;
   }
 
   const match = trimmed.match(/^(\d{1,2})\s+([a-zA-Zäöüé]+)\s+(\d{4})$/i);
@@ -85,8 +102,12 @@ export function parseDutchOrIsoDate(value: string | null | undefined): Date | nu
     }
   }
 
-  const fallback = new Date(trimmed);
-  if (!Number.isNaN(fallback.getTime())) return fallback;
+  // Avoid parsing arbitrary strings that might be timestamps or junk
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(trimmed)) {
+    const fallback = new Date(trimmed);
+    if (!Number.isNaN(fallback.getTime())) return fallback;
+  }
+
   return null;
 }
 
@@ -98,31 +119,43 @@ export function formatDatumVoluit(date: Date): string {
   });
 }
 
-function pickBestDate(
-  candidates: Array<string | null | undefined>
-): { date: Date; source: string } | null {
-  let best: { date: Date; source: string } | null = null;
-  for (const candidate of candidates) {
-    const parsed = parseDutchOrIsoDate(candidate);
-    if (!parsed) continue;
-    if (!best || parsed.getTime() > best.date.getTime()) {
-      best = { date: parsed, source: candidate!.trim() };
-    }
+function normalizeMetaKind(
+  value: string | null | undefined
+): BelastbaarheidsdocumentType | null {
+  const t = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  if (t === 'fml' || t === 'izp' || t === 'lab' || t === 'belastbaarheidsprofiel') {
+    return t;
   }
-  return best;
+  return null;
 }
 
 /**
- * Resolve the leading belastbaarheidsdocument by document date (not upload order).
- * Prefers explicit documentDate, then meta date, then uploaded_at as last resort.
+ * Resolve the leading belastbaarheidsdocument.
+ * Priority: meta kind+date (intake) → real documentDate on uploads → model fields.
+ * Never uses uploaded_at as document date.
  */
 export function resolveLeadingBelastbaarheidsdoc(options: {
   docs: LeadingBelastbaarheidsDocInput[];
   metaDateIsoOrVoluit?: string | null;
+  metaKind?: string | null;
   modelType?: BelastbaarheidsdocumentType | null;
   modelDatumVoluit?: string | null;
 }): LeadingBelastbaarheidsDocResult | null {
-  const { docs, metaDateIsoOrVoluit, modelType, modelDatumVoluit } = options;
+  const { docs, metaDateIsoOrVoluit, metaKind, modelType, modelDatumVoluit } = options;
+
+  const metaParsed = parseDutchOrIsoDate(metaDateIsoOrVoluit);
+  const kindFromMeta = normalizeMetaKind(metaKind);
+
+  // Authoritative: intake/gegevens kind + date
+  if (kindFromMeta && metaParsed) {
+    return {
+      type: kindFromMeta,
+      datumVoluit: formatDatumVoluit(metaParsed),
+      isoDate: metaParsed.toISOString().slice(0, 10),
+    };
+  }
 
   type Candidate = {
     type: BelastbaarheidsdocumentType;
@@ -135,18 +168,28 @@ export function resolveLeadingBelastbaarheidsdoc(options: {
   for (const doc of docs) {
     const type = inferBelastbaarheidsdocumentType(doc.type);
     if (!type) continue;
-    const best = pickBestDate([doc.documentDate, doc.uploaded_at]);
+    // Only real document dates — never uploaded_at
+    const parsed = parseDutchOrIsoDate(doc.documentDate);
     candidates.push({
       type,
-      date: best?.date ?? null,
-      datumVoluit: best ? formatDatumVoluit(best.date) : '',
+      date: parsed,
+      datumVoluit: parsed ? formatDatumVoluit(parsed) : '',
     });
   }
 
   if (candidates.length === 0) {
-    // Fall back to meta + model when no typed docs are available
+    if (kindFromMeta) {
+      const modelParsed = parseDutchOrIsoDate(modelDatumVoluit);
+      const date = metaParsed ?? modelParsed;
+      return {
+        type: kindFromMeta,
+        datumVoluit: date
+          ? formatDatumVoluit(date)
+          : (modelDatumVoluit || metaDateIsoOrVoluit || '').trim(),
+        isoDate: date ? date.toISOString().slice(0, 10) : null,
+      };
+    }
     if (modelType) {
-      const metaParsed = parseDutchOrIsoDate(metaDateIsoOrVoluit);
       const modelParsed = parseDutchOrIsoDate(modelDatumVoluit);
       const date = metaParsed ?? modelParsed;
       return {
@@ -157,50 +200,59 @@ export function resolveLeadingBelastbaarheidsdoc(options: {
         isoDate: date ? date.toISOString().slice(0, 10) : null,
       };
     }
+    if (metaParsed) {
+      // Date only from meta — type still unknown unless model provides it
+      if (modelType) {
+        return {
+          type: modelType,
+          datumVoluit: formatDatumVoluit(metaParsed),
+          isoDate: metaParsed.toISOString().slice(0, 10),
+        };
+      }
+      return null;
+    }
     return null;
   }
 
-  // Prefer candidate with the newest known date
   const dated = candidates.filter((c) => c.date != null);
   let winner: Candidate;
   if (dated.length > 0) {
     winner = dated.reduce((a, b) =>
-      (a.date!.getTime() >= b.date!.getTime() ? a : b)
+      a.date!.getTime() >= b.date!.getTime() ? a : b
     );
   } else {
-    // No dates: prefer model type if it matches a candidate, else first
     winner =
       (modelType && candidates.find((c) => c.type === modelType)) ||
+      (kindFromMeta && candidates.find((c) => c.type === kindFromMeta)) ||
       candidates[0];
   }
 
-  // Prefer meta date for datumVoluit when it matches the winning type / is newer
-  const metaParsed = parseDutchOrIsoDate(metaDateIsoOrVoluit);
   const modelParsed = parseDutchOrIsoDate(modelDatumVoluit);
 
-  let finalDate = winner.date;
-  if (metaParsed && (!finalDate || metaParsed.getTime() >= finalDate.getTime())) {
-    // Use meta date when available and not older than winner
-    if (!finalDate || metaParsed.getTime() === finalDate.getTime() || !winner.date) {
-      finalDate = metaParsed;
-    }
+  let finalType = winner.type;
+  if (kindFromMeta) {
+    finalType = kindFromMeta;
   }
-  if (!finalDate && modelParsed) {
+
+  let finalDate = winner.date;
+  if (metaParsed) {
+    finalDate = metaParsed;
+  } else if (!finalDate && modelParsed) {
     finalDate = modelParsed;
   }
 
-  // If model returns a newer date for the same type, prefer that for display
   if (
-    modelType === winner.type &&
+    modelType === finalType &&
     modelParsed &&
     finalDate &&
-    modelParsed.getTime() > finalDate.getTime()
+    modelParsed.getTime() > finalDate.getTime() &&
+    !metaParsed
   ) {
     finalDate = modelParsed;
   }
 
   return {
-    type: winner.type,
+    type: finalType,
     datumVoluit: finalDate
       ? formatDatumVoluit(finalDate)
       : (winner.datumVoluit || modelDatumVoluit || metaDateIsoOrVoluit || '').trim(),

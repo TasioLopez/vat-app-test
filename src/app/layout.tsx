@@ -4,6 +4,7 @@ import "@/styles/globals.css";
 import { ReactNode } from "react";
 import type { Metadata } from "next";
 import { ToastProvider } from "@/components/ui/Toast";
+import { StagingEnvironmentBanner } from "@/components/ui/StagingEnvironmentBanner";
 import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={montserrat.variable}>
       <body>
+        <StagingEnvironmentBanner />
         <ToastProvider>
           {children}
         </ToastProvider>

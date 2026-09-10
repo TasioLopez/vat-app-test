@@ -1,4 +1,5 @@
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
+import { normalizeFmlIzpLabKind } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import { normalizeAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { normalizeExWerknemer } from '@/lib/tp/ex-werknemer-wording';
 import {
@@ -113,6 +114,12 @@ export function normalizeTp2ExtractedData(
     out.registration_date === out.fml_izp_lab_date
   ) {
     delete out.registration_date;
+  }
+
+  if ('fml_izp_lab_kind' in out) {
+    const kind = normalizeFmlIzpLabKind(out.fml_izp_lab_kind);
+    if (kind) out.fml_izp_lab_kind = kind;
+    else delete out.fml_izp_lab_kind;
   }
 
   if (out.occupational_doctor_org != null) {
