@@ -164,15 +164,6 @@ type Document = {
 const DOC_TYPES = [...EMPLOYEE_DOC_TYPES] as EmployeeDocType[];
 const DOC_LABELS = EMPLOYEE_DOC_LABELS;
 
-const DOC_ACCENT: Record<EmployeeDocType, string> = {
-    intakeformulier: 'bg-emerald-500',
-    ad_rapportage: 'bg-violet-500',
-    fml_izp: 'bg-sky-500',
-    cv: 'bg-amber-500',
-    spreek_reportage: 'bg-rose-500',
-    extra: 'bg-slate-500',
-};
-
 const EMPLOYEE_DETAILS_FIELD_KEYS: (keyof EmployeeDetails)[] = [
     'gender',
     'phone',
@@ -333,18 +324,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         url: string;
     } | null>(null);
 
-    const uploadedSourceDocs = useMemo(
-        () =>
-            DOC_TYPES.map((type) => {
-                const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
-                return doc ? { type, doc } : null;
-            }).filter(Boolean) as { type: EmployeeDocType; doc: Document }[],
-        [documents]
-    );
-
     const uploadedSourcesCount = useMemo(
-        () => uploadedSourceDocs.length,
-        [uploadedSourceDocs]
+        () =>
+            DOC_TYPES.filter((type) =>
+                documents.some((d) => d.type?.toLowerCase().trim() === type)
+            ).length,
+        [documents]
     );
 
     useEffect(() => {
@@ -1372,7 +1357,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </span>
                                     </span>
                                 </Button>
-                                <DialogContent className="max-w-md sm:max-w-lg">
+                                <DialogContent
+                                    className="max-w-md sm:max-w-lg"
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                >
                                     <DialogHeader>
                                         <DialogTitle className="flex items-center gap-2 text-gray-900">
                                             <FolderOpen className="h-5 w-5 text-emerald-600" />
@@ -1419,11 +1407,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                         )}
                                                     </button>
                                                     {doc ? (
-                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
                                                             <button
                                                                 type="button"
                                                                 title="Bekijken"
                                                                 aria-label="Bekijken"
+                                                                tabIndex={-1}
                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -1440,6 +1429,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                                 type="button"
                                                                 title="Bewerken"
                                                                 aria-label="Bewerken"
+                                                                tabIndex={-1}
                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -1453,6 +1443,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                                 type="button"
                                                                 title="Verwijderen"
                                                                 aria-label="Verwijderen"
+                                                                tabIndex={-1}
                                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -1549,67 +1540,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     </div>
                                 </DialogContent>
                             </Dialog>
-
-                            {uploadedSourceDocs.length > 0 ? (
-                                <ul className="space-y-1.5 pt-1">
-                                    {uploadedSourceDocs.map(({ type, doc }) => (
-                                        <li
-                                            key={doc.id}
-                                            className="group relative flex items-center gap-2.5 rounded-lg border border-gray-100 bg-gray-50/80 px-2.5 py-2"
-                                        >
-                                            <span
-                                                className={cn(
-                                                    'h-3.5 w-3.5 shrink-0 rounded-sm',
-                                                    DOC_ACCENT[type]
-                                                )}
-                                                aria-hidden
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-medium text-gray-900">
-                                                    {DOC_LABELS[type]}
-                                                </p>
-                                                <p className="truncate text-xs text-gray-500">
-                                                    {doc.name || 'Bestand'}
-                                                </p>
-                                            </div>
-                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-end gap-1 rounded-lg bg-white/70 px-2 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-                                                <button
-                                                    type="button"
-                                                    title="Bekijken"
-                                                    aria-label={`Bekijken: ${DOC_LABELS[type]}`}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:text-purple-700"
-                                                    onClick={() =>
-                                                        setPreviewDoc({
-                                                            title: doc.name || DOC_LABELS[type],
-                                                            url: doc.url,
-                                                        })
-                                                    }
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    title="Bewerken"
-                                                    aria-label={`Bewerken: ${DOC_LABELS[type]}`}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:text-purple-700"
-                                                    onClick={() => setActiveDocType(type)}
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    title="Verwijderen"
-                                                    aria-label={`Verwijderen: ${DOC_LABELS[type]}`}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:text-red-700"
-                                                    onClick={() => void deleteSourceDocument(doc)}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : null}
 
                         </div>
                     </div>
