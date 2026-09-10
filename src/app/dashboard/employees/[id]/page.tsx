@@ -379,8 +379,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         setEmployee({
             ...data,
-            first_name: normalizePersonName(data.first_name) ?? data.first_name,
-            last_name: normalizePersonName(data.last_name) ?? data.last_name,
+            first_name: normalizePersonName(data.first_name) ?? '',
+            last_name: normalizePersonName(data.last_name) ?? '',
         });
         setSavedEmployeeSnapshot(toEditableEmployeePayload(data));
         if (data.client_id) {
