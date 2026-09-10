@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-
-const url =
-  process.env.SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  '';
-
-export const supabaseAdmin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+/**
+ * Shared service-role admin client.
+ * Lazy — safe to import at module scope during `next build`.
+ */
+export {
+  serviceRoleSupabase as supabaseAdmin,
+  getServiceRoleSupabase,
+} from '@/lib/supabase/service-role';
