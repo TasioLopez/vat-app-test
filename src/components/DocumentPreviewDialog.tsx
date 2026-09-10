@@ -14,6 +14,7 @@ type Props = {
 };
 
 const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']);
+const WORD_EXT = new Set(['docx', 'doc']);
 
 function extensionFromPath(path: string | null | undefined): string {
   if (!path) return '';
@@ -28,19 +29,46 @@ function resolveExt(storagePath: string | null, title: string): string {
   return extensionFromPath(storagePath) || extensionFromPath(title);
 }
 
+function buildDocxSrcDoc(bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; color: #111; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 24px 28px;
+  }
+  img { max-width: 100%; height: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  td, th { border: 1px solid #ddd; padding: 6px 8px; vertical-align: top; }
+  p { margin: 0 0 0.75em; }
+  h1, h2, h3, h4 { margin: 1em 0 0.5em; line-height: 1.25; }
+</style>
+</head>
+<body>${bodyHtml}</body>
+</html>`;
+}
+
 export function DocumentPreviewDialog({ open, onOpenChange, title, storagePath }: Props) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [docxSrcDoc, setDocxSrcDoc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ext = useMemo(() => resolveExt(storagePath, title), [storagePath, title]);
   const isPdf = ext === 'pdf';
   const isImage = IMAGE_EXT.has(ext);
-  const embeddable = isPdf || isImage;
+  const isWord = WORD_EXT.has(ext);
+  const isOther = !isPdf && !isImage && !isWord;
 
   useEffect(() => {
     if (!open || !storagePath) {
       setSignedUrl(null);
+      setDocxSrcDoc(null);
       setError(null);
       setLoading(false);
       return;
@@ -50,25 +78,35 @@ export function DocumentPreviewDialog({ open, onOpenChange, title, storagePath }
     setLoading(true);
     setError(null);
     setSignedUrl(null);
+    setDocxSrcDoc(null);
 
     const fileExt = resolveExt(storagePath, title);
 
-    void signStorageUrl(storagePath)
-      .then((url) => {
+    void (async () => {
+      try {
+        const url = await signStorageUrl(storagePath);
         if (cancelled) return;
         setSignedUrl(url);
-        if (fileExt !== 'pdf' && !IMAGE_EXT.has(fileExt)) {
-          window.open(url, '_blank', 'noopener,noreferrer');
+
+        if (WORD_EXT.has(fileExt)) {
+          const res = await fetch(url);
+          if (!res.ok) {
+            throw new Error(`Bestand ophalen mislukt (${res.status})`);
+          }
+          const arrayBuffer = await res.arrayBuffer();
+          const mammoth = await import('mammoth');
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          if (cancelled) return;
+          setDocxSrcDoc(buildDocxSrcDoc(result.value || '<p><em>Leeg document.</em></p>'));
         }
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Voorbeeld laden mislukt');
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -110,6 +148,12 @@ export function DocumentPreviewDialog({ open, onOpenChange, title, storagePath }
           {error ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <p className="text-sm text-red-600">Kon voorbeeld niet laden. {error}</p>
+              {signedUrl ? (
+                <Button type="button" variant="secondary" onClick={openInNewTab}>
+                  <ExternalLink className="mr-1.5 h-4 w-4" />
+                  Openen in nieuw tabblad
+                </Button>
+              ) : null}
             </div>
           ) : null}
           {!loading && !error && signedUrl && isPdf ? (
@@ -129,11 +173,19 @@ export function DocumentPreviewDialog({ open, onOpenChange, title, storagePath }
               className="mx-auto h-full max-h-full w-auto max-w-full object-contain p-4"
             />
           ) : null}
-          {!loading && !error && signedUrl && !embeddable ? (
+          {!loading && !error && isWord && docxSrcDoc ? (
+            <iframe
+              title={`Voorbeeld: ${title}`}
+              className="h-full w-full border-0 bg-white"
+              sandbox="allow-same-origin"
+              srcDoc={docxSrcDoc}
+            />
+          ) : null}
+          {!loading && !error && signedUrl && isOther ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Dit bestandstype kan niet in de browser worden getoond. Het is geopend in een nieuw
-                tabblad (of gebruik de knop hierboven).
+                Dit bestandstype kan niet in de browser worden getoond. Gebruik de knop om het te
+                openen.
               </p>
               <Button type="button" variant="secondary" onClick={openInNewTab}>
                 <ExternalLink className="mr-1.5 h-4 w-4" />
