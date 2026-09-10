@@ -5,7 +5,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { AlignJustify, AlignLeft, Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { TPInstanceProvider, useTPInstance } from '@/context/TPInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
@@ -67,14 +67,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const lowLeadTimeWarnedRef = useRef<string | null>(null);
   const autofillCancelRef = useRef(false);
   const autofillAbortRef = useRef<AbortController | null>(null);
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [autofilling, setAutofilling] = useState(false);

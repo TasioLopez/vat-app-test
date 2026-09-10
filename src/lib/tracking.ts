@@ -7,10 +7,11 @@ export async function trackAccess(
   entityId: string,
   isModification: boolean = false
 ) {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) return;
+
+  const supabase = createBrowserClient(url, key);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;

@@ -1,14 +1,12 @@
 // src/app/signup/page.tsx
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation } from "@/lib/validation";
-
-export const dynamic = "force-dynamic";
+import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,15 +21,17 @@ export default function SignupPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
   const resolvedRef = useRef(false);
-
-  const supabase = useMemo(() => {
-    return createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }, []);
+  const supabaseRef = useRef<SupabaseClient | null>(null);
 
   useEffect(() => {
+    const supabase = tryCreateBrowserSupabase();
+    supabaseRef.current = supabase;
+    if (!supabase) {
+      setError("App-configuratie ontbreekt (Supabase).");
+      setCheckingSession(false);
+      return;
+    }
+
     const applyUser = (user: User) => {
       resolvedRef.current = true;
       setError("");
@@ -105,11 +105,18 @@ export default function SignupPage() {
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
-  }, [supabase]);
+  }, []);
 
   const handleSignup = async () => {
     setError("");
     setLoading(true);
+
+    const supabase = supabaseRef.current ?? tryCreateBrowserSupabase();
+    if (!supabase) {
+      setError("App-configuratie ontbreekt (Supabase).");
+      setLoading(false);
+      return;
+    }
 
     if (!email) {
       setError("Ongeldige of verlopen aanmeldlink.");

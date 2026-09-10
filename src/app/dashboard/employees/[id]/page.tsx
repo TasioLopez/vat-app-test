@@ -3,7 +3,7 @@
 import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import EmployeeUnsavedGuard from '@/components/employee/EmployeeUnsavedGuard';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import {
     Map,
     Compass,
@@ -278,10 +278,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const { id: employeeId } = use(params);
     const guardedRouter = useGuardedRouter();
     const { showSuccess, showError, showInfo } = useToastHelpers();
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);

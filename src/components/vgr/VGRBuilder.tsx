@@ -5,7 +5,7 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import { Check, ChevronLeft, ChevronRight, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { VGRInstanceProvider, useVGRInstance } from '@/context/VGRInstanceContext';
 import { ExportButton } from '@/components/tp/ExportButton';
 import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
@@ -26,14 +26,6 @@ function VGRBuilderInner({ employeeId, vgrInstanceId }: { employeeId: string; vg
   const guardedRouter = useGuardedRouter();
   const { vgrData, updateField, saveAll, isDirty, markSaved } = useVGRInstance();
   const { showSuccess, showError } = useToastHelpers();
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
 

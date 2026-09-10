@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 const Logo = "/branding/vat-app-logo.svg";
 import { validateForm, authValidation } from "@/lib/validation";
 import { getConfiguredClientAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
+import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const router = useRouter();
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +22,12 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const supabase = tryCreateBrowserSupabase();
+    if (!supabase) {
+      alert("App-configuratie ontbreekt (Supabase).");
+      return;
+    }
 
     const {
       data: authData,
@@ -79,6 +80,13 @@ export default function LoginPage() {
     setResetMessage(null);
 
     try {
+      const supabase = tryCreateBrowserSupabase();
+      if (!supabase) {
+        setResetMessage({ type: 'error', text: 'App-configuratie ontbreekt (Supabase).' });
+        setResetLoading(false);
+        return;
+      }
+
       const validation = validateForm(authValidation.forgotPassword, { email: resetEmail });
       if (!validation.success) {
         const firstError = Object.values(validation.errors || {})[0];

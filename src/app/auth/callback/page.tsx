@@ -7,13 +7,11 @@
  * (and http://localhost:3000/auth/callback for local dev).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
 import { getSafeAuthRedirectPath } from "@/lib/auth/safe-auth-redirect";
-
-export const dynamic = "force-dynamic";
+import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -21,18 +19,17 @@ export default function AuthCallbackPage() {
   const [phase, setPhase] = useState<"working" | "error">("working");
   const resolvedRef = useRef(false);
 
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
-
   useEffect(() => {
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | null = null;
+
+    const supabase = tryCreateBrowserSupabase();
+    if (!supabase) {
+      setError("App-configuratie ontbreekt (Supabase). Neem contact op met beheer.");
+      setPhase("error");
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
       if (cancelled || resolvedRef.current) return;
       resolvedRef.current = true;
@@ -59,7 +56,6 @@ export default function AuthCallbackPage() {
 
     const logBranch = (branch: string, details?: Record<string, unknown>) => {
       if (process.env.NODE_ENV !== "production") {
-        // Keep diagnostics minimal and non-sensitive.
         console.info("[auth/callback]", branch, details ?? {});
       }
     };
@@ -167,7 +163,7 @@ export default function AuthCallbackPage() {
       clearTimeout(timeoutId);
       subscription?.unsubscribe();
     };
-  }, [router, supabase]);
+  }, [router]);
 
   if (phase === "error") {
     return (

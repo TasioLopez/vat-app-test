@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Image from "next/image";
 const Logo = "/branding/vat-app-logo.svg";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation } from "@/lib/validation";
+import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -16,13 +17,21 @@ function ResetPasswordContent() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabaseRef = useRef<SupabaseClient | null>(null);
 
   useEffect(() => {
+    const supabase = tryCreateBrowserSupabase();
+    supabaseRef.current = supabase;
+    if (!supabase) {
+      setMessage({
+        type: 'error',
+        text: 'App-configuratie ontbreekt (Supabase).',
+      });
+      setIsValidSession(false);
+      setCheckingSession(false);
+      return;
+    }
+
     const checkSession = async () => {
       try {
         // Ensure PKCE/hash callback from the email link is applied to storage before we validate
@@ -50,8 +59,8 @@ function ResetPasswordContent() {
       }
     };
 
-    checkSession();
-  }, [supabase]);
+    void checkSession();
+  }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +68,12 @@ function ResetPasswordContent() {
     setMessage(null);
 
     try {
+      const supabase = supabaseRef.current ?? tryCreateBrowserSupabase();
+      if (!supabase) {
+        setMessage({ type: 'error', text: 'App-configuratie ontbreekt (Supabase).' });
+        return;
+      }
+
       // Validate password reset form
       const validation = validateForm(
         passwordValidation.resetPassword,
