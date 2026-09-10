@@ -1,6 +1,6 @@
 // src/app/api/invite-user/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import { getSessionUserWithRole, isAdmin } from "@/lib/help/auth";
 import { getConfiguredServerAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
 
@@ -16,12 +16,6 @@ function getBaseUrl(req: NextRequest) {
 
   throw new Error("Cannot resolve base URL from request.");
 }
-
-// Server-side Supabase client (service role key)
-const supabase = createClient(
-  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: NextRequest) {
   try {

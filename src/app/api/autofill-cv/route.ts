@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { serviceRoleSupabase as service } from '@/lib/supabase/service-role';
 import { getActiveCvModel, normalizeCvModel, normalizeCvPayload } from '@/lib/cv/normalize';
 import type { CvLocale, CvModel } from '@/types/cv';
 import { coerceCvTemplateKey } from '@/types/cv';
@@ -16,8 +16,6 @@ import {
   cvRewriteUserPrompt,
 } from '@/lib/cv/prompts';
 import { emptyCvFacts } from '@/lib/cv/facts';
-
-const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export const dynamic = 'force-dynamic';
 

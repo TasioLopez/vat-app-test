@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
+import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import { getIntakeContextForTp } from "@/lib/document-analysis";
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { PRACTISCHE_BELEMMERINGEN_DEFAULT } from "@/lib/tp2026/mapping";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 function stripCitations(text: string): string {

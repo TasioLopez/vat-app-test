@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
+import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   buildPowMeterContextFromMeta,
@@ -9,10 +9,6 @@ import {
   GENERATION_FALLBACK,
 } from '@/lib/tp/pow-meter';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function GET(req: NextRequest) {
