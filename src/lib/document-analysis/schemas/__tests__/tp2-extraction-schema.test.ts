@@ -1,6 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTp2ExtractionResult } from '../tp2-extraction-schema';
+import {
+  parseTp2ExtractionResult,
+  validateTp2DoctorExtraction,
+} from '../tp2-extraction-schema';
 import { parseAdReportDateResult, parseFmlIzpDateResult } from '../tp2-date-schema';
 
 describe('parseTp2ExtractionResult', () => {
@@ -65,6 +68,55 @@ describe('parseTp2ExtractionResult', () => {
     });
     assert.equal(result.fml_izp_lab_date, '2026-06-09');
     assert.equal(result.fml_izp_lab_kind, 'fml');
+  });
+});
+
+describe('validateTp2DoctorExtraction', () => {
+  it('fails when supervisie phrase has bare primary and no doctor_role (Hippman)', () => {
+    const result = validateTp2DoctorExtraction({
+      occupational_doctor_org: 'P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      doctor_role: null,
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors[0] || '', /doctor_role/i);
+  });
+
+  it('fails when osv_doctor_name set but doctor_role and primary title missing', () => {
+    const result = validateTp2DoctorExtraction({
+      occupational_doctor_org: 'P. Mort',
+      osv_doctor_name: 'K. Julien',
+      osv_doctor_role: 'BA',
+    });
+    assert.equal(result.ok, false);
+  });
+
+  it('fails when doctor_role Arts but primary lacks Arts prefix', () => {
+    const result = validateTp2DoctorExtraction({
+      occupational_doctor_org: 'P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      doctor_role: 'Arts',
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors[0] || '', /Arts/i);
+  });
+
+  it('passes Hippman-correct titled phrase with roles', () => {
+    const result = validateTp2DoctorExtraction({
+      occupational_doctor_org:
+        'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      doctor_role: 'Arts',
+      osv_doctor_name: 'K. Julien',
+      osv_doctor_role: 'BA',
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.errors, []);
+  });
+
+  it('passes VA-only with matching title', () => {
+    const result = validateTp2DoctorExtraction({
+      occupational_doctor_org: 'Verzekeringsarts A.J. Karim',
+      doctor_role: 'VA',
+    });
+    assert.equal(result.ok, true);
   });
 });
 

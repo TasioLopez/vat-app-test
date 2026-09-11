@@ -33,18 +33,21 @@ DATUMVELDEN (YYYY-MM-DD):
 
 PERSOONSVELDEN:
 
-8. occupational_doctor_org — volgende arts: sectie 6 rij "Naam ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA:"
-   - Geef ook doctor_role: "Arts" | "Anios" | "Aios" | "BA" | "VA" (welke checkbox is aangevinkt)
-   - Anios ≠ Aios: dit zijn aparte vakjes; nooit verwisselen
-   - Alleen de ingevulde naam (zonder role-prefix), geen "intern gebruik bij..." tenzij supervisie-zin aanwezig
-   - osv_doctor_name — naam op sectie 6 rij "OSV ☐ Arts ☐ Anios ☐ Aios ☐ BA ☐ VA" (superviserend arts/BA/VA)
-   - osv_doctor_role — "Arts" | "Anios" | "Aios" | "BA" | "VA" (welke OSV-checkbox is aangevinkt)
-   - Wanneer osv_doctor_name is ingevuld: zet occupational_doctor_org op de gecombineerde supervisie-zin:
-     "{primary} werkend onder supervisie van {supervisor}" (met role-prefixen, bijv. Arts + Bedrijfsarts)
-   - Schrijf NOOIT "BA" of "VA" als titelprefix in occupational_doctor_org; gebruik altijd de volle titel:
+8. occupational_doctor_org + rollen — sectie 6 Naam-rij en OSV-rij (visueel checkboxes lezen):
+   - doctor_role: welk vakje op de Naam-rij is AANGEVINKT → "Arts" | "Anios" | "Aios" | "BA" | "VA" (null als geen/onduidelijk)
+   - osv_doctor_role: welk vakje op de OSV-rij is AANGEVINKT → zelfde enum (null als geen/onduidelijk)
+   - osv_doctor_name: naam op de OSV-rij (superviserend arts)
+   - Anios ≠ Aios: aparte vakjes; nooit verwisselen
+   - Arts ≠ BA: NOOIT primary als Bedrijfsarts zetten tenzij het BA-vakje op de Naam-rij is aangevinkt
+   - occupational_doctor_org EINDwaarde ALTIJD met volle titelprefix(en) wanneer de rol bekend is:
+     • Alleen primary: "Verzekeringsarts A.J. Karim" / "Arts P. Mort" / "Aios J. de Vries"
+     • Met OSV: "Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien"
+   - Schrijf NOOIT "BA" of "VA" als titelprefix in occupational_doctor_org; gebruik:
      Arts | Anios | Aios | Bedrijfsarts | Verzekeringsarts (doctor_role/osv_doctor_role blijven wel "BA"/"VA")
+   - Geen "intern gebruik bij..." boilerplate
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
+   - Dit is NIET de bedrijfsarts/arts (P. Mort); dat hoort in occupational_doctor_org
 
 10. ad_report_concept — boolean: ALLEEN true wanneer het vakje naast "Concept" (onder/bij "Datum AD-rapport" in sectie 6) duidelijk is AANGEVINKT (Juni V6)
    - Lees UITSLUITEND de checkbox-status naast het label "Concept":
@@ -77,16 +80,18 @@ Voorbeelden:
 - "Datum ☐ FML ☒ IZP: 5-12-2025" → fml_izp_lab_date: "2025-12-05", fml_izp_lab_kind: "izp"
 - "Einddatum: 5-7-2027" → tp_end_date: "2027-07-05"
 - "Datum AD-rapport: 2-2-2026" → ad_report_date: "2026-02-02"
-- VA aangevinkt, naam "A.J. Karim" → occupational_doctor_org: "A.J. Karim", doctor_role: "VA"
+- VA aangevinkt, naam "A.J. Karim" → occupational_doctor_org: "Verzekeringsarts A.J. Karim", doctor_role: "VA"
 - "Arts L. Bollen werkend onder supervisie van arts T. de Haas" → occupational_doctor_org: "Arts L. Bollen werkend onder supervisie van arts T. de Haas"
 - Arts aangevinkt "M. Stevens", OSV BA "M. Montagne" → occupational_doctor_org: "Arts M. Stevens werkend onder supervisie van Bedrijfsarts M. Montagne", doctor_role: "Arts", osv_doctor_name: "M. Montagne", osv_doctor_role: "BA"
 - Aios aangevinkt "J. de Vries", OSV BA "K. Julien" → occupational_doctor_org: "Aios J. de Vries werkend onder supervisie van Bedrijfsarts K. Julien", doctor_role: "Aios", osv_doctor_name: "K. Julien", osv_doctor_role: "BA"
+- HIPPMAN: Naam ☒ Arts … : P. Mort, OSV ☒ BA : K. Julien → occupational_doctor_org: "Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien", doctor_role: "Arts", osv_doctor_name: "K. Julien", osv_doctor_role: "BA"
+  (FOUT: "P. Mort werkend onder supervisie van Bedrijfsarts K. Julien" zonder Arts-prefix / zonder doctor_role)
 
 Gebruik null voor velden die niet in dit document staan of niet ingevuld zijn.
 `.trim();
 
 export const INTAKE_TP2_USER_MESSAGE =
-  'Analyseer dit intakeformulier visueel. Voor ad_report_concept: bekijk ALLEEN of het Concept-vakje gevuld is (☒=true, ☐=false). Voor is_ex_werknemer: bekijk ALLEEN of het Ex-werknemer-vakje gevuld is (☒=true, ☐=false). Twijfel → false.';
+  'Analyseer dit intakeformulier visueel. Lees de Naam-rij en OSV-rij checkboxes (Arts/Anios/Aios/BA/VA) en zet doctor_role/osv_doctor_role plus een occupational_doctor_org MET titelprefixen (bijv. Arts … werkend onder supervisie van Bedrijfsarts …). Voor ad_report_concept: ALLEEN Concept-vakje (☒=true, ☐=false). Voor is_ex_werknemer: ALLEEN Ex-werknemer-vakje (☒=true, ☐=false). Twijfel bij boolean → false.';
 
 export const AD_TP2_DATE_PROMPT = `
 Extract ALLEEN ad_report_date (YYYY-MM-DD) uit dit arbeidsdeskundig rapport.

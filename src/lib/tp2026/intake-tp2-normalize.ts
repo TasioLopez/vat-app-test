@@ -140,30 +140,36 @@ export function normalizeTp2ExtractedData(
 
   if (out.occupational_doctor_org != null) {
     const primaryRaw = String(out.occupational_doctor_org);
-    const osvName = out.osv_doctor_name != null ? String(out.osv_doctor_name).trim() : '';
+    const osvNameRaw =
+      out.osv_doctor_name != null ? String(out.osv_doctor_name).trim() : '';
     const osvRole = normalizeDoctorRole(out.osv_doctor_role);
+    const hasRoleSignal = Boolean(doctorRole || osvRole || osvNameRaw);
 
     let formatted: string | undefined;
-    if (osvName && !/werkend onder supervisie van/i.test(primaryRaw)) {
-      formatted = buildSupervisiePhrase(primaryRaw, doctorRole, osvName, osvRole);
-    } else if (
-      /werkend onder supervisie van/i.test(primaryRaw) &&
-      doctorRole &&
-      !hasDoctorRolePrefix(expandDoctorRoleAbbreviations(primaryRaw.split(/\s+werkend onder supervisie van/i)[0] || ''))
-    ) {
-      // Rebuild titled supervisie when role is known but primary lacks a prefix.
-      const parts = expandDoctorRoleAbbreviations(primaryRaw)
+    if (hasRoleSignal) {
+      // Always rebuild from roles + names; do not trust a weak model phrase.
+      const expanded = expandDoctorRoleAbbreviations(primaryRaw)
         .replace(/\s+/g, ' ')
-        .trim()
-        .split(/\s+werkend onder supervisie van\s+/i);
+        .trim();
+      const parts = expanded.split(/\s+werkend onder supervisie van\s+/i);
       const primaryBare = stripLeadingDoctorRolePrefix((parts[0] || '').trim());
-      const supervisor = (parts[1] || '').trim();
-      formatted = buildSupervisiePhrase(
-        primaryBare,
-        doctorRole,
-        supervisor ? stripLeadingDoctorRolePrefix(supervisor) : osvName || null,
-        osvRole
-      );
+      const supervisorFromOrg = (parts[1] || '').trim();
+      const supervisorForPhrase = osvNameRaw
+        ? stripLeadingDoctorRolePrefix(
+            expandDoctorRoleAbbreviations(osvNameRaw).replace(/\s+/g, ' ').trim()
+          )
+        : supervisorFromOrg;
+
+      if (supervisorForPhrase) {
+        formatted = buildSupervisiePhrase(
+          primaryBare,
+          doctorRole,
+          supervisorForPhrase,
+          osvRole
+        );
+      } else {
+        formatted = formatOccupationalDoctorOrg(primaryBare, doctorRole);
+      }
     } else {
       formatted = formatOccupationalDoctorOrg(primaryRaw, doctorRole);
     }

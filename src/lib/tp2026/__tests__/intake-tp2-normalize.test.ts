@@ -4,6 +4,7 @@ import {
   formatOccupationalDoctorOrg,
   normalizeTp2ExtractedData,
 } from '../intake-tp2-normalize';
+import { resolveOccupationalDoctorLabel } from '@/lib/tp/format-context';
 
 describe('normalizeTp2ExtractedData — Calvin case dates', () => {
   it('normalizes Dutch dates to ISO', () => {
@@ -183,6 +184,26 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
       result.occupational_doctor_org,
       'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
     );
+  });
+
+  it('rebuilds Hippman weak vision phrase when Arts + OSV BA roles are present', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      doctor_role: 'Arts',
+      osv_doctor_name: 'K. Julien',
+      osv_doctor_role: 'BA',
+    });
+
+    assert.equal(
+      result.occupational_doctor_org,
+      'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+    assert.equal(
+      resolveOccupationalDoctorLabel(String(result.occupational_doctor_org)),
+      'Arts'
+    );
+    assert.equal(result.doctor_role, undefined);
+    assert.equal(result.osv_doctor_name, undefined);
   });
 
   it('rebuilds supervisie via formatOccupationalDoctorOrg when primary lacks prefix', () => {

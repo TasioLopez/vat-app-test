@@ -18,6 +18,7 @@ import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructur
 import {
   TP2_EXTRACTION_JSON_SCHEMA,
   parseTp2ExtractionResult,
+  validateTp2DoctorExtraction,
 } from '@/lib/document-analysis/schemas/tp2-extraction-schema';
 import {
   AD_REPORT_DATE_JSON_SCHEMA,
@@ -36,10 +37,6 @@ import {
   detectExWerknemerFromText,
   intakeTextHasExWerknemerLabel,
 } from '@/lib/tp/ex-werknemer-wording';
-import {
-  applyDoctorRolesFromText,
-  detectDoctorRolesFromText,
-} from '@/lib/tp/intake-doctor-roles';
 import {
   describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
@@ -78,6 +75,7 @@ type ExtractionSchemaConfig<T> = {
   parse: (raw: unknown) => T;
   instructions: string;
   userMessage: string;
+  validate?: (result: T) => { ok: boolean; errors: string[] };
 };
 
 async function extractFromDocument<T extends Record<string, unknown>>(
@@ -108,6 +106,7 @@ async function extractFromDocument<T extends Record<string, unknown>>(
       schemaName: config.schemaName,
       schema: config.schema,
       parse: config.parse,
+      validate: config.validate,
       pdfBuffer,
       analysisFilename,
       usePdfVision: true,
@@ -149,7 +148,7 @@ function applyIntakeCheckboxOverridesFromText(
 ): Record<string, unknown> {
   if (!plainText) return merged;
 
-  let next = { ...merged };
+  const next = { ...merged };
   const meta = describeIntakePlainText(plainText);
   console.log(
     `📋 TP2 checkbox plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
@@ -182,17 +181,6 @@ function applyIntakeCheckboxOverridesFromText(
         : null
   );
 
-  const doctorRoles = detectDoctorRolesFromText(plainText);
-  if (
-    doctorRoles.doctor_role ||
-    doctorRoles.osv_doctor_role ||
-    doctorRoles.primary_name ||
-    doctorRoles.osv_name
-  ) {
-    console.log('📋 TP2 doctor roles from text:', doctorRoles);
-  }
-  next = applyDoctorRolesFromText(next, doctorRoles);
-
   return next;
 }
 
@@ -211,6 +199,7 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
       parse: parseTp2ExtractionResult,
       instructions: INTAKE_TP2_PROMPT,
       userMessage: INTAKE_TP2_USER_MESSAGE,
+      validate: validateTp2DoctorExtraction,
     });
 
     const plainText = await loadIntakePlainText(intakeDoc);

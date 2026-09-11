@@ -91,6 +91,7 @@ export {
 export {
   TP2_EXTRACTION_JSON_SCHEMA,
   parseTp2ExtractionResult,
+  validateTp2DoctorExtraction,
   type Tp2ExtractionResult,
 } from './schemas/tp2-extraction-schema';
 export {
