@@ -172,6 +172,28 @@ describe('normalizeTp2ExtractedData — doctor fields', () => {
     assert.equal(result.osv_doctor_name, undefined);
     assert.equal(result.osv_doctor_role, undefined);
   });
+
+  it('rebuilds supervisie when doctor_role is set but primary lacks a title', () => {
+    const result = normalizeTp2ExtractedData({
+      occupational_doctor_org: 'P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      doctor_role: 'Arts',
+    });
+
+    assert.equal(
+      result.occupational_doctor_org,
+      'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+  });
+
+  it('rebuilds supervisie via formatOccupationalDoctorOrg when primary lacks prefix', () => {
+    assert.equal(
+      formatOccupationalDoctorOrg(
+        'P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+        'Arts'
+      ),
+      'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+  });
 });
 
 describe('normalizeTp2ExtractedData — ad_report_concept', () => {

@@ -7,6 +7,8 @@ import {
   DOCTOR_ROLE_PREFIXES,
   expandDoctorRoleAbbreviations,
   extractDoctorRolePrefix,
+  hasDoctorRolePrefix,
+  stripLeadingDoctorRolePrefix,
   type DoctorRole,
 } from '@/lib/tp/format-context';
 import { formatPersonShortName } from '@/lib/utils';
@@ -58,7 +60,21 @@ export function formatOccupationalDoctorOrg(
 
   let cleaned = expandDoctorRoleAbbreviations(raw.trim()).replace(/\s+/g, ' ').trim();
   if (/werkend onder supervisie van/i.test(cleaned)) {
-    return cleaned;
+    // Expand BA/VA, and ensure primary has a title when doctor_role is known.
+    const parts = cleaned.split(/\s+werkend onder supervisie van\s+/i);
+    const primaryPart = (parts[0] || '').trim();
+    const supervisorPart = (parts[1] || '').trim();
+    if (!primaryPart) return cleaned;
+
+    let primary = primaryPart;
+    if (role && ROLE_PREFIX[role] && !hasDoctorRolePrefix(primary)) {
+      primary = `${ROLE_PREFIX[role]} ${stripLeadingDoctorRolePrefix(primary)}`.trim();
+    } else {
+      primary = expandDoctorRoleAbbreviations(primary);
+    }
+
+    if (!supervisorPart) return primary;
+    return `${primary} werkend onder supervisie van ${supervisorPart}`;
   }
 
   cleaned = cleaned.replace(/\s*-?\s*BIG\s*(nr\.?|nummer)?\s*[\d\s]+/gi, '');
@@ -130,6 +146,24 @@ export function normalizeTp2ExtractedData(
     let formatted: string | undefined;
     if (osvName && !/werkend onder supervisie van/i.test(primaryRaw)) {
       formatted = buildSupervisiePhrase(primaryRaw, doctorRole, osvName, osvRole);
+    } else if (
+      /werkend onder supervisie van/i.test(primaryRaw) &&
+      doctorRole &&
+      !hasDoctorRolePrefix(expandDoctorRoleAbbreviations(primaryRaw.split(/\s+werkend onder supervisie van/i)[0] || ''))
+    ) {
+      // Rebuild titled supervisie when role is known but primary lacks a prefix.
+      const parts = expandDoctorRoleAbbreviations(primaryRaw)
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(/\s+werkend onder supervisie van\s+/i);
+      const primaryBare = stripLeadingDoctorRolePrefix((parts[0] || '').trim());
+      const supervisor = (parts[1] || '').trim();
+      formatted = buildSupervisiePhrase(
+        primaryBare,
+        doctorRole,
+        supervisor ? stripLeadingDoctorRolePrefix(supervisor) : osvName || null,
+        osvRole
+      );
     } else {
       formatted = formatOccupationalDoctorOrg(primaryRaw, doctorRole);
     }

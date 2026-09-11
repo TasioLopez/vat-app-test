@@ -37,6 +37,10 @@ import {
   intakeTextHasExWerknemerLabel,
 } from '@/lib/tp/ex-werknemer-wording';
 import {
+  applyDoctorRolesFromText,
+  detectDoctorRolesFromText,
+} from '@/lib/tp/intake-doctor-roles';
+import {
   describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
@@ -139,30 +143,57 @@ async function loadIntakePlainText(intakeDoc: DocRow): Promise<string | null> {
   }
 }
 
-async function resolveConceptFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
-  const plainText = await loadIntakePlainText(intakeDoc);
-  if (!plainText) return null;
+function applyIntakeCheckboxOverridesFromText(
+  merged: Record<string, unknown>,
+  plainText: string | null
+): Record<string, unknown> {
+  if (!plainText) return merged;
 
+  let next = { ...merged };
   const meta = describeIntakePlainText(plainText);
   console.log(
-    `📋 TP2 Concept plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
+    `📋 TP2 checkbox plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
   );
 
-  const detected = detectAdReportConceptFromText(plainText);
-  if (detected !== null) return detected;
-  // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
-  if (meta.hasConcept) return false;
-  return null;
-}
+  const conceptFromText = detectAdReportConceptFromText(plainText);
+  if (conceptFromText !== null) {
+    console.log(`📋 TP2 Concept checkbox from text: ${conceptFromText}`);
+  } else if (meta.hasConcept) {
+    // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
+    console.log('📋 TP2 Concept label without glyph → false');
+  }
+  next.ad_report_concept = applyAdReportConceptFromText(
+    next.ad_report_concept,
+    conceptFromText !== null ? conceptFromText : meta.hasConcept ? false : null
+  );
 
-async function resolveExWerknemerFromIntakeText(intakeDoc: DocRow): Promise<boolean | null> {
-  const plainText = await loadIntakePlainText(intakeDoc);
-  if (!plainText) return null;
+  const exWerknemerFromText = detectExWerknemerFromText(plainText);
+  if (exWerknemerFromText !== null) {
+    console.log(`📋 TP2 Ex-werknemer checkbox from text: ${exWerknemerFromText}`);
+  } else if (intakeTextHasExWerknemerLabel(plainText)) {
+    console.log('📋 TP2 Ex-werknemer label without glyph → false');
+  }
+  next.is_ex_werknemer = applyExWerknemerFromText(
+    next.is_ex_werknemer,
+    exWerknemerFromText !== null
+      ? exWerknemerFromText
+      : intakeTextHasExWerknemerLabel(plainText)
+        ? false
+        : null
+  );
 
-  const detected = detectExWerknemerFromText(plainText);
-  if (detected !== null) return detected;
-  if (intakeTextHasExWerknemerLabel(plainText)) return false;
-  return null;
+  const doctorRoles = detectDoctorRolesFromText(plainText);
+  if (
+    doctorRoles.doctor_role ||
+    doctorRoles.osv_doctor_role ||
+    doctorRoles.primary_name ||
+    doctorRoles.osv_name
+  ) {
+    console.log('📋 TP2 doctor roles from text:', doctorRoles);
+  }
+  next = applyDoctorRolesFromText(next, doctorRoles);
+
+  return next;
 }
 
 async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unknown>> {
@@ -182,24 +213,8 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
       userMessage: INTAKE_TP2_USER_MESSAGE,
     });
 
-    // Deterministic Concept ☐/☒ wins over model (prevents false-positive concept).
-    const conceptFromText = await resolveConceptFromIntakeText(intakeDoc);
-    if (conceptFromText !== null) {
-      console.log(`📋 TP2 Concept checkbox from text: ${conceptFromText}`);
-    }
-    merged.ad_report_concept = applyAdReportConceptFromText(
-      merged.ad_report_concept,
-      conceptFromText
-    );
-
-    const exWerknemerFromText = await resolveExWerknemerFromIntakeText(intakeDoc);
-    if (exWerknemerFromText !== null) {
-      console.log(`📋 TP2 Ex-werknemer checkbox from text: ${exWerknemerFromText}`);
-    }
-    merged.is_ex_werknemer = applyExWerknemerFromText(
-      merged.is_ex_werknemer,
-      exWerknemerFromText
-    );
+    const plainText = await loadIntakePlainText(intakeDoc);
+    merged = applyIntakeCheckboxOverridesFromText(merged, plainText);
   } else {
     console.log('⚠️ No intake document found for TP2 extraction');
   }
