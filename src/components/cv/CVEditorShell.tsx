@@ -27,6 +27,7 @@ import {
 import { useCV } from '@/context/CVContext';
 import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
+import CvToolbarScroll from '@/components/cv/CvToolbarScroll';
 import { ExportCVButton } from '@/components/cv/ExportCVButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
 import { CV_FONT_OPTIONS, coerceCvFontId } from '@/lib/cv/font-options';
@@ -284,8 +285,8 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             </div>
           </div>
 
-          <div
-            className="-mx-1 flex min-h-0 flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden border-t border-gray-100 px-1 pt-1.5 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          <CvToolbarScroll
+            className="border-t border-gray-100"
             role="toolbar"
             aria-label="CV-werkbalk"
           >
@@ -531,7 +532,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
                 />
               )}
             </div>
-          </div>
+          </CvToolbarScroll>
         </div>
         {activeShare ? (
           <div className="flex flex-wrap items-center gap-2 border-t border-amber-100 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
