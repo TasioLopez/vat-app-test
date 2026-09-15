@@ -5,7 +5,10 @@ import {
   ensureIntakeShape,
   INTAKE_LAYOUT_KEY,
 } from '@/lib/intake/schema';
-import { mergeExtractionsIntoIntake } from '@/lib/intake/merge-extractions';
+import {
+  ageFromDateOfBirth,
+  mergeExtractionsIntoIntake,
+} from '@/lib/intake/merge-extractions';
 import { intakeToGegevensFields } from '@/lib/intake/project';
 import { tp3DetailsFromValidatedIntake } from '@/lib/intake/tp-hydrate';
 import { isStagingEnv, assertStagingOnly } from '@/lib/auth/staging-only';
@@ -57,6 +60,51 @@ describe('mergeExtractionsIntoIntake', () => {
     assert.equal(merged.s6.fml_izp_lab_kind, 'fml');
     assert.equal(merged.s6.is_ex_werknemer, true);
     assert.match(merged.s3.korte_beschrijving_werkzaamheden, /Als Beveiliger/);
+  });
+
+  it('merges Hippman-like age, city, email and doctor roles', () => {
+    const merged = mergeExtractionsIntoIntake(createEmptyIntakeData(), {
+      core: {
+        age: 32,
+        gender: 'Vrouw',
+        city: 'Amersfoort',
+        email: 'Gloria.hippman94@outlook.com',
+        date_of_birth: '1994-03-18',
+      },
+      tp2: {
+        doctor_role: 'Arts',
+        osv_doctor_role: 'BA',
+        osv_doctor_name: 'K. Julien',
+        occupational_doctor_org:
+          'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+        occupational_doctor_name: 'S. Kowalski',
+      },
+    });
+
+    assert.equal(merged.s2.age, '32');
+    assert.equal(merged.s2.city, 'Amersfoort');
+    assert.equal(merged.s2.email, 'Gloria.hippman94@outlook.com');
+    assert.equal(merged.s6.doctor_role, 'Arts');
+    assert.equal(merged.s6.osv_doctor_role, 'BA');
+    assert.equal(merged.s6.osv_doctor_name, 'K. Julien');
+    assert.equal(merged.s6.occupational_doctor_name, 'P. Mort');
+    assert.equal(merged.s6.occupational_doctor_ad_name, 'S. Kowalski');
+  });
+
+  it('derives age from DOB and doctor roles from org when missing', () => {
+    const merged = mergeExtractionsIntoIntake(createEmptyIntakeData(), {
+      core: { date_of_birth: '1994-03-18' },
+      tp2: {
+        occupational_doctor_org:
+          'Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien',
+      },
+    });
+
+    assert.equal(merged.s2.age, ageFromDateOfBirth('1994-03-18'));
+    assert.equal(merged.s6.doctor_role, 'Arts');
+    assert.equal(merged.s6.osv_doctor_role, 'BA');
+    assert.equal(merged.s6.occupational_doctor_name, 'P. Mort');
+    assert.equal(merged.s6.osv_doctor_name, 'K. Julien');
   });
 });
 

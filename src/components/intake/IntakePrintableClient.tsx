@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ensureIntakeShape, INTAKE_SECTION_DEFS, type IntakeData } from '@/lib/intake/schema';
+import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 
 function Row({ label, value }: { label: string; value: string }) {
   if (!value?.trim()) return null;
@@ -51,10 +52,12 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
       className="intake-print-root mx-auto bg-white text-[11pt] leading-snug text-gray-900"
       style={{ width: '210mm', minHeight: '297mm', padding: '14mm 16mm' }}
     >
-      <header className="mb-6">
+      <header className="mb-4">
         <h1 className="text-xl font-bold">Intakeformulier</h1>
         <p className="text-sm text-gray-600">{intake.s1.employee_name || '—'}</p>
       </header>
+
+      <IntakeDossierHeader data={intake} />
 
       <SectionBlock title={titleFor('s1')}>
         <Row label="Naam werknemer" value={intake.s1.employee_name} />
@@ -62,14 +65,14 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
       </SectionBlock>
 
       <SectionBlock title={titleFor('s2')}>
-        <Row label="Leeftijd" value={intake.s2.age} />
-        <Row label="Geslacht" value={intake.s2.gender} />
+        <Row label="Leeftijd werknemer" value={intake.s2.age} />
+        <Row label="Geslacht werknemer" value={intake.s2.gender} />
         <Row label="Functietitel" value={intake.s2.current_job} />
-        <Row label="Werkgever" value={intake.s2.employer} />
-        <Row label="Urenomvang" value={intake.s2.contract_hours} />
+        <Row label="Werkgever/organisatie" value={intake.s2.employer} />
+        <Row label="Urenomvang functie (per week)" value={intake.s2.contract_hours} />
         <Row label="Woonplaats" value={intake.s2.city} />
-        <Row label="Telefoon" value={intake.s2.phone} />
-        <Row label="Email" value={intake.s2.email} />
+        <Row label="Telefoonnummer werknemer" value={intake.s2.phone} />
+        <Row label="Email werknemer" value={intake.s2.email} />
         <Row label="Andere werkgever" value={intake.s2.other_employers} />
       </SectionBlock>
 
@@ -121,33 +124,6 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
       </SectionBlock>
 
       <SectionBlock title={titleFor('s6')}>
-        <Row label="Geboortedatum" value={intake.s6.date_of_birth} />
-        <Row label="Weken" value={intake.s6.weken} />
-        <Row label="Aanmelddatum" value={intake.s6.registration_date} />
-        <Row label="Startdatum" value={intake.s6.tp_start_date} />
-        <Row
-          label="Datum FML/IZP"
-          value={[intake.s6.fml_izp_lab_kind?.toUpperCase(), intake.s6.fml_izp_lab_date]
-            .filter(Boolean)
-            .join(' ')}
-        />
-        <Row label="Einddatum" value={intake.s6.tp_end_date} />
-        <Row
-          label="Arts"
-          value={[intake.s6.doctor_role, intake.s6.occupational_doctor_name]
-            .filter(Boolean)
-            .join(' ')}
-        />
-        <Row label="Datum AD-rapport" value={intake.s6.ad_report_date} />
-        <BoolRow label="Concept" value={intake.s6.ad_report_concept} />
-        <Row
-          label="OSV"
-          value={[intake.s6.osv_doctor_role, intake.s6.osv_doctor_name]
-            .filter(Boolean)
-            .join(' ')}
-        />
-        <Row label="Naam AD" value={intake.s6.occupational_doctor_ad_name} />
-        <BoolRow label="Ex-werknemer" value={intake.s6.is_ex_werknemer} />
         <Row label="Actief spoor 1" value={intake.s6.actief_spoor1} />
         <Row label="Eigen/aangepast werk" value={intake.s6.eigen_of_aangepast_werk} />
         <Row label="Uren werkzaam" value={intake.s6.uren_werkzaam} />

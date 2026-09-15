@@ -15,6 +15,79 @@ function fillIfEmpty(current: string, next: unknown): string {
   return str(next);
 }
 
+/** Map Dutch title / abbreviation to intake doctor_role enum. */
+export function titleToDoctorRole(title: string): string {
+  const t = title.trim().toLowerCase();
+  if (t === 'arts') return 'Arts';
+  if (t === 'anios') return 'Anios';
+  if (t === 'aios') return 'Aios';
+  if (t === 'ba' || t === 'bedrijfsarts') return 'BA';
+  if (t === 'va' || t === 'verzekeringsarts') return 'VA';
+  return '';
+}
+
+const TITLE_PREFIX_RE =
+  /^(Arts|Anios|Aios|Bedrijfsarts|Verzekeringsarts|BA|VA)\b/i;
+
+/** Derive integer age string from YYYY-MM-DD (or DD-MM-YYYY) as of today. */
+export function ageFromDateOfBirth(dob: string, now = new Date()): string {
+  const raw = dob.trim();
+  if (!raw) return '';
+  let y: number;
+  let m: number;
+  let d: number;
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const nl = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (iso) {
+    y = Number(iso[1]);
+    m = Number(iso[2]);
+    d = Number(iso[3]);
+  } else if (nl) {
+    d = Number(nl[1]);
+    m = Number(nl[2]);
+    y = Number(nl[3]);
+  } else {
+    return '';
+  }
+  if (!y || !m || !d) return '';
+  let age = now.getFullYear() - y;
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  if (month < m || (month === m && day < d)) age -= 1;
+  if (age < 0 || age > 120) return '';
+  return String(age);
+}
+
+/** Fill doctor_role / osv_* from occupational_doctor_org when missing. */
+export function enrichDoctorRolesFromOrg(data: IntakeData, orgRaw: unknown): void {
+  if (typeof orgRaw !== 'string' || !orgRaw.trim()) return;
+  const org = orgRaw.trim();
+  const primaryPart = org.replace(/\s+werkend onder supervisie van.*/i, '').trim();
+  const osvMatch = org.match(/\bwerkend onder supervisie van\s+(.+)$/i);
+  const osvPart = osvMatch?.[1]?.trim() || '';
+
+  if (!data.s6.occupational_doctor_name) {
+    const withoutRole = primaryPart.replace(TITLE_PREFIX_RE, '').trim();
+    data.s6.occupational_doctor_name = withoutRole || primaryPart;
+  }
+
+  if (!data.s6.doctor_role) {
+    const m = primaryPart.match(TITLE_PREFIX_RE);
+    if (m) data.s6.doctor_role = titleToDoctorRole(m[1]);
+  }
+
+  if (osvPart) {
+    if (!data.s6.osv_doctor_name) {
+      const withoutRole = osvPart.replace(TITLE_PREFIX_RE, '').trim();
+      data.s6.osv_doctor_name = withoutRole || osvPart;
+    }
+    if (!data.s6.osv_doctor_role) {
+      const m = osvPart.match(TITLE_PREFIX_RE);
+      if (m) data.s6.osv_doctor_role = titleToDoctorRole(m[1]);
+    }
+  }
+}
+
 /** Merge flat extraction results (core, algemene, tp2, sectie3/5/7, narrative) into IntakeData. */
 export function mergeExtractionsIntoIntake(
   base: unknown,
@@ -43,10 +116,13 @@ export function mergeExtractionsIntoIntake(
   if (parts.employeeName) data.s1.employee_name = fillIfEmpty(data.s1.employee_name, parts.employeeName);
   data.s1.intake_date = fillIfEmpty(data.s1.intake_date, tp2.intake_date);
 
+  data.s2.age = fillIfEmpty(data.s2.age, numToStr(core.age));
   data.s2.gender = fillIfEmpty(data.s2.gender, core.gender);
   data.s2.current_job = fillIfEmpty(data.s2.current_job, core.current_job);
   data.s2.contract_hours = fillIfEmpty(data.s2.contract_hours, numToStr(core.contract_hours));
+  data.s2.city = fillIfEmpty(data.s2.city, core.city);
   data.s2.phone = fillIfEmpty(data.s2.phone, core.phone);
+  data.s2.email = fillIfEmpty(data.s2.email, core.email);
   data.s2.other_employers = fillIfEmpty(data.s2.other_employers, core.other_employers);
   if (parts.employer) data.s2.employer = fillIfEmpty(data.s2.employer, parts.employer);
 
@@ -87,11 +163,11 @@ export function mergeExtractionsIntoIntake(
     data.s6.occupational_doctor_ad_name,
     tp2.occupational_doctor_name
   );
-  // Primary doctor name from org string is imperfect; keep org parse light
-  if (!data.s6.occupational_doctor_name && typeof tp2.occupational_doctor_org === 'string') {
-    const org = tp2.occupational_doctor_org.replace(/\s+werkend onder supervisie van.*/i, '').trim();
-    const withoutRole = org.replace(/^(Arts|Anios|Aios|Bedrijfsarts|Verzekeringsarts|BA|VA)\s+/i, '');
-    data.s6.occupational_doctor_name = withoutRole || org;
+
+  enrichDoctorRolesFromOrg(data, tp2.occupational_doctor_org);
+
+  if (!data.s2.age.trim() && data.s6.date_of_birth) {
+    data.s2.age = ageFromDateOfBirth(data.s6.date_of_birth);
   }
 
   data.s7.ad_auteur = fillIfEmpty(data.s7.ad_auteur, s7.ad_auteur);

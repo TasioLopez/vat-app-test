@@ -8,8 +8,7 @@ import {
   DUTCH_LANGUAGE_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
 } from '@/lib/tp2026/gegevens-field-options';
-
-const DOCTOR_ROLES = ['Arts', 'Anios', 'Aios', 'BA', 'VA'] as const;
+import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 
 type FieldProps = {
   label: string;
@@ -60,27 +59,6 @@ function Checkbox({
       />
       {label}
     </label>
-  );
-}
-
-function RoleCheckboxes({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-3">
-      {DOCTOR_ROLES.map((role) => (
-        <Checkbox
-          key={role}
-          label={role}
-          checked={value === role}
-          onChange={(checked) => onChange(checked ? role : '')}
-        />
-      ))}
-    </div>
   );
 }
 
@@ -270,109 +248,6 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
               onChange={(v) => patch('s5', { behandeling: v })}
               multiline
             />
-
-            {/* Perfectview dossier grid (stored on s6) */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-gray-800">Re-integratiegegevens</p>
-                <Checkbox
-                  label="Ex-werknemer"
-                  checked={data.s6.is_ex_werknemer}
-                  onChange={(v) => patch('s6', { is_ex_werknemer: v })}
-                />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field
-                  label="Geboortedatum"
-                  value={data.s6.date_of_birth}
-                  onChange={(v) => patch('s6', { date_of_birth: v })}
-                />
-                <Field
-                  label="Weken"
-                  value={data.s6.weken}
-                  onChange={(v) => patch('s6', { weken: v })}
-                />
-                <Field
-                  label="Aanmelddatum"
-                  value={data.s6.registration_date}
-                  onChange={(v) => patch('s6', { registration_date: v })}
-                />
-                <Field
-                  label="Startdatum"
-                  value={data.s6.tp_start_date}
-                  onChange={(v) => patch('s6', { tp_start_date: v })}
-                />
-                <div className="space-y-2">
-                  <Field
-                    label="Datum FML/IZP"
-                    value={data.s6.fml_izp_lab_date}
-                    onChange={(v) => patch('s6', { fml_izp_lab_date: v })}
-                  />
-                  <div className="flex flex-wrap gap-3">
-                    <Checkbox
-                      label="FML"
-                      checked={data.s6.fml_izp_lab_kind === 'fml'}
-                      onChange={(checked) =>
-                        patch('s6', { fml_izp_lab_kind: checked ? 'fml' : '' })
-                      }
-                    />
-                    <Checkbox
-                      label="IZP"
-                      checked={data.s6.fml_izp_lab_kind === 'izp'}
-                      onChange={(checked) =>
-                        patch('s6', { fml_izp_lab_kind: checked ? 'izp' : '' })
-                      }
-                    />
-                  </div>
-                </div>
-                <Field
-                  label="Einddatum"
-                  value={data.s6.tp_end_date}
-                  onChange={(v) => patch('s6', { tp_end_date: v })}
-                />
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Naam Arts / Anios / Aios / BA / VA</p>
-                  <RoleCheckboxes
-                    value={data.s6.doctor_role}
-                    onChange={(v) => patch('s6', { doctor_role: v })}
-                  />
-                  <Field
-                    label="Naam"
-                    value={data.s6.occupational_doctor_name}
-                    onChange={(v) => patch('s6', { occupational_doctor_name: v })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Field
-                    label="Datum AD-rapport"
-                    value={data.s6.ad_report_date}
-                    onChange={(v) => patch('s6', { ad_report_date: v })}
-                  />
-                  <Checkbox
-                    label="Concept"
-                    checked={data.s6.ad_report_concept}
-                    onChange={(v) => patch('s6', { ad_report_concept: v })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">OSV Arts / Anios / Aios / BA / VA</p>
-                  <RoleCheckboxes
-                    value={data.s6.osv_doctor_role}
-                    onChange={(v) => patch('s6', { osv_doctor_role: v })}
-                  />
-                  <Field
-                    label="Naam OSV"
-                    value={data.s6.osv_doctor_name}
-                    onChange={(v) => patch('s6', { osv_doctor_name: v })}
-                  />
-                </div>
-                <Field
-                  label="Naam AD"
-                  value={data.s6.occupational_doctor_ad_name}
-                  onChange={(v) => patch('s6', { occupational_doctor_ad_name: v })}
-                />
-              </div>
-            </div>
           </div>
         );
       case 's6':
@@ -588,6 +463,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
 
   return (
     <div className="space-y-10 pb-16">
+      <IntakeDossierHeader data={data} onPatchS6={(p) => patch('s6', p)} />
       {INTAKE_SECTION_DEFS.map((def) => (
         <section
           key={def.key}
