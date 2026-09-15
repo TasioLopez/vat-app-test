@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Check,
   ChevronLeft,
-  ChevronRight,
   FileUp,
   Loader2,
   Save,
@@ -20,7 +19,11 @@ import {
   useIntakeInstance,
 } from '@/context/IntakeInstanceContext';
 import { IntakeSectionEditor } from '@/components/intake/IntakeSectionEditor';
-import { INTAKE_SECTION_DEFS, ensureIntakeShape } from '@/lib/intake/schema';
+import {
+  INTAKE_SECTION_DEFS,
+  ensureIntakeShape,
+  type IntakeSectionKey,
+} from '@/lib/intake/schema';
 import { AutofillProgressOverlay } from '@/components/ui/AutofillProgressOverlay';
 
 type Props = {
@@ -41,11 +44,48 @@ function IntakeBuilderInner({
   const { intakeData, replaceIntakeData, isDirty, markSaved, validatedAt, setValidatedAt } =
     useIntakeInstance();
   const { showSuccess, showError } = useToastHelpers();
-  const [stepIndex, setStepIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<IntakeSectionKey>(
+    INTAKE_SECTION_DEFS[0].key
+  );
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const section = INTAKE_SECTION_DEFS[stepIndex];
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+
+    const sections = INTAKE_SECTION_DEFS.map((s) =>
+      document.getElementById(`intake-sec-${s.key}`)
+    ).filter((el): el is HTMLElement => Boolean(el));
+
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const top = visible[0];
+        if (!top?.target?.id) return;
+        const key = top.target.id.replace(/^intake-sec-/, '') as IntakeSectionKey;
+        if (INTAKE_SECTION_DEFS.some((s) => s.key === key)) {
+          setActiveSection(key);
+        }
+      },
+      { root, rootMargin: '-10% 0px -55% 0px', threshold: [0.1, 0.25, 0.5] }
+    );
+
+    for (const el of sections) observer.observe(el);
+    return () => observer.disconnect();
+  }, [intakeData]);
+
+  const scrollToSection = useCallback((key: IntakeSectionKey) => {
+    const el = document.getElementById(`intake-sec-${key}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(key);
+  }, []);
 
   const persist = useCallback(
     async (opts?: { validate?: boolean }) => {
@@ -172,27 +212,24 @@ function IntakeBuilderInner({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
       {busyLabel ? (
-        <div className="relative min-h-[200px]">
-          <AutofillProgressOverlay
-            progress={{ currentLabel: busyLabel, currentIndex: 0, total: 1 }}
-            title="Bezig…"
-          />
-        </div>
+        <AutofillProgressOverlay
+          progress={{ currentLabel: busyLabel, currentIndex: 0, total: 1 }}
+          title="Bezig…"
+        />
       ) : null}
 
-      <div className="shrink-0 border-b border-border bg-white px-6 py-3">
+      <div className="sticky top-0 z-20 shrink-0 border-b border-border bg-white px-6 py-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="truncate text-xl font-bold text-gray-900">Intakeformulier</h1>
             <p className="text-sm text-gray-600">
-              Sectie {stepIndex + 1} van {INTAKE_SECTION_DEFS.length}
               {validatedAt ? (
-                <span className="ml-2 text-emerald-700">· Gevalideerd</span>
+                <span className="text-emerald-700">Gevalideerd</span>
               ) : (
-                <span className="ml-2 text-amber-700">· Concept</span>
+                <span className="text-amber-700">Concept</span>
               )}
             </p>
           </div>
@@ -204,25 +241,6 @@ function IntakeBuilderInner({
             >
               <ChevronLeft className="mr-1 h-4 w-4" />
               Werknemer
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              disabled={stepIndex === 0}
-              onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              className="h-8 w-8"
-              disabled={stepIndex >= INTAKE_SECTION_DEFS.length - 1}
-              onClick={() =>
-                setStepIndex((i) => Math.min(INTAKE_SECTION_DEFS.length - 1, i + 1))
-              }
-            >
-              <ChevronRight className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => void onImport()} disabled={!!busyLabel}>
               <FileUp className="mr-1 h-4 w-4" />
@@ -251,16 +269,16 @@ function IntakeBuilderInner({
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <nav className="hidden w-64 shrink-0 overflow-y-auto border-r bg-gray-50 p-3 md:block">
           <ul className="space-y-1">
-            {INTAKE_SECTION_DEFS.map((s, i) => (
+            {INTAKE_SECTION_DEFS.map((s) => (
               <li key={s.key}>
                 <button
                   type="button"
                   className={`w-full rounded-md px-2 py-1.5 text-left text-sm ${
-                    i === stepIndex
+                    activeSection === s.key
                       ? 'bg-purple-100 font-medium text-purple-900'
                       : 'text-gray-700 hover:bg-white'
                   }`}
-                  onClick={() => setStepIndex(i)}
+                  onClick={() => scrollToSection(s.key)}
                 >
                   {s.title}
                 </button>
@@ -269,7 +287,7 @@ function IntakeBuilderInner({
           </ul>
         </nav>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-6">
           {intakeData.meta.conflicts.length > 0 ? (
             <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               <p className="font-medium">Conflicten bij generatie</p>
@@ -284,7 +302,6 @@ function IntakeBuilderInner({
           ) : null}
           <IntakeSectionEditor
             data={intakeData}
-            activeSection={section.key}
             onChange={(next) => replaceIntakeData(ensureIntakeShape(next))}
           />
         </div>
