@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS public.clients (
   name text NOT NULL,
   industry text,
   contact_email text,
+  phone text,
+  plaats text,
   referent_first_name text,
   referent_last_name text,
   referent_email text,

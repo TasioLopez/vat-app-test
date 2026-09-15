@@ -5,6 +5,7 @@
 --   1) 20260910213000_add_fml_izp_lab_kind.sql
 --   2) 20260915190000_fix_users_role_check_back_office.sql
 --   3) 20260915220000_intake_instances_and_exports.sql
+--   4) 20260915223000_add_clients_phone_plaats.sql
 --
 -- Safe to re-run (IF NOT EXISTS / DROP IF EXISTS where needed).
 -- Do NOT run on production until explicitly approved.
@@ -16,6 +17,14 @@
 
 ALTER TABLE public.tp_meta
   ADD COLUMN IF NOT EXISTS fml_izp_lab_kind text;
+
+-- ---------------------------------------------------------------------------
+-- 1b) clients.phone + clients.plaats (werkgever UI)
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS phone text,
+  ADD COLUMN IF NOT EXISTS plaats text;
 
 -- ---------------------------------------------------------------------------
 -- 2) Ensure users.role CHECK allows back_office

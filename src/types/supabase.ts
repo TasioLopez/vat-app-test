@@ -21,6 +21,8 @@ export type Database = {
           id: string
           industry: string | null
           name: string
+          phone: string | null
+          plaats: string | null
           referent_email: string | null
           referent_first_name: string | null
           referent_last_name: string | null
@@ -33,6 +35,8 @@ export type Database = {
           id?: string
           industry?: string | null
           name: string
+          phone?: string | null
+          plaats?: string | null
           referent_email?: string | null
           referent_first_name?: string | null
           referent_last_name?: string | null
@@ -45,6 +49,8 @@ export type Database = {
           id?: string
           industry?: string | null
           name?: string
+          phone?: string | null
+          plaats?: string | null
           referent_email?: string | null
           referent_first_name?: string | null
           referent_last_name?: string | null
