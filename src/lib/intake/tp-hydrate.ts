@@ -9,6 +9,7 @@ import {
   hasIntakeFunctieCategories,
   hasIntakePassendeFunctiesQuote,
 } from '@/lib/tp/intake-sectie7/build-fields';
+import type { IntakeSectie7Content } from '@/lib/tp/intake-sectie7/schema';
 
 export type ValidatedIntakeRecord = {
   id: string;
@@ -127,11 +128,12 @@ export function tp3DetailsFromValidatedIntake(
       return { praktische_belemmeringen: belemmeringen };
     }
     case 'advies_ad_passende_arbeid': {
-      const content = {
+      const content: IntakeSectie7Content = {
         quote_advies_spoor2: advies || null,
         quote_passende_functies: passende || null,
         functie_categorien: intake.s7.functie_categorien,
         ad_auteur: intake.s7.ad_auteur || null,
+        ad_datum_iso: intake.s6.ad_report_date || null,
       };
       if (
         !hasIntakeAdviesQuote(content) &&
