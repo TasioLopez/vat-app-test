@@ -316,6 +316,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [tpOpening, setTpOpening] = useState(false);
     const [vgrOpening, setVgrOpening] = useState(false);
+    const [intakeOpening, setIntakeOpening] = useState(false);
+    const isStagingApp = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
     const [customTransportDraft, setCustomTransportDraft] = useState('');
     const [customEducationDraft, setCustomEducationDraft] = useState('');
     const [educationAndereOpen, setEducationAndereOpen] = useState(false);
@@ -1159,6 +1161,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const openIntakeBuilder = async () => {
+        setIntakeOpening(true);
+        try {
+            setDocsModalOpen(false);
+            guardedRouter.push(`/dashboard/intake/${employeeId}`);
+        } catch (error) {
+            console.error(error);
+            showError('Fout', 'Kon Intake bouwer niet openen.');
+        } finally {
+            setIntakeOpening(false);
+        }
+    };
+
     return (
         <div className="p-4 space-y-6">
             <EmployeeUnsavedGuard
@@ -1474,7 +1489,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                                         <span className="font-semibold text-gray-900">Documenten maken</span>
                                         <span className="text-xs font-normal text-gray-600">
-                                            Trajectplan, VGR of CV openen
+                                            {isStagingApp
+                                                ? 'Intake, Trajectplan, VGR of CV openen'
+                                                : 'Trajectplan, VGR of CV openen'}
                                         </span>
                                     </span>
                                 </Button>
@@ -1489,6 +1506,28 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </p>
                                     </DialogHeader>
                                     <div className="flex flex-col gap-3 pt-1">
+                                        {isStagingApp ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => void openIntakeBuilder()}
+                                                disabled={intakeOpening}
+                                                className="group flex w-full items-center gap-4 rounded-xl border-2 border-teal-200 bg-gradient-to-r from-teal-50/90 to-white p-4 text-left transition-colors hover:border-teal-400 hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                            >
+                                                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800 group-hover:bg-teal-200">
+                                                    <FileText className="h-6 w-6" />
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block font-semibold text-gray-900">
+                                                        Intakeformulier
+                                                    </span>
+                                                    <span className="text-sm text-gray-600">
+                                                        {intakeOpening
+                                                            ? 'Openen…'
+                                                            : 'Eerste document — digitaal intakeformulier'}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        ) : null}
                                         <button
                                             type="button"
                                             onClick={() => void openTpBuilder()}
