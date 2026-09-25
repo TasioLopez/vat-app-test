@@ -17,6 +17,15 @@ export function formatOrgUserDisplayName(
   return name || user.email || 'Naamloos';
 }
 
+export function compareOrgUserDisplayName(
+  a: Pick<OrgDirectoryUser, 'first_name' | 'last_name' | 'email'>,
+  b: Pick<OrgDirectoryUser, 'first_name' | 'last_name' | 'email'>
+): number {
+  return formatOrgUserDisplayName(a).localeCompare(formatOrgUserDisplayName(b), 'nl', {
+    sensitivity: 'base',
+  });
+}
+
 export async function fetchOrgDirectory(
   supabase: SupabaseClient
 ): Promise<OrgDirectoryUser[]> {
@@ -25,7 +34,7 @@ export async function fetchOrgDirectory(
     console.error('list_org_users failed:', error);
     return [];
   }
-  return (data ?? []) as OrgDirectoryUser[];
+  return [...((data ?? []) as OrgDirectoryUser[])].sort(compareOrgUserDisplayName);
 }
 
 export function orgUsersById(users: OrgDirectoryUser[]): Map<string, OrgDirectoryUser> {

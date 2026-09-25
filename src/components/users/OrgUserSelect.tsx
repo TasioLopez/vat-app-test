@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import {
+  compareOrgUserDisplayName,
   fetchOrgDirectory,
   formatOrgUserDisplayName,
   type OrgDirectoryUser,
@@ -64,6 +65,10 @@ export function OrgUserSelect({
   }, [supabase, usersProp]);
 
   const selectValue = value || (allowNone ? NONE_VALUE : undefined);
+  const sortedUsers = useMemo(
+    () => [...users].sort(compareOrgUserDisplayName),
+    [users]
+  );
 
   return (
     <Select
@@ -97,7 +102,7 @@ export function OrgUserSelect({
             })()}
           </SelectItem>
         ) : null}
-        {users.map((u) => (
+        {sortedUsers.map((u) => (
           <SelectItem key={u.id} value={u.id}>
             {formatOrgUserDisplayName(u)}
           </SelectItem>
