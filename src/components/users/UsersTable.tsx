@@ -32,6 +32,7 @@ import {
   fetchAllPaged,
   hasUnrestrictedOrgAccess,
 } from "@/lib/users/effective-access";
+import { compareOrgUserDisplayName } from "@/lib/users/org-directory";
 import { Pencil, Trash2 } from "lucide-react";
 
 type User = {
@@ -58,6 +59,16 @@ type Employee = {
 
 function sortedIds(ids: string[] | undefined): string {
   return [...(ids || [])].sort().join(",");
+}
+
+function compareClientName(a: Client, b: Client): number {
+  return (a.name ?? "").localeCompare(b.name ?? "", "nl", { sensitivity: "base" });
+}
+
+function compareEmployeeDisplayName(a: Employee, b: Employee): number {
+  return `${a.first_name} ${a.last_name}`
+    .trim()
+    .localeCompare(`${b.first_name} ${b.last_name}`.trim(), "nl", { sensitivity: "base" });
 }
 
 export default function UsersTable() {
@@ -143,9 +154,9 @@ export default function UsersTable() {
             ),
           ]);
 
-        setUsers(userRows);
-        setClients(clientRows);
-        setEmployees(employeeRows);
+        setUsers([...userRows].sort(compareOrgUserDisplayName));
+        setClients([...clientRows].sort(compareClientName));
+        setEmployees([...employeeRows].sort(compareEmployeeDisplayName));
 
         const clientMap: Record<string, string[]> = {};
         for (const rel of userClientRows) {
@@ -317,14 +328,15 @@ export default function UsersTable() {
     return clients
       .filter((c) => c.name.toLowerCase().includes(q))
       .filter((c) => !selected.includes(c.id))
+      .sort(compareClientName)
       .slice(0, 50);
   }, [clients, editingId, userClients, editClientSearch]);
 
   const selectableEmployeesForEdit = useMemo(
     () =>
-      employees.filter(
-        (e) => e.client_id != null && selectedClientsForEdit.includes(e.client_id)
-      ),
+      employees
+        .filter((e) => e.client_id != null && selectedClientsForEdit.includes(e.client_id))
+        .sort(compareEmployeeDisplayName),
     [employees, selectedClientsForEdit]
   );
 
@@ -334,6 +346,7 @@ export default function UsersTable() {
     return selectableEmployeesForEdit
       .filter((e) => !assigned.includes(e.id))
       .filter((e) => `${e.first_name} ${e.last_name}`.toLowerCase().includes(q))
+      .sort(compareEmployeeDisplayName)
       .slice(0, 30);
   }, [selectableEmployeesForEdit, editingId, userEmployees, editEmployeeSearch]);
 
