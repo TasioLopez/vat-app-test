@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  normalizeReferentWritePayload,
   referentPayloadFromTpFields,
   referentPayloadHasContact,
 } from '../referents';
@@ -50,5 +51,24 @@ describe('referentPayloadFromTpFields', () => {
       ),
       true
     );
+  });
+});
+
+describe('normalizeReferentWritePayload', () => {
+  it('trims and normalizes form fields including functie', () => {
+    const payload = normalizeReferentWritePayload({
+      first_name: '  Glenn ',
+      last_name: ' Kuiper ',
+      phone: '0634379655',
+      email: ' g.kuiper@middin.nl ',
+      referent_function: ' Teammanager ',
+      gender: ' Man ',
+    });
+    assert.equal(payload.first_name, 'Glenn');
+    assert.equal(payload.last_name, 'Kuiper');
+    assert.equal(payload.phone, '06 - 34 37 96 55');
+    assert.equal(payload.email, 'g.kuiper@middin.nl');
+    assert.equal(payload.referent_function, 'Teammanager');
+    assert.equal(payload.gender, 'Man');
   });
 });

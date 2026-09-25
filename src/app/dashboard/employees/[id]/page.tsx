@@ -47,6 +47,7 @@ import { trackAccess } from '@/lib/tracking';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OrgUserSelect } from '@/components/users/OrgUserSelect';
+import { ReferentEditDialog } from '@/components/employee/ReferentEditDialog';
 import {
     AutofillProgressOverlay,
     type AutofillProgressState,
@@ -314,6 +315,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [docsModalOpen, setDocsModalOpen] = useState(false);
+    const [referentDialogOpen, setReferentDialogOpen] = useState(false);
+    const [referentDialogMode, setReferentDialogMode] = useState<'edit' | 'create'>('edit');
     const [tpOpening, setTpOpening] = useState(false);
     const [vgrOpening, setVgrOpening] = useState(false);
     const [customTransportDraft, setCustomTransportDraft] = useState('');
@@ -1277,32 +1280,61 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 {employee.client_id ? (
                                     <div className="space-y-1 min-w-0">
                                         <label className="text-sm text-gray-600">Contactpersoon</label>
-                                        <Select
-                                            value={employee.referent_id ?? '__none__'}
-                                            onValueChange={async (v) => {
-                                                const refId = v === '__none__' ? null : v;
-                                                setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
-                                                const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
-                                                if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
-                                                else {
-                                                    setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
-                                                    showSuccess('Contactpersoon bijgewerkt.');
-                                                }
-                                            }}
-                                        >
-                                            <SelectTrigger className={SELECT_CLASS}>
-                                                <SelectValue placeholder="— Geen / Default —" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="__none__">— Geen / Default —</SelectItem>
-                                                {referents.map((r) => (
-                                                    <SelectItem key={r.id} value={r.id}>
-                                                        {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
-                                                        {r.referent_function ? ` (${r.referent_function})` : ''}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Select
+                                                value={employee.referent_id ?? '__none__'}
+                                                onValueChange={async (v) => {
+                                                    const refId = v === '__none__' ? null : v;
+                                                    setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
+                                                    const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
+                                                    if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
+                                                    else {
+                                                        setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
+                                                        showSuccess('Contactpersoon bijgewerkt.');
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className={cn(SELECT_CLASS, 'min-w-0 flex-1')}>
+                                                    <SelectValue placeholder="— Geen / Default —" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">— Geen / Default —</SelectItem>
+                                                    {referents.map((r) => (
+                                                        <SelectItem key={r.id} value={r.id}>
+                                                            {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
+                                                            {r.referent_function ? ` (${r.referent_function})` : ''}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="shrink-0"
+                                                disabled={!employee.referent_id}
+                                                title="Contactpersoon bewerken"
+                                                onClick={() => {
+                                                    setReferentDialogMode('edit');
+                                                    setReferentDialogOpen(true);
+                                                }}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="shrink-0"
+                                                title="Nieuwe contactpersoon"
+                                                onClick={() => {
+                                                    setReferentDialogMode('create');
+                                                    setReferentDialogOpen(true);
+                                                }}
+                                            >
+                                                Nieuw
+                                            </Button>
+                                        </div>
                                     </div>
                                 ) : null}
                             </div>
@@ -2262,6 +2294,41 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     }}
                 />
             )}
+
+            {employee?.client_id ? (
+                <ReferentEditDialog
+                    open={referentDialogOpen}
+                    onOpenChange={setReferentDialogOpen}
+                    mode={referentDialogMode}
+                    clientId={employee.client_id}
+                    initial={
+                        referentDialogMode === 'edit' && employee.referent_id
+                            ? referents.find((r) => r.id === employee.referent_id) ?? null
+                            : null
+                    }
+                    onError={(message) => showError('Fout', message)}
+                    onSaved={async (referentId) => {
+                        await fetchReferents(employee.client_id);
+                        if (employee.referent_id === referentId) {
+                            showSuccess('Contactpersoon bijgewerkt.');
+                            return;
+                        }
+                        const { error } = await supabase
+                            .from('employees')
+                            .update({ referent_id: referentId })
+                            .eq('id', employeeId);
+                        if (error) {
+                            showError('Fout', 'Kon werknemer niet koppelen aan contactpersoon.');
+                            return;
+                        }
+                        setEmployee((prev) => (prev ? { ...prev, referent_id: referentId } : null));
+                        setSavedEmployeeSnapshot((prev) =>
+                            prev ? { ...prev, referent_id: referentId } : prev
+                        );
+                        showSuccess('Contactpersoon aangemaakt en gekoppeld.');
+                    }}
+                />
+            ) : null}
 
             <DocumentPreviewDialog
                 open={!!previewDoc}

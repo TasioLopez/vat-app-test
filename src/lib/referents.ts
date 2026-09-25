@@ -65,6 +65,80 @@ export function referentPayloadHasContact(payload: ReferentWritePayload): boolea
   return Boolean(payload.first_name || payload.last_name || payload.phone || payload.email);
 }
 
+/** Normalize free-form referent form fields for insert/update. */
+export function normalizeReferentWritePayload(input: {
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  referent_function?: string | null;
+  gender?: string | null;
+}): ReferentWritePayload {
+  return {
+    first_name: normalizePersonName(String(input.first_name ?? "").trim()) || null,
+    last_name: normalizePersonName(String(input.last_name ?? "").trim()) || null,
+    phone: normalizePhoneForStorage(input.phone),
+    email: String(input.email ?? "").trim() || null,
+    referent_function: String(input.referent_function ?? "").trim() || null,
+    gender: String(input.gender ?? "").trim() || null,
+  };
+}
+
+export async function updateReferentById(
+  supabase: SupabaseClient,
+  referentId: string,
+  payload: ReferentWritePayload
+): Promise<{ error?: string }> {
+  const { error } = await (supabase as any)
+    .from("referents")
+    .update({
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      phone: payload.phone,
+      email: payload.email,
+      referent_function: payload.referent_function ?? null,
+      gender: payload.gender ?? null,
+    })
+    .eq("id", referentId);
+  if (error) return { error: `referents: ${error.message}` };
+  return {};
+}
+
+export async function createReferentForClient(
+  supabase: SupabaseClient,
+  clientId: string,
+  payload: ReferentWritePayload,
+  options?: { isDefault?: boolean }
+): Promise<{ error?: string; referentId?: string }> {
+  let isDefault = options?.isDefault;
+  if (isDefault === undefined) {
+    const { data: existingList, error: listError } = await (supabase as any)
+      .from("referents")
+      .select("id")
+      .eq("client_id", clientId);
+    if (listError) return { error: `referents: ${listError.message}` };
+    isDefault = !existingList || existingList.length === 0;
+  }
+
+  const { data: created, error: insertError } = await (supabase as any)
+    .from("referents")
+    .insert({
+      client_id: clientId,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      phone: payload.phone,
+      email: payload.email,
+      referent_function: payload.referent_function ?? null,
+      gender: payload.gender ?? null,
+      is_default: isDefault,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) return { error: `referents: ${insertError.message}` };
+  return { referentId: created.id as string };
+}
+
 /**
  * Resolve referent for an employee: use employee.referent_id if set,
  * else the client's default referent (is_default = true). Returns null if none.
