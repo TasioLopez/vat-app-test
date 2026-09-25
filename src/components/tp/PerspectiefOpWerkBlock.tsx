@@ -13,7 +13,7 @@ import {
  */
 export function PerspectiefOpWerkBlock({ className = '' }: { className?: string }) {
   return (
-    <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
+    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       <p>{PERSPECTIEF_OP_WERK_MISSION}</p>
       <div className="mt-4">
         <BasisToelichtingHeading label="POW-meter™" />

@@ -465,7 +465,9 @@ function InleidingAtomPreview({
           <span className="text-[12px] text-neutral-600">— nog niet ingevuld —</span>
         ) : null}
         {atom.showAvgDisclaimer ? (
-          <p className="mt-3 text-[12px] font-semibold text-neutral-900">{avgDisclaimer}</p>
+          <div className="tp-body-prose">
+            <p className="mt-3 text-[12px] font-semibold text-neutral-900">{avgDisclaimer}</p>
+          </div>
         ) : null}
         {atom.showToelichting && sub ? (
           <div className="mt-4">
@@ -505,7 +507,9 @@ function TextBlockBody({
       <div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/pow-meter-v2.png" alt="PoW-meter" className="mt-1 w-full h-auto" />
-        <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+        <div className="tp-body-prose">
+          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+        </div>
       </div>
     );
   }
@@ -543,7 +547,9 @@ function TextBlockBody({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[200px] max-w-full" />
         </div>
-        <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+        <div className="tp-body-prose">
+          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+        </div>
       </div>
     );
   }

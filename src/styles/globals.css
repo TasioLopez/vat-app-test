@@ -88,9 +88,11 @@ body {
 }
 
 /* TP 2026: optional justified body prose (preview + print) */
-.tp-text-justified .tp-body-prose p,
-.tp-text-justified .tp-body-prose li {
+.tp-text-justified .tp-body-prose {
   text-align: justify;
+}
+.tp-text-justified .tp-body-prose :is(h1, h2, h3) {
+  text-align: left;
 }
 
 .page-content {
