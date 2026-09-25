@@ -46,7 +46,7 @@ export function AdviesPassendeArbeidBlock({
   const quote = quoteBlock.trim();
 
   return (
-    <div className={`text-[12px] leading-relaxed text-neutral-900 ${className}`}>
+    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
       {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{doc(intro)}</p> : null}
       {quote ? (
         <div className="mt-2 italic">

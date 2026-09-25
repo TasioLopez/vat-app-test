@@ -39,7 +39,7 @@ export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefine
 export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {
   const display = useDocumentText(subText.trim());
   return (
-    <ValentineZLogoBulletRow className="mt-2 text-[12px] leading-relaxed text-neutral-900">
+    <ValentineZLogoBulletRow className="tp-body-prose mt-2 text-[12px] leading-relaxed text-neutral-900">
       {display}
     </ValentineZLogoBulletRow>
   );

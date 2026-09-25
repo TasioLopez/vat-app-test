@@ -10,7 +10,7 @@ import { SectionBand, ValentineZLogoBulletRow } from '@/components/tp2026/primit
 import { TP2026_BORDER_BOX_CLASS } from '@/lib/tp2026/tp2026-colors';
 
 const paperText =
-  'bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
+  'tp-body-prose bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
 
 export function BasisAgreementBlock() {
   return (
@@ -89,26 +89,28 @@ export function BasisSignatureBlock({
           </SignatureCell>
           <div />
         </div>
-        <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
-          Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons
-          klachtenreglement op onze website{' '}
-          <a
-            href="https://www.valentinez.nl"
-            className="text-[#6d2a96] underline underline-offset-2"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            www.valentinez.nl
-          </a>
-          . Een papieren versie kunt u opvragen via 085 - 800 2010 of{' '}
-          <a
-            href="mailto:info@valentinez.nl"
-            className="text-[#6d2a96] underline underline-offset-2"
-          >
-            info@valentinez.nl
-          </a>
-          .
-        </p>
+        <div className="tp-body-prose">
+          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>
+            Voor alle volledige informatie verwijzen wij u graag naar ons privacyreglement en ons
+            klachtenreglement op onze website{' '}
+            <a
+              href="https://www.valentinez.nl"
+              className="text-[#6d2a96] underline underline-offset-2"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              www.valentinez.nl
+            </a>
+            . Een papieren versie kunt u opvragen via 085 - 800 2010 of{' '}
+            <a
+              href="mailto:info@valentinez.nl"
+              className="text-[#6d2a96] underline underline-offset-2"
+            >
+              info@valentinez.nl
+            </a>
+            .
+          </p>
+        </div>
       </div>
     </div>
   );
