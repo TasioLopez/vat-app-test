@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { canAccessUsersAdmin } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Gebruikers",
@@ -23,7 +24,7 @@ export default async function UsersLayout({ children }: { children: ReactNode })
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!row || row.role !== "admin") {
+  if (!row || !canAccessUsersAdmin(row.role)) {
     redirect("/dashboard");
   }
 
