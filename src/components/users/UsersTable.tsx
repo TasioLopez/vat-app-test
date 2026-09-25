@@ -26,7 +26,7 @@ import { SELECT_CLASS } from "@/lib/select-class";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFormDirty } from "@/hooks/useFormDirty";
 import ModalUnsavedGuard, { useGuardedModalClose } from "@/components/unsaved/ModalUnsavedGuard";
-import { roleLabel } from "@/lib/auth/roles";
+import { roleLabel, allowedRoleOptions, canChangeUserRole, canDeleteUsers } from "@/lib/auth/roles";
 import {
   buildEffectiveAccessMaps,
   fetchAllPaged,
@@ -89,6 +89,8 @@ export default function UsersTable() {
   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"werkgevers" | "werknemers" | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   const { effectiveClients, effectiveEmployees } = useMemo(
     () =>
@@ -127,6 +129,19 @@ export default function UsersTable() {
     const fetchAll = async () => {
       setLoadError(null);
       try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+        if (authUser) {
+          setCurrentUserId(authUser.id);
+          const { data: me } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", authUser.id)
+            .maybeSingle();
+          setCurrentUserRole(me?.role ?? null);
+        }
+
         const [userRows, clientRows, employeeRows, userClientRows, empUserRows] =
           await Promise.all([
             fetchAllPaged<User>(async (from, to) => {
@@ -179,10 +194,12 @@ export default function UsersTable() {
   }, []);
 
   const handleEdit = (user: User) => {
+    const seededClients = [...(effectiveClients[user.id] || [])];
     setEditingId(user.id);
     setEditedUser(user);
     setUserSnapshot({ ...user });
-    setClientsSnapshot([...(userClients[user.id] || [])]);
+    setUserClients((prev) => ({ ...prev, [user.id]: seededClients }));
+    setClientsSnapshot(seededClients);
     setEmployeesSnapshot([...(userEmployees[user.id] || [])]);
     setEditClientSearch("");
     setEditEmployeeSearch("");
@@ -198,6 +215,21 @@ export default function UsersTable() {
 
     if (!editedUser.role || !["admin", "user", "back_office"].includes(editedUser.role)) {
       throw new Error("Selecteer een geldige rol.");
+    }
+
+    const fromRole = userSnapshot?.role || editedUser.role;
+    if (
+      currentUserId &&
+      currentUserRole &&
+      !canChangeUserRole(
+        currentUserRole,
+        currentUserId,
+        editingId,
+        fromRole,
+        editedUser.role
+      )
+    ) {
+      throw new Error("Je mag deze rolwijziging niet doorvoeren.");
     }
 
     const payload = { ...editedUser };
@@ -260,7 +292,7 @@ export default function UsersTable() {
     setUserSnapshot({ ...payload });
     setClientsSnapshot([...(userClients[editingId] || [])]);
     setEmployeesSnapshot([...(userEmployees[editingId] || [])]);
-  }, [editedUser, editingId, userClients, userEmployees]);
+  }, [editedUser, editingId, userClients, userEmployees, userSnapshot, currentUserId, currentUserRole]);
 
   const handleSave = async () => {
     try {
@@ -468,23 +500,41 @@ export default function UsersTable() {
                 />
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-1 block">Rol</label>
-                  <Select
-                    value={editedUser.role || undefined}
-                    onValueChange={(v) =>
-                      handleChange({
-                        target: { name: "role", value: v },
-                      } as React.ChangeEvent<HTMLSelectElement>)
-                    }
-                  >
-                    <SelectTrigger className={cn(SELECT_CLASS)}>
-                      <SelectValue placeholder="Selecteer rol..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Beheerder</SelectItem>
-                      <SelectItem value="back_office">Back office</SelectItem>
-                      <SelectItem value="user">Gebruiker</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const fromRole = userSnapshot?.role || editedUser.role || "user";
+                    const options =
+                      currentUserId && currentUserRole
+                        ? allowedRoleOptions(
+                            currentUserRole,
+                            currentUserId,
+                            uid,
+                            fromRole
+                          )
+                        : (["admin", "back_office", "user"] as const);
+                    const roleLocked = options.length <= 1;
+                    return (
+                      <Select
+                        value={editedUser.role || undefined}
+                        disabled={roleLocked}
+                        onValueChange={(v) =>
+                          handleChange({
+                            target: { name: "role", value: v },
+                          } as React.ChangeEvent<HTMLSelectElement>)
+                        }
+                      >
+                        <SelectTrigger className={cn(SELECT_CLASS)}>
+                          <SelectValue placeholder="Selecteer rol..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {options.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {roleLabel(r)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -507,8 +557,10 @@ export default function UsersTable() {
                         Klanten toewijzen
                       </label>
                       <p className="text-xs text-muted-foreground mb-2">
-                        {selectedClients.length} klanten geselecteerd. Werknemerstoegang wordt apart
-                        toegewezen (niet automatisch alle werknemers van een klant).
+                        {selectedClients.length} klanten geselecteerd. Werkgevers via toegewezen
+                        werknemers zijn meegenomen en worden bij opslaan als expliciete koppelingen
+                        opgeslagen. Werknemerstoegang blijft apart toegewezen (niet automatisch alle
+                        werknemers van een klant).
                       </p>
                       <div className="h-[120px] overflow-hidden rounded-md border border-border">
                         <ScrollArea className="h-full">
@@ -784,15 +836,17 @@ export default function UsersTable() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(u.id)}
-                      title="Verwijderen"
-                      aria-label="Verwijderen"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {currentUserRole && canDeleteUsers(currentUserRole) ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(u.id)}
+                        title="Verwijderen"
+                        aria-label="Verwijderen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : null}
                   </div>
                   {editingId === u.id && renderModal(u)}
                 </TableCell>

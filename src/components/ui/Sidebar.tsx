@@ -20,6 +20,7 @@ import {
 } from "react-icons/fa";
 import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
+import { canAccessUsersAdmin } from "@/lib/auth/roles";
 
 export default function Sidebar({
   collapsed,
@@ -75,7 +76,7 @@ export default function Sidebar({
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: <FaTachometerAlt /> },
-    ...(role === "admin"
+    ...(canAccessUsersAdmin(role)
       ? [{ name: "Gebruikers", href: "/dashboard/users", icon: <FaUsers /> }]
       : []),
     { name: "Werkgevers", href: "/dashboard/clients", icon: <FaBriefcase /> },
