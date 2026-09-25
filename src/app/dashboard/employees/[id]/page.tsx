@@ -112,9 +112,9 @@ type Referent = {
     first_name: string | null;
     last_name: string | null;
     referent_function: string | null;
-    phone?: string | null;
-    email?: string | null;
-    gender?: string | null;
+    phone: string | null;
+    email: string | null;
+    gender: string | null;
 };
 
 type EmployeeDetails = {
