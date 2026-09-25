@@ -4,7 +4,7 @@ import {
   parseTp2ExtractionResult,
   validateTp2DoctorExtraction,
 } from '../tp2-extraction-schema';
-import { parseAdReportDateResult, parseFmlIzpDateResult } from '../tp2-date-schema';
+import { parseAdReportDateResult, parseFmlIzpDateResult, fmlIzpLabDateLabel } from '../tp2-date-schema';
 
 describe('parseTp2ExtractionResult', () => {
   it('keeps date and doctor fields, drops nulls', () => {
@@ -160,5 +160,26 @@ describe('parseFmlIzpDateResult', () => {
         fml_izp_lab_kind: 'izp',
       }
     );
+  });
+});
+
+describe('fmlIzpLabDateLabel', () => {
+  it('returns Datum FML for fml kind', () => {
+    assert.equal(fmlIzpLabDateLabel('fml'), 'Datum FML');
+    assert.equal(fmlIzpLabDateLabel('FML'), 'Datum FML');
+  });
+
+  it('returns Datum IZP for izp kind', () => {
+    assert.equal(fmlIzpLabDateLabel('izp'), 'Datum IZP');
+  });
+
+  it('returns Datum LAB for lab kind', () => {
+    assert.equal(fmlIzpLabDateLabel('lab'), 'Datum LAB');
+  });
+
+  it('falls back when kind is missing or invalid', () => {
+    assert.equal(fmlIzpLabDateLabel(null), 'Datum FML/IZP/LAB');
+    assert.equal(fmlIzpLabDateLabel(''), 'Datum FML/IZP/LAB');
+    assert.equal(fmlIzpLabDateLabel('unknown'), 'Datum FML/IZP/LAB');
   });
 });

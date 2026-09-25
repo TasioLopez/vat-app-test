@@ -21,6 +21,7 @@ import {
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
 import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { fmlIzpLabDateLabel } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import {
   resolveOccupationalDoctorLabel,
   stripLeadingDoctorRolePrefix,
@@ -379,14 +380,9 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
               }
             />
             <DataRow
-              label="Type FML/IZP/LAB"
-              value={
-                data.fml_izp_lab_kind
-                  ? String(data.fml_izp_lab_kind).toUpperCase()
-                  : '—'
-              }
+              label={fmlIzpLabDateLabel(data.fml_izp_lab_kind)}
+              value={formatNLDateForDoc(data.fml_izp_lab_date)}
             />
-            <DataRow label="Datum FML/IZP/LAB" value={formatNLDateForDoc(data.fml_izp_lab_date)} />
           </TP2026FieldTable>
         </div>
 

@@ -49,6 +49,13 @@ export function normalizeFmlIzpLabKind(value: unknown): FmlIzpLabKind | null {
   return null;
 }
 
+/** Document label for the FML/IZP/LAB date row, e.g. "Datum FML". */
+export function fmlIzpLabDateLabel(kind: unknown): string {
+  const normalized = normalizeFmlIzpLabKind(kind);
+  if (!normalized) return 'Datum FML/IZP/LAB';
+  return `Datum ${normalized.toUpperCase()}`;
+}
+
 export function parseFmlIzpDateResult(raw: unknown): FmlIzpDateResult {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const date = o.fml_izp_lab_date;
