@@ -14,6 +14,12 @@ import {
 import type { Database } from '@/types/supabase';
 import { getEmployeeDocLabel } from '@/lib/documents/employee-doc-types';
 import { signStorageUrl } from '@/lib/documents/sign-storage-url';
+import {
+  DOCUMENT_MAX_BYTES,
+  readJsonResponse,
+  uploadEmployeeDocument,
+  validateEmployeeDocumentFile,
+} from '@/lib/documents/upload-employee-document';
 
 type Document = Database['public']['Tables']['documents']['Row'];
 
@@ -57,71 +63,28 @@ export default function DocumentModal({
   const processFile = async (file: File) => {
     if (!file) return;
 
+    const validationError = validateEmployeeDocumentFile(file);
+    if (validationError) {
+      setError(validationError);
+      setStatus(null);
+      return;
+    }
+
     setUploading(true);
     setError(null);
     setSuccess(false);
-    setStatus('Upload voorbereiden…');
+    setStatus(existingDoc ? 'Bestaand document verwijderen…' : 'Upload voorbereiden…');
 
     try {
-      if (existingDoc) {
-        setStatus('Bestaand document verwijderen…');
-        const deleteRes = await fetch('/api/documents/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: existingDoc.id,
-            url: existingDoc.url,
-          }),
-        });
-
-        const deleteResult = await deleteRes.json();
-
-        if (!deleteRes.ok || !deleteResult.success) {
-          throw new Error(
-            `Kon bestaand document niet verwijderen: ${deleteResult.error}`
-          );
-        }
-      }
-
       setStatus('Bestand uploaden…');
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('employee_id', employeeId);
-      formData.append('type', type);
-      formData.append('name', file.name);
-
-      const uploadRes = await fetch('/api/documents/upload', {
-        method: 'POST',
-        body: formData,
+      await uploadEmployeeDocument({
+        employeeId,
+        type,
+        file,
+        existingDoc: existingDoc
+          ? { id: existingDoc.id, url: existingDoc.url }
+          : null,
       });
-
-      const uploadData = await uploadRes.json();
-
-      if (!uploadRes.ok || !uploadData.success) {
-        throw new Error(`Upload mislukt: ${uploadData.error}`);
-      }
-
-      const uploadedPath = uploadData.path;
-
-      setStatus('Documentgegevens opslaan…');
-
-      const metadataRes = await fetch('/api/documents/metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_id: employeeId,
-          type,
-          name: file.name,
-          url: uploadedPath,
-        }),
-      });
-
-      const metadataData = await metadataRes.json();
-
-      if (!metadataRes.ok) {
-        throw new Error(`Kon documentgegevens niet opslaan: ${metadataData.error}`);
-      }
 
       setStatus('Upload voltooid!');
       setSuccess(true);
@@ -184,10 +147,10 @@ export default function DocumentModal({
         }),
       });
 
-      const result = await res.json();
+      const result = await readJsonResponse(res);
 
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Verwijderen mislukt');
+      if (!res.ok || result.success !== true) {
+        throw new Error(String(result.error || 'Verwijderen mislukt'));
       }
 
       onDeleted();
@@ -340,7 +303,8 @@ export default function DocumentModal({
                       : 'Klik of sleep een bestand hierheen'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Ondersteund: PDF, DOC, DOCX, PNG, JPG
+                    Ondersteund: PDF, DOC, DOCX, PNG, JPG (max{' '}
+                    {Math.round(DOCUMENT_MAX_BYTES / (1024 * 1024))} MB)
                   </p>
                 </div>
               )}

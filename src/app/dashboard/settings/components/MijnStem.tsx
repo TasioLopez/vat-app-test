@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FaUpload, FaFileAlt, FaTrash, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import { createBrowserClient } from "@supabase/ssr";
 import { Card } from '@/components/ui/card';
+import { uploadMijnStemDocument } from '@/lib/mijn-stem/upload-document';
 
 interface Document {
     id: string;
@@ -90,53 +91,32 @@ export default function MijnStem() {
 
             for (const file of Array.from(files)) {
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    // Set upload progress
                     setUploadProgress(prev => ({ ...prev, [file.name]: 0 }));
 
                     console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
 
-                    const response = await fetch('/api/mijn-stem/upload', {
-                        method: 'POST',
-                        body: formData,
-                    });
+                    const { document: uploaded } = await uploadMijnStemDocument(file);
 
-                    console.log('Upload response status:', response.status);
+                    const newDoc: Document = {
+                        id: uploaded.id,
+                        filename: uploaded.filename,
+                        file_size: uploaded.file_size,
+                        file_type: uploaded.file_type,
+                        status: 'uploaded',
+                        created_at: uploaded.created_at
+                    };
 
-                    const data = await response.json();
-                    console.log('Upload response data:', data);
-                    
-                    if (data.success) {
-                        // Add to local state immediately
-                        const newDoc: Document = {
-                            id: data.document.id,
-                            filename: data.document.filename,
-                            file_size: data.document.file_size,
-                            file_type: data.document.file_type,
-                            status: 'uploaded',
-                            created_at: data.document.created_at
-                        };
-                        
-                        setDocuments(prev => [newDoc, ...prev]);
-                        setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-                        
-                        // Start analysis
-                        analyzeDocument(data.document.id);
-                        successCount++;
-                    } else {
-                        console.error('Upload failed:', data.error, data);
-                        errorCount++;
-                        
-                        const errorMsg = data.details || data.error || 'Onbekende fout';
-                        showMessage('error', `Upload mislukt: ${errorMsg}`);
-                        console.error('Full error details:', data);
-                    }
+                    setDocuments(prev => [newDoc, ...prev]);
+                    setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+
+                    analyzeDocument(uploaded.id);
+                    successCount++;
                 } catch (fileError) {
                     console.error('File upload error:', fileError);
                     errorCount++;
-                    showMessage('error', `Upload mislukt voor ${file.name}`);
+                    const errorMsg =
+                        fileError instanceof Error ? fileError.message : `Upload mislukt voor ${file.name}`;
+                    showMessage('error', errorMsg);
                 }
             }
 

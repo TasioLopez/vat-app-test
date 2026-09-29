@@ -1,64 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, requireAuth } from '@/lib/auth/api-auth';
+import {
+  isOwnedMijnStemStoragePath,
+  MIJN_STEM_MAX_BYTES,
+  resolveMijnStemMime,
+} from '@/lib/mijn-stem/prepare-signed-upload';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
-
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-];
-
-const MAX_SIZE = 10 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
     const authResult = await requireAuth();
     if (isAuthError(authResult)) return authResult;
 
-    const formData = await req.formData();
-    const file = formData.get('file');
+    const body = await req.json().catch(() => ({}));
+    const storagePath = (body?.storage_path ?? '').toString().trim();
+    const filename = (body?.filename ?? '').toString().trim();
+    const fileSize = Number(body?.file_size);
+    const fileType = (body?.file_type ?? '').toString().trim();
 
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'Missing file' }, { status: 400 });
+    if (!storagePath || !filename) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
+    if (!isOwnedMijnStemStoragePath(authResult.user.id, storagePath)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (file.size > MAX_SIZE) {
+    if (!Number.isFinite(fileSize) || fileSize < 0 || fileSize > MIJN_STEM_MAX_BYTES) {
       return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
     }
 
-    const userId = authResult.user.id;
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/\s+/g, '-');
-    const fileName = `${userId}/mijn-stem-${timestamp}-${safeName}`;
-
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('documents')
-      .upload(fileName, file);
-
-    if (uploadError) {
-      return NextResponse.json({ error: 'Storage upload failed' }, { status: 500 });
+    const resolvedMime = resolveMijnStemMime(fileType, filename);
+    if (!resolvedMime) {
+      return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
     }
 
     const { data: insertData, error: insertError } = await authResult.supabase
       .from('mijn_stem_documents')
       .insert({
-        user_id: userId,
-        filename: file.name,
-        storage_path: uploadData.path,
-        file_size: file.size,
-        file_type: file.type,
+        user_id: authResult.user.id,
+        filename,
+        storage_path: storagePath,
+        file_size: fileSize,
+        file_type: resolvedMime,
         status: 'uploaded',
       })
       .select()
       .single();
 
     if (insertError) {
-      await supabaseAdmin.storage.from('documents').remove([uploadData.path]);
+      await supabaseAdmin.storage.from('documents').remove([storagePath]);
       return NextResponse.json({ error: 'Failed to save file metadata' }, { status: 500 });
     }
 

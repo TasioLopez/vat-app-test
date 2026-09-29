@@ -5,10 +5,37 @@ export const ALLOWED_DOCUMENT_MIMES = new Set([
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
+  'image/png',
+  'image/jpeg',
 ]);
 
 export function isAllowedDocumentMime(mime: string): boolean {
   return ALLOWED_DOCUMENT_MIMES.has(mime);
+}
+
+const EXT_TO_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  txt: 'text/plain',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+};
+
+/** Resolve MIME from Content-Type or filename extension. */
+export function resolveDocumentMime(
+  contentType: string | null | undefined,
+  fileName: string
+): string | null {
+  const mime = (contentType || '').trim().toLowerCase();
+  if (mime && mime !== 'application/octet-stream' && ALLOWED_DOCUMENT_MIMES.has(mime)) {
+    return mime;
+  }
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot < 0) return mime && ALLOWED_DOCUMENT_MIMES.has(mime) ? mime : null;
+  const ext = fileName.slice(lastDot + 1).toLowerCase();
+  return EXT_TO_MIME[ext] ?? null;
 }
 
 /** Keep only characters Supabase Storage accepts in object keys. */
