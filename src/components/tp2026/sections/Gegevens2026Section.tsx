@@ -20,7 +20,7 @@ import {
 } from '@/components/tp2026/primitives';
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import { GegevensEditorRow } from '@/components/tp2026/GegevensEditorRow';
-import { adReportDateLabel, isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { adReportDateLabel, formatAdReportDateForDoc, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { fmlIzpLabDateLabel } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import {
   resolveOccupationalDoctorLabel,
@@ -368,15 +368,22 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
             />
             <DataRow
               label={adReportDateLabel(isAdReportConcept(data))}
-              value={formatNLDateForDoc(data.ad_report_date)}
+              value={formatAdReportDateForDoc(data.ad_report_date)}
             />
-            <DataRow label="Arbeidsdeskundige" value={data.occupational_doctor_name || '—'} />
+            <DataRow
+              label="Arbeidsdeskundige"
+              value={
+                data.occupational_doctor_name?.trim()
+                  ? data.occupational_doctor_name
+                  : 'Geen'
+              }
+            />
             <DataRow
               label={resolveOccupationalDoctorLabel(data.occupational_doctor_org)}
               value={
                 data.occupational_doctor_org
-                  ? stripLeadingDoctorRolePrefix(String(data.occupational_doctor_org)) || '—'
-                  : '—'
+                  ? stripLeadingDoctorRolePrefix(String(data.occupational_doctor_org)) || 'Geen'
+                  : 'Geen'
               }
             />
             <DataRow

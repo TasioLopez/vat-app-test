@@ -1,6 +1,6 @@
 /** Static paragraph when no AD report is available (masterprompt alinea 8). */
 export const INLEIDING_GEEN_AD =
-  'Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Eventuele adviezen van de arbeidsdeskundige zullen worden verwerkt in de voortgangsrapportage.';
+  'Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Indien de rapportage van de arbeidsdeskundige beschikbaar is gesteld zullen mogelijke adviezen worden verwerkt in de eerstvolgende voortgangsrapportage.';
 
 export const INLEIDING_EX_WERKNEMER_DISCLAIMER_PREFIX = 'Werknemer is uit dienst bij';
 
@@ -33,6 +33,10 @@ export const VALENTINEZ_DOEL_AFSLUITING =
 
 /** Delimiter matched by InleidingSubBlock (intro ends with this phrase). */
 export const AD_INTRO_SUFFIX =
+  'staat de volgende conclusie en het advies ten aanzien van het inzetten van een tweede spoor traject:';
+
+/** Previous AD intro delimiter (pre senior-validated wording). */
+export const AD_INTRO_SUFFIX_PREVIOUS =
   'staat het volgende advies ten aanzien van het inzetten van een tweede spoor traject:';
 
 /** Legacy AD intro delimiter (still present in older inleiding_sub values). */
@@ -40,7 +44,11 @@ export const AD_INTRO_SUFFIX_LEGACY = 'staat het volgende:';
 
 /** Whether inleiding_sub should render via InleidingSubBlock (bold intro + italic quote). */
 export function isAdSubBlock(text: string): boolean {
-  return text.includes(AD_INTRO_SUFFIX) || text.includes(AD_INTRO_SUFFIX_LEGACY);
+  return (
+    text.includes(AD_INTRO_SUFFIX) ||
+    text.includes(AD_INTRO_SUFFIX_PREVIOUS) ||
+    text.includes(AD_INTRO_SUFFIX_LEGACY)
+  );
 }
 
 /** Default model — override with OPENAI_INLEIDING_MODEL (e.g. gpt-5.6-sol). */

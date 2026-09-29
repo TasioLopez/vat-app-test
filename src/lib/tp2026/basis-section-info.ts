@@ -22,10 +22,10 @@ Ten tijde van het intakegesprek re-integreert werknemer niet/wel in spoor 1. Ind
 
 ValentineZ heeft uitgelegd wat het doel is van het 2e spoortraject. Werknemer geeft aan de noodzaak van het tweede spoor te begrijpen en mee te werken. Indien werknemer het anders ervaart, hier toelichten. In het tweede spoor traject zal o.a. onderzocht worden welke passende mogelijkheden er op de arbeidsmarkt zijn.
 
-In het arbeidsdeskundigrapport opgesteld door naam arbeidsdeskundige op datum voluit schrijven staat het volgende advies ten aanzien van het inzetten van een tweede spoor traject:
+In het arbeidsdeskundig rapport opgesteld door naam arbeidsdeskundige op datum voluit schrijven staat de volgende conclusie en het advies ten aanzien van het inzetten van een tweede spoor traject:
 "Zoek in AD-rapport naar quotes van AD-er om hier conclusie en advies te noteren."
 
-Of: Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Eventuele adviezen van de arbeidsdeskundige zullen worden verwerkt in de voortgangsrapportage.`,
+Of: Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Indien de rapportage van de arbeidsdeskundige beschikbaar is gesteld zullen mogelijke adviezen worden verwerkt in de eerstvolgende voortgangsrapportage.`,
   },
 
   sociale_achtergrond: {
@@ -94,12 +94,12 @@ Let op: mits van toepassing, anders weglaten.`,
     body: `Hier kan, indien van toepassing, een toelichting worden opgenomen. Praktische belemmeringen zijn factoren die het tweede spoortraject kunnen belemmeren of (negatief) kunnen beïnvloeden. Denk hierbij aan mantelzorgverplichtingen voor een naast familielid of een vervoersbeperking die niet door de bedrijfsarts is vermeld. Let op dat dit AVG-proof wordt beschreven.
 
 Indien er geen praktische belemmeringen van toepassing zijn, kan de volgende tekst worden opgenomen:
-Er zijn, voor zover bekend, geen praktische belemmeringen die mogelijk van invloed zijn op het verloop van het tweede spoortraject.`,
+Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.`,
   },
 
   advies_ad_passende_arbeid: {
     title: 'Advies passende arbeid',
-    body: `Let op: indien er geen arbeidsdeskundig rapport beschikbaar is en/of er geen passende mogelijkheden zijn geduid, laat dit onderdeel dan volledig weg. Vermeld in dat geval de volgende zin: Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Eventuele adviezen van de arbeidsdeskundige zullen worden verwerkt in de voortgangsrapportage.
+    body: `Let op: indien er geen arbeidsdeskundig rapport beschikbaar is en/of er geen passende mogelijkheden zijn geduid, laat dit onderdeel dan volledig weg. Vermeld in dat geval de volgende zin: Tijdens het opstellen van het trajectplan was het arbeidsdeskundig rapport nog niet beschikbaar voor de loopbaanadviseur. Indien de rapportage van de arbeidsdeskundige beschikbaar is gesteld zullen mogelijke adviezen over passende arbeid worden verwerkt in de eerstvolgende voortgangsrapportage.
 
 In het arbeidsdeskundigrapport, opgesteld door naam arbeidsdeskundige, op datum (voluit) staat het volgende advies over passende arbeid:
 "Uitspraak AD".
@@ -148,7 +148,7 @@ Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt
     title: 'Zoekprofiel',
     body: `Het zoekprofiel (V3) is brongetrouw, kansengericht en UWV-conform. Het bestaat uit exact twee alinea's (voorkeur 150–225 woorden; volledigheid gaat boven de limiet), zonder kopjes, opsommingen of tabellen.
 
-Bronnen: intakeformulier, arbeidsdeskundig rapport, FML/IZP/LAB/belastbaarheidsprofiel, spreekuurrapportage en artsenverduidelijking. Prioriteit belastbaarheid: meest recente aparte belastbaarheidsbron wanneer aanwezig. Ontbreekt AD én belastbaarheidsbron én spreekuur? Dan alleen de standaardregel: "N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld."
+Bronnen: intakeformulier, arbeidsdeskundig rapport, FML/IZP/LAB/belastbaarheidsprofiel, spreekuurrapportage en artsenverduidelijking. Prioriteit belastbaarheid: meest recente aparte belastbaarheidsbron wanneer aanwezig. Ontbreekt belastbaarheidsprofiel én spreekuur? Dan alleen de standaardregel: "Tijdens het opstellen van het trajectplan was het belastbaarheidsprofiel nog niet beschikbaar voor de loopbaanadviseur. Hierdoor kan er momenteel nog geen zoekprofiel opgesteld worden. Zodra dit beschikbaar is gesteld zal het zoekprofiel worden opgesteld."
 
 Eerste alinea — V3-openingszin (enkelvoud/meervoud):
 "Op basis van de hoogst afgeronde opleiding(en) en de werkervaring is werknemer aangewezen op functies op maximaal [niveau]."

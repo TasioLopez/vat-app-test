@@ -3,10 +3,10 @@ import {
   OPENING_PATTERN,
   PARA1_CLOSING_TEMPLATES,
   SECTION_HEADING_PATTERN,
-  ZOEKPROFIEL_NB_NO_AD,
   type ActualisatieEntry,
   type BelastbaarheidsdocumentType,
 } from './constants';
+import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import type { ZoekprofielContentResult } from './schema';
 import {
   formatValidationIssues,
@@ -98,7 +98,7 @@ export function buildPara1Closing(
 }
 
 export function buildInsufficientZoekprofielFields(): ZoekprofielFields {
-  return { zoekprofiel: ZOEKPROFIEL_NB_NO_AD };
+  return { zoekprofiel: BELASTBAARHEID_GEEN_PROFIEL };
 }
 
 export function buildZoekprofielFields(

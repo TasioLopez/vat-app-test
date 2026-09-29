@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {
   buildBelastbaarheidsprofielBlock,
   buildBelastbaarheidsprofielFields,
+  buildBelastbaarheidsprofielGeenProfielFields,
   parseBelastbaarheidsprofiel,
 } from '../build-fields';
-import { PROGNOSE_DELIMITER } from '../constants';
+import { BELASTBAARHEID_GEEN_PROFIEL, PROGNOSE_DELIMITER } from '../constants';
 import { mergeBelastbaarheidsprofielContent } from '../merge-content';
 import type { BelastbaarheidsprofielContentResult } from '../schema';
 import { parseSpreekuurContentResult } from '../spreekuur-schema';
@@ -43,6 +44,25 @@ describe('buildBelastbaarheidsprofielFields', () => {
     const prognosePart = prognose_bedrijfsarts.split(PROGNOSE_DELIMITER)[1] ?? '';
     assert.match(prognosePart, /Er zijn benutbare mogelijkheden/);
     assert.match(prognosePart, /Arbeidsdeskundig onderzoek noodzakelijk/);
+  });
+
+  it('assembles IZP intro when fml_izp_lab_kind is izp', () => {
+    const ctx = {
+      meta: {
+        fml_izp_lab_date: '2026-01-23',
+        fml_izp_lab_kind: 'izp',
+        occupational_doctor_org:
+          'Arts L. Bollen werkend onder supervisie van arts T. de Haas',
+      },
+    };
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(ctx, baseContent);
+    assert.match(prognose_bedrijfsarts, /Inzetbaarheidsprofiel \(IZP\) van 23 januari 2026/);
+    assert.doesNotMatch(prognose_bedrijfsarts, /Functionele Mogelijkheden Lijst \(FML\)/);
+  });
+
+  it('returns geen-profiel standard sentence via helper', () => {
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielGeenProfielFields();
+    assert.equal(prognose_bedrijfsarts, BELASTBAARHEID_GEEN_PROFIEL);
   });
 
   it('omits prognose block when intake Sectie 5 quote is empty', () => {

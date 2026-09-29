@@ -10,6 +10,19 @@ const BLOCKED_PATHS = new Set([
   '/debug-user',
 ]);
 
+function isStagingEnv(): boolean {
+  return process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+}
+
+function isStagingOnlyPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/dashboard/intake') ||
+    pathname.startsWith('/intake/') ||
+    pathname.startsWith('/api/intake') ||
+    pathname.startsWith('/api/export-intake-pdf')
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -17,7 +30,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  if (!pathname.startsWith('/dashboard')) {
+  if (isStagingOnlyPath(pathname) && !isStagingEnv()) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const needsAuth =
+    pathname.startsWith('/dashboard') || pathname.startsWith('/intake/print');
+
+  if (!needsAuth) {
     return NextResponse.next();
   }
 
@@ -62,6 +82,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/intake/:path*',
+    '/api/intake/:path*',
+    '/api/export-intake-pdf',
     '/api/check-schema',
     '/api/mijn-stem/init',
     '/api/mijn-stem/setup',

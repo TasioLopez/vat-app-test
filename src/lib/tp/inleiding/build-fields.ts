@@ -9,6 +9,7 @@ import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-label
 import {
   AD_INTRO_SUFFIX,
   AD_INTRO_SUFFIX_LEGACY,
+  AD_INTRO_SUFFIX_PREVIOUS,
   buildInleidingExWerknemerDisclaimer,
   hasInleidingExWerknemerDisclaimer,
   INLEIDING_GEEN_AD,
@@ -253,7 +254,9 @@ export function buildAdSubBlock(
   return buildInleidingSubBlock(intro, quote);
 }
 
-const AD_DELIMITERS = [AD_INTRO_SUFFIX, AD_INTRO_SUFFIX_LEGACY].sort((a, b) => b.length - a.length);
+const AD_DELIMITERS = [AD_INTRO_SUFFIX, AD_INTRO_SUFFIX_PREVIOUS, AD_INTRO_SUFFIX_LEGACY].sort(
+  (a, b) => b.length - a.length
+);
 
 const INLEIDING_SUB_NB_PATTERN = 'nog geen AD-rapport';
 

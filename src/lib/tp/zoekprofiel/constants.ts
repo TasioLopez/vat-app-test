@@ -29,7 +29,7 @@ export type BelastbaarheidsdocumentType =
 
 export type ActualisatieType = 'spreekuurrapportage' | 'artsenverduidelijking';
 
-/** N.B. when no AD and no belastbaarheidsbron — zoekprofiel-specific. */
+/** @deprecated Prefer BELASTBAARHEID_GEEN_PROFIEL — kept for legacy references. */
 export const ZOEKPROFIEL_NB_NO_AD =
   'N.B.: Tijdens het opstellen van dit trajectplan is er nog geen AD-rapport opgesteld.';
 

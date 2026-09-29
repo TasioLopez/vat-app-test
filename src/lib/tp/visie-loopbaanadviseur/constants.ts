@@ -24,7 +24,7 @@ export const TOELICHTING_ONBEKEND =
 
 /** AD present with named functions — footnote asterisk links to FUNCTIE_FOOTER. */
 export const AD_FUNCTIES_INTRO =
-  'Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:';
+  'Naast de functies die de arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies:';
 
 /** AD present but no named functions in advies. */
 export const AD_NO_FUNCTIES_INTRO =
@@ -32,7 +32,7 @@ export const AD_NO_FUNCTIES_INTRO =
 
 /** Concept AD present with named functions — footnote asterisk links to FUNCTIE_FOOTER. */
 export const CONCEPT_AD_FUNCTIES_INTRO =
-  'Naast de functies die de concept arbeidsdeskundige mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies*:';
+  'Naast de functies die de arbeidsdeskundige in het concept arbeidsdeskundigrapport mogelijk als passend beschouwt, denkt de loopbaanadviseur ook aan onderstaande functies:';
 
 /** Concept AD present but no named functions in advies. */
 export const CONCEPT_AD_NO_FUNCTIES_INTRO =
@@ -44,7 +44,7 @@ export const NO_AD_BELASTBAARHEID_INTRO =
 
 /** No AD narrative and no belastbaarheidsprofiel. */
 export const NO_AD_NO_BELASTBAARHEID_INTRO =
-  'Er zijn geen arbeidsdeskundig rapport en belastbaarheidsprofiel beschikbaar. De hieronder opgenomen functies zijn door de loopbaanadviseur geselecteerd op basis van de informatie uit het intakegesprek.';
+  'Er zijn geen arbeidsdeskundig rapport en belastbaarheidsprofiel beschikbaar. Hierdoor zijn er momenteel geen functies geduid door de loopbaanadviseur. Indien er een belastbaarheidsprofiel beschikbaar wordt gesteld, zullen er passende functies geduid worden.';
 
 export const FUNCTIE_FOOTER =
   '*Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/ IZP/ LAB.';

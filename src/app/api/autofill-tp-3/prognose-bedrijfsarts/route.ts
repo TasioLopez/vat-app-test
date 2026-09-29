@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     const { data: meta } = await supabase
       .from('tp_meta')
-      .select('fml_izp_lab_date, occupational_doctor_org')
+      .select('fml_izp_lab_date, fml_izp_lab_kind, occupational_doctor_org')
       .eq('employee_id', employeeId)
       .single();
 

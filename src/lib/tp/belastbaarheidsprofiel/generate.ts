@@ -6,6 +6,7 @@ import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { generateIntakeSectie5Content } from '@/lib/tp/intake-sectie5';
 import {
   buildBelastbaarheidsprofielFields,
+  buildBelastbaarheidsprofielGeenProfielFields,
   stripCitations,
   type BelastbaarheidsprofielBuildContext,
   type BelastbaarheidsprofielFields,
@@ -65,6 +66,26 @@ function pickNewestSpreekuurDoc(docs: EmployeeDoc[]): EmployeeDoc | null {
     const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
     return bTime - aTime;
   })[0];
+}
+
+function isSeparateBelastbaarheidsDoc(type: string | null | undefined): boolean {
+  const t = (type || '').toLowerCase();
+  return (
+    t.includes('fml') ||
+    t.includes('izp') ||
+    t.includes('lab') ||
+    t.includes('functiemogelijkhedenlijst') ||
+    t.includes('inzetbaarheidsprofiel') ||
+    t.includes('lijst arbeidsmogelijkheden')
+  );
+}
+
+function hasSeparateBelastOrSpreekuurDoc(docs: EmployeeDoc[]): boolean {
+  return docs.some(
+    (d) =>
+      Boolean(d.url) &&
+      (isSeparateBelastbaarheidsDoc(d.type) || isSpreekReportageDocType(d.type))
+  );
 }
 
 function getBelastbaarheidsprofielModel(): string {
@@ -185,6 +206,10 @@ export async function generateBelastbaarheidsprofiel(
   ctx: BelastbaarheidsprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<BelastbaarheidsprofielFields> {
+  if (!hasSeparateBelastOrSpreekuurDoc(docs)) {
+    return buildBelastbaarheidsprofielGeenProfielFields();
+  }
+
   const spreekuurDoc = pickNewestSpreekuurDoc(docs);
   const hasSpreekuurDoc = Boolean(spreekuurDoc);
 

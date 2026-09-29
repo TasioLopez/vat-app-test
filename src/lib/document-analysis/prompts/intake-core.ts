@@ -5,7 +5,7 @@ export const INTAKE_CORE_PROMPT = `Je analyseert een Nederlands intakeformulier 
 ${INTAKE_LAYOUT_V75_HINT}
 
 FOCUS ALLEEN OP:
-- Sectie 2 Persoonsgegevens: functietitel, urenomvang, geslacht, telefoonnummer WERKNEMER, andere werkgever
+- Sectie 2 Persoonsgegevens: leeftijd, functietitel, urenomvang, geslacht, woonplaats, telefoon/email WERKNEMER, andere werkgever
 - Sectie 4 Aanmelding: contactpersoon werkgever (ENIGE bron voor referent_*)
 - Sectie 6: geboortedatum werknemer (niet trajectdatums)
 
@@ -15,11 +15,14 @@ BELANGRIJK:
 - Niet-ingevuld → null (NOOIT gokken).
 
 VELDEN (exacte JSON keys):
+- age: leeftijd als getal of digit-string uit sectie 2 "Leeftijd werknemer:" (niet zelf berekenen tenzij leeftijd ontbreekt én geboortedatum duidelijk is — liever null laten als leeftijd niet letterlijk staat)
 - current_job: functietitel (sectie 2)
 - contract_hours: number uren per week (sectie 2)
 - date_of_birth: YYYY-MM-DD (sectie 6 "Geboortedatum:" of sectie 2)
 - gender: "Man" of "Vrouw"
+- city: woonplaats (sectie 2)
 - phone: telefoonnummer WERKNEMER sectie 2 — NIET sectie 4 contactpersoon
+- email: email WERKNEMER sectie 2
 - other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; null indien leeg, "Nee", "Geen" of n.v.t. — NOOIT "Nee"/"Geen" als waarde opslaan; alleen echte werkgeversnamen
 
 SECTIE 4 — AANMELDING (ENIGE BRON referent_*):

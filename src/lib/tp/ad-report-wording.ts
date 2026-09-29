@@ -1,5 +1,7 @@
 /** Wording helpers when the AD report is marked as a concept (Juni V6 checkbox). */
 
+import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
+
 /** Coerce concept flag; null/unknown/missing → false (only explicit true is concept). */
 export function normalizeAdReportConcept(value: unknown): boolean {
   if (value === true || value === 'true' || value === 1 || value === '1') return true;
@@ -76,6 +78,17 @@ export function hasIntakeAdNarrative(meta?: {
 
 export function adReportDateLabel(concept: boolean): string {
   return concept ? 'Datum concept AD rapportage' : 'Datum AD rapportage';
+}
+
+/**
+ * Document value for Datum AD rapportage: formatted Dutch date, or "Geen" when
+ * there is no AD date / no information available (instead of an em dash).
+ */
+export function formatAdReportDateForDoc(adDate: unknown): string {
+  if (adDate == null || adDate === '') return 'Geen';
+  if (typeof adDate === 'string' && adDate.trim() === '') return 'Geen';
+  const formatted = formatNLDateForDoc(String(adDate));
+  return formatted === '—' ? 'Geen' : formatted;
 }
 
 export function buildAdAdviesIntroPrefix(concept: boolean): string {

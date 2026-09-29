@@ -2,10 +2,14 @@ export {
   DEFAULT_BELASTBAARHEID_MODEL,
   PROGNOSE_DELIMITER,
   STANDARD_RUBRIEKEN,
+  BELASTBAARHEID_GEEN_PROFIEL,
+  FML_INTRO_TEMPLATE,
+  IZP_INTRO_TEMPLATE,
   GENERATION_FALLBACK,
 } from './constants';
 export {
   buildBelastbaarheidsprofielFields,
+  buildBelastbaarheidsprofielGeenProfielFields,
   stripCitations,
   type BelastbaarheidsprofielBuildContext,
   type BelastbaarheidsprofielFields,

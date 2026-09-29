@@ -15,6 +15,10 @@ function nullableNumber(description: string) {
 export const INTAKE_CORE_JSON_SCHEMA = {
   type: 'object',
   properties: {
+    age: {
+      type: ['string', 'number', 'null'] as const,
+      description: 'Leeftijd werknemer as number or digit string (sectie 2 "Leeftijd werknemer")',
+    },
     current_job: nullableString('Functietitel werknemer (sectie 2)'),
     contract_hours: nullableNumber('Contracturen per week als getal (sectie 2)'),
     date_of_birth: nullableString('Geboortedatum YYYY-MM-DD (sectie 6 of sectie 2)'),
@@ -23,7 +27,9 @@ export const INTAKE_CORE_JSON_SCHEMA = {
       enum: GENDER_ENUM,
       description: 'Geslacht: Man of Vrouw (sectie 2)',
     },
+    city: nullableString('Woonplaats werknemer (sectie 2)'),
     phone: nullableString('Telefoonnummer werknemer (sectie 2, niet contactpersoon)'),
+    email: nullableString('Email werknemer (sectie 2)'),
     other_employers: nullableString('Andere werkgevers komma-gescheiden (sectie 2)'),
     referent_first_name: nullableString('Voornaam contactpersoon werkgever (sectie 4)'),
     referent_last_name: nullableString('Achternaam contactpersoon werkgever (sectie 4)'),
@@ -33,11 +39,14 @@ export const INTAKE_CORE_JSON_SCHEMA = {
     referent_gender: nullableString('Geslacht contactpersoon indien expliciet vermeld'),
   },
   required: [
+    'age',
     'current_job',
     'contract_hours',
     'date_of_birth',
     'gender',
+    'city',
     'phone',
+    'email',
     'other_employers',
     'referent_first_name',
     'referent_last_name',
