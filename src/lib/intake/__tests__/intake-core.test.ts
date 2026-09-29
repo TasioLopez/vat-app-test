@@ -12,6 +12,13 @@ import {
 import { intakeToGegevensFields } from '@/lib/intake/project';
 import { tp3DetailsFromValidatedIntake } from '@/lib/intake/tp-hydrate';
 import { isStagingEnv, assertStagingOnly } from '@/lib/auth/staging-only';
+import { formatIntakeDateNl } from '@/lib/intake/format-date';
+import {
+  intakeDraftHasContent,
+  isDossierSourceType,
+  isIntakeDocumentType,
+} from '@/lib/intake/sources';
+import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
 
 describe('intake schema', () => {
   it('ensureIntakeShape fills defaults', () => {
@@ -157,5 +164,49 @@ describe('staging-only gate', () => {
     assert.ok(blocked);
     assert.equal(blocked!.status, 404);
     process.env.NEXT_PUBLIC_APP_ENV = prev;
+  });
+});
+
+describe('formatIntakeDateNl', () => {
+  it('formats ISO dates as dd-MM-yyyy', () => {
+    assert.equal(formatIntakeDateNl('2026-01-10'), '10-01-2026');
+    assert.equal(formatIntakeDateNl(''), '');
+    assert.equal(formatIntakeDateNl(null), '');
+  });
+});
+
+describe('intake sources helpers', () => {
+  it('classifies intake vs dossier document types', () => {
+    assert.equal(isIntakeDocumentType('intakeformulier'), true);
+    assert.equal(isIntakeDocumentType('extra'), false);
+    assert.equal(isDossierSourceType('extra'), true);
+    assert.equal(isDossierSourceType('intakeformulier'), false);
+  });
+
+  it('detects draft content', () => {
+    assert.equal(intakeDraftHasContent(createEmptyIntakeData()), false);
+    const filled = createEmptyIntakeData();
+    filled.s1.employee_name = 'Jan';
+    assert.equal(intakeDraftHasContent(filled), true);
+  });
+});
+
+describe('applyIntakeCheckboxOverridesFromText', () => {
+  it('forces ad_report_concept false when Concept ☐ is in text even if model said true', () => {
+    const text = 'Datum AD-rapport: 14-9-2026 Concept ☐\nEx-werknemer ☐';
+    const out = applyIntakeCheckboxOverridesFromText(
+      { ad_report_concept: true, is_ex_werknemer: true },
+      text
+    );
+    assert.equal(out.ad_report_concept, false);
+    assert.equal(out.is_ex_werknemer, false);
+  });
+
+  it('forces ad_report_concept true when Concept ☒ is in text', () => {
+    const out = applyIntakeCheckboxOverridesFromText(
+      { ad_report_concept: false },
+      'Datum AD-rapport: 1-2-2026 Concept ☒'
+    );
+    assert.equal(out.ad_report_concept, true);
   });
 });

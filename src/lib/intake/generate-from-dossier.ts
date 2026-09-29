@@ -1,12 +1,11 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
-import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
-import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/lib/intake/generate-prompt';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
+import { isDossierSourceType } from '@/lib/intake/sources';
 
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
@@ -391,18 +390,6 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
   ],
   additionalProperties: false,
 } as const;
-
-function isDossierSourceType(type: string | null | undefined): boolean {
-  const t = (type || '').toLowerCase();
-  if (t.includes('intake')) return false;
-  return (
-    isAdDocumentType(type) ||
-    isFmlDocumentType(type) ||
-    isSpreekReportageDocType(type) ||
-    t === 'extra' ||
-    t.includes('extra')
-  );
-}
 
 export type GenerateIntakeFromDossierResult = {
   data: IntakeData;

@@ -1,28 +1,34 @@
 'use client';
 
 import type { IntakeData, IntakeSection6 } from '@/lib/intake/schema';
+import { formatIntakeDateNl } from '@/lib/intake/format-date';
 
 const DOCTOR_ROLES = ['Arts', 'Anios', 'Aios', 'BA', 'VA'] as const;
 const OSV_ROLES = ['Arts', 'Anios', 'Aios', 'BA', 'VA'] as const;
 
-type PatchS6 = (patch: Partial<IntakeSection6>) => void;
+const inputClass = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm';
+
+type PatchS6 = (patch: Partial<IntakeSection6>, opts?: { debounce?: boolean }) => void;
 
 function Field({
   label,
   value,
   onChange,
   readOnly,
+  type = 'text',
 }: {
   label: string;
   value: string;
   onChange?: (v: string) => void;
   readOnly?: boolean;
+  type?: 'text' | 'date';
 }) {
   if (readOnly) {
+    const display = type === 'date' ? formatIntakeDateNl(value) : value;
     return (
       <div className="mb-1.5 text-[11pt] leading-snug">
         <span className="font-medium text-gray-800">{label}: </span>
-        <span className="text-gray-700">{value || '—'}</span>
+        <span className="text-gray-700">{display || '—'}</span>
       </div>
     );
   }
@@ -30,8 +36,9 @@ function Field({
     <label className="block space-y-1">
       <span className="text-sm font-medium text-gray-700">{label}</span>
       <input
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-        value={value}
+        type={type}
+        className={inputClass}
+        value={value || ''}
         onChange={(e) => onChange?.(e.target.value)}
       />
     </label>
@@ -82,7 +89,7 @@ function RoleCheckboxes({
   readOnly?: boolean;
 }) {
   return (
-    <div className={readOnly ? 'inline' : 'flex flex-wrap gap-3'}>
+    <div className={readOnly ? 'inline' : 'grid gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-5'}>
       {roles.map((role) => (
         <Checkbox
           key={role}
@@ -119,12 +126,12 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
         className ||
         (readOnly
           ? 'mb-5 break-inside-avoid border-b border-gray-300 pb-4'
-          : 'scroll-mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-4')
+          : 'scroll-mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-5')
       }
     >
       {!readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-gray-800">Dossiergegevens</p>
+          <h2 className="text-lg font-semibold text-gray-900">Dossiergegevens</h2>
           <Checkbox
             label="Ex-werknemer"
             checked={s6.is_ex_werknemer}
@@ -133,9 +140,10 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
         </div>
       )}
 
-      <div className={readOnly ? 'grid grid-cols-2 gap-x-6 gap-y-1' : 'grid gap-3 sm:grid-cols-2'}>
+      <div className={readOnly ? 'grid grid-cols-2 gap-x-6 gap-y-1' : 'grid gap-4 sm:grid-cols-2'}>
         <Field
           label="Geboortedatum"
+          type="date"
           value={s6.date_of_birth}
           readOnly={readOnly}
           onChange={(v) => patch({ date_of_birth: v })}
@@ -144,16 +152,18 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
           label="Weken"
           value={s6.weken}
           readOnly={readOnly}
-          onChange={(v) => patch({ weken: v })}
+          onChange={(v) => patch({ weken: v }, { debounce: true })}
         />
         <Field
           label="Aanmelddatum"
+          type="date"
           value={s6.registration_date}
           readOnly={readOnly}
           onChange={(v) => patch({ registration_date: v })}
         />
         <Field
           label="Startdatum"
+          type="date"
           value={s6.tp_start_date}
           readOnly={readOnly}
           onChange={(v) => patch({ tp_start_date: v })}
@@ -165,16 +175,17 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
               <span className="font-medium text-gray-800">Datum </span>
               <Checkbox label="FML" checked={s6.fml_izp_lab_kind === 'fml'} readOnly />
               <Checkbox label="IZP" checked={s6.fml_izp_lab_kind === 'izp'} readOnly />
-              <span>: {s6.fml_izp_lab_date || '—'}</span>
+              <span>: {formatIntakeDateNl(s6.fml_izp_lab_date) || '—'}</span>
             </div>
           ) : (
             <>
               <Field
                 label="Datum FML/IZP"
+                type="date"
                 value={s6.fml_izp_lab_date}
                 onChange={(v) => patch({ fml_izp_lab_date: v })}
               />
-              <div className="flex flex-wrap gap-3">
+              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                 <Checkbox
                   label="FML"
                   checked={s6.fml_izp_lab_kind === 'fml'}
@@ -192,6 +203,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
 
         <Field
           label="Einddatum"
+          type="date"
           value={s6.tp_end_date}
           readOnly={readOnly}
           onChange={(v) => patch({ tp_end_date: v })}
@@ -217,7 +229,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
               <Field
                 label="Naam"
                 value={s6.occupational_doctor_name}
-                onChange={(v) => patch({ occupational_doctor_name: v })}
+                onChange={(v) => patch({ occupational_doctor_name: v }, { debounce: true })}
               />
             </>
           )}
@@ -227,7 +239,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
           {readOnly ? (
             <div>
               <span className="font-medium text-gray-800">Datum AD-rapport: </span>
-              <span className="text-gray-700">{s6.ad_report_date || '—'}</span>
+              <span className="text-gray-700">{formatIntakeDateNl(s6.ad_report_date) || '—'}</span>
               <span className="ml-3">
                 <Checkbox label="Concept" checked={s6.ad_report_concept} readOnly />
               </span>
@@ -236,6 +248,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
             <>
               <Field
                 label="Datum AD-rapport"
+                type="date"
                 value={s6.ad_report_date}
                 onChange={(v) => patch({ ad_report_date: v })}
               />
@@ -266,7 +279,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
               <Field
                 label="Naam OSV"
                 value={s6.osv_doctor_name}
-                onChange={(v) => patch({ osv_doctor_name: v })}
+                onChange={(v) => patch({ osv_doctor_name: v }, { debounce: true })}
               />
             </>
           )}
@@ -276,7 +289,7 @@ export function IntakeDossierHeader({ data, onPatchS6, className }: IntakeDossie
           label="Naam AD"
           value={s6.occupational_doctor_ad_name}
           readOnly={readOnly}
-          onChange={(v) => patch({ occupational_doctor_ad_name: v })}
+          onChange={(v) => patch({ occupational_doctor_ad_name: v }, { debounce: true })}
         />
 
         {readOnly && (

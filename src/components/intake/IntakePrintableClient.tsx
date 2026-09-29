@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ensureIntakeShape, INTAKE_SECTION_DEFS, type IntakeData } from '@/lib/intake/schema';
+import { formatIntakeDateNl } from '@/lib/intake/format-date';
 import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -12,6 +13,10 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="whitespace-pre-wrap text-gray-700">{value}</span>
     </div>
   );
+}
+
+function DateRow({ label, value }: { label: string; value: string }) {
+  return <Row label={label} value={formatIntakeDateNl(value)} />;
 }
 
 function BoolRow({ label, value }: { label: string; value: boolean }) {
@@ -61,7 +66,7 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
 
       <SectionBlock title={titleFor('s1')}>
         <Row label="Naam werknemer" value={intake.s1.employee_name} />
-        <Row label="Datum gesprek" value={intake.s1.intake_date} />
+        <DateRow label="Datum gesprek" value={intake.s1.intake_date} />
       </SectionBlock>
 
       <SectionBlock title={titleFor('s2')}>
@@ -91,7 +96,7 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
       </SectionBlock>
 
       <SectionBlock title={titleFor('s5')}>
-        <Row label="Eerste ziektedag" value={intake.s5.first_sick_day} />
+        <DateRow label="Eerste ziektedag" value={intake.s5.first_sick_day} />
         <Row label="Reden" value={intake.s5.reden_ziekmelding} />
         <div className="mb-2 grid grid-cols-2 gap-1">
           <BoolRow

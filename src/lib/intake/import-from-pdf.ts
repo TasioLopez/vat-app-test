@@ -21,6 +21,8 @@ import {
 } from '@/lib/intake/narrative-schema';
 import { mergeExtractionsIntoIntake } from '@/lib/intake/merge-extractions';
 import { createEmptyIntakeData, ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
+import { extractPdfPlainTextWithGlyphFallback } from '@/lib/document-analysis/documentPlainText';
 
 export type ImportIntakeFromPdfResult = {
   data: IntakeData;
@@ -96,7 +98,15 @@ export async function importIntakeFromPdf(params: {
     schema: TP2_EXTRACTION_JSON_SCHEMA as Record<string, unknown>,
     parse: parseTp2ExtractionResult,
   });
-  const tp2 = normalizeTp2ExtractedData(tp2Raw || {});
+  let plainText: string | null = null;
+  try {
+    plainText = await extractPdfPlainTextWithGlyphFallback(pdfBuffer);
+  } catch (e) {
+    console.warn('Intake import checkbox text extraction failed', e);
+  }
+  const tp2 = normalizeTp2ExtractedData(
+    applyIntakeCheckboxOverridesFromText(tp2Raw || {}, plainText, 'Intake import')
+  );
 
   const narrativeRaw = await runStructuredFileExtraction({
     openai,

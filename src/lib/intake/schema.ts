@@ -494,23 +494,49 @@ export function ensureIntakeShape(raw: unknown): IntakeData {
   return shaped;
 }
 
+/** Lucide icon keys rendered in the intake left nav. */
+export type IntakeSectionIcon =
+  | 'dossier'
+  | 'message'
+  | 'user'
+  | 'briefcase'
+  | 'userPlus'
+  | 'heartPulse'
+  | 'refresh'
+  | 'fileText'
+  | 'home'
+  | 'users'
+  | 'housework'
+  | 'calendar'
+  | 'sparkles'
+  | 'history'
+  | 'compass'
+  | 'target'
+  | 'info';
+
+export const INTAKE_DOSSIER_NAV = {
+  key: 'dossier' as const,
+  title: 'Dossiergegevens',
+  icon: 'dossier' as IntakeSectionIcon,
+};
+
 export const INTAKE_SECTION_DEFS = [
-  { key: 's1', title: '1. Gespreksinformatie' },
-  { key: 's2', title: '2. Persoonsgegevens' },
-  { key: 's3', title: '3. Functiebeschrijving' },
-  { key: 's4', title: '4. Aanmelding' },
-  { key: 's5', title: '5. Medische situatie' },
-  { key: 's6', title: '6. Re-integratie en houding' },
-  { key: 's7', title: '7. Arbeidsdeskundig rapport' },
-  { key: 's8', title: '8. Woonsituatie' },
-  { key: 's9', title: '9. Familie en sociaal netwerk' },
-  { key: 's10', title: '10. Huishoudelijke taken en zorgtaken' },
-  { key: 's11', title: '11. Dagstructuur en energieverdeling' },
-  { key: 's12', title: "12. Vrije tijd en hobby's" },
-  { key: 's13', title: '13. Werkverleden en verbondenheid' },
-  { key: 's14', title: '14. Houding t.o.v. spoor 2' },
-  { key: 's16', title: '16. Toekomstbeeld en voorkeuren' },
-  { key: 's17', title: '17. Bijzonderheden' },
+  { key: 's1', title: '1. Gespreksinformatie', icon: 'message' as IntakeSectionIcon },
+  { key: 's2', title: '2. Persoonsgegevens', icon: 'user' as IntakeSectionIcon },
+  { key: 's3', title: '3. Functiebeschrijving', icon: 'briefcase' as IntakeSectionIcon },
+  { key: 's4', title: '4. Aanmelding', icon: 'userPlus' as IntakeSectionIcon },
+  { key: 's5', title: '5. Medische situatie', icon: 'heartPulse' as IntakeSectionIcon },
+  { key: 's6', title: '6. Re-integratie en houding', icon: 'refresh' as IntakeSectionIcon },
+  { key: 's7', title: '7. Arbeidsdeskundig rapport', icon: 'fileText' as IntakeSectionIcon },
+  { key: 's8', title: '8. Woonsituatie', icon: 'home' as IntakeSectionIcon },
+  { key: 's9', title: '9. Familie en sociaal netwerk', icon: 'users' as IntakeSectionIcon },
+  { key: 's10', title: '10. Huishoudelijke taken en zorgtaken', icon: 'housework' as IntakeSectionIcon },
+  { key: 's11', title: '11. Dagstructuur en energieverdeling', icon: 'calendar' as IntakeSectionIcon },
+  { key: 's12', title: "12. Vrije tijd en hobby's", icon: 'sparkles' as IntakeSectionIcon },
+  { key: 's13', title: '13. Werkverleden en verbondenheid', icon: 'history' as IntakeSectionIcon },
+  { key: 's14', title: '14. Houding t.o.v. spoor 2', icon: 'compass' as IntakeSectionIcon },
+  { key: 's16', title: '16. Toekomstbeeld en voorkeuren', icon: 'target' as IntakeSectionIcon },
+  { key: 's17', title: '17. Bijzonderheden', icon: 'info' as IntakeSectionIcon },
 ] as const;
 
 export type IntakeSectionKey = (typeof INTAKE_SECTION_DEFS)[number]['key'];

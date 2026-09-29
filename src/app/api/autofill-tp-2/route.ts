@@ -29,19 +29,10 @@ import {
 import { normalizeTp2ExtractedData } from '@/lib/tp2026/intake-tp2-normalize';
 import { docsIncludeAdReport, resolveTp2HasAdReport } from '@/lib/tp/intake-ad-presence';
 import {
-  applyAdReportConceptFromText,
-  detectAdReportConceptFromText,
-} from '@/lib/tp/ad-report-wording';
-import {
-  applyExWerknemerFromText,
-  detectExWerknemerFromText,
-  intakeTextHasExWerknemerLabel,
-} from '@/lib/tp/ex-werknemer-wording';
-import {
-  describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
+import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
 
 export const maxDuration = 120;
 
@@ -142,48 +133,6 @@ async function loadIntakePlainText(intakeDoc: DocRow): Promise<string | null> {
   }
 }
 
-function applyIntakeCheckboxOverridesFromText(
-  merged: Record<string, unknown>,
-  plainText: string | null
-): Record<string, unknown> {
-  if (!plainText) return merged;
-
-  const next = { ...merged };
-  const meta = describeIntakePlainText(plainText);
-  console.log(
-    `📋 TP2 checkbox plain text len=${meta.textLen} hasConcept=${meta.hasConcept} glyphs=${meta.hasCheckboxGlyphs}`
-  );
-
-  const conceptFromText = detectAdReportConceptFromText(plainText);
-  if (conceptFromText !== null) {
-    console.log(`📋 TP2 Concept checkbox from text: ${conceptFromText}`);
-  } else if (meta.hasConcept) {
-    // Label present but no clear checkbox glyph → do not trust vision; treat as not-concept.
-    console.log('📋 TP2 Concept label without glyph → false');
-  }
-  next.ad_report_concept = applyAdReportConceptFromText(
-    next.ad_report_concept,
-    conceptFromText !== null ? conceptFromText : meta.hasConcept ? false : null
-  );
-
-  const exWerknemerFromText = detectExWerknemerFromText(plainText);
-  if (exWerknemerFromText !== null) {
-    console.log(`📋 TP2 Ex-werknemer checkbox from text: ${exWerknemerFromText}`);
-  } else if (intakeTextHasExWerknemerLabel(plainText)) {
-    console.log('📋 TP2 Ex-werknemer label without glyph → false');
-  }
-  next.is_ex_werknemer = applyExWerknemerFromText(
-    next.is_ex_werknemer,
-    exWerknemerFromText !== null
-      ? exWerknemerFromText
-      : intakeTextHasExWerknemerLabel(plainText)
-        ? false
-        : null
-  );
-
-  return next;
-}
-
 async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unknown>> {
   const intakeDoc = docs.find((d) => isIntakeDocumentType(d.type));
   const adDoc = docs.find((d) => isAdDocumentType(d.type));
@@ -203,7 +152,7 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
     });
 
     const plainText = await loadIntakePlainText(intakeDoc);
-    merged = applyIntakeCheckboxOverridesFromText(merged, plainText);
+    merged = applyIntakeCheckboxOverridesFromText(merged, plainText, 'TP2');
   } else {
     console.log('⚠️ No intake document found for TP2 extraction');
   }

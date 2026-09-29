@@ -19,6 +19,8 @@ DOSSIERTABEL (sectie 6)
 - doctor_role / osv_doctor_role: Arts | Anios | Aios | BA | VA. Anios ≠ Aios.
 - OSV alleen invullen bij expliciete supervisie.
 - occupational_doctor_ad_name = naam AD; occupational_doctor_name = naam arts/BA.
+- ad_report_concept: true ALLEEN als het AD-rapport expliciet een concept is (bijv. titel/status "concept"/"conceptrapport", of intakeformulier-checkbox Concept aangevinkt). Anders false. Het woord "concept" in lopende tekst is niet genoeg.
+- is_ex_werknemer: true ALLEEN bij duidelijk aangevinkt Ex-werknemer; anders false.
 
 FUNCTIEOMSCHRIJVING (s3)
 Maximaal vijf doorlopende zinnen. Begin exact: "Als [werkelijke functienaam] is werknemer…".
