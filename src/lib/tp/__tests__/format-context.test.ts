@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildArtsPhrase,
   buildSupervisiePhrase,
+  cleanDoctorOrgRaw,
   enrichArtsOrgFromMeta,
   expandDoctorRoleAbbreviations,
   formatDoctorWithRole,
@@ -67,6 +68,35 @@ describe('buildArtsPhrase', () => {
       buildArtsPhrase(''),
       'Arts [naam] werkend onder supervisie van Arts [supervisor]'
     );
+  });
+
+  it('strips BIG numbers and empty parentheses (Habib regression)', () => {
+    const input =
+      'K. Blommestein, AIOS bedrijfsgeneeskunde (BIG 19931127401) Onder supervisie van E. Visser, bedrijfsarts (BIG 39042022501)';
+    const phrase = buildArtsPhrase(input);
+    assert.doesNotMatch(phrase, /BIG/i);
+    assert.doesNotMatch(phrase, /\(\s*\)/);
+    assert.match(phrase, /Blommestein/);
+    assert.match(phrase, /Visser/);
+  });
+
+  it('strips BIG from werkend-onder-supervisie path', () => {
+    const phrase = buildArtsPhrase(
+      'Arts L. Bollen (BIG 12345678901) werkend onder supervisie van arts T. de Haas (BIG 98765432101)'
+    );
+    assert.doesNotMatch(phrase, /BIG/i);
+    assert.doesNotMatch(phrase, /\(\s*\)/);
+    assert.match(phrase, /Arts L\. Bollen werkend onder supervisie van arts T\. de Haas/);
+  });
+});
+
+describe('cleanDoctorOrgRaw', () => {
+  it('removes parenthesized BIG and leftover empty parentheses', () => {
+    assert.equal(
+      cleanDoctorOrgRaw('Bedrijfsarts E. Visser (BIG 39042022501)'),
+      'Bedrijfsarts E. Visser'
+    );
+    assert.equal(cleanDoctorOrgRaw('Arts X ()'), 'Arts X');
   });
 });
 

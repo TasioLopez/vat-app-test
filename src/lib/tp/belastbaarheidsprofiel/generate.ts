@@ -242,7 +242,7 @@ export async function generateBelastbaarheidsprofiel(
   const intakeSectie5Promise = generateIntakeSectie5Content(openai, supabase, docs).catch(
     (error) => {
       console.warn('⚠️ Belastbaarheidsprofiel: intake Sectie 5 extractie mislukt', error);
-      return { quote_prognose_advies_belastbaarheid: null };
+      return { quote_prognose_advies_belastbaarheid: null, rubrieken: [] };
     }
   );
 
@@ -255,7 +255,8 @@ export async function generateBelastbaarheidsprofiel(
   const mergedContent = mergeBelastbaarheidsprofielContent(
     mainContent,
     spreekuurResult,
-    hasSpreekuurDoc
+    hasSpreekuurDoc,
+    intakeSectie5.rubrieken
   );
 
   mergedContent.prognose_citaat = intakeSectie5.quote_prognose_advies_belastbaarheid

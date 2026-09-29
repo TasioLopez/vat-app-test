@@ -111,11 +111,12 @@ export function stripLeadingDoctorRolePrefix(value: string): string {
 
 export function cleanDoctorOrgRaw(raw: string): string {
   let cleaned = expandDoctorRoleAbbreviations(raw.trim());
-  if (/werkend onder supervisie van/i.test(cleaned)) {
-    return cleaned.replace(/\s+/g, ' ').trim();
-  }
 
-  cleaned = cleaned.replace(/\s*-?\s*BIG\s*(nr\.?|nummer)?\s*[\d\s]+/gi, '');
+  // Strip BIG / registration IDs (parenthesized or bare), then leftover empty ().
+  cleaned = cleaned.replace(/\(\s*BIG\s*(nr\.?|nummer)?\s*[\d.\s]*\s*\)/gi, '');
+  cleaned = cleaned.replace(/\bBIG\s*(nr\.?|nummer)?\s*[\d.\s]+/gi, '');
+  cleaned = cleaned.replace(/\(\s*\)/g, '');
+
   cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
@@ -135,7 +136,7 @@ function formatSupervisiePart(part: string): string {
  * Preserves Verzekeringsarts/Bedrijfsarts/Arts role prefixes from tp_meta.
  */
 export function buildArtsPhrase(occupational_doctor_org: string | null | undefined): string {
-  const raw = (occupational_doctor_org || '').trim();
+  const raw = cleanDoctorOrgRaw(occupational_doctor_org || '');
   if (!raw) {
     return 'Arts [naam] werkend onder supervisie van Arts [supervisor]';
   }
@@ -144,19 +145,18 @@ export function buildArtsPhrase(occupational_doctor_org: string | null | undefin
   if (commaMatch) {
     const primary = formatSupervisiePart(commaMatch[1].trim());
     const supervisor = formatSupervisiePart(commaMatch[2].trim());
-    return `${primary} werkend onder supervisie van ${supervisor}`;
+    return cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
   }
 
   if (/werkend onder supervisie van/i.test(raw)) {
-    return cleanDoctorOrgRaw(raw);
+    return raw;
   }
 
-  const cleaned = cleanDoctorOrgRaw(raw);
-  if (hasDoctorRolePrefix(cleaned)) {
-    return cleaned;
+  if (hasDoctorRolePrefix(raw)) {
+    return raw;
   }
 
-  return cleaned ? `Arts ${cleaned}` : 'Arts [naam]';
+  return `Arts ${raw}`;
 }
 
 function extractPrimaryDoctorName(value: string): string {
@@ -179,10 +179,8 @@ export function enrichArtsOrgFromMeta(
   artsOrg: string | null | undefined,
   occupationalDoctorOrg: string | null | undefined
 ): string | null {
-  const arts = expandDoctorRoleAbbreviations((artsOrg || '').trim()).replace(/\s+/g, ' ').trim();
-  const meta = expandDoctorRoleAbbreviations((occupationalDoctorOrg || '').trim())
-    .replace(/\s+/g, ' ')
-    .trim();
+  const arts = cleanDoctorOrgRaw(artsOrg || '');
+  const meta = cleanDoctorOrgRaw(occupationalDoctorOrg || '');
 
   if (!arts) return meta || null;
 
@@ -198,7 +196,7 @@ export function enrichArtsOrgFromMeta(
     if (metaName && metaName.toLowerCase() === arts.toLowerCase()) {
       return meta;
     }
-    return `${metaPrefix} ${arts}`;
+    return cleanDoctorOrgRaw(`${metaPrefix} ${arts}`);
   }
 
   return arts;

@@ -15,6 +15,9 @@ export function sanitizeIntakeSectie5Content(content: IntakeSectie5Content): Int
     quote_prognose_advies_belastbaarheid: content.quote_prognose_advies_belastbaarheid
       ? stripCitations(content.quote_prognose_advies_belastbaarheid)
       : null,
+    rubrieken: Array.isArray(content.rubrieken)
+      ? content.rubrieken.map((r) => String(r).trim()).filter(Boolean)
+      : [],
   };
 }
 

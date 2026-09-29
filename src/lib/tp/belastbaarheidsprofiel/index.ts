@@ -21,6 +21,7 @@ export {
 export {
   mergeBelastbaarheidsprofielContent,
   buildSpreekuurMeta,
+  resolveRubrieken,
 } from './merge-content';
 export {
   BELASTBAARHEID_CONTENT_JSON_SCHEMA,

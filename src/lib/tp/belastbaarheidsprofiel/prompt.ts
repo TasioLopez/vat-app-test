@@ -8,12 +8,12 @@ Analyseer de bijgevoegde documenten (FML/IZP/LAB, AD-rapport, intakeformulier) e
 BELANGRIJK: Spreekuurrapportage wordt apart verwerkt. Gebruik NOOIT een Spreekuurrapportage-document als bron in deze extractie.
 
 DOEL — alleen rubrieken extractie, geen layout:
-1. rubrieken — lijst van FML-rubrieken waarin werknemer beperkingen heeft (fallback wanneer context.has_spreekuurrapportage true is)
+1. rubrieken — lijst van FML-rubrieken waarin werknemer beperkingen heeft (server gebruikt dit als fallback wanneer intake Sectie 5 geen aangevinkte rubrieken heeft)
 
 BRONVOLGORDE
 - Gebruik primair de meest recente FML/IZP/LAB voor rubrieken
 - Indien geen losse FML: haal rubrieken uit het AD-rapport
-- Intakeformulier sectie 5 FML/IZP checkboxes als aanvulling
+- Intakeformulier sectie 5 FML/IZP checkboxes mogen als aanvulling, maar intake wordt server-side als primaire bron gemerged
 
 RUBRIEKEN
 - Alleen rubrieken opnemen met daadwerkelijke beperkingen
