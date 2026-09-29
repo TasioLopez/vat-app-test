@@ -55,6 +55,7 @@ export default function DeleteUserModal({
 }: DeleteUserModalProps) {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [owned, setOwned] = useState<OwnedEmployee[]>([]);
   const [directory, setDirectory] = useState<OrgDirectoryUser[]>([]);
@@ -75,6 +76,7 @@ export default function DeleteUserModal({
   const resetState = useCallback(() => {
     setLoading(false);
     setFetching(false);
+    setHasLoaded(false);
     setError(null);
     setOwned([]);
     setDirectory([]);
@@ -91,6 +93,7 @@ export default function DeleteUserModal({
 
     let cancelled = false;
     setFetching(true);
+    setHasLoaded(false);
     setError(null);
 
     void (async () => {
@@ -136,7 +139,10 @@ export default function DeleteUserModal({
           setError(err instanceof Error ? err.message : "Laden mislukt");
         }
       } finally {
-        if (!cancelled) setFetching(false);
+        if (!cancelled) {
+          setFetching(false);
+          setHasLoaded(true);
+        }
       }
     })();
 
@@ -238,8 +244,8 @@ export default function DeleteUserModal({
     await deleteUser([]);
   };
 
-  // Zero-dossier path: short confirm dialog
-  if (open && user && !fetching && owned.length === 0 && !error) {
+  // Zero-dossier path: short confirm dialog (only after load completes)
+  if (open && user && hasLoaded && !fetching && owned.length === 0 && !error) {
     return (
       <ConfirmDialog
         open={open}
@@ -274,119 +280,121 @@ export default function DeleteUserModal({
           <DialogTitle>Gebruiker verwijderen — dossiers hertoewijzen</DialogTitle>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground">
-          {targetLabel} is dossier-eigenaar van {owned.length} werknemer
-          {owned.length === 1 ? "" : "s"}. Wijs elke dossier toe aan een andere
-          gebruiker voordat je verwijdert.
-        </p>
-
-        {fetching ? (
+        {fetching || !hasLoaded ? (
           <p className="text-sm text-muted-foreground py-6">Laden…</p>
         ) : (
-          <div className="flex flex-col gap-4 min-h-0 flex-1">
-            <div className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3">
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Nieuwe eigenaar voor selectie
-                </label>
-                <OrgUserSelect
-                  supabase={supabase}
-                  value={bulkOwnerId}
-                  onChange={(id) => setBulkOwnerId(id)}
-                  users={candidateUsers}
-                  currentUserId={currentUserId}
-                  placeholder="Selecteer eigenaar…"
-                  disabled={loading}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={loading || !bulkOwnerId || selectedIds.size === 0}
-                onClick={applyBulk}
-              >
-                Toepassen op selectie ({selectedIds.size})
-              </Button>
-            </div>
+          <>
+            <p className="text-sm text-muted-foreground">
+              {targetLabel} is dossier-eigenaar van {owned.length} werknemer
+              {owned.length === 1 ? "" : "s"}. Wijs elke dossier toe aan een andere
+              gebruiker voordat je verwijdert.
+            </p>
 
-            <div className="rounded-md border border-border overflow-hidden min-h-0 flex-1">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected;
-                  }}
-                  onChange={toggleSelectAll}
-                  disabled={loading || owned.length === 0}
-                  aria-label="Alles selecteren"
-                  className="h-4 w-4"
-                />
-                <span className="text-sm font-medium">Werknemers</span>
+            <div className="flex flex-col gap-4 min-h-0 flex-1">
+              <div className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Nieuwe eigenaar voor selectie
+                  </label>
+                  <OrgUserSelect
+                    supabase={supabase}
+                    value={bulkOwnerId}
+                    onChange={(id) => setBulkOwnerId(id)}
+                    users={candidateUsers}
+                    currentUserId={currentUserId}
+                    placeholder="Selecteer eigenaar…"
+                    disabled={loading}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={loading || !bulkOwnerId || selectedIds.size === 0}
+                  onClick={applyBulk}
+                >
+                  Toepassen op selectie ({selectedIds.size})
+                </Button>
               </div>
-              <ScrollArea className="h-[min(360px,50vh)]">
-                <ul className="divide-y divide-border">
-                  {owned.map((emp) => {
-                    const name = `${emp.first_name} ${emp.last_name}`.trim() || "Naamloos";
-                    return (
-                      <li
-                        key={emp.id}
-                        className="flex flex-wrap items-center gap-3 px-3 py-2.5"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(emp.id)}
-                          onChange={() => toggleRow(emp.id)}
-                          disabled={loading}
-                          aria-label={`Selecteer ${name}`}
-                          className="h-4 w-4 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-foreground truncate">
-                            {name}
-                          </div>
-                          {emp.client_name ? (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {emp.client_name}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="w-full sm:w-[220px]">
-                          <OrgUserSelect
-                            supabase={supabase}
-                            value={assignments[emp.id]}
-                            onChange={(id) =>
-                              setAssignments((prev) => ({ ...prev, [emp.id]: id }))
-                            }
-                            users={candidateUsers}
-                            currentUserId={currentUserId}
-                            placeholder="Nieuwe eigenaar…"
+
+              <div className="rounded-md border border-border overflow-hidden min-h-0 flex-1">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    disabled={loading || owned.length === 0}
+                    aria-label="Alles selecteren"
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm font-medium">Werknemers</span>
+                </div>
+                <ScrollArea className="h-[min(360px,50vh)]">
+                  <ul className="divide-y divide-border">
+                    {owned.map((emp) => {
+                      const name = `${emp.first_name} ${emp.last_name}`.trim() || "Naamloos";
+                      return (
+                        <li
+                          key={emp.id}
+                          className="flex flex-wrap items-center gap-3 px-3 py-2.5"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(emp.id)}
+                            onChange={() => toggleRow(emp.id)}
                             disabled={loading}
+                            aria-label={`Selecteer ${name}`}
+                            className="h-4 w-4 shrink-0"
                           />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </ScrollArea>
-            </div>
-
-            {ownerSummary.length > 0 ? (
-              <div className="text-xs text-muted-foreground">
-                Samenvatting:{" "}
-                {ownerSummary.map((s, i) => (
-                  <span key={s.ownerId}>
-                    {i > 0 ? " · " : ""}
-                    {s.label}: {s.count}
-                  </span>
-                ))}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {name}
+                            </div>
+                            {emp.client_name ? (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {emp.client_name}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="w-full sm:w-[220px]">
+                            <OrgUserSelect
+                              supabase={supabase}
+                              value={assignments[emp.id]}
+                              onChange={(id) =>
+                                setAssignments((prev) => ({ ...prev, [emp.id]: id }))
+                              }
+                              users={candidateUsers}
+                              currentUserId={currentUserId}
+                              placeholder="Nieuwe eigenaar…"
+                              disabled={loading}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </ScrollArea>
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Nog geen nieuwe eigenaren gekozen.
-              </p>
-            )}
-          </div>
+
+              {ownerSummary.length > 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Samenvatting:{" "}
+                  {ownerSummary.map((s, i) => (
+                    <span key={s.ownerId}>
+                      {i > 0 ? " · " : ""}
+                      {s.label}: {s.count}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Nog geen nieuwe eigenaren gekozen.
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
