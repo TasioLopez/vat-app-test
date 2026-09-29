@@ -2,6 +2,7 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import { isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
 import { hasDefinitiveAdReport, isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import {
   buildVisieLoopbaanadviseurFields,
@@ -30,6 +31,7 @@ import {
 import {
   VISIE_LOOPBAANADVISEUR_SUGGESTION_JSON_SCHEMA,
   parseVisieLoopbaanadviseurSuggestionResult,
+  toPublishedFuncties,
   type VisieLoopbaanadviseurContentResult,
   type VisieLoopbaanFunctie,
 } from './schema';
@@ -99,6 +101,18 @@ export function hasIntakeDoc(docs: EmployeeDoc[]): boolean {
   return docs.some((d) => getVisieLoopbaanadviseurDocCategory(d.type) === 'intake');
 }
 
+/** True when advies_ad_passende_arbeid holds real AD narrative (not empty / N.B. placeholder). */
+export function hasMeaningfulAdAdvies(advies: string | null | undefined): boolean {
+  const raw = String(advies ?? '').trim();
+  if (!raw) return false;
+  if (isAdviesNbNoReport(raw)) return false;
+  return true;
+}
+
+/**
+ * Scenario for Visie LA standard intro.
+ * Meta-first (concept / has_ad_report / advies content); AD PDF alone does not force ad_*.
+ */
 export function detectDocumentScenario(
   docs: EmployeeDoc[],
   meta?: VisieLoopbaanadviseurBuildContext['meta'] | null
@@ -110,15 +124,16 @@ export function detectDocumentScenario(
   );
 
   const isConcept = isAdReportConcept(meta ?? undefined);
-  const hasAdDoc = categories.has('ad');
-  const hasFuncties = extractAdExclusionPhrases(meta?.advies_ad_passende_arbeid).length > 0;
-  const hasDefinitiveAd = hasDefinitiveAdReport(meta ?? undefined) || (hasAdDoc && !isConcept);
+  const hasFuncties =
+    extractAdExclusionPhrases(meta?.advies_ad_passende_arbeid).length > 0;
+  const hasDefinitiveAd = hasDefinitiveAdReport(meta ?? undefined);
+  const hasAdviesNarrative = hasMeaningfulAdAdvies(meta?.advies_ad_passende_arbeid);
   const hasBelastbaarheid = categories.has('belastbaarheid');
 
   if (isConcept) {
     return hasFuncties ? 'concept_ad_with_functies' : 'concept_ad_no_functies';
   }
-  if (hasDefinitiveAd) {
+  if (hasDefinitiveAd || hasAdviesNarrative) {
     return hasFuncties ? 'ad_with_functies' : 'ad_no_functies';
   }
   if (hasBelastbaarheid) return 'belastbaarheid_only';
@@ -177,6 +192,24 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
   await Promise.all(fileIds.map((id) => openai.files.delete(id).catch(() => {})));
 }
 
+function excerptText(value: string | null | undefined, maxChars: number): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  if (raw.length <= maxChars) return raw;
+  return `${raw.slice(0, maxChars).trim()}…`;
+}
+
+/** Compact profile signals so the model anchors titles in opleiding/ervaring/zoekrichting. */
+export function buildProfielHints(meta: VisieLoopbaanadviseurBuildContext['meta']): {
+  persoonlijk_profiel_excerpt: string | null;
+  zoekprofiel_excerpt: string | null;
+} {
+  return {
+    persoonlijk_profiel_excerpt: excerptText(meta.persoonlijk_profiel, 900),
+    zoekprofiel_excerpt: excerptText(meta.zoekprofiel, 700),
+  };
+}
+
 function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string, unknown> {
   const adUitsluiting = extractAdExclusionPhrases(ctx.meta.advies_ad_passende_arbeid);
   return {
@@ -189,6 +222,7 @@ function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string,
       zoekprofiel: ctx.meta.zoekprofiel || null,
       persoonlijk_profiel: ctx.meta.persoonlijk_profiel || null,
     },
+    profiel_hints: buildProfielHints(ctx.meta),
     ad_uitsluiting_functies: adUitsluiting,
   };
 }
@@ -329,7 +363,12 @@ export async function generateFunctieSuggestions(
     }
 
     return {
-      suggestions: content.functies.slice(0, batchSize),
+      suggestions: content.functies.slice(0, batchSize).map((f) => ({
+        naam: f.naam,
+        toelichting: f.toelichting,
+        ...(f.anker ? { anker: f.anker } : {}),
+        ...(f.anker_detail ? { anker_detail: f.anker_detail } : {}),
+      })),
       qualityWarnings: quality.ok ? [] : quality.issues,
     };
   } finally {
@@ -377,8 +416,9 @@ export async function generateVisieLoopbaanadviseur(
     ctx,
     docs
   );
-  const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: suggestions }, scenario);
-  const draft = draftFromGeneratedBatch(suggestions, { status: 'kept', round: 1 });
+  const published = toPublishedFuncties(suggestions);
+  const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: published }, scenario);
+  const draft = draftFromGeneratedBatch(published, { status: 'kept', round: 1 });
   return {
     ...fields,
     draft,

@@ -4,7 +4,11 @@ import {
   FUNCTIE_SUGGESTION_BATCH_SIZE,
   TOELICHTING_CLONE_PHRASES,
 } from './constants';
-import type { VisieLoopbaanadviseurContentResult, VisieLoopbaanFunctie } from './schema';
+import {
+  FUNCTIE_ANKER_VALUES,
+  type VisieLoopbaanadviseurContentResult,
+  type VisieLoopbaanFunctie,
+} from './schema';
 
 const FUNCTIE_STOPWORDS = new Set([
   'medewerker',
@@ -20,6 +24,28 @@ const FUNCTIE_STOPWORDS = new Set([
   'zakelijke',
   'dienstverlening',
 ]);
+
+/** Max significant tokens in a realistic short NL job title. */
+export const MAX_FUNCTIE_TITLE_TOKENS = 6;
+
+const LIMITATIONS_ONLY_MARKERS = [
+  ...TOELICHTING_CLONE_PHRASES,
+  'belastbaarheid',
+  'binnen de fml',
+  'binnen fml',
+  'passend binnen',
+] as const;
+
+const PROFILE_LINK_MARKERS = [
+  'opleiding',
+  'ervaring',
+  'werkervaring',
+  'zoekprofiel',
+  'achtergrond',
+  'afgerond',
+  'gewerkt',
+  'sector',
+] as const;
 
 const AD_PLACEHOLDER_PATTERN =
   /^(n\.?\s*b\.?|geen\s+ad|nog\s+geen\s+ad|tijdens het opstellen)/i;
@@ -212,6 +238,33 @@ export function assessFunctieQuality(
   checkExclusionOverlaps(concrete, excl.keptNames ?? [], 'Behouden-overlap', issues);
   checkExclusionOverlaps(concrete, excl.rejectedNames ?? [], 'Afgewezen-overlap', issues);
 
+  for (const f of concrete) {
+    const tokens = significantTokens(f.naam);
+    if (tokens.length > MAX_FUNCTIE_TITLE_TOKENS) {
+      issues.push(
+        `Titel te niche/lang: "${f.naam}" (${tokens.length} kernwoorden; max ${MAX_FUNCTIE_TITLE_TOKENS})`
+      );
+    }
+
+    if (!f.anker || !(FUNCTIE_ANKER_VALUES as readonly string[]).includes(f.anker)) {
+      issues.push(`Ontbrekend/ongeldig anker voor "${f.naam}"`);
+    }
+    if (!String(f.anker_detail ?? '').trim()) {
+      issues.push(`Ontbrekend anker_detail voor "${f.naam}"`);
+    }
+
+    const toel = (f.toelichting || '').toLowerCase();
+    const hasLimitationMarker = LIMITATIONS_ONLY_MARKERS.some((m) =>
+      toel.includes(m.toLowerCase())
+    );
+    const hasProfileLink = PROFILE_LINK_MARKERS.some((m) => toel.includes(m));
+    if (hasLimitationMarker && !hasProfileLink) {
+      issues.push(
+        `Toelichting alleen belastbaarheid/prikkelarm zonder profielbrug: "${f.naam}"`
+      );
+    }
+  }
+
   for (let i = 0; i < concrete.length; i++) {
     for (let j = i + 1; j < concrete.length; j++) {
       if (titlesTooSimilar(concrete[i].naam, concrete[j].naam)) {
@@ -240,12 +293,18 @@ export function buildRepairFeedbackMessage(
   batchSize: number = FUNCTIE_SUGGESTION_BATCH_SIZE
 ): string {
   const names = rejectedNames.filter(Boolean).join('; ');
+  const realismHint = issues.some((i) =>
+    /niche|anker|profielbrug|belastbaarheid\/prikkelarm/i.test(i)
+  )
+    ? 'Realisme: gebruik korte, gangbare NL-titels; elk item mét anker+anker_detail uit opleiding/ervaring/zoekprofiel; geen niche-samenstellingen of limitations-only toelichtingen.'
+    : '';
   return [
     'REPARATIE — vorige functiesuggesties voldeden niet aan de kwaliteitseisen.',
     `Problemen: ${issues.join(' | ')}`,
     names ? `Afgewezen namen: ${names}` : '',
     `Lever opnieuw exact ${batchSize} NIEUWE functies.`,
-    `Eisen: ${batchSize} duidelijk verschillende roltypen; geen AD/behouden/afgewezen-overlap; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid; geen onrealistische functies.`,
+    `Eisen: ${batchSize} duidelijk verschillende roltypen; common titles; anker verplicht; geen AD/behouden/afgewezen-overlap; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid.`,
+    realismHint,
   ]
     .filter(Boolean)
     .join('\n');

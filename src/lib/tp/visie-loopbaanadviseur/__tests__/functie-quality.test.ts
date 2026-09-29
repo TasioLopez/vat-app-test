@@ -4,6 +4,7 @@ import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT, ADVIES_NB_NO_REPORT_LEGACY } fro
 import {
   assessFunctieQuality,
   buildRegenerateFeedbackMessage,
+  buildRepairFeedbackMessage,
   extractAdExclusionPhrases,
   normalizeFunctieNaam,
 } from '../functie-quality';
@@ -51,39 +52,55 @@ describe('assessFunctieQuality', () => {
           naam: 'Medewerker klantcontact backoffice reisorganisatie',
           toelichting:
             'Backoffice in een prikkelarme setting zonder hoge tempo of strakke deadlines.',
+          anker: 'werkervaring',
+          anker_detail: 'reisorganisatie',
         },
         {
           naam: 'Medewerker planning en administratie zakelijke dienstverlening',
           toelichting:
             'Planning en administratie in een prikkelarme setting zonder productiedruk.',
+          anker: 'werkervaring',
+          anker_detail: 'planning',
         },
         {
           naam: 'Projectmedewerker interne processen en documentatie',
           toelichting:
             'Documentatie in een prikkelarme omgeving zonder hoge tempo of deadlines.',
+          anker: 'opleiding',
+          anker_detail: 'administratie',
         },
       ],
     };
 
     const result = assessFunctieQuality(content, []);
     assert.equal(result.ok, false);
-    assert.ok(result.issues.some((i) => /Onderling te gelijk|Toelichtingen te gelijk/i.test(i)));
+    assert.ok(
+      result.issues.some((i) =>
+        /Onderling te gelijk|Toelichtingen te gelijk|niche\/lang/i.test(i)
+      )
+    );
   });
 
-  it('passes clearly distinct role titles with varied toelichtingen', () => {
+  it('passes clearly distinct role titles with ankers and varied toelichtingen', () => {
     const content: VisieLoopbaanadviseurContentResult = {
       functies: [
         {
-          naam: 'Junior reisadviseur ondersteuning',
+          naam: 'Reisadviseur',
           toelichting: 'Sluit aan bij haar opleiding Toerisme en recreatie.',
+          anker: 'opleiding',
+          anker_detail: 'Toerisme en recreatie',
         },
         {
-          naam: 'Roostermaker hospitaliteit',
+          naam: 'Roostermaker',
           toelichting: 'Past bij haar ervaring met organiseren als Supervisor.',
+          anker: 'werkervaring',
+          anker_detail: 'Supervisor',
         },
         {
-          naam: 'Documentcontroleur luchtvaartdossiers',
-          toelichting: 'Vraagt nauwkeurigheid en digitale vaardigheden zonder fysieke piekbelasting.',
+          naam: 'Documentcontroleur',
+          toelichting: 'Past bij zoekprofiel administratief en digitale vaardigheden.',
+          anker: 'zoekprofiel',
+          anker_detail: 'administratief',
         },
       ],
     };
@@ -92,20 +109,72 @@ describe('assessFunctieQuality', () => {
     assert.equal(result.ok, true, result.issues.join(' | '));
   });
 
+  it('fails when anker is missing', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [
+        {
+          naam: 'Receptionist',
+          toelichting: 'Past bij haar gastvrijheidsachtergrond.',
+        },
+      ],
+    };
+    const result = assessFunctieQuality(content, []);
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((i) => /anker/i.test(i)));
+  });
+
+  it('fails niche overlong titles', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [
+        {
+          naam: 'Klantcontact backoffice reisorganisatie planning documentatie dossiervorming kwaliteitscontrole',
+          toelichting: 'Past bij opleiding toerisme.',
+          anker: 'opleiding',
+          anker_detail: 'toerisme',
+        },
+      ],
+    };
+    const result = assessFunctieQuality(content, []);
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((i) => /niche\/lang/i.test(i)));
+  });
+
+  it('fails limitations-only toelichting without profile link', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [
+        {
+          naam: 'Administratief medewerker',
+          toelichting: 'Passend in een prikkelarme setting zonder hoge tempo.',
+          anker: 'werkervaring',
+          anker_detail: 'admin',
+        },
+      ],
+    };
+    const result = assessFunctieQuality(content, []);
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((i) => /profielbrug/i.test(i)));
+  });
+
   it('fails when proposed naam overlaps AD exclusion phrase', () => {
     const content: VisieLoopbaanadviseurContentResult = {
       functies: [
         {
           naam: 'Receptionist hotel',
           toelichting: 'Past bij haar gastvrijheidsachtergrond.',
+          anker: 'werkervaring',
+          anker_detail: 'hotel',
         },
         {
-          naam: 'Roostermaker hospitaliteit',
+          naam: 'Roostermaker',
           toelichting: 'Past bij organisatorische ervaring.',
+          anker: 'werkervaring',
+          anker_detail: 'planning',
         },
         {
-          naam: 'Documentcontroleur dossiers',
-          toelichting: 'Past bij nauwkeurige digitale vaardigheden.',
+          naam: 'Documentcontroleur',
+          toelichting: 'Past bij opleiding administratie.',
+          anker: 'opleiding',
+          anker_detail: 'administratie',
         },
       ],
     };
@@ -118,9 +187,24 @@ describe('assessFunctieQuality', () => {
   it('fails when suggestion overlaps kept or rejected names', () => {
     const content: VisieLoopbaanadviseurContentResult = {
       functies: [
-        { naam: 'Junior reisadviseur', toelichting: 'Opleiding toerisme.' },
-        { naam: 'Roostermaker zorg', toelichting: 'Organisatie-ervaring.' },
-        { naam: 'Documentcontroleur', toelichting: 'Digitale vaardigheden.' },
+        {
+          naam: 'Junior reisadviseur',
+          toelichting: 'Opleiding toerisme.',
+          anker: 'opleiding',
+          anker_detail: 'toerisme',
+        },
+        {
+          naam: 'Roostermaker zorg',
+          toelichting: 'Organisatie-ervaring.',
+          anker: 'werkervaring',
+          anker_detail: 'zorg',
+        },
+        {
+          naam: 'Documentcontroleur',
+          toelichting: 'Digitale vaardigheden uit zoekprofiel.',
+          anker: 'zoekprofiel',
+          anker_detail: 'digitaal',
+        },
       ],
     };
     const result = assessFunctieQuality(content, {
@@ -145,5 +229,17 @@ describe('buildRegenerateFeedbackMessage', () => {
     assert.match(msg, /Functie B/);
     assert.match(msg, /Meer administratief/);
     assert.match(msg, /exact 5/);
+  });
+});
+
+describe('buildRepairFeedbackMessage', () => {
+  it('mentions realism when niche or anker issues fire', () => {
+    const msg = buildRepairFeedbackMessage(
+      ['Titel te niche/lang: "Foo"', 'Ontbrekend anker voor "Bar"'],
+      ['Foo'],
+      5
+    );
+    assert.match(msg, /REPARATIE/);
+    assert.match(msg, /Realisme/);
   });
 });

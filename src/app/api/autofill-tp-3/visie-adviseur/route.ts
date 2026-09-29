@@ -16,6 +16,7 @@ import {
   markDraftFinalized,
   parseDraft,
   createEmptyDraft,
+  toPublishedFuncties,
   type VisieLoopbaanFunctie,
   type VisieLaFunctieDraft,
 } from '@/lib/tp/visie-loopbaanadviseur';
@@ -162,7 +163,31 @@ export async function POST(req: NextRequest) {
     };
 
     if (mode === 'finalize') {
+      const scenario = detectDocumentScenario(docs, meta);
       const kept = coerceFunctieList(body.kept);
+
+      if (scenario === 'intake_only') {
+        const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: [] }, scenario);
+        let draft = parseDraft(body.draft);
+        draft = markDraftFinalized(draft.suggestions.length ? draft : createEmptyDraft());
+
+        await supabase.from('tp_meta').upsert(
+          {
+            employee_id: employeeId,
+            visie_loopbaanadviseur: fields.visie_loopbaanadviseur,
+          } as any,
+          { onConflict: 'employee_id' }
+        );
+
+        return NextResponse.json({
+          details: {
+            visie_loopbaanadviseur: fields.visie_loopbaanadviseur,
+            visie_la_functie_draft: draft,
+          },
+          scenario,
+        });
+      }
+
       if (kept.length < FUNCTIE_FINAL_MIN_COUNT) {
         return NextResponse.json(
           {
@@ -172,8 +197,11 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const scenario = detectDocumentScenario(docs, meta);
-      const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: kept }, scenario);
+      const fields = buildVisieLoopbaanadviseurFields(
+        ctx,
+        { functies: toPublishedFuncties(kept) },
+        scenario
+      );
       let draft = parseDraft(body.draft);
       if (draft.suggestions.length === 0) {
         draft = draftFromGeneratedBatch(kept, { status: 'kept', round: 1 });
@@ -193,6 +221,7 @@ export async function POST(req: NextRequest) {
           visie_loopbaanadviseur: fields.visie_loopbaanadviseur,
           visie_la_functie_draft: draft,
         },
+        scenario,
       });
     }
 
@@ -201,6 +230,18 @@ export async function POST(req: NextRequest) {
         { error: 'Ongeldige mode (initial | regenerate | finalize)' },
         { status: 400 }
       );
+    }
+
+    const scenario = detectDocumentScenario(docs, meta);
+    if (scenario === 'intake_only') {
+      return NextResponse.json({
+        suggestions: [],
+        draft: parseDraft(body.draft),
+        qualityWarnings: [],
+        scenario,
+        message:
+          'Geen AD-rapport en geen belastbaarheidsprofiel: er worden nog geen functies geduid. Pas de standaardzin toe zonder suggesties.',
+      });
     }
 
     const kept = coerceFunctieList(body.kept);
@@ -221,12 +262,14 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    const published = toPublishedFuncties(suggestions);
+
     const draft =
       mode === 'initial'
-        ? draftFromGeneratedBatch(suggestions, { status: 'pending', round: 1 })
+        ? draftFromGeneratedBatch(published, { status: 'pending', round: 1 })
         : mergeRegenerationBatch(
             existingDraft.suggestions.length ? existingDraft : createEmptyDraft(),
-            suggestions,
+            published,
             { userFeedback }
           );
 
@@ -234,13 +277,14 @@ export async function POST(req: NextRequest) {
     let finalDraft = draft;
     if (mode === 'regenerate' && kept.length > 0 && existingDraft.suggestions.length === 0) {
       const seeded = draftFromGeneratedBatch(kept, { status: 'kept', round: 0 });
-      finalDraft = mergeRegenerationBatch(seeded, suggestions, { userFeedback });
+      finalDraft = mergeRegenerationBatch(seeded, published, { userFeedback });
     }
 
     return NextResponse.json({
       suggestions: finalDraft.suggestions.filter((s) => s.status === 'pending'),
       draft: finalDraft,
       qualityWarnings,
+      scenario,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

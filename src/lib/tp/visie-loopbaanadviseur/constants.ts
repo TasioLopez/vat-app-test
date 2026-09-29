@@ -83,16 +83,19 @@ Context uit dossier: zoekprofiel (leidend), persoonlijk profiel, advies AD passe
 Gebruik nooit aannames.
 `.trim();
 
-export const SELECTION_PROCESS_V10 = `
-Stap 1 — Analyseer persoonlijk profiel: opleiding, werkervaring, competenties, interesses, werk-/denkniveau, taal, digitale vaardigheden, mobiliteit.
-Stap 2 — Analyseer zoekprofiel (leidend). Wanneer afwezig: leid af uit opleiding, werkervaring en persoonlijk profiel.
-Stap 3 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren, fysieke omgeving, dynamische handelingen, statische houdingen, werktijden; plus staan, lopen, tillen/dragen, buigen, knielen/hurken, reiken, houdingsafwisseling, werktempo, omgevingseisen. Bij één wezenlijke overschrijding: afwijzen. Werk conservatief.
-Stap 4 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook de structured list ad_uitsluiting_functies in context.
-Stap 5 — Arbeidsmarkttoets: regulier, Nederlandse arbeidsmarkt, voldoende vacatures, realistisch bemiddelbaar, maximaal circa zes maanden scholing.
+export const SELECTION_PROCESS_V12 = `
+Stap 1 — Profielbrug (EERST): kies functies die aantoonbaar aansluiten op opleiding, recente werkervaring en/of zoekprofiel. Elke suggestie moet een concreet anker uit het dossier hebben.
+Stap 2 — Arbeidsmarkttoets: prefer common, findable Nederlandse vacaturetitels (kort, standaard; maximaal circa 1–2 modifiers). Geen niche-samenstellingen, geen verzonnen of zeldzame titels, geen over-specifieke stacks.
+Stap 3 — Zoekprofiel: respecteer zoekrichting en niveau; wanneer zoekprofiel ontbreekt, leid af uit opleiding en werkervaring (niet alleen uit belastbaarheid).
+Stap 4 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren, fysieke omgeving, dynamische handelingen, statische houdingen, werktijden; plus staan, lopen, tillen/dragen, buigen, knielen/hurken, reiken, houdingsafwisseling, werktempo, omgevingseisen. Bij één wezenlijke overschrijding: afwijzen. Werk conservatief — maar verzin géén veilige niche-titels alleen om FML te omzeilen.
+Stap 5 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook ad_uitsluiting_functies en behouden/afgewezen namen.
 Stap 6 — Praktijktoets: functies waarin regelmatig langdurig staan/lopen, productietempo, assemblage, productiewerk, kwaliteitscontrole, zwaar tillen, veel bukken/traplopen/reiken of structurele fysieke belasting: afwijzen. Bij twijfel afwijzen.
-Stap 7 — Onderlinge controle: exact vijf NIEUWE functiesuggesties per ronde. De vijf concrete suggesties moeten duidelijk verschillende roltypen zijn (bijv. contactgericht vs planning/organisatie vs specialistisch/intern), niet herschrijvingen van dezelfde admin/backoffice-idee. Zelfde zoekprofiel-wereld mag; onderlinge titel en kerntaak moeten duidelijk verschillen. Per toelichting een ander passendheidsargument (opleiding vs werkervaring vs specifieke skill); herhaal niet dezelfde prikkelarm/lage druk/geen deadlines-formulering. Nooit behouden of afgewezen namen (of synoniemen) opnieuw voorstellen.
-Stap 8 — Eindcontrole: volledig passend binnen belastbaarheid, aansluitend bij profiel en zoekprofiel, niet door AD genoemd, geen synoniemen, regulier en kansrijk. Het eindresultaat in het trajectplan mag een variabel aantal behouden functies bevatten (≥1).
+Stap 7 — Onderlinge controle: exact vijf NIEUWE suggesties. Verschillende roltypen én verschillende ankers (niet vijf limitation-only admin-clones). Per toelichting een ander passendheidsargument gekoppeld aan het anker; herhaal niet dezelfde prikkelarm/lage druk-formulering.
+Stap 8 — Eindcontrole: plaatsbaar en realistisch, geworteld in profiel, passend binnen belastbaarheid, niet door AD genoemd, regulier en kansrijk. Eindresultaat trajectplan: variabel aantal behouden functies (≥1), behalve scenario zonder AD én zonder belastbaarheidsprofiel (geen functies).
 `.trim();
+
+/** @deprecated Use SELECTION_PROCESS_V12 */
+export const SELECTION_PROCESS_V10 = SELECTION_PROCESS_V12;
 
 export const AD_SYNONYM_EXAMPLES = `
 assemblage → geen assemblagemedewerker
@@ -123,14 +126,16 @@ export const PRAKTIJKTOETS_AVOID = [
 export const EINDCONTROLE_CHECKLIST = `
 - Juiste vaste toelichting (systeem)
 - Juiste inleidende zin functies (systeem)
-- Suggestieronde: exact vijf NIEUWE functies
-- Eindresultaat trajectplan: variabel aantal behouden functies (≥1)
+- Suggestieronde: exact vijf NIEUWE functies (behalve intake_only)
+- Eindresultaat trajectplan: variabel aantal behouden functies (≥1), of geen functies bij intake_only
 - Maximaal één zin toelichting per functie
+- Elke functie: anker (opleiding|werkervaring|zoekprofiel) + anker_detail uit dossier
+- Korte, gangbare NL-titels (geen niche-samenstellingen)
 - Geen AD-titels of synoniemen (inclusief ad_uitsluiting_functies)
 - Geen overlap met behouden of afgewezen functies
-- Vijf suggesties = verschillende roltypen (geen near-clones)
-- Toelichtingen niet copy-paste (verschillende passendheidsargumenten)
-- Passend binnen belastbaarheid en zoekprofiel
+- Vijf suggesties = verschillende roltypen én ankers
+- Toelichtingen niet copy-paste / niet alleen prikkelarm-belastbaarheid
+- Passend binnen belastbaarheid en zoekprofiel; realistisch plaatsbaar
 `.trim();
 
 /** Shared banned toelichting phrase families (quality gate). */

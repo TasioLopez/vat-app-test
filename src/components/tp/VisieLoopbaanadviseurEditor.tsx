@@ -59,6 +59,7 @@ export function VisieLoopbaanadviseurEditor({
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showManual, setShowManual] = useState(false);
+  const [lastScenario, setLastScenario] = useState<string | null>(null);
 
   const update = (patch: Partial<typeof parsed>) => {
     setDraftMd(buildVisieLoopbaanadviseurBlock({ ...parsed, ...patch }));
@@ -116,10 +117,17 @@ export function VisieLoopbaanadviseurEditor({
       if (json.draft) {
         setDraftState(parseDraft(json.draft));
       }
-      const qw = Array.isArray(json.qualityWarnings)
-        ? json.qualityWarnings.map(String)
-        : [];
-      setWarnings(qw);
+      if (typeof json.scenario === 'string') {
+        setLastScenario(json.scenario);
+      }
+      if (typeof json.message === 'string' && json.message.trim()) {
+        setWarnings([json.message.trim()]);
+      } else {
+        const qw = Array.isArray(json.qualityWarnings)
+          ? json.qualityWarnings.map(String)
+          : [];
+        setWarnings(qw);
+      }
       if (mode === 'regenerate') setFeedback('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generatie mislukt');
@@ -133,7 +141,8 @@ export function VisieLoopbaanadviseurEditor({
     setBusy('finalize');
     try {
       const keptFuncties = getKeptFuncties(draft);
-      if (keptFuncties.length < FUNCTIE_FINAL_MIN_COUNT) {
+      const allowEmpty = lastScenario === 'intake_only';
+      if (!allowEmpty && keptFuncties.length < FUNCTIE_FINAL_MIN_COUNT) {
         throw new Error(
           `Selecteer minstens ${FUNCTIE_FINAL_MIN_COUNT} functie om toe te passen`
         );
@@ -143,6 +152,9 @@ export function VisieLoopbaanadviseurEditor({
         kept: keptFuncties,
         draft,
       });
+      if (typeof json.scenario === 'string') {
+        setLastScenario(json.scenario);
+      }
       const details =
         json.details && typeof json.details === 'object'
           ? (json.details as Record<string, unknown>)
@@ -252,7 +264,9 @@ export function VisieLoopbaanadviseurEditor({
               type="button"
               size="sm"
               disabled={
-                !employeeId || busy != null || kept.length < FUNCTIE_FINAL_MIN_COUNT
+                !employeeId ||
+                busy != null ||
+                (lastScenario !== 'intake_only' && kept.length < FUNCTIE_FINAL_MIN_COUNT)
               }
               onClick={() => void handleFinalize()}
             >

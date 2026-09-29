@@ -16,6 +16,7 @@ export {
   FUNCTIE_FINAL_MIN_COUNT,
   DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL,
   GENERATION_FALLBACK,
+  SELECTION_PROCESS_V12,
   type DocumentScenario,
 } from './constants';
 export {
@@ -47,16 +48,6 @@ export {
   type VisieLaFunctieDraft,
 } from './draft';
 export {
-  assessFunctieQuality,
-  buildRegenerateFeedbackMessage,
-  buildRepairFeedbackMessage,
-  extractAdExclusionPhrases,
-  normalizeFunctieNaam,
-  significantTokens,
-  type FunctieQualityExclusions,
-  type FunctieQualityResult,
-} from './functie-quality';
-export {
   detectDocumentScenario,
   filterVisieLoopbaanadviseurDocs,
   generateFunctieSuggestions,
@@ -64,6 +55,8 @@ export {
   generateVisieLoopbaanadviseurContent,
   getVisieLoopbaanadviseurDocCategory,
   hasIntakeDoc,
+  hasMeaningfulAdAdvies,
+  buildProfielHints,
   type EmployeeDoc,
   type GenerateFunctieSuggestionsOptions,
   type GenerateFunctieSuggestionsResult,
@@ -72,11 +65,25 @@ export {
 export {
   VISIE_LOOPBAANADVISEUR_CONTENT_JSON_SCHEMA,
   VISIE_LOOPBAANADVISEUR_SUGGESTION_JSON_SCHEMA,
+  FUNCTIE_ANKER_VALUES,
   parseVisieLoopbaanadviseurContentResult,
   parseVisieLoopbaanadviseurSuggestionResult,
+  toPublishedFuncties,
+  type FunctieAnker,
   type VisieLoopbaanadviseurContentResult,
   type VisieLoopbaanFunctie,
 } from './schema';
+export {
+  assessFunctieQuality,
+  buildRegenerateFeedbackMessage,
+  buildRepairFeedbackMessage,
+  extractAdExclusionPhrases,
+  normalizeFunctieNaam,
+  significantTokens,
+  MAX_FUNCTIE_TITLE_TOKENS,
+  type FunctieQualityExclusions,
+  type FunctieQualityResult,
+} from './functie-quality';
 export { parseFunctieLine } from './parse-functie-line';
 export {
   VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT,

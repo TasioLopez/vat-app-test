@@ -5,18 +5,18 @@ import {
   EINDCONTROLE_CHECKLIST,
   FUNCTIE_SUGGESTION_BATCH_SIZE,
   PRAKTIJKTOETS_AVOID,
-  SELECTION_PROCESS_V10,
+  SELECTION_PROCESS_V12,
   SOURCE_HIERARCHY_V10,
 } from './constants';
 import type { VisieLoopbaanFunctie } from './schema';
 
 /**
- * Visie loopbaanadviseur V11 masterprompt — suggestion rounds of 5; final count is variable.
+ * Visie loopbaanadviseur V12 masterprompt — realism + profile anker first.
  * Model generates functies only; server builds toelichting, intro, and footer.
  */
 export const VISIE_LOOPBAANADVISEUR_CONTENT_PROMPT = `
 ROL
-Je bent een ervaren loopbaanadviseur gespecialiseerd in tweede spoortrajecten conform de Wet verbetering poortwachter en de verwachtingen van het UWV.
+Je bent een ervaren loopbaanadviseur gespecialiseerd in tweede spoortrajecten conform de Wet verbetering poortwachter en de verwachtingen van het UWV. Je stelt alleen realistische, gangbare functies voor die een adviseur ook echt zou bemiddelen.
 
 DOEL
 Na analyse van de documenten lever je gestructureerde content voor "Visie loopbaanadviseur".
@@ -32,7 +32,7 @@ BRONVOLGORDE BELASTBAARHEID
 ${SOURCE_HIERARCHY_V10}
 
 SELECTIEPROCES
-${SELECTION_PROCESS_V10}
+${SELECTION_PROCESS_V12}
 
 AD-SYNONIEMEN (nooit opnieuw noemen)
 ${AD_SYNONYM_EXAMPLES}
@@ -41,32 +41,36 @@ PRAKTIJKTOETS — vermijd functies met regelmatig:
 ${PRAKTIJKTOETS_AVOID.map((t) => `- ${t}`).join('\n')}
 Bij twijfel altijd afwijzen.
 
-CONTEXT
-- zoekprofiel uit dossier is LEIDEND voor functiekeuze
-- persoonlijk_profiel: opleiding, werkervaring, competenties
-- advies_ad_passende_arbeid: functies/richtingen die NOOIT opnieuw genoemd mogen worden
-- ad_uitsluiting_functies: gestructureerde uitsluitingslijst — titels/synoniemen hierin NOOIT opnieuw noemen
+REALISME / PLAATSBAARHEID (hard)
+- Prefer standaard NL-vacaturetitels (bijv. administratief medewerker, receptionist, klantenservicemedewerker, planningondersteuner) — géén lange samengestelde nichetitels
+- Maximaal circa 1–2 modifiers in de titel; vermijd stacks van sector+taak+setting
+- Elke functie bouwt voort op opleiding, recente werkervaring of zoekprofiel (veld anker + anker_detail)
+- Verboden: titels die alleen “veilig binnen FML” zijn zonder profielbrug; verzonnen of zeldzame functies; near-clones van elkaar of van AD
 
-OUTPUT (model levert alleen functies)
+CONTEXT
+- profiel_hints en zoekprofiel/persoonlijk_profiel: gebruik voor ankers
+- advies_ad_passende_arbeid / ad_uitsluiting_functies: NOOIT opnieuw noemen (ook geen synoniemen)
+- belastbaarheid filtert; belastbaarheid is NIET de primaire bron van functietitels
+
+OUTPUT
 Selecteer exact ${FUNCTIE_SUGGESTION_BATCH_SIZE} NIEUWE functies:
-- ${FUNCTIE_SUGGESTION_BATCH_SIZE} concrete functienamen op de Nederlandse arbeidsmarkt
-- Geen "En soortgelijk" of vergelijkbare filler-regels
-- Per functie: maximaal één zin toelichting waarom passend binnen belastbaarheid
-- Duidelijk verschillende roltypen (bijv. contactgericht vs planning/organisatie vs specialistisch/intern) — geen near-clones van admin/backoffice
-- Per toelichting een ander passendheidsargument; geen herhaling van dezelfde prikkelarm/lage druk-formulering
-- Geen synoniemen of vergelijkbare functies t.o.v. arbeidsdeskundig rapport, ad_uitsluiting_functies, behouden of afgewezen functies
-- Conservatief binnen belastbaarheid en zoekprofiel; maximaal circa zes maanden scholing; geen onrealistische of te verliggende functies
+- ${FUNCTIE_SUGGESTION_BATCH_SIZE} korte, gangbare functienamen op de Nederlandse arbeidsmarkt
+- Geen "En soortgelijk" of filler
+- Per functie: toelichting (max 1 zin) die het anker noemt; anker = opleiding|werkervaring|zoekprofiel; anker_detail = kort feit uit dossier
+- Duidelijk verschillende roltypen én ankers
+- Geen AD-/behouden-/afgewezen-overlap
+- Conservatief binnen belastbaarheid; max. circa zes maanden scholing
 
 EINDCONTROLE
 ${EINDCONTROLE_CHECKLIST}
 
 JSON OUTPUT
-Lever exact: functies (array van ${FUNCTIE_SUGGESTION_BATCH_SIZE} objecten met naam en toelichting).
+Lever exact: functies (array van ${FUNCTIE_SUGGESTION_BATCH_SIZE} objecten met naam, toelichting, anker, anker_detail).
 Geen sectiekop "Visie loopbaanadviseur". Geen extra velden.
 `.trim();
 
 export function buildVisieLoopbaanadviseurContextMessage(ctx: Record<string, unknown>): string {
-  return `Context (zoekprofiel is leidend; genereer geen andere data uit context):\n${JSON.stringify(ctx, null, 2)}`;
+  return `Context (profielbrug en zoekprofiel leiden; genereer geen andere data uit context):\n${JSON.stringify(ctx, null, 2)}`;
 }
 
 export function buildRegenerateContextExtras(opts: {
@@ -77,7 +81,7 @@ export function buildRegenerateContextExtras(opts: {
 }): string {
   const batchSize = opts.batchSize ?? FUNCTIE_SUGGESTION_BATCH_SIZE;
   return [
-    `REGENERATIE — genereer exact ${batchSize} NIEUWE functiesuggesties.`,
+    `REGENERATIE — genereer exact ${batchSize} NIEUWE, gangbare functiesuggesties met anker.`,
     opts.kept.length
       ? `Behouden door adviseur (NOOIT opnieuw voorstellen, ook geen synoniemen):\n${opts.kept
           .map((f) => `- ${f.naam}`)
@@ -91,7 +95,7 @@ export function buildRegenerateContextExtras(opts: {
     opts.userFeedback?.trim()
       ? `Feedback adviseur: ${opts.userFeedback.trim()}`
       : '',
-    `Lever alleen nieuwe, concrete functies; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
+    `Eisen: common NL-titels; elk item met anker+anker_detail; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
   ]
     .filter(Boolean)
     .join('\n\n');

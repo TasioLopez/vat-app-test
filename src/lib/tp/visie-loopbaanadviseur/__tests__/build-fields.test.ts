@@ -65,26 +65,56 @@ Ik denk aan eventuele functies zoals:
 const ADVIES_NB = ADVIES_NB_NO_REPORT;
 
 describe('detectDocumentScenario', () => {
-  it('returns ad_with_functies when AD document and named functions in advies', () => {
+  it('returns ad_with_functies when has_ad_report and named functions in advies', () => {
     const docs = [
       { type: 'intakeformulier', url: 'a' },
       { type: 'fml_izp', url: 'b' },
       { type: 'ad_rapportage', url: 'c' },
     ];
     assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: true,
+        advies_ad_passende_arbeid: AD_ADVIES_WITH_FUNCTIES,
+      }),
+      'ad_with_functies'
+    );
+  });
+
+  it('returns ad_with_functies from meaningful advies even without has_ad_report flag', () => {
+    const docs = [{ type: 'intakeformulier', url: 'a' }];
+    assert.equal(
       detectDocumentScenario(docs, { advies_ad_passende_arbeid: AD_ADVIES_WITH_FUNCTIES }),
       'ad_with_functies'
     );
   });
 
-  it('returns ad_no_functies when AD document but no named functions', () => {
+  it('returns ad_no_functies when has_ad_report but no named functions', () => {
+    const docs = [
+      { type: 'intakeformulier', url: 'a' },
+      { type: 'fml_izp', url: 'b' },
+    ];
+    assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: true,
+        advies_ad_passende_arbeid: '',
+      }),
+      'ad_no_functies'
+    );
+  });
+
+  it('does not treat AD PDF alone as definitive AD when advies is N.B.', () => {
     const docs = [
       { type: 'intakeformulier', url: 'a' },
       { type: 'fml_izp', url: 'b' },
       { type: 'ad_rapportage', url: 'c' },
     ];
-    assert.equal(detectDocumentScenario(docs, { advies_ad_passende_arbeid: ADVIES_NB }), 'ad_no_functies');
-    assert.equal(detectDocumentScenario(docs, { advies_ad_passende_arbeid: '' }), 'ad_no_functies');
+    assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: false,
+        advies_ad_passende_arbeid: ADVIES_NB,
+      }),
+      'belastbaarheid_only'
+    );
   });
 
   it('returns concept_ad_no_functies for concept AD without AD PDF when no functions named', () => {
@@ -126,6 +156,25 @@ describe('detectDocumentScenario', () => {
         advies_ad_passende_arbeid: AD_ADVIES_WITH_FUNCTIES,
       }),
       'concept_ad_with_functies'
+    );
+  });
+
+  it('detects Habib-style Quote passende functies bullets as with_functies', () => {
+    const advies = [
+      'In het arbeidsdeskundigrapport staat het volgende advies over passende arbeid:',
+      '',
+      '<<<ADVIES>>>',
+      'Passend werk sluit aan bij de bekwaamheden.',
+      '- Receptiemedewerker',
+      '- Projectondersteuner',
+      '- Data-entry medewerker',
+    ].join('\n');
+    assert.equal(
+      detectDocumentScenario([{ type: 'intakeformulier', url: 'a' }], {
+        has_ad_report: true,
+        advies_ad_passende_arbeid: advies,
+      }),
+      'ad_with_functies'
     );
   });
 
@@ -370,32 +419,52 @@ describe('parseVisieLoopbaanadviseur / buildVisieLoopbaanadviseurBlock', () => {
   });
 });
 
+describe('toPublishedFuncties', () => {
+  it('strips anker fields before publish', async () => {
+    const { toPublishedFuncties } = await import('../schema');
+    const published = toPublishedFuncties([
+      {
+        naam: 'Receptionist',
+        toelichting: 'Past bij gastvrijheid.',
+        anker: 'werkervaring',
+        anker_detail: 'hotel',
+      },
+    ]);
+    assert.deepEqual(published, [
+      { naam: 'Receptionist', toelichting: 'Past bij gastvrijheid.' },
+    ]);
+    assert.equal('anker' in published[0], false);
+  });
+});
+
 describe('parseVisieLoopbaanadviseurContentResult', () => {
   it('parses functies and drops En soortgelijk without hard-capping at 3', async () => {
     const { parseVisieLoopbaanadviseurContentResult } = await import('../schema');
     const result = parseVisieLoopbaanadviseurContentResult({
       functies: [
-        { naam: 'A', toelichting: 'x' },
-        { naam: 'B', toelichting: 'y' },
-        { naam: 'C', toelichting: 'z' },
+        { naam: 'A', toelichting: 'x', anker: 'opleiding', anker_detail: 'mbo' },
+        { naam: 'B', toelichting: 'y', anker: 'werkervaring', anker_detail: 'admin' },
+        { naam: 'C', toelichting: 'z', anker: 'zoekprofiel', anker_detail: 'kantoor' },
         { naam: 'En soortgelijk', toelichting: '' },
-        { naam: 'D', toelichting: 'w' },
+        { naam: 'D', toelichting: 'w', anker: 'opleiding', anker_detail: 'hbo' },
       ],
     });
     assert.equal(result.functies.length, 4);
     assert.equal(result.functies[3].naam, 'D');
+    assert.equal(result.functies[0].anker, 'opleiding');
+    assert.equal(result.functies[0].anker_detail, 'mbo');
   });
 
   it('caps suggestion parse at batch size 5', async () => {
     const { parseVisieLoopbaanadviseurSuggestionResult } = await import('../schema');
     const result = parseVisieLoopbaanadviseurSuggestionResult({
       functies: [
-        { naam: 'A', toelichting: '1' },
-        { naam: 'B', toelichting: '2' },
-        { naam: 'C', toelichting: '3' },
-        { naam: 'D', toelichting: '4' },
-        { naam: 'E', toelichting: '5' },
-        { naam: 'F', toelichting: '6' },
+        { naam: 'A', toelichting: '1', anker: 'opleiding', anker_detail: 'a' },
+        { naam: 'B', toelichting: '2', anker: 'opleiding', anker_detail: 'b' },
+        { naam: 'C', toelichting: '3', anker: 'werkervaring', anker_detail: 'c' },
+        { naam: 'D', toelichting: '4', anker: 'werkervaring', anker_detail: 'd' },
+        { naam: 'E', toelichting: '5', anker: 'zoekprofiel', anker_detail: 'e' },
+        { naam: 'F', toelichting: '6', anker: 'zoekprofiel', anker_detail: 'f' },
       ],
     });
     assert.equal(result.functies.length, 5);

@@ -33,10 +33,7 @@ import {
   hasUnrestrictedOrgAccess,
 } from "@/lib/users/effective-access";
 import { compareOrgUserDisplayName } from "@/lib/users/org-directory";
-<<<<<<< HEAD
-=======
 import DeleteUserModal, { type DeleteUserTarget } from "@/components/users/DeleteUserModal";
->>>>>>> staging
 import { Pencil, Trash2 } from "lucide-react";
 
 type User = {
@@ -95,10 +92,7 @@ export default function UsersTable() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-<<<<<<< HEAD
-=======
   const [deleteTarget, setDeleteTarget] = useState<DeleteUserTarget | null>(null);
->>>>>>> staging
 
   const { effectiveClients, effectiveEmployees } = useMemo(
     () =>
