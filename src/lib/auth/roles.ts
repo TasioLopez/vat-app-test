@@ -8,8 +8,9 @@ export function isBackOffice(role: string): boolean {
   return role === 'back_office';
 }
 
+/** Create/edit new werkgevers — admin only. Back office is view-all + coach assign. */
 export function canManageClients(role: string): boolean {
-  return isAdmin(role) || isBackOffice(role);
+  return isAdmin(role);
 }
 
 export function canDeleteClients(role: string): boolean {
@@ -29,19 +30,19 @@ export function isStandardUser(role: string): boolean {
   return role === 'user' || role === 'back_office';
 }
 
-/** Admin and back office can switch between personal and org-wide dashboard stats. */
+/** Org-wide dashboard stats toggle — admin only. */
 export function canViewOverallDashboardStats(role: string): boolean {
-  return isAdmin(role) || isBackOffice(role);
+  return isAdmin(role);
 }
 
-/** Total users card: overall scope only, admin and back office. */
+/** Total users card — admin only. */
 export function canViewTotalUsersStat(role: string): boolean {
-  return isAdmin(role) || isBackOffice(role);
+  return isAdmin(role);
 }
 
-/** Gebruikers admin page: admin and back office. */
+/** Gebruikers admin page — admin only. */
 export function canAccessUsersAdmin(role: string): boolean {
-  return isAdmin(role) || isBackOffice(role);
+  return isAdmin(role);
 }
 
 export function canInviteUsers(role: string): boolean {
@@ -55,21 +56,17 @@ export function canDeleteUsers(role: string): boolean {
 /**
  * Whether actor may set target's role from → to.
  * Same-role is always allowed (no-op on save).
- * Admins: any change. Back office: only promote another user → back_office.
+ * Only admins may change roles.
  */
 export function canChangeUserRole(
   actorRole: string,
-  actorId: string,
-  targetId: string,
+  _actorId: string,
+  _targetId: string,
   fromRole: string,
   toRole: string
 ): boolean {
   if (fromRole === toRole) return true;
-  if (isAdmin(actorRole)) return true;
-  if (!isBackOffice(actorRole)) return false;
-  if (actorId === targetId) return false;
-  if (fromRole === 'admin' || toRole === 'admin') return false;
-  return fromRole === 'user' && toRole === 'back_office';
+  return isAdmin(actorRole);
 }
 
 /** Role values the actor may pick for the target in the UI (always includes current). */

@@ -12,16 +12,16 @@ describe('resolveDashboardScope', () => {
     assert.equal(resolveDashboardScope('user', null), 'mine');
   });
 
-  it('defaults admin and back_office to all', () => {
-    assert.equal(resolveDashboardScope('admin', null), 'all');
-    assert.equal(resolveDashboardScope('back_office', undefined), 'all');
-    assert.equal(resolveDashboardScope('admin', 'xyz'), 'all');
+  it('forces mine for back_office (like a normal user)', () => {
+    assert.equal(resolveDashboardScope('back_office', 'all'), 'mine');
+    assert.equal(resolveDashboardScope('back_office', undefined), 'mine');
   });
 
-  it('accepts mine and all for admin and back_office', () => {
+  it('defaults admin to all and accepts mine/all', () => {
+    assert.equal(resolveDashboardScope('admin', null), 'all');
+    assert.equal(resolveDashboardScope('admin', 'xyz'), 'all');
     assert.equal(resolveDashboardScope('admin', 'mine'), 'mine');
     assert.equal(resolveDashboardScope('admin', 'all'), 'all');
-    assert.equal(resolveDashboardScope('back_office', 'mine'), 'mine');
   });
 });
 
