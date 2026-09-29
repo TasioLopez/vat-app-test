@@ -3,16 +3,45 @@ import { describe, it } from 'node:test';
 import {
   allowedRoleOptions,
   canAccessUsersAdmin,
+  canAssignEmployeeOwner,
   canChangeUserRole,
   canDeleteUsers,
   canInviteUsers,
+  canManageClients,
+  canViewOverallDashboardStats,
+  canViewTotalUsersStat,
 } from '../roles';
 
 describe('canAccessUsersAdmin', () => {
-  it('allows admin and back_office only', () => {
+  it('allows admin only', () => {
     assert.equal(canAccessUsersAdmin('admin'), true);
-    assert.equal(canAccessUsersAdmin('back_office'), true);
+    assert.equal(canAccessUsersAdmin('back_office'), false);
     assert.equal(canAccessUsersAdmin('user'), false);
+  });
+});
+
+describe('canManageClients', () => {
+  it('is admin-only', () => {
+    assert.equal(canManageClients('admin'), true);
+    assert.equal(canManageClients('back_office'), false);
+    assert.equal(canManageClients('user'), false);
+  });
+});
+
+describe('canAssignEmployeeOwner', () => {
+  it('allows admin and back_office', () => {
+    assert.equal(canAssignEmployeeOwner('admin'), true);
+    assert.equal(canAssignEmployeeOwner('back_office'), true);
+    assert.equal(canAssignEmployeeOwner('user'), false);
+  });
+});
+
+describe('dashboard stats helpers', () => {
+  it('are admin-only', () => {
+    assert.equal(canViewOverallDashboardStats('admin'), true);
+    assert.equal(canViewOverallDashboardStats('back_office'), false);
+    assert.equal(canViewTotalUsersStat('admin'), true);
+    assert.equal(canViewTotalUsersStat('back_office'), false);
   });
 });
 
@@ -42,23 +71,10 @@ describe('canChangeUserRole', () => {
     assert.equal(canChangeUserRole('admin', admin, admin, 'admin', 'user'), true);
   });
 
-  it('allows back_office to promote user to back_office only', () => {
-    assert.equal(canChangeUserRole('back_office', bo, user, 'user', 'back_office'), true);
-  });
-
-  it('blocks back_office self role change', () => {
+  it('blocks back_office from any role change', () => {
+    assert.equal(canChangeUserRole('back_office', bo, user, 'user', 'back_office'), false);
     assert.equal(canChangeUserRole('back_office', bo, bo, 'back_office', 'user'), false);
-    assert.equal(canChangeUserRole('back_office', bo, bo, 'back_office', 'admin'), false);
-  });
-
-  it('blocks back_office from touching admin or granting admin', () => {
     assert.equal(canChangeUserRole('back_office', bo, admin, 'admin', 'user'), false);
-    assert.equal(canChangeUserRole('back_office', bo, admin, 'admin', 'back_office'), false);
-    assert.equal(canChangeUserRole('back_office', bo, user, 'user', 'admin'), false);
-  });
-
-  it('blocks back_office demote of back_office', () => {
-    assert.equal(canChangeUserRole('back_office', bo, 'other-bo', 'back_office', 'user'), false);
   });
 
   it('blocks standard user from any role change', () => {
@@ -67,11 +83,8 @@ describe('canChangeUserRole', () => {
 });
 
 describe('allowedRoleOptions', () => {
-  it('for back_office editing a user includes only user and back_office', () => {
-    assert.deepEqual(
-      allowedRoleOptions('back_office', 'bo', 'u1', 'user').sort(),
-      ['back_office', 'user'].sort()
-    );
+  it('for back_office editing a user is only current role', () => {
+    assert.deepEqual(allowedRoleOptions('back_office', 'bo', 'u1', 'user'), ['user']);
   });
 
   it('for back_office editing self is only current role', () => {
