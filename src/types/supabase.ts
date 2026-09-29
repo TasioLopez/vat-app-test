@@ -1379,6 +1379,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_reassign_employee_owners: {
+        Args: {
+          p_from_user_id: string
+          p_assignments: Json
+        }
+        Returns: undefined
+      }
       set_employee_owner: {
         Args: {
           p_employee_id: string

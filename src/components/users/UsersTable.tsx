@@ -33,6 +33,7 @@ import {
   hasUnrestrictedOrgAccess,
 } from "@/lib/users/effective-access";
 import { compareOrgUserDisplayName } from "@/lib/users/org-directory";
+import DeleteUserModal, { type DeleteUserTarget } from "@/components/users/DeleteUserModal";
 import { Pencil, Trash2 } from "lucide-react";
 
 type User = {
@@ -91,6 +92,7 @@ export default function UsersTable() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteUserTarget | null>(null);
 
   const { effectiveClients, effectiveEmployees } = useMemo(
     () =>
@@ -309,12 +311,17 @@ export default function UsersTable() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
-    const { error } = await supabase.from("users").delete().eq("id", id);
-    if (!error) {
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+  const handleDeleteClick = (user: User) => {
+    if (currentUserId && user.id === currentUserId) {
+      alert("Je kunt je eigen account niet verwijderen.");
+      return;
     }
+    setDeleteTarget({
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -840,9 +847,10 @@ export default function UsersTable() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDelete(u.id)}
+                        onClick={() => handleDeleteClick(u)}
                         title="Verwijderen"
                         aria-label="Verwijderen"
+                        disabled={!!currentUserId && u.id === currentUserId}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -886,6 +894,19 @@ export default function UsersTable() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      <DeleteUserModal
+        open={!!deleteTarget}
+        user={deleteTarget}
+        currentUserId={currentUserId}
+        onOpenChange={(next) => {
+          if (!next) setDeleteTarget(null);
+        }}
+        onDeleted={(userId) => {
+          setUsers((prev) => prev.filter((u) => u.id !== userId));
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }
