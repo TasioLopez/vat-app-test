@@ -38,14 +38,14 @@ export const SPOOR2_SUBTEXT_TEMPLATES: Record<string, [string, string, string]> 
     'Voor het optimaal gebruik van social media bij solliciteren biedt de loopbaanadviseur de benodigde begeleiding.',
   ],
   webinars: [
-    'Werknemer heeft genoeg pc-vaardigheden om via de pc webinars te volgen, loopbaan adviseur zal hierin adviseren welke nuttig kunnen zijn voor werknemer.',
+    'Werknemer heeft genoeg pc-vaardigheden om via de pc webinars te volgen, loopbaanadviseur zal hierin adviseren welke nuttig kunnen zijn voor werknemer.',
     'Werknemer kan webinars volgen; de loopbaanadviseur adviseert welke webinars het meest passend zijn.',
     'Online webinars sluiten aan bij de mogelijkheden van werknemer; advies over keuze volgt van de loopbaanadviseur.',
   ],
   'sollicitatievaardigheden-en-sollicitatietools': [
-    'Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. De cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.',
-    'CV en sollicitatievaardigheden worden samen met de loopbaanadviseur op maat bijgewerkt.',
-    'De loopbaanadviseur ondersteunt werknemer bij cv, sollicitatiebrieven en het gebruik van sollicitatietools.',
+    'Werknemer zal de nodige begeleiding van de loopbaanadviseur ontvangen op het gebied van solliciteren en sollicitatietools. Het cv van werknemer zal samen met de loopbaanadviseur worden nagelopen en aangepast/aangevuld.',
+    'Het CV en de sollicitatievaardigheden worden samen met de loopbaanadviseur op maat bijgewerkt.',
+    'De loopbaanadviseur ondersteunt werknemer bij het opstellen van een cv, sollicitatiebrieven en het gebruik van sollicitatietools.',
   ],
 };
 

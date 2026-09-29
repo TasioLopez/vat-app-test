@@ -218,10 +218,18 @@ export function buildVisieLoopbaanadviseurFields(
   content: VisieLoopbaanadviseurContentResult,
   scenario: DocumentScenario
 ): VisieLoopbaanadviseurFields {
-  validateFuncties(content);
-
   const toelichting = getToelichtingParagraph(ctx.details.gender);
   const functiesIntro = buildFunctiesIntro(scenario);
+
+  if (scenario === 'intake_only') {
+    const assembled = [TOELICHTING_DELIMITER, toelichting, FUNCTIES_DELIMITER, functiesIntro].join(
+      '\n\n'
+    );
+    return { visie_loopbaanadviseur: assembled };
+  }
+
+  validateFuncties(content);
+
   const bullets = formatFunctieBullets(content);
 
   const assembled = [

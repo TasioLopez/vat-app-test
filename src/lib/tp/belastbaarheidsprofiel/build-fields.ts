@@ -1,6 +1,9 @@
 import { buildArtsPhrase, enrichArtsOrgFromMeta, nlDate } from '@/lib/tp/format-context';
+import { normalizeFmlIzpLabKind } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import {
+  BELASTBAARHEID_GEEN_PROFIEL,
   FML_INTRO_TEMPLATE,
+  IZP_INTRO_TEMPLATE,
   MEDISCH_SPREEKUUR_INTRO_TEMPLATE,
   PROGNOSE_DELIMITER,
   STANDARD_RUBRIEKEN,
@@ -11,6 +14,7 @@ export type BelastbaarheidsprofielBuildContext = {
   has_spreekuurrapportage?: boolean;
   meta: {
     fml_izp_lab_date?: string | null;
+    fml_izp_lab_kind?: string | null;
     occupational_doctor_org?: string | null;
   };
 };
@@ -42,6 +46,10 @@ function fillTemplate(
   return template.replace('{datum}', vars.datum).replace('{artsPhrase}', vars.artsPhrase);
 }
 
+function resolveIntroTemplate(kind: string | null | undefined): string {
+  return normalizeFmlIzpLabKind(kind) === 'izp' ? IZP_INTRO_TEMPLATE : FML_INTRO_TEMPLATE;
+}
+
 function resolveIntroVars(
   ctx: BelastbaarheidsprofielBuildContext,
   content: BelastbaarheidsprofielContentResult
@@ -58,10 +66,16 @@ function resolveIntroVars(
     };
   }
 
+  const kind = normalizeFmlIzpLabKind(ctx.meta.fml_izp_lab_kind);
+  const datumFallback = kind === 'izp' ? '[datum IZP]' : '[datum FML]';
   return {
-    datum: nlDate(ctx.meta.fml_izp_lab_date) || '[datum FML]',
+    datum: nlDate(ctx.meta.fml_izp_lab_date) || datumFallback,
     artsPhrase: buildArtsPhrase(ctx.meta.occupational_doctor_org),
   };
+}
+
+export function buildBelastbaarheidsprofielGeenProfielFields(): BelastbaarheidsprofielFields {
+  return { prognose_bedrijfsarts: BELASTBAARHEID_GEEN_PROFIEL };
 }
 
 export function buildBelastbaarheidsprofielFields(
@@ -70,7 +84,7 @@ export function buildBelastbaarheidsprofielFields(
 ): BelastbaarheidsprofielFields {
   const introVars = resolveIntroVars(ctx, content);
 
-  const fmlIntro = fillTemplate(FML_INTRO_TEMPLATE, introVars);
+  const limitationsIntro = fillTemplate(resolveIntroTemplate(ctx.meta.fml_izp_lab_kind), introVars);
   const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, introVars);
   const rubriekenLines = normalizeRubrieken(content.rubrieken)
     .map((r) => `• ${r}`)
@@ -80,7 +94,7 @@ export function buildBelastbaarheidsprofielFields(
     ? stripCitations(content.prognose_citaat)
     : '';
 
-  const parts = [fmlIntro, rubriekenLines, spreekuurIntro];
+  const parts = [limitationsIntro, rubriekenLines, spreekuurIntro];
   if (prognoseQuote) {
     parts.push(`${PROGNOSE_DELIMITER}\n${prognoseQuote}`);
   }

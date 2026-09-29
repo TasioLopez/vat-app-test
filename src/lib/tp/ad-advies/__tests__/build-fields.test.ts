@@ -6,7 +6,7 @@ import {
   buildAdAdviesBlock,
   parseAdAdvies,
 } from '../build-fields';
-import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT, ADVIES_NB_NO_REPORT_LEGACY, isAdviesNbNoReport } from '../constants';
+import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT, ADVIES_NB_NO_REPORT_LEGACY, ADVIES_NB_NO_REPORT_PREVIOUS, isAdviesNbNoReport } from '../constants';
 import type { AdAdviesContentResult } from '../schema';
 
 const CALVIN_SPOOR2_ADVIES =
@@ -240,8 +240,9 @@ describe('buildAdAdviesFields', () => {
 });
 
 describe('isAdviesNbNoReport', () => {
-  it('recognizes current and legacy geen-AD placeholders', () => {
+  it('recognizes current, previous and legacy geen-AD placeholders', () => {
     assert.equal(isAdviesNbNoReport(ADVIES_NB_NO_REPORT), true);
+    assert.equal(isAdviesNbNoReport(ADVIES_NB_NO_REPORT_PREVIOUS), true);
     assert.equal(isAdviesNbNoReport(ADVIES_NB_NO_REPORT_LEGACY), true);
     assert.equal(isAdviesNbNoReport(`  ${ADVIES_NB_NO_REPORT}  `), true);
     assert.equal(isAdviesNbNoReport('In het arbeidsdeskundigrapport'), false);

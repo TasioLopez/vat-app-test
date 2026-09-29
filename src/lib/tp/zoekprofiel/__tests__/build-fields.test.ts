@@ -11,7 +11,7 @@ import {
   type ZoekprofielBuildContext,
 } from '../build-fields';
 import type { ZoekprofielContentResult } from '../schema';
-import { ZOEKPROFIEL_NB_NO_AD } from '../constants';
+import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 
 const baseCtx: ZoekprofielBuildContext = {
   employee: { first_name: 'Jan', last_name: 'Jansen' },
@@ -165,20 +165,20 @@ describe('buildPara1Closing', () => {
 });
 
 describe('buildInsufficientZoekprofielFields', () => {
-  it('returns N.B. standard line only', () => {
+  it('returns geen-belastbaarheidsprofiel standard line only', () => {
     const { zoekprofiel } = buildInsufficientZoekprofielFields();
-    assert.equal(zoekprofiel, ZOEKPROFIEL_NB_NO_AD);
+    assert.equal(zoekprofiel, BELASTBAARHEID_GEEN_PROFIEL);
   });
 });
 
 describe('buildZoekprofielFields insufficient scenario', () => {
-  it('returns N.B. without calling model content', () => {
+  it('returns geen-belastbaarheidsprofiel without calling model content', () => {
     const ctx = {
       employee: {},
       meta: { scenario: 'insufficient' as const },
     };
     const { zoekprofiel } = buildZoekprofielFields(ctx, baseContent);
-    assert.equal(zoekprofiel, ZOEKPROFIEL_NB_NO_AD);
+    assert.equal(zoekprofiel, BELASTBAARHEID_GEEN_PROFIEL);
   });
 });
 

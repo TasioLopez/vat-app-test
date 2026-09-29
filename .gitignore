@@ -26,6 +26,9 @@
 .DS_Store
 *.pem
 
+# Local sample / reference PDFs — do not commit
+*.pdf
+
 # debug
 npm-debug.log*
 yarn-debug.log*

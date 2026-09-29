@@ -360,6 +360,17 @@ export async function generateVisieLoopbaanadviseur(
   docs: EmployeeDoc[]
 ): Promise<VisieLoopbaanadviseurGenerateResult> {
   const scenario = detectDocumentScenario(docs, ctx.meta);
+
+  if (scenario === 'intake_only') {
+    const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: [] }, scenario);
+    const draft = draftFromGeneratedBatch([], { status: 'kept', round: 1 });
+    return {
+      ...fields,
+      draft,
+      qualityWarnings: [],
+    };
+  }
+
   const { suggestions, qualityWarnings } = await generateFunctieSuggestions(
     openai,
     supabase,

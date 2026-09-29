@@ -6,6 +6,7 @@ import {
   buildAdAdviesIntroPrefix,
   buildInleidingAdIntroPrefix,
   detectAdReportConceptFromText,
+  formatAdReportDateForDoc,
   hasDefinitiveAdReport,
   hasIntakeAdNarrative,
   isAdReportConcept,
@@ -123,6 +124,23 @@ describe('adReportDateLabel', () => {
   });
 });
 
+describe('formatAdReportDateForDoc', () => {
+  it('returns Geen when no date / no information', () => {
+    assert.equal(formatAdReportDateForDoc(null), 'Geen');
+    assert.equal(formatAdReportDateForDoc(undefined), 'Geen');
+    assert.equal(formatAdReportDateForDoc(''), 'Geen');
+    assert.equal(formatAdReportDateForDoc('   '), 'Geen');
+  });
+
+  it('formats a filled date in Dutch', () => {
+    assert.equal(formatAdReportDateForDoc('2026-06-27'), '27\u00A0juni\u00A02026');
+  });
+
+  it('returns Geen for unparseable date strings', () => {
+    assert.equal(formatAdReportDateForDoc('not-a-date'), 'Geen');
+  });
+});
+
 describe('intro prefixes', () => {
   it('builds advies intro prefix', () => {
     assert.equal(
@@ -157,9 +175,9 @@ describe('patchAdviesIntroForConcept', () => {
 describe('patchInleidingAdIntroForConcept', () => {
   it('inserts and removes concept wording', () => {
     const standard =
-      'In het arbeidsdeskundig rapport opgesteld door S. Dijkstra op 21 mei 2026 staat het volgende advies ten aanzien van het inzetten van een tweede spoor traject:';
+      'In het arbeidsdeskundig rapport opgesteld door S. Dijkstra op 21 mei 2026 staat de volgende conclusie en het advies ten aanzien van het inzetten van een tweede spoor traject:';
     const concept =
-      'In het concept arbeidsdeskundig rapport opgesteld door S. Dijkstra op 21 mei 2026 staat het volgende advies ten aanzien van het inzetten van een tweede spoor traject:';
+      'In het concept arbeidsdeskundig rapport opgesteld door S. Dijkstra op 21 mei 2026 staat de volgende conclusie en het advies ten aanzien van het inzetten van een tweede spoor traject:';
 
     assert.equal(patchInleidingAdIntroForConcept(standard, true), concept);
     assert.equal(patchInleidingAdIntroForConcept(concept, false), standard);

@@ -156,18 +156,18 @@ describe('detectDocumentScenario', () => {
 describe('buildFunctiesIntro', () => {
   it('maps six AD-regels scenarios to exact intro texts', () => {
     assert.equal(buildFunctiesIntro('ad_with_functies'), AD_FUNCTIES_INTRO);
-    assert.ok(AD_FUNCTIES_INTRO.endsWith('functies*:'));
+    assert.ok(AD_FUNCTIES_INTRO.endsWith('functies:'));
     assert.equal(buildFunctiesIntro('ad_no_functies'), AD_NO_FUNCTIES_INTRO);
     assert.match(AD_NO_FUNCTIES_INTRO, /geen passende functies benoemd/);
     assert.equal(buildFunctiesIntro('concept_ad_with_functies'), CONCEPT_AD_FUNCTIES_INTRO);
-    assert.ok(CONCEPT_AD_FUNCTIES_INTRO.endsWith('functies*:'));
-    assert.match(CONCEPT_AD_FUNCTIES_INTRO, /concept arbeidsdeskundige/);
+    assert.ok(CONCEPT_AD_FUNCTIES_INTRO.endsWith('functies:'));
+    assert.match(CONCEPT_AD_FUNCTIES_INTRO, /in het concept arbeidsdeskundigrapport/);
     assert.equal(buildFunctiesIntro('concept_ad_no_functies'), CONCEPT_AD_NO_FUNCTIES_INTRO);
     assert.match(CONCEPT_AD_NO_FUNCTIES_INTRO, /concept arbeidsdeskundig rapport/);
     assert.equal(buildFunctiesIntro('belastbaarheid_only'), NO_AD_BELASTBAARHEID_INTRO);
     assert.match(NO_AD_BELASTBAARHEID_INTRO, /Er is geen arbeidsdeskundig rapport beschikbaar/);
     assert.equal(buildFunctiesIntro('intake_only'), NO_AD_NO_BELASTBAARHEID_INTRO);
-    assert.match(NO_AD_NO_BELASTBAARHEID_INTRO, /geen arbeidsdeskundig rapport en belastbaarheidsprofiel/);
+    assert.match(NO_AD_NO_BELASTBAARHEID_INTRO, /geen functies geduid door de loopbaanadviseur/);
   });
 });
 
@@ -231,6 +231,8 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
       'intake_only'
     );
     assert.ok(visie_loopbaanadviseur.includes(NO_AD_NO_BELASTBAARHEID_INTRO));
+    assert.ok(!visie_loopbaanadviseur.includes(FUNCTIE_FOOTER));
+    assert.ok(!visie_loopbaanadviseur.includes('• Medewerker'));
   });
 
   it('uses female toelichting template with haar', () => {
@@ -273,7 +275,7 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
     const { visie_loopbaanadviseur } = buildVisieLoopbaanadviseurFields(
       baseCtx,
       content,
-      'intake_only'
+      'ad_with_functies'
     );
     assert.match(visie_loopbaanadviseur, /• Alleen A: Passend\./);
     assert.equal(

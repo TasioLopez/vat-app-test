@@ -314,7 +314,7 @@ describe('buildInleidingFields', () => {
 describe('buildAdSubBlock', () => {
   it('formats AD intro with delimiter suffix', () => {
     const block = buildAdSubBlock('dhr. X', '15 januari 2026', 'Citaat tekst.');
-    assert.match(block, /op 15 januari 2026 staat het volgende advies/);
+    assert.match(block, /op 15 januari 2026 staat de volgende conclusie en het advies/);
     assert.ok(block.endsWith('Citaat tekst.'));
   });
 });
