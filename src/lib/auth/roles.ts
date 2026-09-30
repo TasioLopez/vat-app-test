@@ -8,9 +8,9 @@ export function isBackOffice(role: string): boolean {
   return role === 'back_office';
 }
 
-/** Create/edit new werkgevers — admin only. Back office is view-all + coach assign. */
+/** Create werkgevers — admin and back office (back office's main extra vs normal users). */
 export function canManageClients(role: string): boolean {
-  return isAdmin(role);
+  return isAdmin(role) || isBackOffice(role);
 }
 
 export function canDeleteClients(role: string): boolean {
