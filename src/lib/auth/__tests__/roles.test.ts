@@ -21,9 +21,9 @@ describe('canAccessUsersAdmin', () => {
 });
 
 describe('canManageClients', () => {
-  it('is admin-only', () => {
+  it('allows admin and back_office', () => {
     assert.equal(canManageClients('admin'), true);
-    assert.equal(canManageClients('back_office'), false);
+    assert.equal(canManageClients('back_office'), true);
     assert.equal(canManageClients('user'), false);
   });
 });
