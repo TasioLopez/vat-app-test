@@ -64,4 +64,33 @@ describe('normalizeCvPayload', () => {
     });
     assert.equal(p.layoutOptions, undefined);
   });
+
+  it('keeps valid experience field style colors and strips invalid', () => {
+    const p = normalizeCvPayload({
+      schemaVersion: 2,
+      activeLocale: 'nl',
+      content: {
+        nl: {
+          personal: { fullName: 'A' },
+          experience: [
+            {
+              id: 'e1',
+              role: 'Dev',
+              organization: 'Acme',
+              styles: {
+                organization: { color: '#00A3CC' },
+                period: { color: 'red' },
+                role: { color: '#abc' },
+              },
+            },
+          ],
+        },
+      },
+      layout: [],
+    });
+    const exp = getActiveCvModel(p).experience[0];
+    assert.equal(exp.styles?.organization?.color, '#00a3cc');
+    assert.equal(exp.styles?.role?.color, '#aabbcc');
+    assert.equal(exp.styles?.period, undefined);
+  });
 });

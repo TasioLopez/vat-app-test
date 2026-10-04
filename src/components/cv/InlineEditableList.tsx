@@ -16,9 +16,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import InlineEditableText from '@/components/cv/InlineEditableText';
+import type { CvFieldSelection } from '@/types/cv';
 import { cn } from '@/lib/utils';
 
-type Item = { id: string; text: string };
+type Item = { id: string; text: string; styles?: { text?: { color?: string } } };
 
 type Props = {
   title: string;
@@ -34,6 +35,7 @@ type Props = {
   itemTextClassName?: string;
   variant?: 'default' | 'sidebar';
   showBullets?: boolean;
+  selectionItemType?: Extract<CvFieldSelection, { field: 'text' }>['itemType'];
 };
 
 function SortableListRow({
@@ -45,6 +47,7 @@ function SortableListRow({
   onRemove,
   itemTextClassName,
   variant,
+  selectionItemType,
 }: {
   item: Item;
   sortable: boolean;
@@ -54,6 +57,7 @@ function SortableListRow({
   onRemove: (id: string) => void;
   itemTextClassName: string;
   variant: 'default' | 'sidebar';
+  selectionItemType?: Extract<CvFieldSelection, { field: 'text' }>['itemType'];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: item.id,
@@ -93,7 +97,13 @@ function SortableListRow({
           value={item.text}
           onChange={(v) => onChange(item.id, v)}
           className={cn('block w-full text-sm', itemTextClassName)}
+          style={item.styles?.text?.color ? { color: item.styles.text.color } : undefined}
           readOnly={readOnly}
+          selection={
+            selectionItemType
+              ? { itemType: selectionItemType, itemId: item.id, field: 'text' }
+              : undefined
+          }
         />
       </div>
       {!readOnly && (
@@ -124,6 +134,7 @@ export default function InlineEditableList({
   itemTextClassName = 'text-gray-800',
   variant = 'default',
   showBullets = true,
+  selectionItemType,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -140,6 +151,7 @@ export default function InlineEditableList({
           itemTextClassName={itemTextClassName}
           showBullets={showBullets}
           variant={variant}
+          selectionItemType={selectionItemType}
         />
       ))}
     </ul>

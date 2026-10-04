@@ -27,10 +27,15 @@ import { cn } from '@/lib/utils';
 
 type Variant = 'default' | 'sidebar';
 
+export type CvSectionFragment = 'full' | 'header' | 'item';
+
 type Props = {
   section: CvLayoutSection;
   variant?: Variant;
   accent: string;
+  /** Pagination fragment: header-only or single experience/education item. */
+  fragment?: CvSectionFragment;
+  itemId?: string;
 };
 
 function EditableSectionTitle({
@@ -104,7 +109,13 @@ function SortableExperienceItem({
   );
 }
 
-export default function CvSectionRenderer({ section, variant = 'default', accent }: Props) {
+export default function CvSectionRenderer({
+  section,
+  variant = 'default',
+  accent,
+  fragment = 'full',
+  itemId,
+}: Props) {
   const {
     cvData,
     activeLocale,
@@ -144,9 +155,12 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   const title = getSectionTitle(section.type, locale, section.title);
   const isSidebar = variant === 'sidebar';
   const titleClass = isSidebar
-    ? 'border-b pb-1 text-xs font-semibold uppercase tracking-wide border-white/30 text-white'
-    : 'mb-2 text-sm font-semibold uppercase tracking-wide';
+    ? 'mt-1 border-b border-white/30 pb-1 text-xs font-semibold uppercase tracking-wide text-white'
+    : 'mb-2 mt-1 text-sm font-semibold uppercase tracking-wide';
   const titleStyle = isSidebar ? undefined : ({ color: accent } as React.CSSProperties);
+  const bodyTextClass = isSidebar ? 'text-white/95' : 'text-gray-700';
+  const metaTextClass = isSidebar ? 'text-white/80' : 'text-gray-500';
+  const headingTextClass = isSidebar ? 'text-white' : 'text-gray-900';
   const sectionTitleProps = {
     section,
     locale,
@@ -325,6 +339,7 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
         variant={isSidebar ? 'sidebar' : 'default'}
         itemTextClassName={isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'}
         readOnly={readOnly}
+        selectionItemType="skill"
       />
     );
   }
@@ -403,32 +418,49 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
         variant={isSidebar ? 'sidebar' : 'default'}
         itemTextClassName={isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'}
         readOnly={readOnly}
+        selectionItemType="interest"
       />
     );
   }
 
   if (section.type === 'experience') {
+    const showHeader = fragment === 'full' || fragment === 'header';
+    const items =
+      fragment === 'item' && itemId
+        ? cvData.experience.filter((e) => e.id === itemId)
+        : fragment === 'header'
+          ? []
+          : cvData.experience;
+
+    const header = showHeader ? (
+      <div className="mb-2 flex items-center justify-between">
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
+            className={titleClass}
+            style={titleStyle}
+          />
+        ) : null}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={addExperience}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
+            aria-label={labels('add')}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    ) : null;
+
+    if (fragment === 'header') {
+      return <section>{header}</section>;
+    }
+
     return (
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          {title ? (
-            <EditableSectionTitle
-              {...sectionTitleProps}
-              className={titleClass}
-              style={titleStyle}
-            />
-          ) : null}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={addExperience}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
-              aria-label={labels('add')}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        {header}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -441,9 +473,9 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
             if (from >= 0 && to >= 0) reorderExperience(from, to);
           }}
         >
-          <SortableContext items={cvData.experience.map((e) => e.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {cvData.experience.map((e) => (
+          <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {items.map((e) => (
                 <SortableExperienceItem key={e.id} id={e.id}>
                   {!readOnly && (
                     <button
@@ -458,33 +490,52 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
                   <InlineEditableText
                     value={e.role}
                     onChange={(v) => updateExperience(e.id, { role: v })}
-                    className="block text-sm font-semibold text-gray-900"
+                    className={cn('block text-sm font-semibold', headingTextClass)}
+                    style={e.styles?.role?.color ? { color: e.styles.role.color } : undefined}
                     placeholder={labels('role')}
                     readOnly={readOnly}
+                    selection={{ itemType: 'experience', itemId: e.id, field: 'role' }}
                   />
-                  <div className="flex flex-wrap gap-x-3 text-xs text-gray-500">
+                  <div className={cn('flex flex-wrap gap-x-3 text-xs', metaTextClass)}>
                     <InlineEditableText
                       value={e.organization ?? ''}
                       onChange={(v) => updateExperience(e.id, { organization: v })}
                       className="inline min-w-[80px]"
+                      style={
+                        e.styles?.organization?.color
+                          ? { color: e.styles.organization.color }
+                          : undefined
+                      }
                       placeholder={labels('organization')}
                       readOnly={readOnly}
+                      hideWhenEmpty
+                      selection={{ itemType: 'experience', itemId: e.id, field: 'organization' }}
                     />
                     <InlineEditableText
                       value={e.period ?? ''}
                       onChange={(v) => updateExperience(e.id, { period: v })}
                       className="inline min-w-[60px]"
+                      style={e.styles?.period?.color ? { color: e.styles.period.color } : undefined}
                       placeholder={labels('period')}
                       readOnly={readOnly}
+                      hideWhenEmpty
+                      selection={{ itemType: 'experience', itemId: e.id, field: 'period' }}
                     />
                   </div>
                   <InlineEditableText
                     value={e.description ?? ''}
                     onChange={(v) => updateExperience(e.id, { description: v })}
                     multiline
-                    className="mt-1 block w-full text-sm text-gray-700"
+                    className={cn('mt-1 block w-full text-sm', bodyTextClass)}
+                    style={
+                      e.styles?.description?.color
+                        ? { color: e.styles.description.color }
+                        : undefined
+                    }
                     placeholder={labels('description')}
                     readOnly={readOnly}
+                    hideWhenEmpty
+                    selection={{ itemType: 'experience', itemId: e.id, field: 'description' }}
                   />
                 </SortableExperienceItem>
               ))}
@@ -496,27 +547,43 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
   }
 
   if (section.type === 'education') {
+    const showHeader = fragment === 'full' || fragment === 'header';
+    const items =
+      fragment === 'item' && itemId
+        ? cvData.education.filter((e) => e.id === itemId)
+        : fragment === 'header'
+          ? []
+          : cvData.education;
+
+    const header = showHeader ? (
+      <div className="mb-2 flex items-center justify-between">
+        {title ? (
+          <EditableSectionTitle
+            {...sectionTitleProps}
+            className={titleClass}
+            style={titleStyle}
+          />
+        ) : null}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={addEducation}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
+            aria-label={labels('add')}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    ) : null;
+
+    if (fragment === 'header') {
+      return <section>{header}</section>;
+    }
+
     return (
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          {title ? (
-            <EditableSectionTitle
-              {...sectionTitleProps}
-              className={titleClass}
-              style={titleStyle}
-            />
-          ) : null}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={addEducation}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
-              aria-label={labels('add')}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        {header}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -529,9 +596,9 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
             if (from >= 0 && to >= 0) reorderEducation(from, to);
           }}
         >
-          <SortableContext items={cvData.education.map((e) => e.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {cvData.education.map((ed) => (
+          <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {items.map((ed) => (
                 <SortableEducationItem key={ed.id} id={ed.id} readOnly={readOnly}>
                   {!readOnly && (
                     <button
@@ -546,24 +613,40 @@ export default function CvSectionRenderer({ section, variant = 'default', accent
                   <InlineEditableText
                     value={ed.institution}
                     onChange={(v) => updateEducation(ed.id, { institution: v })}
-                    className="block text-sm font-semibold text-gray-900"
+                    className={cn('block text-sm font-semibold', headingTextClass)}
+                    style={
+                      ed.styles?.institution?.color
+                        ? { color: ed.styles.institution.color }
+                        : undefined
+                    }
                     placeholder={labels('institution')}
                     readOnly={readOnly}
+                    selection={{ itemType: 'education', itemId: ed.id, field: 'institution' }}
                   />
                   <InlineEditableText
                     value={ed.diploma ?? ''}
                     onChange={(v) => updateEducation(ed.id, { diploma: v })}
-                    className="block text-xs text-gray-600"
+                    className={cn('block text-xs', metaTextClass)}
+                    style={ed.styles?.diploma?.color ? { color: ed.styles.diploma.color } : undefined}
                     placeholder={labels('diploma')}
                     readOnly={readOnly}
+                    hideWhenEmpty
+                    selection={{ itemType: 'education', itemId: ed.id, field: 'diploma' }}
                   />
                   <InlineEditableText
                     value={ed.description ?? ''}
                     onChange={(v) => updateEducation(ed.id, { description: v })}
                     multiline
-                    className="mt-1 block w-full text-sm text-gray-700"
+                    className={cn('mt-1 block w-full text-sm', bodyTextClass)}
+                    style={
+                      ed.styles?.description?.color
+                        ? { color: ed.styles.description.color }
+                        : undefined
+                    }
                     placeholder={labels('description')}
                     readOnly={readOnly}
+                    hideWhenEmpty
+                    selection={{ itemType: 'education', itemId: ed.id, field: 'description' }}
                   />
                 </SortableEducationItem>
               ))}
@@ -642,7 +725,12 @@ function LanguageRow({
   onRemove,
   labels,
 }: {
-  item: { id: string; language: string; level?: string };
+  item: {
+    id: string;
+    language: string;
+    level?: string;
+    styles?: Partial<Record<'language' | 'level', { color?: string }>>;
+  };
   isSidebar: boolean;
   readOnly: boolean;
   onUpdate: (patch: { language?: string; level?: string }) => void;
@@ -685,15 +773,20 @@ function LanguageRow({
           value={item.language}
           onChange={(v) => onUpdate({ language: v })}
           className={cn('block w-full font-medium', textClass)}
+          style={item.styles?.language?.color ? { color: item.styles.language.color } : undefined}
           placeholder={labels('language')}
           readOnly={readOnly}
+          selection={{ itemType: 'language', itemId: item.id, field: 'language' }}
         />
         <InlineEditableText
           value={item.level ?? ''}
           onChange={(v) => onUpdate({ level: v })}
           className={cn('block w-full text-xs opacity-90', textClass)}
+          style={item.styles?.level?.color ? { color: item.styles.level.color } : undefined}
           placeholder={labels('level')}
           readOnly={readOnly}
+          hideWhenEmpty
+          selection={{ itemType: 'language', itemId: item.id, field: 'level' }}
         />
       </div>
       {!readOnly && (

@@ -139,17 +139,23 @@ export async function GET(req: NextRequest) {
 
     await page.waitForSelector('.cv-print-root, #cv-print-root', { timeout: 30_000 });
     await page.waitForSelector('#cv-print-root[data-ready="1"]', { timeout: 30_000 });
+    await page.waitForSelector('.cv-paged-document[data-cv-pagination-ready="1"]', {
+      timeout: 30_000,
+    }).catch(() => null);
 
     await page.evaluate(async () => {
       const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
       if (fonts?.ready) await fonts.ready;
     });
+    // Allow final paint after measured pagination settles.
+    await new Promise((r) => setTimeout(r, 200));
 
     await page.addStyleTag({
       content: `
         @page { size: A4; margin: 0; }
         html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .cv-print-root { margin: 0 !important; }
+        .cv-print-root { margin: 0 !important; padding: 0 !important; }
+        .cv-a4-box { display: none !important; }
       `,
     });
 

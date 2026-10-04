@@ -101,6 +101,9 @@ export const UI_LABELS: Record<CvLocale, Record<string, string>> = {
     language: 'Taal',
     level: 'Niveau',
     digitalSkillsPlaceholder: 'PC-vaardigheden…',
+    textColor: 'Tekstkleur',
+    clearField: 'Wis',
+    deselectField: 'Deselecteren',
   },
   en: {
     add: 'Add',
@@ -153,6 +156,9 @@ export const UI_LABELS: Record<CvLocale, Record<string, string>> = {
     language: 'Language',
     level: 'Level',
     digitalSkillsPlaceholder: 'Computer skills…',
+    textColor: 'Text color',
+    clearField: 'Clear',
+    deselectField: 'Deselect',
   },
 };
 

@@ -128,7 +128,7 @@ export default function CvEditableColumnFlow({
       }}
     >
       <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <div className="flex flex-col gap-4">{nodes}</div>
+        <div className="flex flex-col gap-6">{nodes}</div>
       </SortableContext>
       {showAddControl ? (
         <CvAddSectionControl
