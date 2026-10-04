@@ -19,6 +19,7 @@ import {
   isIntakeDocumentType,
 } from '@/lib/intake/sources';
 import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
+import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
 
 describe('intake schema', () => {
   it('ensureIntakeShape fills defaults', () => {
@@ -208,5 +209,42 @@ describe('applyIntakeCheckboxOverridesFromText', () => {
       'Datum AD-rapport: 1-2-2026 Concept ☒'
     );
     assert.equal(out.ad_report_concept, true);
+  });
+});
+
+describe('mergeIntakeFillBlanks', () => {
+  it('keeps non-empty intake strings and fills empties from dossier', () => {
+    const base = createEmptyIntakeData();
+    base.s1.employee_name = 'Jan Jansen';
+    base.s1.intake_date = '2026-01-10';
+    base.s6.ad_report_concept = false;
+
+    const gap = createEmptyIntakeData();
+    gap.s1.employee_name = 'Other Name';
+    gap.s1.intake_date = '2020-01-01';
+    gap.s2.city = 'Utrecht';
+    gap.s6.ad_report_concept = true;
+    gap.s6.tp_start_date = '2026-02-01';
+
+    const merged = mergeIntakeFillBlanks(base, gap);
+    assert.equal(merged.s1.employee_name, 'Jan Jansen');
+    assert.equal(merged.s1.intake_date, '2026-01-10');
+    assert.equal(merged.s2.city, 'Utrecht');
+    assert.equal(merged.s6.tp_start_date, '2026-02-01');
+    assert.equal(merged.s6.ad_report_concept, false);
+  });
+
+  it('does not flip intake-authoritative false booleans from dossier true', () => {
+    const base = createEmptyIntakeData();
+    base.s6.is_ex_werknemer = false;
+    base.s5.fml_beperkingen.werktijden = false;
+
+    const gap = createEmptyIntakeData();
+    gap.s6.is_ex_werknemer = true;
+    gap.s5.fml_beperkingen.werktijden = true;
+
+    const merged = mergeIntakeFillBlanks(base, gap);
+    assert.equal(merged.s6.is_ex_werknemer, false);
+    assert.equal(merged.s5.fml_beperkingen.werktijden, false);
   });
 });

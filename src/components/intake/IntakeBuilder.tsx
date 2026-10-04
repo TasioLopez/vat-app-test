@@ -37,7 +37,7 @@ import {
   useIntakeInstance,
 } from '@/context/IntakeInstanceContext';
 import { IntakeSectionEditor } from '@/components/intake/IntakeSectionEditor';
-import { IntakeFillModal, type IntakeFillMode } from '@/components/intake/IntakeFillModal';
+import { IntakeFillModal } from '@/components/intake/IntakeFillModal';
 import {
   INTAKE_DOSSIER_NAV,
   INTAKE_SECTION_DEFS,
@@ -45,7 +45,6 @@ import {
   type IntakeSectionIcon,
   type IntakeSectionKey,
 } from '@/lib/intake/schema';
-import { intakeDraftHasContent } from '@/lib/intake/sources';
 import { AutofillProgressOverlay } from '@/components/ui/AutofillProgressOverlay';
 
 type Props = {
@@ -112,7 +111,8 @@ function IntakeBuilderInner({
   const { showSuccess, showError } = useToastHelpers();
   const [saving, setSaving] = useState(false);
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
-  const [fillOpen, setFillOpen] = useState(false);
+  const [noIntakeOpen, setNoIntakeOpen] = useState(false);
+  const [noIntakeMessage, setNoIntakeMessage] = useState<string | undefined>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [activeSection, setActiveSection] = useState<NavKey>('dossier');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -210,42 +210,25 @@ function IntakeBuilderInner({
     }
   };
 
-  const onImport = async () => {
-    setBusyLabel('Intake importeren uit PDF…');
+  const onAutofill = async () => {
+    setBusyLabel('Intake automatisch invullen…');
     try {
-      const res = await fetch('/api/intake/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          intakeInstanceId,
-          data_json: intakeData,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Import mislukt');
-      replaceIntakeData(json.data_json, { markDirty: false });
-      setValidatedAt(null);
-      markSaved();
-      if (json.warning) showError('Let op', json.warning);
-      else showSuccess('Geïmporteerd', 'Velden zijn gevuld vanuit het intakeformulier.');
-    } catch (e) {
-      showError('Fout', e instanceof Error ? e.message : 'Import mislukt');
-    } finally {
-      setBusyLabel(null);
-    }
-  };
-
-  const onGenerate = async () => {
-    setBusyLabel('Intake genereren uit dossier…');
-    try {
-      const res = await fetch('/api/intake/generate', {
+      const res = await fetch('/api/intake/autofill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId, intakeInstanceId }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Generatie mislukt');
+      if (res.status === 404) {
+        setNoIntakeMessage(
+          typeof json.error === 'string'
+            ? json.error
+            : 'Er is geen intakeformulier-document gevonden bij deze werknemer. Upload eerst een intakeformulier bij de documenten.'
+        );
+        setNoIntakeOpen(true);
+        return;
+      }
+      if (!res.ok) throw new Error(json.error || 'Automatisch invullen mislukt');
       replaceIntakeData(json.data_json, { markDirty: false });
       setValidatedAt(null);
       markSaved();
@@ -258,18 +241,18 @@ function IntakeBuilderInner({
       } else if (json.warning) {
         showError('Let op', json.warning);
       } else {
-        showSuccess('Gegenereerd', 'Intake is gevuld vanuit dossierdocumenten.');
+        showSuccess(
+          'Ingevuld',
+          json.gap_filled
+            ? 'Intake is gevuld vanuit het intakeformulier en aangevuld vanuit het dossier.'
+            : 'Intake is gevuld vanuit het intakeformulier.'
+        );
       }
     } catch (e) {
-      showError('Fout', e instanceof Error ? e.message : 'Generatie mislukt');
+      showError('Fout', e instanceof Error ? e.message : 'Automatisch invullen mislukt');
     } finally {
       setBusyLabel(null);
     }
-  };
-
-  const onFillConfirm = (mode: IntakeFillMode) => {
-    if (mode === 'import') void onImport();
-    else void onGenerate();
   };
 
   const onExport = async () => {
@@ -308,11 +291,9 @@ function IntakeBuilderInner({
       ) : null}
 
       <IntakeFillModal
-        isOpen={fillOpen}
-        onClose={() => setFillOpen(false)}
-        employeeId={employeeId}
-        hasDraftContent={intakeDraftHasContent(intakeData)}
-        onConfirm={onFillConfirm}
+        isOpen={noIntakeOpen}
+        onClose={() => setNoIntakeOpen(false)}
+        message={noIntakeMessage}
       />
 
       <div className="sticky top-0 z-20 shrink-0 border-b border-border bg-white px-6 py-3 shadow-sm">
@@ -351,7 +332,7 @@ function IntakeBuilderInner({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFillOpen(true)}
+              onClick={() => void onAutofill()}
               disabled={!!busyLabel}
             >
               <FileUp className="mr-1 h-4 w-4" />

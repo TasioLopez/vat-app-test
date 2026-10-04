@@ -27,3 +27,5 @@ export {
   isIntakeDocumentType,
 } from '@/lib/intake/sources';
 export type { IntakeSourcesSummary } from '@/lib/intake/sources';
+export { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
+export { autofillIntakeFromDocuments } from '@/lib/intake/autofill';
