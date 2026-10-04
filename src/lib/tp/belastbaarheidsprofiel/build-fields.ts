@@ -6,7 +6,6 @@ import {
   IZP_INTRO_TEMPLATE,
   MEDISCH_SPREEKUUR_INTRO_TEMPLATE,
   PROGNOSE_DELIMITER,
-  STANDARD_RUBRIEKEN,
 } from './constants';
 import type { BelastbaarheidsprofielContentResult } from './schema';
 
@@ -33,10 +32,16 @@ export function stripCitations(text: string): string {
     .trim();
 }
 
-function normalizeRubrieken(rubrieken: string[]): string[] {
-  const cleaned = rubrieken.map((r) => r.trim()).filter(Boolean);
-  if (cleaned.length > 0) return cleaned;
-  return [...STANDARD_RUBRIEKEN];
+/** Keep only non-empty labels; never invent the full STANDARD_RUBRIEKEN list. */
+export function normalizeRubrieken(rubrieken: string[]): string[] {
+  return rubrieken.map((r) => r.trim()).filter(Boolean);
+}
+
+export function hasUsableBelastbaarheidsContent(content: {
+  rubrieken: string[];
+  prognose_citaat: string | null;
+}): boolean {
+  return normalizeRubrieken(content.rubrieken).length > 0 || Boolean(content.prognose_citaat?.trim());
 }
 
 function fillTemplate(
@@ -86,20 +91,19 @@ export function buildBelastbaarheidsprofielFields(
 
   const limitationsIntro = fillTemplate(resolveIntroTemplate(ctx.meta.fml_izp_lab_kind), introVars);
   const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, introVars);
-  const rubriekenLines = normalizeRubrieken(content.rubrieken)
-    .map((r) => `• ${r}`)
-    .join('\n');
+  const rubrieken = normalizeRubrieken(content.rubrieken);
+  const rubriekenLines = rubrieken.map((r) => `• ${r}`).join('\n');
 
   const prognoseQuote = content.prognose_citaat
     ? stripCitations(content.prognose_citaat)
     : '';
 
-  const parts = [limitationsIntro, rubriekenLines, spreekuurIntro];
+  const parts = [limitationsIntro, rubriekenLines, spreekuurIntro].filter(Boolean);
   if (prognoseQuote) {
     parts.push(`${PROGNOSE_DELIMITER}\n${prognoseQuote}`);
   }
 
-  return { prognose_bedrijfsarts: parts.filter(Boolean).join('\n\n') };
+  return { prognose_bedrijfsarts: parts.join('\n\n') };
 }
 
 export type ParsedBelastbaarheidsprofiel = {

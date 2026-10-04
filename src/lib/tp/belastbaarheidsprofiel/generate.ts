@@ -7,6 +7,7 @@ import { generateIntakeSectie5Content } from '@/lib/tp/intake-sectie5';
 import {
   buildBelastbaarheidsprofielFields,
   buildBelastbaarheidsprofielGeenProfielFields,
+  hasUsableBelastbaarheidsContent,
   stripCitations,
   type BelastbaarheidsprofielBuildContext,
   type BelastbaarheidsprofielFields,
@@ -22,6 +23,11 @@ import {
   parseBelastbaarheidsprofielContentResult,
   type BelastbaarheidsprofielContentResult,
 } from './schema';
+import {
+  hasBelastbaarheidsSource,
+  hasIntakeDoc,
+  type EmployeeDoc,
+} from './sources';
 import { extractSpreekuurContent } from './spreekuur-extract';
 import type { SpreekuurContentResult } from './spreekuur-schema';
 
@@ -37,12 +43,6 @@ const DOC_PRIORITY: Record<string, number> = {
   intakeformulier: 3,
   'intake-formulier': 3,
   intake: 3,
-};
-
-type EmployeeDoc = {
-  type: string | null;
-  url: string | null;
-  uploaded_at?: string | null;
 };
 
 function docPriority(type: string | null | undefined): number {
@@ -66,26 +66,6 @@ function pickNewestSpreekuurDoc(docs: EmployeeDoc[]): EmployeeDoc | null {
     const bTime = b.uploaded_at ? new Date(b.uploaded_at).getTime() : 0;
     return bTime - aTime;
   })[0];
-}
-
-function isSeparateBelastbaarheidsDoc(type: string | null | undefined): boolean {
-  const t = (type || '').toLowerCase();
-  return (
-    t.includes('fml') ||
-    t.includes('izp') ||
-    t.includes('lab') ||
-    t.includes('functiemogelijkhedenlijst') ||
-    t.includes('inzetbaarheidsprofiel') ||
-    t.includes('lijst arbeidsmogelijkheden')
-  );
-}
-
-function hasSeparateBelastOrSpreekuurDoc(docs: EmployeeDoc[]): boolean {
-  return docs.some(
-    (d) =>
-      Boolean(d.url) &&
-      (isSeparateBelastbaarheidsDoc(d.type) || isSpreekReportageDocType(d.type))
-  );
 }
 
 function getBelastbaarheidsprofielModel(): string {
@@ -206,12 +186,13 @@ export async function generateBelastbaarheidsprofiel(
   ctx: BelastbaarheidsprofielBuildContext,
   docs: EmployeeDoc[]
 ): Promise<BelastbaarheidsprofielFields> {
-  if (!hasSeparateBelastOrSpreekuurDoc(docs)) {
+  if (!hasBelastbaarheidsSource(docs)) {
     return buildBelastbaarheidsprofielGeenProfielFields();
   }
 
   const spreekuurDoc = pickNewestSpreekuurDoc(docs);
   const hasSpreekuurDoc = Boolean(spreekuurDoc);
+  const hasIntake = hasIntakeDoc(docs);
 
   const buildCtx: BelastbaarheidsprofielBuildContext = {
     ...ctx,
@@ -228,9 +209,11 @@ export async function generateBelastbaarheidsprofiel(
     buildCtx,
     docs
   ).catch((error) => {
-    if (!hasSpreekuurDoc) throw error;
+    // Soft-fail when intake or spreekuur can still supply content.
+    if (!hasSpreekuurDoc && !hasIntake) throw error;
     console.warn(
-      '⚠️ Belastbaarheidsprofiel: geen FML/AD documenten — alleen Spreekuurrapportage beschikbaar'
+      '⚠️ Belastbaarheidsprofiel: main FML/AD extract mislukt — verder met intake/spreekuur',
+      error
     );
     return {
       rubrieken: [],
@@ -262,6 +245,10 @@ export async function generateBelastbaarheidsprofiel(
   mergedContent.prognose_citaat = intakeSectie5.quote_prognose_advies_belastbaarheid
     ? stripCitations(intakeSectie5.quote_prognose_advies_belastbaarheid)
     : null;
+
+  if (!hasUsableBelastbaarheidsContent(mergedContent)) {
+    return buildBelastbaarheidsprofielGeenProfielFields();
+  }
 
   return buildBelastbaarheidsprofielFields(buildCtx, mergedContent);
 }
