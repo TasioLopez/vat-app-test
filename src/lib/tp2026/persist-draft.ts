@@ -10,7 +10,6 @@ import {
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { stripTPProfileFields } from '@/lib/tp/resolve-profile-context';
-import { persistReferentFromTpData } from '@/lib/referents';
 
 export type PersistTp2026DraftParams = {
   tpInstanceId: string;
@@ -125,11 +124,8 @@ export async function persistTp2026Draft(
     }
   }
 
-  // Profile-linked contact fields are stripped from data_json; write them to referents.
-  const referentResult = await persistReferentFromTpData(supabase, employeeId, tpData);
-  if (referentResult.error) {
-    return { error: referentResult.error };
-  }
+  // Contact person edits are document-only (document_referent_* in data_json).
+  // Explicit "Opslaan als nieuwe contactpersoon" creates referents outside this path.
 
   return {};
 }

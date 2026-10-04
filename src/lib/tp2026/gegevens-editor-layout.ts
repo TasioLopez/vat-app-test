@@ -68,10 +68,8 @@ export const GEGEVENS_EDITOR_SECTIONS: GegevensEditorSection[] = [
     id: 'opdrachtgever',
     title: 'Gegevens opdrachtgever',
     icon: Building2,
-    rows: [
-      { keys: ['client_referent_name'] },
-      { keys: ['client_referent_phone', 'client_referent_email'] },
-    ],
+    /** Contact fields rendered via DocumentReferentFields (document-only overrides). */
+    rows: [],
   },
   {
     id: 'adviseur',

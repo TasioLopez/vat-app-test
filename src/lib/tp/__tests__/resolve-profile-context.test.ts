@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   applyTPProfileContext,
   getProfileWerkgeverName,
+  getReferentDisplayFields,
   getWerkgeverName,
+  hasDocumentReferentOverride,
   stripTPProfileFields,
   TP_PROFILE_LINKED_KEYS,
 } from '../resolve-profile-context';
@@ -43,6 +45,25 @@ describe('applyTPProfileContext', () => {
     assert.equal(result.document_employer_name, 'Short Name');
     assert.equal(result.client_name, 'New Employer BV');
   });
+
+  it('preserves document_referent_* when applying profile context', () => {
+    const result = applyTPProfileContext(
+      {
+        document_referent_name: 'Doc Contact',
+        document_referent_phone: '0699999999',
+        client_referent_name: 'Old Contact',
+      },
+      {
+        client_referent_name: 'New Contact',
+        client_referent_phone: '0612345678',
+        client_referent_email: 'new@example.com',
+      }
+    );
+    assert.equal(result.document_referent_name, 'Doc Contact');
+    assert.equal(result.document_referent_phone, '0699999999');
+    assert.equal(result.client_referent_name, 'New Contact');
+    assert.equal(result.client_referent_phone, '0612345678');
+  });
 });
 
 describe('stripTPProfileFields', () => {
@@ -79,6 +100,62 @@ describe('stripTPProfileFields', () => {
     assert.equal('employer_name' in result, false);
     assert.equal(result.document_employer_name, 'Employer');
     assert.equal(result.tp_start_date, '2026-01-01');
+  });
+
+  it('keeps document_referent_* while stripping profile referent keys', () => {
+    const result = stripTPProfileFields({
+      client_referent_name: 'Profile Contact',
+      client_referent_phone: '0611111111',
+      document_referent_name: 'Doc Contact',
+      document_referent_phone: '0622222222',
+      document_referent_email: 'doc@example.com',
+      tp_start_date: '2026-01-01',
+    });
+
+    assert.equal('client_referent_name' in result, false);
+    assert.equal('client_referent_phone' in result, false);
+    assert.equal(result.document_referent_name, 'Doc Contact');
+    assert.equal(result.document_referent_phone, '0622222222');
+    assert.equal(result.document_referent_email, 'doc@example.com');
+    assert.equal(result.tp_start_date, '2026-01-01');
+  });
+});
+
+describe('getReferentDisplayFields', () => {
+  it('prefers document override over profile per field', () => {
+    const display = getReferentDisplayFields({
+      document_referent_name: 'Doc Name',
+      client_referent_name: 'Profile Name',
+      client_referent_phone: '0612345678',
+      document_referent_email: 'doc@example.com',
+      client_referent_email: 'profile@example.com',
+    });
+    assert.equal(display.client_referent_name, 'Doc Name');
+    assert.equal(display.client_referent_phone, '0612345678');
+    assert.equal(display.client_referent_email, 'doc@example.com');
+  });
+
+  it('falls back to profile when document override is empty', () => {
+    const display = getReferentDisplayFields({
+      document_referent_name: '   ',
+      client_referent_name: 'Profile Name',
+      client_referent_phone: '0612345678',
+    });
+    assert.equal(display.client_referent_name, 'Profile Name');
+    assert.equal(display.client_referent_phone, '0612345678');
+  });
+});
+
+describe('hasDocumentReferentOverride', () => {
+  it('is true when any document_referent field is set', () => {
+    assert.equal(hasDocumentReferentOverride({ document_referent_phone: '06' }), true);
+  });
+
+  it('is false when only profile referent fields are set', () => {
+    assert.equal(
+      hasDocumentReferentOverride({ client_referent_name: 'Profile Name' }),
+      false
+    );
   });
 });
 

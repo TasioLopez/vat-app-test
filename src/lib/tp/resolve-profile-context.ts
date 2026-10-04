@@ -108,6 +108,84 @@ export function getWerkgeverName(data: Record<string, unknown>): string {
   return getProfileWerkgeverName(data);
 }
 
+/** Document-only contact keys stored in tp_instances.data_json (not referents table). */
+export const TP_DOCUMENT_REFERENT_KEYS = [
+  'document_referent_name',
+  'document_referent_phone',
+  'document_referent_email',
+  'document_referent_function',
+  'document_referent_gender',
+] as const;
+
+export type TPDocumentReferentKey = (typeof TP_DOCUMENT_REFERENT_KEYS)[number];
+
+const DOCUMENT_TO_PROFILE_REFERENT: Record<
+  TPDocumentReferentKey,
+  'client_referent_name' | 'client_referent_phone' | 'client_referent_email' | 'client_referent_function' | 'client_referent_gender'
+> = {
+  document_referent_name: 'client_referent_name',
+  document_referent_phone: 'client_referent_phone',
+  document_referent_email: 'client_referent_email',
+  document_referent_function: 'client_referent_function',
+  document_referent_gender: 'client_referent_gender',
+};
+
+/** True when any document-only referent field is set. */
+export function hasDocumentReferentOverride(data: Record<string, unknown>): boolean {
+  return TP_DOCUMENT_REFERENT_KEYS.some((key) => String(data[key] ?? '').trim().length > 0);
+}
+
+/**
+ * Display fields for contactpersoon: document override per field, else profile.
+ * Returns the same shape as profile-linked client_referent_* keys for UI/print.
+ */
+export function getReferentDisplayFields(data: Record<string, unknown>): {
+  client_referent_name: string | null;
+  client_referent_phone: string | null;
+  client_referent_email: string | null;
+  client_referent_function: string | null;
+  client_referent_gender: string | null;
+} {
+  const pick = (docKey: TPDocumentReferentKey, profileKey: string): string | null => {
+    const doc = String(data[docKey] ?? '').trim();
+    if (doc) return doc;
+    const profile = String(data[profileKey] ?? '').trim();
+    return profile || null;
+  };
+  return {
+    client_referent_name: pick('document_referent_name', 'client_referent_name'),
+    client_referent_phone: pick('document_referent_phone', 'client_referent_phone'),
+    client_referent_email: pick('document_referent_email', 'client_referent_email'),
+    client_referent_function: pick('document_referent_function', 'client_referent_function'),
+    client_referent_gender: pick('document_referent_gender', 'client_referent_gender'),
+  };
+}
+
+/** Clear all document-only referent overrides. */
+export function clearDocumentReferentOverrides(
+  updateField: (key: string, value: unknown) => void
+): void {
+  for (const key of TP_DOCUMENT_REFERENT_KEYS) {
+    updateField(key, '');
+  }
+}
+
+/** Write a document-only referent field (for TP Gegevens edits). */
+export function setDocumentReferentField(
+  updateField: (key: string, value: unknown) => void,
+  profileKey:
+    | 'client_referent_name'
+    | 'client_referent_phone'
+    | 'client_referent_email'
+    | 'client_referent_function'
+    | 'client_referent_gender',
+  value: unknown
+): void {
+  const entry = Object.entries(DOCUMENT_TO_PROFILE_REFERENT).find(([, p]) => p === profileKey);
+  if (!entry) return;
+  updateField(entry[0], value);
+}
+
 /** Push resolved profile-linked fields into TP context via updateField. */
 export function syncTPProfileContextFields(
   updateField: (key: string, value: unknown) => void,

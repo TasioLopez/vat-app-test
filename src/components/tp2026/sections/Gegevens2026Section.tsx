@@ -38,10 +38,16 @@ import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info
 import { formatPhoneForDisplay, normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 import { NB_DEFAULT_GEEN_AD } from '@/lib/tp/static';
-import { getWerkgeverName, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import {
+  clearDocumentReferentOverrides,
+  getReferentDisplayFields,
+  getWerkgeverName,
+  resolveTPProfileContext,
+} from '@/lib/tp/resolve-profile-context';
 import { Mail, Phone, User } from 'lucide-react';
 import { PrintGenderChecks, PrintJaNeeChecks } from '@/components/tp2026/PrintCheckbox';
 import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
+import { DocumentReferentFields } from '@/components/tp2026/DocumentReferentFields';
 import { Button } from '@/components/ui/button';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { OrgUserSelect } from '@/components/users/OrgUserSelect';
@@ -192,11 +198,17 @@ export function Gegevens2026Editor({
   const createNewContactPerson = async () => {
     setCreatingReferent(true);
     try {
-      const result = await createAndLinkReferentFromTpData(supabase, employeeId, data);
+      // Prefer document display values so the button saves what the user sees.
+      const display = getReferentDisplayFields(data);
+      const result = await createAndLinkReferentFromTpData(supabase, employeeId, {
+        ...data,
+        ...display,
+      });
       if (result.error) {
         showError('Contactpersoon niet aangemaakt', result.error);
         return;
       }
+      clearDocumentReferentOverrides(updateField);
       const profileContext = await resolveTPProfileContext(supabase, employeeId);
       for (const key of [
         'client_referent_name',
@@ -227,11 +239,14 @@ export function Gegevens2026Editor({
         <GegevensEditorSection key={section.id} title={section.title} icon={section.icon}>
           <div className="space-y-4">
             {section.id === 'opdrachtgever' ? (
-              <DocumentEmployerNameField
-                data={data}
-                updateField={updateField}
-                label="Werkgever"
-              />
+              <>
+                <DocumentEmployerNameField
+                  data={data}
+                  updateField={updateField}
+                  label="Werkgever"
+                />
+                <DocumentReferentFields data={data} updateField={updateField} />
+              </>
             ) : null}
             {section.id === 'adviseur' ? (
               <div className="space-y-3">
@@ -289,8 +304,7 @@ export function Gegevens2026Editor({
             {section.id === 'opdrachtgever' ? (
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Wijzigingen worden opgeslagen in het contactpersonenprofiel van de werkgever.
-                  Gebruik de knop om een nieuwe contactpersoon aan te maken.
+                  Gebruik de knop alleen als u de contactpersoon ook in het systeem wilt opslaan.
                 </p>
                 <Button
                   type="button"
@@ -341,6 +355,7 @@ function GegevensFooter({
 }
 
 function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNumber: number }) {
+  const referent = getReferentDisplayFields(data);
   return (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       <A4LogoHeader />
@@ -397,9 +412,12 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
           <SectionBand title="Gegevens opdrachtgever" />
           <TP2026FieldTable>
             <DataRow label="Werkgever" value={getWerkgeverName(data) || '—'} />
-            <DataRow label="Contactpersoon" value={data.client_referent_name || '—'} />
-            <DataRow label="Telefoon" value={formatPhoneForDisplay(data.client_referent_phone)} />
-            <DataRow label="E-mail" value={data.client_referent_email || '—'} />
+            <DataRow label="Contactpersoon" value={referent.client_referent_name || '—'} />
+            <DataRow
+              label="Telefoon"
+              value={formatPhoneForDisplay(referent.client_referent_phone)}
+            />
+            <DataRow label="E-mail" value={referent.client_referent_email || '—'} />
           </TP2026FieldTable>
         </div>
 
