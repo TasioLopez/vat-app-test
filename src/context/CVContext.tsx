@@ -24,6 +24,8 @@ import { coerceCvFontId } from '@/lib/cv/font-options';
 import { getActiveCvModel } from '@/lib/cv/normalize';
 import type {
   CvDocumentPayload,
+  CvFieldSelection,
+  CvFieldStyle,
   CvLayoutOptions,
   CvLayoutSection,
   CvLocale,
@@ -33,7 +35,7 @@ import type {
   CvSidebarPosition,
   CvTemplateKey,
 } from '@/types/cv';
-import { emptyCvModel, newCvId } from '@/types/cv';
+import { emptyCvModel, isOptionalCvField, newCvId } from '@/types/cv';
 import { updateCvDocument } from '@/lib/cv/service';
 
 type CvHistorySnapshot = {
@@ -112,6 +114,13 @@ export type CVContextValue = {
   readOnly: boolean;
   editorMode: 'advisor' | 'guest';
   shareToken?: string;
+  selectedField: CvFieldSelection | null;
+  setSelectedField: (field: CvFieldSelection | null) => void;
+  updateSelectedFieldStyle: (style: CvFieldStyle | null) => void;
+  clearSelectedFieldValue: () => void;
+  /** True when pagination has measured and packed pages (print/export gate). */
+  paginationReady: boolean;
+  setPaginationReady: (ready: boolean) => void;
 };
 
 const Ctx = createContext<CVContextValue | undefined>(undefined);
@@ -162,6 +171,8 @@ export function CVProvider({
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialUpdatedAt ?? null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [histVer, setHistVer] = useState(0);
+  const [selectedField, setSelectedField] = useState<CvFieldSelection | null>(null);
+  const [paginationReady, setPaginationReady] = useState(false);
 
   const stateRef = useRef<CvHistorySnapshot>({
     title: initialTitle,
@@ -763,6 +774,131 @@ export function CVProvider({
     [updatePayload]
   );
 
+  const updateSelectedFieldStyle = useCallback(
+    (style: CvFieldStyle | null) => {
+      if (!selectedField) return;
+      const { itemType, itemId, field } = selectedField;
+      updateActiveModel((prev) => {
+        if (itemType === 'experience') {
+          return {
+            ...prev,
+            experience: prev.experience.map((x) => {
+              if (x.id !== itemId) return x;
+              const styles = { ...(x.styles ?? {}) };
+              if (style?.color) styles[field] = { color: style.color };
+              else delete styles[field];
+              return { ...x, styles: Object.keys(styles).length ? styles : undefined };
+            }),
+          };
+        }
+        if (itemType === 'education') {
+          return {
+            ...prev,
+            education: prev.education.map((x) => {
+              if (x.id !== itemId) return x;
+              const styles = { ...(x.styles ?? {}) };
+              if (style?.color) styles[field] = { color: style.color };
+              else delete styles[field];
+              return { ...x, styles: Object.keys(styles).length ? styles : undefined };
+            }),
+          };
+        }
+        if (itemType === 'language') {
+          return {
+            ...prev,
+            languages: prev.languages.map((x) => {
+              if (x.id !== itemId) return x;
+              const styles = { ...(x.styles ?? {}) };
+              if (style?.color) styles[field] = { color: style.color };
+              else delete styles[field];
+              return { ...x, styles: Object.keys(styles).length ? styles : undefined };
+            }),
+          };
+        }
+        if (itemType === 'skill') {
+          return {
+            ...prev,
+            skills: prev.skills.map((x) => {
+              if (x.id !== itemId) return x;
+              const styles = { ...(x.styles ?? {}) };
+              if (style?.color) styles.text = { color: style.color };
+              else delete styles.text;
+              return { ...x, styles: Object.keys(styles).length ? styles : undefined };
+            }),
+          };
+        }
+        if (itemType === 'interest') {
+          return {
+            ...prev,
+            interests: prev.interests.map((x) => {
+              if (x.id !== itemId) return x;
+              const styles = { ...(x.styles ?? {}) };
+              if (style?.color) styles.text = { color: style.color };
+              else delete styles.text;
+              return { ...x, styles: Object.keys(styles).length ? styles : undefined };
+            }),
+          };
+        }
+        return prev;
+      });
+    },
+    [selectedField, updateActiveModel]
+  );
+
+  const clearSelectedFieldValue = useCallback(() => {
+    if (!selectedField || !isOptionalCvField(selectedField)) return;
+    const { itemType, itemId, field } = selectedField;
+    updateActiveModel((prev) => {
+      if (itemType === 'experience') {
+        return {
+          ...prev,
+          experience: prev.experience.map((x) => {
+            if (x.id !== itemId) return x;
+            const styles = { ...(x.styles ?? {}) };
+            delete styles[field];
+            return {
+              ...x,
+              [field]: '',
+              styles: Object.keys(styles).length ? styles : undefined,
+            };
+          }),
+        };
+      }
+      if (itemType === 'education') {
+        return {
+          ...prev,
+          education: prev.education.map((x) => {
+            if (x.id !== itemId) return x;
+            const styles = { ...(x.styles ?? {}) };
+            delete styles[field];
+            return {
+              ...x,
+              [field]: '',
+              styles: Object.keys(styles).length ? styles : undefined,
+            };
+          }),
+        };
+      }
+      if (itemType === 'language' && field === 'level') {
+        return {
+          ...prev,
+          languages: prev.languages.map((x) => {
+            if (x.id !== itemId) return x;
+            const styles = { ...(x.styles ?? {}) };
+            delete styles.level;
+            return {
+              ...x,
+              level: '',
+              styles: Object.keys(styles).length ? styles : undefined,
+            };
+          }),
+        };
+      }
+      return prev;
+    });
+    setSelectedField(null);
+  }, [selectedField, updateActiveModel]);
+
   const save = useCallback(
     async (options?: { version?: boolean }) => {
       setSaving(true);
@@ -870,6 +1006,12 @@ export function CVProvider({
       readOnly,
       editorMode,
       shareToken,
+      selectedField,
+      setSelectedField,
+      updateSelectedFieldStyle,
+      clearSelectedFieldValue,
+      paginationReady,
+      setPaginationReady,
     }),
     [
       employeeId,
@@ -932,6 +1074,10 @@ export function CVProvider({
       readOnly,
       editorMode,
       shareToken,
+      selectedField,
+      updateSelectedFieldStyle,
+      clearSelectedFieldValue,
+      paginationReady,
     ]
   );
 

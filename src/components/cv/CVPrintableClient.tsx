@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { CVProvider } from '@/context/CVContext';
+import { CVProvider, useCV } from '@/context/CVContext';
 import type { CvDocumentPayload, CvLocale, CvTemplateKey } from '@/types/cv';
 import CVPreview from '@/components/cv/CVPreview';
 
@@ -16,6 +16,64 @@ type Props = {
   printLocale?: CvLocale;
 };
 
+function PrintReadyGate() {
+  const { paginationReady, photoDisplayUrl, cvData } = useCV();
+
+  useEffect(() => {
+    const root = document.getElementById('cv-print-root');
+    if (!root) return;
+
+    let cancelled = false;
+    let fallbackTimer: number | undefined;
+
+    const markReady = () => {
+      if (!cancelled) root.setAttribute('data-ready', '1');
+    };
+
+    const clearReady = () => {
+      root.setAttribute('data-ready', '0');
+    };
+
+    clearReady();
+
+    if (!paginationReady) {
+      fallbackTimer = window.setTimeout(markReady, 8000);
+      return () => {
+        cancelled = true;
+        if (fallbackTimer) window.clearTimeout(fallbackTimer);
+      };
+    }
+
+    const needsPhoto =
+      Boolean(photoDisplayUrl) && cvData.options?.includePhotoInCv === true;
+
+    if (needsPhoto && photoDisplayUrl) {
+      const img = new Image();
+      img.onload = markReady;
+      img.onerror = markReady;
+      img.src = photoDisplayUrl;
+      fallbackTimer = window.setTimeout(markReady, 4000);
+      return () => {
+        cancelled = true;
+        if (fallbackTimer) window.clearTimeout(fallbackTimer);
+      };
+    }
+
+    // Settle one frame after pagination so layout is painted.
+    const raf = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(markReady);
+    });
+    fallbackTimer = window.setTimeout(markReady, 1500);
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
+    };
+  }, [paginationReady, photoDisplayUrl, cvData.options?.includePhotoInCv]);
+
+  return <CVPreview />;
+}
+
 export default function CVPrintableClient({
   employeeId,
   cvId,
@@ -26,36 +84,6 @@ export default function CVPrintableClient({
   initialPhotoSignedUrl,
   printLocale,
 }: Props) {
-  useEffect(() => {
-    const root = document.getElementById('cv-print-root');
-    if (!root) return;
-    let cancelled = false;
-
-    const markReady = () => {
-      if (!cancelled) root.setAttribute('data-ready', '1');
-    };
-
-    const activeModel =
-      printLocale === 'en' && payload.content.en ? payload.content.en : payload.content.nl;
-    if (initialPhotoSignedUrl && activeModel.options?.includePhotoInCv) {
-      const img = new Image();
-      img.onload = markReady;
-      img.onerror = markReady;
-      img.src = initialPhotoSignedUrl;
-      const fallback = window.setTimeout(markReady, 4000);
-      return () => {
-        cancelled = true;
-        window.clearTimeout(fallback);
-      };
-    }
-
-    const to = window.setTimeout(markReady, 400);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(to);
-    };
-  }, [employeeId, cvId, payload, initialPhotoSignedUrl, printLocale]);
-
   return (
     <CVProvider
       employeeId={employeeId}
@@ -68,8 +96,8 @@ export default function CVPrintableClient({
       readOnly
       printLocale={printLocale}
     >
-      <div id="cv-print-root" className="cv-print-root bg-gray-100 p-6 print:bg-white print:p-0">
-        <CVPreview />
+      <div id="cv-print-root" className="cv-print-root bg-white print:bg-white print:p-0" data-ready="0">
+        <PrintReadyGate />
       </div>
     </CVProvider>
   );

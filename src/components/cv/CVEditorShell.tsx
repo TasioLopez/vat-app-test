@@ -25,8 +25,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCV } from '@/context/CVContext';
-import AccentColorPicker from '@/components/cv/AccentColorPicker';
 import CVPreview from '@/components/cv/CVPreview';
+import CvFieldStyleControls from '@/components/cv/CvFieldStyleControls';
 import CvToolbarScroll from '@/components/cv/CvToolbarScroll';
 import { ExportCVButton } from '@/components/cv/ExportCVButton';
 import { isLayoutCustomized } from '@/lib/cv/layout-presets';
@@ -54,8 +54,6 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
     setTitle,
     templateKey,
     setTemplateKey,
-    accentColor,
-    setAccentColor,
     save,
     saving,
     isDirty,
@@ -394,7 +392,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
             <div className="h-6 w-px shrink-0 bg-gray-200" aria-hidden />
 
             <div className="flex shrink-0 items-center gap-1">
-              <AccentColorPicker variant="compact" value={accentColor} onChange={setAccentColor} />
+              <CvFieldStyleControls />
               <Select
                 value={coerceCvFontId(layoutOptions.fontFamily)}
                 onValueChange={setFontFamily}

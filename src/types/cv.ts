@@ -37,12 +37,23 @@ export function coerceCvTemplateKey(raw: string | undefined | null): CvTemplateK
 
 export const DEFAULT_ACCENT_COLOR = '#00A3CC';
 
+/** Persisted per-field text style (hex color). */
+export type CvFieldStyle = {
+  color?: string;
+};
+
+export type CvExperienceFieldKey = 'role' | 'organization' | 'period' | 'description';
+export type CvEducationFieldKey = 'institution' | 'diploma' | 'period' | 'description';
+export type CvLanguageFieldKey = 'language' | 'level';
+export type CvListFieldKey = 'text';
+
 export type CvExperienceItem = {
   id: string;
   role: string;
   organization?: string;
   period?: string;
   description?: string;
+  styles?: Partial<Record<CvExperienceFieldKey, CvFieldStyle>>;
 };
 
 export type CvEducationItem = {
@@ -51,15 +62,50 @@ export type CvEducationItem = {
   diploma?: string;
   period?: string;
   description?: string;
+  styles?: Partial<Record<CvEducationFieldKey, CvFieldStyle>>;
 };
 
-export type CvListItem = { id: string; text: string };
+export type CvListItem = {
+  id: string;
+  text: string;
+  styles?: Partial<Record<CvListFieldKey, CvFieldStyle>>;
+};
 
 export type CvLanguageItem = {
   id: string;
   language: string;
   level?: string;
+  styles?: Partial<Record<CvLanguageFieldKey, CvFieldStyle>>;
 };
+
+/** Currently selected editable field in the CV editor toolbar. */
+export type CvFieldSelection =
+  | { itemType: 'experience'; itemId: string; field: CvExperienceFieldKey }
+  | { itemType: 'education'; itemId: string; field: CvEducationFieldKey }
+  | { itemType: 'language'; itemId: string; field: CvLanguageFieldKey }
+  | { itemType: 'skill'; itemId: string; field: CvListFieldKey }
+  | { itemType: 'interest'; itemId: string; field: CvListFieldKey };
+
+export function isOptionalCvField(selection: CvFieldSelection): boolean {
+  if (selection.itemType === 'experience') {
+    return (
+      selection.field === 'organization' ||
+      selection.field === 'period' ||
+      selection.field === 'description'
+    );
+  }
+  if (selection.itemType === 'education') {
+    return (
+      selection.field === 'diploma' ||
+      selection.field === 'period' ||
+      selection.field === 'description'
+    );
+  }
+  if (selection.itemType === 'language') {
+    return selection.field === 'level';
+  }
+  return false;
+}
 
 export type CvPersonal = {
   fullName: string;
