@@ -19,6 +19,7 @@ import {
 import { Trash2, Eye, Search, Filter, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToastHelpers } from '@/components/ui/Toast';
 import ConfirmDeleteModal from '@/components/shared/ConfirmDeleteModal';
+import { DocStatusPill } from '@/components/employee/DocStatusPill';
 import { cn } from '@/lib/utils';
 import { SELECT_CLASS } from '@/lib/select-class';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,12 +35,21 @@ import {
   canOpenEmployeeDossier,
   isBackOffice,
 } from '@/lib/auth/roles';
+import {
+  buildCvStatusMap,
+  buildTpStatusMap,
+  chunkIds,
+  cvStatusRank,
+  tpStatusRank,
+  type CvStatus,
+  type TpStatus,
+} from '@/lib/employee/doc-status';
 
 export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
 };
 
-type SortField = 'name' | 'email' | 'client' | 'created_at' | 'owner';
+type SortField = 'name' | 'client' | 'created_at' | 'owner' | 'tp' | 'cv';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'cards';
 type OwnerFilterMode = 'mine' | 'all' | 'colleague' | 'unassigned';
@@ -78,6 +88,12 @@ export default function EmployeesPage() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [tpStatusByEmployee, setTpStatusByEmployee] = useState<Map<string, TpStatus>>(
+    () => new Map()
+  );
+  const [cvStatusByEmployee, setCvStatusByEmployee] = useState<Map<string, CvStatus>>(
+    () => new Map()
+  );
   const { showSuccess, showError } = useToastHelpers();
   const router = useRouter();
 
@@ -106,6 +122,67 @@ export default function EmployeesPage() {
   }, [ownerFilterMode, colleagueUserId, ownerFilterHydrated]);
 
   const ownerById = useMemo(() => orgUsersById(orgUsers), [orgUsers]);
+
+  const fetchDocStatuses = async (employeeIds: string[]) => {
+    if (employeeIds.length === 0) {
+      setTpStatusByEmployee(new Map());
+      setCvStatusByEmployee(new Map());
+      return;
+    }
+
+    const idChunks = chunkIds(employeeIds);
+    const instances: Array<{ id: string; employee_id: string }> = [];
+    const parentCvs: Array<{ employee_id: string }> = [];
+    const shares: Array<{
+      employee_id: string;
+      revoked_at: string | null;
+      expires_at: string;
+      last_accessed_at: string | null;
+    }> = [];
+
+    for (const chunk of idChunks) {
+      const [tpRes, cvRes, shareRes] = await Promise.all([
+        supabase.from('tp_instances').select('id, employee_id').in('employee_id', chunk),
+        supabase
+          .from('cv_documents')
+          .select('id, employee_id')
+          .in('employee_id', chunk)
+          .is('parent_cv_id', null),
+        supabase
+          .from('cv_share_links')
+          .select('employee_id, revoked_at, expires_at, last_accessed_at')
+          .in('employee_id', chunk),
+      ]);
+
+      if (tpRes.error) console.error('Error fetching tp_instances:', tpRes.error);
+      if (cvRes.error) console.error('Error fetching cv_documents:', cvRes.error);
+      if (shareRes.error) console.error('Error fetching cv_share_links:', shareRes.error);
+
+      if (tpRes.data) instances.push(...tpRes.data);
+      if (cvRes.data) parentCvs.push(...cvRes.data);
+      if (shareRes.data) shares.push(...shareRes.data);
+    }
+
+    const exportInstanceIds = new Set<string>();
+    const instanceIdChunks = chunkIds(instances.map((r) => r.id));
+    for (const chunk of instanceIdChunks) {
+      if (chunk.length === 0) continue;
+      const { data, error } = await supabase
+        .from('tp_exports')
+        .select('tp_instance_id')
+        .in('tp_instance_id', chunk);
+      if (error) {
+        console.error('Error fetching tp_exports:', error);
+        continue;
+      }
+      for (const row of data ?? []) {
+        if (row.tp_instance_id) exportInstanceIds.add(row.tp_instance_id);
+      }
+    }
+
+    setTpStatusByEmployee(buildTpStatusMap(instances, exportInstanceIds));
+    setCvStatusByEmployee(buildCvStatusMap(parentCvs, shares));
+  };
 
   const fetchEmployees = async () => {
     const {
@@ -142,7 +219,11 @@ export default function EmployeesPage() {
       console.error('Error fetching employees:', error);
       return;
     }
-    if (data) setEmployees(data as Employee[]);
+    if (data) {
+      const rows = data as Employee[];
+      setEmployees(rows);
+      void fetchDocStatuses(rows.map((r) => r.id));
+    }
   };
 
   const fetchClients = async () => {
@@ -213,6 +294,16 @@ export default function EmployeesPage() {
         
       if (!error) {
         setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
+        setTpStatusByEmployee((prev) => {
+          const next = new Map(prev);
+          next.delete(selectedEmployeeId);
+          return next;
+        });
+        setCvStatusByEmployee((prev) => {
+          const next = new Map(prev);
+          next.delete(selectedEmployeeId);
+          return next;
+        });
         setShowDeleteModal(false);
         setSelectedEmployeeId(null);
         showSuccess('Werknemer succesvol verwijderd!');
@@ -268,17 +359,13 @@ export default function EmployeesPage() {
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortField) {
         case 'name':
           aValue = `${a.first_name} ${a.last_name}`.toLowerCase();
           bValue = `${b.first_name} ${b.last_name}`.toLowerCase();
-          break;
-        case 'email':
-          aValue = a.email?.toLowerCase() || '';
-          bValue = b.email?.toLowerCase() || '';
           break;
         case 'client':
           aValue = a.clients?.name?.toLowerCase() || '';
@@ -287,6 +374,14 @@ export default function EmployeesPage() {
         case 'owner':
           aValue = ownerDisplayName(a.owner_id).toLowerCase();
           bValue = ownerDisplayName(b.owner_id).toLowerCase();
+          break;
+        case 'tp':
+          aValue = tpStatusRank(tpStatusByEmployee.get(a.id) ?? 'none');
+          bValue = tpStatusRank(tpStatusByEmployee.get(b.id) ?? 'none');
+          break;
+        case 'cv':
+          aValue = cvStatusRank(cvStatusByEmployee.get(a.id) ?? 'none');
+          bValue = cvStatusRank(cvStatusByEmployee.get(b.id) ?? 'none');
           break;
         case 'created_at':
           aValue = new Date(a.created_at || 0).getTime();
@@ -312,6 +407,8 @@ export default function EmployeesPage() {
     sortField,
     sortDirection,
     ownerById,
+    tpStatusByEmployee,
+    cvStatusByEmployee,
   ]);
 
   const groupedByClient = useMemo(() => {
@@ -348,7 +445,7 @@ export default function EmployeesPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
               type="text"
-              placeholder="Zoek op naam, email of werkgever..."
+              placeholder="Zoek op naam of werkgever..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -450,12 +547,6 @@ export default function EmployeesPage() {
               </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-purple-100/50"
-                onClick={() => handleSort('email')}
-              >
-                Email <SortIcon field="email" />
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
                 onClick={() => handleSort('client')}
               >
                 Werkgever <SortIcon field="client" />
@@ -465,6 +556,20 @@ export default function EmployeesPage() {
                 onClick={() => handleSort('owner')}
               >
                 Dossier-eigenaar <SortIcon field="owner" />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer hover:bg-purple-100/50"
+                title="Trajectplan"
+                onClick={() => handleSort('tp')}
+              >
+                TP <SortIcon field="tp" />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer hover:bg-purple-100/50"
+                title="CV"
+                onClick={() => handleSort('cv')}
+              >
+                CV <SortIcon field="cv" />
               </TableHead>
               <TableHead 
                 className="cursor-pointer hover:bg-purple-100/50"
@@ -489,7 +594,6 @@ export default function EmployeesPage() {
                 <TableCell className="font-semibold">
                       {employee.first_name} {employee.last_name}
                 </TableCell>
-                <TableCell>{employee.email}</TableCell>
                 <TableCell>{employee.clients?.name || '—'}</TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   {canEditOwnerInline ? (
@@ -507,6 +611,12 @@ export default function EmployeesPage() {
                   ) : (
                     ownerDisplayName(employee.owner_id)
                   )}
+                </TableCell>
+                <TableCell>
+                  <DocStatusPill kind="tp" status={tpStatusByEmployee.get(employee.id) ?? 'none'} />
+                </TableCell>
+                <TableCell>
+                  <DocStatusPill kind="cv" status={cvStatusByEmployee.get(employee.id) ?? 'none'} />
                 </TableCell>
                 <TableCell>
                   {employee.created_at 
@@ -563,10 +673,19 @@ export default function EmployeesPage() {
                         <p className="text-lg font-bold text-gray-900">
                           {employee.first_name} {employee.last_name}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">{employee.email}</p>
                         <p className="text-xs text-gray-500 mt-2">
                           Eigenaar: {ownerDisplayName(employee.owner_id)}
                         </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <DocStatusPill
+                            kind="tp"
+                            status={tpStatusByEmployee.get(employee.id) ?? 'none'}
+                          />
+                          <DocStatusPill
+                            kind="cv"
+                            status={cvStatusByEmployee.get(employee.id) ?? 'none'}
+                          />
+                        </div>
                       </div>
                       <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                         <Button
