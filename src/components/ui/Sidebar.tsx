@@ -20,7 +20,7 @@ import {
 } from "react-icons/fa";
 import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
-import { canAccessUsersAdmin } from "@/lib/auth/roles";
+import { canAccessUsersAdmin, isAdmin } from "@/lib/auth/roles";
 
 export default function Sidebar({
   collapsed,
@@ -83,7 +83,7 @@ export default function Sidebar({
     { name: "Werknemers", href: "/dashboard/employees", icon: <FaUserTie /> },
     { name: "TP Docs", href: "/dashboard/tpdocs", icon: <FaFileAlt /> },
     { name: "Help", href: "/dashboard/help", icon: <FaLifeRing /> },
-    ...(role === "admin"
+    ...(isAdmin(role)
       ? [{ name: "Helpbeheer", href: "/dashboard/help/admin", icon: <FaTools /> }]
       : []),
   ];

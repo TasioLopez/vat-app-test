@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Database } from "@/types/supabase";
+import { isAdmin as checkIsAdmin } from "@/lib/auth/roles";
 
 type HelpNotificationsContextValue = {
   userTicketUnread: number;
@@ -34,7 +35,7 @@ export function HelpNotificationsProvider({
   role: string;
   children: ReactNode;
 }) {
-  const isAdmin = role === "admin";
+  const isAdmin = checkIsAdmin(role);
   const [userTicketUnread, setUserTicketUnread] = useState(0);
   const [adminTicketUnread, setAdminTicketUnread] = useState(0);
   const [userUnreadTicketIds, setUserUnreadTicketIds] = useState<string[]>([]);
