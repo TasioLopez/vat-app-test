@@ -219,17 +219,38 @@ describe('buildBelastbaarheidsprofielFields', () => {
     assert.doesNotMatch(prognose_bedrijfsarts, /\bBA\b/);
   });
 
-  it('uses default rubrieken when model returns empty list', () => {
+  it('omits rubrieken bullets when list is empty (does not invent STANDARD_RUBRIEKEN)', () => {
     const content: BelastbaarheidsprofielContentResult = {
       rubrieken: [],
-      prognose_citaat: null,
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: null,
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
+    assert.doesNotMatch(prognose_bedrijfsarts, /• Persoonlijk functioneren/);
+    assert.doesNotMatch(prognose_bedrijfsarts, /• Werktijden/);
+    assert.ok(prognose_bedrijfsarts.includes(PROGNOSE_DELIMITER));
+    assert.match(prognose_bedrijfsarts, /benutbare mogelijkheden/);
+  });
+
+  it('builds intake-driven profile without separate FML rubrieken source in content', () => {
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: [
+        'Persoonlijk functioneren',
+        'Sociaal functioneren',
+        'Dynamische handelingen',
+        'Werktijden',
+      ],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
       spreekuur_meta: null,
     };
 
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
     assert.match(prognose_bedrijfsarts, /• Persoonlijk functioneren/);
+    assert.match(prognose_bedrijfsarts, /• Sociaal functioneren/);
+    assert.match(prognose_bedrijfsarts, /• Dynamische handelingen/);
     assert.match(prognose_bedrijfsarts, /• Werktijden/);
-    assert.doesNotMatch(prognose_bedrijfsarts, new RegExp(PROGNOSE_DELIMITER));
+    assert.match(prognose_bedrijfsarts, /benutbare mogelijkheden/);
   });
 });
 

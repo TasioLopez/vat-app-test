@@ -10,6 +10,8 @@ export {
 export {
   buildBelastbaarheidsprofielFields,
   buildBelastbaarheidsprofielGeenProfielFields,
+  hasUsableBelastbaarheidsContent,
+  normalizeRubrieken,
   stripCitations,
   type BelastbaarheidsprofielBuildContext,
   type BelastbaarheidsprofielFields,
@@ -23,6 +25,16 @@ export {
   buildSpreekuurMeta,
   resolveRubrieken,
 } from './merge-content';
+export {
+  hasBelastbaarheidsSource,
+  hasAdDoc,
+  hasIntakeDoc,
+  hasSeparateBelastOrSpreekuurDoc,
+  isAdDoc,
+  isIntakeDoc,
+  isSeparateBelastbaarheidsDoc,
+  type EmployeeDoc,
+} from './sources';
 export {
   BELASTBAARHEID_CONTENT_JSON_SCHEMA,
   parseBelastbaarheidsprofielContentResult,
