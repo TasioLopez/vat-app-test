@@ -263,9 +263,22 @@ function IntakeBuilderInner({
         `/api/export-intake-pdf?employeeId=${encodeURIComponent(employeeId)}&intakeInstanceId=${encodeURIComponent(intakeInstanceId)}&mode=json`
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || 'Export mislukt');
-      if (json.signedUrl) window.open(json.signedUrl, '_blank');
-      showSuccess('Export', 'Intake-PDF is aangemaakt.');
+      if (!res.ok || !json?.signedUrl) {
+        throw new Error(json.error || 'Export mislukt');
+      }
+      const filename =
+        typeof json.filename === 'string' && json.filename
+          ? json.filename
+          : 'Intakeformulier.pdf';
+      const a = document.createElement('a');
+      a.href = json.signedUrl;
+      a.download = filename;
+      a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showSuccess('Export', 'Intake-PDF is gedownload.');
     } catch (e) {
       showError('Fout', e instanceof Error ? e.message : 'Export mislukt');
     } finally {

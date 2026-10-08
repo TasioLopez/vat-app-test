@@ -190,38 +190,60 @@ export async function GET(req: NextRequest) {
     const { error: uploadErr } = await supabase.storage
       .from('documents')
       .upload(pathKey, pdfBuffer, { contentType: 'application/pdf', upsert: false });
-    if (uploadErr) console.error('Upload error:', uploadErr);
+    if (uploadErr) {
+      console.error('Upload error:', uploadErr);
+      if (mode === 'json') {
+        return new Response(
+          JSON.stringify({ error: uploadErr.message || 'PDF upload mislukt' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // Binary mode can still return the generated buffer even if storage upload fails.
+    } else {
+      if (exportId) {
+        await (supabase as any)
+          .from('intake_exports')
+          .update({ storage_path: pathKey })
+          .eq('id', exportId);
+      }
 
-    if (exportId) {
-      await (supabase as any)
-        .from('intake_exports')
-        .update({ storage_path: pathKey })
-        .eq('id', exportId);
+      const { error: insertErr } = await supabase.from('documents').insert({
+        employee_id: employeeId,
+        type: 'intake',
+        layout_key: INTAKE_LAYOUT_KEY,
+        intake_instance_id: intakeInstanceId,
+        intake_export_id: exportId,
+        name: filename,
+        url: pathKey,
+        uploaded_at: new Date().toISOString(),
+      });
+      if (insertErr) console.error('Insert documents row failed:', insertErr);
     }
 
-    const { error: insertErr } = await supabase.from('documents').insert({
-      employee_id: employeeId,
-      type: 'intake',
-      layout_key: INTAKE_LAYOUT_KEY,
-      intake_instance_id: intakeInstanceId,
-      intake_export_id: exportId,
-      name: filename,
-      url: pathKey,
-      uploaded_at: new Date().toISOString(),
-    });
-    if (insertErr) console.error('Insert documents row failed:', insertErr);
-
-    const { data: signedData, error: signedErr } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(pathKey, 60 * 60, { download: filename });
-    if (signedErr) console.error('Signed URL failed:', signedErr);
-    const signedUrl = signedData?.signedUrl ?? null;
-
     if (mode === 'json') {
-      return new Response(JSON.stringify({ ok: true, path: pathKey, filename, signedUrl }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      });
+      const { data: signedData, error: signedErr } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(pathKey, 60 * 60, { download: filename });
+      if (signedErr || !signedData?.signedUrl) {
+        console.error('Signed URL failed:', signedErr);
+        return new Response(
+          JSON.stringify({ error: signedErr?.message || 'Download-link mislukt' }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          path: pathKey,
+          filename,
+          signedUrl: signedData.signedUrl,
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        }
+      );
     }
 
     return new Response(pdfBuffer, {
