@@ -9,62 +9,11 @@ import {
   EDUCATION_LEVEL_OPTIONS,
 } from '@/lib/tp2026/gegevens-field-options';
 import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
-
-const inputClass = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm';
-
-type FieldProps = {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  multiline?: boolean;
-  rows?: number;
-  type?: 'text' | 'date';
-};
-
-function Field({ label, value, onChange, multiline, rows = 3, type = 'text' }: FieldProps) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-      {multiline ? (
-        <textarea
-          className={inputClass}
-          rows={rows}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <input
-          type={type}
-          className={inputClass}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-    </label>
-  );
-}
-
-function Checkbox({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-gray-300"
-      />
-      {label}
-    </label>
-  );
-}
+import {
+  IntakeField,
+  IntakeSelectField,
+  IntakeToggleChip,
+} from '@/components/intake/IntakeFormControls';
 
 type Props = {
   data: IntakeData;
@@ -146,12 +95,12 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
       case 's1':
         return (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
+            <IntakeField
               label="Naam werknemer"
               value={data.s1.employee_name}
               onChange={(v) => patch('s1', { employee_name: v }, { debounce: true })}
             />
-            <Field
+            <IntakeField
               label="Datum gesprek"
               type="date"
               value={data.s1.intake_date}
@@ -175,7 +124,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 ['other_employers', 'Andere werkgever'],
               ] as const
             ).map(([k, label]) => (
-              <Field
+              <IntakeField
                 key={k}
                 label={label}
                 value={data.s2[k]}
@@ -186,7 +135,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
         );
       case 's3':
         return (
-          <Field
+          <IntakeField
             label="Korte beschrijving van de werkzaamheden"
             value={data.s3.korte_beschrijving_werkzaamheden}
             onChange={(v) =>
@@ -209,7 +158,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 ['extra_referent_function', 'Functie extra contactpersoon'],
               ] as const
             ).map(([k, label]) => (
-              <Field
+              <IntakeField
                 key={k}
                 label={label}
                 value={data.s4[k]}
@@ -222,23 +171,23 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
         return (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field
+              <IntakeField
                 label="Datum eerste ziekte dag"
                 type="date"
                 value={data.s5.first_sick_day}
                 onChange={(v) => patch('s5', { first_sick_day: v })}
               />
-              <Field
+              <IntakeField
                 label="Reden ziekmelding"
                 value={data.s5.reden_ziekmelding}
                 onChange={(v) => patch('s5', { reden_ziekmelding: v }, { debounce: true })}
               />
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">FML/IZP-beperkingen</p>
-              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              <p className="mb-2 text-sm font-medium text-gray-600">FML/IZP-beperkingen</p>
+              <div className="flex flex-wrap gap-2">
                 {fmlKeys.map(({ key, label }) => (
-                  <Checkbox
+                  <IntakeToggleChip
                     key={key}
                     label={label}
                     checked={data.s5.fml_beperkingen[key]}
@@ -251,7 +200,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 ))}
               </div>
             </div>
-            <Field
+            <IntakeField
               label="Quote prognose en quote advies belastbaarheid (bedrijfsarts)"
               value={data.s5.quote_prognose_advies_belastbaarheid}
               onChange={(v) =>
@@ -260,7 +209,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
               multiline
               rows={5}
             />
-            <Field
+            <IntakeField
               label="Behandeling (frequentie en type)"
               value={data.s5.behandeling}
               onChange={(v) => patch('s5', { behandeling: v }, { debounce: true })}
@@ -282,7 +231,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 ['andere_werkgever', 'Heeft werknemer nog een andere werkgever'],
               ] as const
             ).map(([k, label]) => (
-              <Field
+              <IntakeField
                 key={k}
                 label={label}
                 value={data.s6[k]}
@@ -295,19 +244,19 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
       case 's7':
         return (
           <div className="space-y-4">
-            <Field
+            <IntakeField
               label="Naam arbeidsdeskundige"
               value={data.s7.ad_auteur}
               onChange={(v) => patch('s7', { ad_auteur: v }, { debounce: true })}
             />
-            <Field
+            <IntakeField
               label="Quote advies spoor 2 (inleiding)"
               value={data.s7.quote_advies_spoor2}
               onChange={(v) => patch('s7', { quote_advies_spoor2: v }, { debounce: true })}
               multiline
               rows={5}
             />
-            <Field
+            <IntakeField
               label="Quote passende functies"
               value={data.s7.quote_passende_functies}
               onChange={(v) => patch('s7', { quote_passende_functies: v }, { debounce: true })}
@@ -329,7 +278,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
         return (
           <div className="grid gap-4">
             {Object.keys(section).map((k) => (
-              <Field
+              <IntakeField
                 key={k}
                 label={labels[k] || k.replace(/_/g, ' ')}
                 value={section[k] || ''}
@@ -343,72 +292,66 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
       case 's17':
         return (
           <div className="space-y-4">
-            <Field
+            <IntakeField
               label="Bijzonderheden waar rekening mee gehouden moet worden"
               value={data.s17.bijzonderheden}
               onChange={(v) => patch('s17', { bijzonderheden: v }, { debounce: true })}
               multiline
             />
-            <Field
+            <IntakeField
               label="Praktische belemmeringen"
               value={data.s17.praktische_belemmeringen}
               onChange={(v) => patch('s17', { praktische_belemmeringen: v }, { debounce: true })}
               multiline
             />
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-sm font-medium text-gray-700">Opleidingsniveau</span>
-                <select
-                  className={inputClass}
-                  value={data.s17.education_level}
-                  onChange={(e) => patch('s17', { education_level: e.target.value })}
-                >
-                  <option value="">—</option>
-                  {EDUCATION_LEVEL_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field
+              <IntakeSelectField
+                label="Opleidingsniveau"
+                value={data.s17.education_level}
+                onChange={(v) => patch('s17', { education_level: v })}
+                options={EDUCATION_LEVEL_OPTIONS}
+              />
+              <IntakeField
                 label="Opleidingsrichting"
                 value={data.s17.education_name}
                 onChange={(v) => patch('s17', { education_name: v }, { debounce: true })}
               />
-              <Field
+              <IntakeField
                 label="Werkervaring (functies)"
                 value={data.s17.work_experience}
                 onChange={(v) => patch('s17', { work_experience: v }, { debounce: true })}
               />
-              <Field
+              <IntakeField
                 label="Computervaardigheden"
                 value={data.s17.computer_skills}
                 onChange={(v) => patch('s17', { computer_skills: v }, { debounce: true })}
               />
             </div>
-            <div className="grid gap-x-4 gap-y-2 sm:grid-cols-3">
-              <Checkbox
-                label="PC/laptop"
-                checked={data.s17.has_pc}
-                onChange={(v) => patch('s17', { has_pc: v })}
-              />
-              <Checkbox
-                label="Smartphone"
-                checked={data.s17.has_smartphone}
-                onChange={(v) => patch('s17', { has_smartphone: v })}
-              />
-              <Checkbox
-                label="Tablet"
-                checked={data.s17.has_tablet}
-                onChange={(v) => patch('s17', { has_tablet: v })}
-              />
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Apparatuur</p>
+              <div className="flex flex-wrap gap-2">
+                <IntakeToggleChip
+                  label="PC/laptop"
+                  checked={data.s17.has_pc}
+                  onChange={(v) => patch('s17', { has_pc: v })}
+                />
+                <IntakeToggleChip
+                  label="Smartphone"
+                  checked={data.s17.has_smartphone}
+                  onChange={(v) => patch('s17', { has_smartphone: v })}
+                />
+                <IntakeToggleChip
+                  label="Tablet"
+                  checked={data.s17.has_tablet}
+                  onChange={(v) => patch('s17', { has_tablet: v })}
+                />
+              </div>
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">Hoe verplaatst werknemer zich</p>
-              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              <p className="mb-2 text-sm font-medium text-gray-600">Hoe verplaatst werknemer zich</p>
+              <div className="flex flex-wrap gap-2">
                 {TRANSPORT_TYPE_OPTIONS.map((value) => (
-                  <Checkbox
+                  <IntakeToggleChip
                     key={value}
                     label={value}
                     checked={data.s17.transport_types.includes(value)}
@@ -423,10 +366,10 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
               </div>
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-gray-700">Rijbewijs</p>
-              <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+              <p className="mb-2 text-sm font-medium text-gray-600">Rijbewijs</p>
+              <div className="flex flex-wrap gap-2">
                 {DRIVERS_LICENSE_TYPE_OPTIONS.filter((o) => o.value !== 'E').map((o) => (
-                  <Checkbox
+                  <IntakeToggleChip
                     key={o.value}
                     label={o.label}
                     checked={data.s17.drivers_license_types.includes(o.value)}
@@ -441,36 +384,18 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-sm font-medium text-gray-700">Nederlands spreken</span>
-                <select
-                  className={inputClass}
-                  value={data.s17.dutch_speaking}
-                  onChange={(e) => patch('s17', { dutch_speaking: e.target.value })}
-                >
-                  <option value="">—</option>
-                  {DUTCH_LANGUAGE_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1">
-                <span className="text-sm font-medium text-gray-700">Nederlands schrijven</span>
-                <select
-                  className={inputClass}
-                  value={data.s17.dutch_writing}
-                  onChange={(e) => patch('s17', { dutch_writing: e.target.value })}
-                >
-                  <option value="">—</option>
-                  {DUTCH_LANGUAGE_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <IntakeSelectField
+                label="Nederlands spreken"
+                value={data.s17.dutch_speaking}
+                onChange={(v) => patch('s17', { dutch_speaking: v })}
+                options={DUTCH_LANGUAGE_OPTIONS}
+              />
+              <IntakeSelectField
+                label="Nederlands schrijven"
+                value={data.s17.dutch_writing}
+                onChange={(v) => patch('s17', { dutch_writing: v })}
+                options={DUTCH_LANGUAGE_OPTIONS}
+              />
             </div>
           </div>
         );
@@ -489,7 +414,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
         <section
           key={def.key}
           id={`intake-sec-${def.key}`}
-          className="scroll-mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-5"
+          className="scroll-mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm"
         >
           <h2 className="text-lg font-semibold text-gray-900">{def.title}</h2>
           {renderSectionBody(def.key)}

@@ -261,3 +261,93 @@ export function mergeExtractionsIntoIntake(
 
   return ensureIntakeShape(data);
 }
+
+/** Boolean fields that intake PDF checkbox detection owns — never overwritten by dossier gap-fill. */
+const INTAKE_AUTHORITATIVE_BOOL_PATHS = new Set([
+  's5.fml_beperkingen.persoonlijk_functioneren',
+  's5.fml_beperkingen.sociaal_functioneren',
+  's5.fml_beperkingen.dynamische_handelingen',
+  's5.fml_beperkingen.statische_houdingen',
+  's5.fml_beperkingen.aanpassingen_fysieke_omgevingseisen',
+  's5.fml_beperkingen.werktijden',
+  's6.ad_report_concept',
+  's6.is_ex_werknemer',
+  's17.has_pc',
+  's17.has_smartphone',
+  's17.has_tablet',
+]);
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+}
+
+function mergeValueFillBlanks(base: unknown, gap: unknown, path: string): unknown {
+  if (typeof base === 'string' || typeof gap === 'string') {
+    const b = typeof base === 'string' ? base : '';
+    const g = typeof gap === 'string' ? gap : gap == null ? '' : String(gap);
+    return b.trim() ? b : g;
+  }
+
+  if (typeof base === 'boolean' || typeof gap === 'boolean') {
+    if (INTAKE_AUTHORITATIVE_BOOL_PATHS.has(path)) return Boolean(base);
+    if (base === true) return true;
+    return gap === true;
+  }
+
+  if (Array.isArray(base) || Array.isArray(gap)) {
+    const bArr = Array.isArray(base) ? base : [];
+    const gArr = Array.isArray(gap) ? gap : [];
+    return bArr.length > 0 ? bArr : gArr;
+  }
+
+  if (isPlainObject(base) || isPlainObject(gap)) {
+    const bObj = isPlainObject(base) ? base : {};
+    const gObj = isPlainObject(gap) ? gap : {};
+    const keys = new Set([...Object.keys(bObj), ...Object.keys(gObj)]);
+    const out: Record<string, unknown> = {};
+    for (const key of keys) {
+      const childPath = path ? `${path}.${key}` : key;
+      out[key] = mergeValueFillBlanks(bObj[key], gObj[key], childPath);
+    }
+    return out;
+  }
+
+  return base ?? gap ?? null;
+}
+
+/**
+ * Blank-only merge: keep non-empty intake (base) values; fill empties from dossier (gap).
+ * Intake-authoritative booleans (Concept, Ex-werknemer, FML flags, devices) are never changed.
+ */
+export function mergeIntakeFillBlanks(base: unknown, gap: unknown): IntakeData {
+  const baseData = ensureIntakeShape(base);
+  const gapData = ensureIntakeShape(gap);
+
+  const merged = mergeValueFillBlanks(baseData, gapData, '') as IntakeData;
+
+  // Preserve intake meta notes and append dossier notes / conflicts carefully.
+  const notes = [
+    ...baseData.meta.generation_notes,
+    ...gapData.meta.generation_notes.filter(
+      (n) => !baseData.meta.generation_notes.includes(n)
+    ),
+  ];
+  const conflicts = [
+    ...baseData.meta.conflicts,
+    ...gapData.meta.conflicts.filter(
+      (c) =>
+        !baseData.meta.conflicts.some(
+          (b) => b.field === c.field && b.message === c.message
+        )
+    ),
+  ];
+
+  merged.meta = {
+    ...merged.meta,
+    form_version: baseData.meta.form_version || gapData.meta.form_version,
+    generation_notes: notes,
+    conflicts,
+  };
+
+  return ensureIntakeShape(merged);
+}
