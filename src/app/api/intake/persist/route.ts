@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { assertStagingOnly } from '@/lib/auth/staging-only';
 import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { persistIntakeDraft } from '@/lib/intake/persist-draft';
 import { ensureIntakeShape } from '@/lib/intake/schema';
@@ -25,9 +24,6 @@ async function getAuthedClient() {
 
 /** Persist intake draft (and optionally validate/project). */
 export async function POST(req: NextRequest) {
-  const blocked = assertStagingOnly();
-  if (blocked) return blocked;
-
   const body = await req.json().catch(() => null);
   const intakeInstanceId = body?.intakeInstanceId as string | undefined;
   const employeeId = body?.employeeId as string | undefined;

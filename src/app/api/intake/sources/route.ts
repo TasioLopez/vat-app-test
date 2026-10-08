@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { assertStagingOnly } from '@/lib/auth/staging-only';
 import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { getIntakeSourcesSummary } from '@/lib/intake/sources';
 
@@ -24,9 +23,6 @@ async function getAuthedClient() {
 
 /** Metadata-only preflight for Invullen chooser (no LLM, no download). */
 export async function GET(req: NextRequest) {
-  const blocked = assertStagingOnly();
-  if (blocked) return blocked;
-
   const employeeId = req.nextUrl.searchParams.get('employeeId') || undefined;
   if (!employeeId) {
     return NextResponse.json({ error: 'Missing employeeId' }, { status: 400 });

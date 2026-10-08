@@ -27,7 +27,6 @@ import {
   gegevensFromValidatedIntake,
   tp3DetailsFromValidatedIntake,
 } from '@/lib/intake/tp-hydrate';
-import { isStagingEnv } from '@/lib/auth/staging-only';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -134,25 +133,23 @@ async function runEmployeeAutofillStep(
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    if (isStagingEnv()) {
-      const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-      if (validated) {
-        const details = gegevensFromValidatedIntake(validated.data);
-        let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS, {
-          overwrite: true,
-        });
-        next = applySuggestedReferentToTpData(next, {
-          first_name: details.referent_first_name as string | undefined,
-          last_name: details.referent_last_name as string | undefined,
-          referent_function: details.referent_function as string | undefined,
-          phone: details.referent_phone as string | undefined,
-          email: details.referent_email as string | undefined,
-        } as SuggestedReferent);
-        return {
-          data: ensureTP2026Shape(next),
-          employeePersist: { rawDetails: details },
-        };
-      }
+    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
+    if (validated) {
+      const details = gegevensFromValidatedIntake(validated.data);
+      let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS, {
+        overwrite: true,
+      });
+      next = applySuggestedReferentToTpData(next, {
+        first_name: details.referent_first_name as string | undefined,
+        last_name: details.referent_last_name as string | undefined,
+        referent_function: details.referent_function as string | undefined,
+        phone: details.referent_phone as string | undefined,
+        email: details.referent_email as string | undefined,
+      } as SuggestedReferent);
+      return {
+        data: ensureTP2026Shape(next),
+        employeePersist: { rawDetails: details },
+      };
     }
 
     const res = await fetch(`/api/autofill-employee-info-chatlike?employeeId=${ctx.employeeId}`, {
@@ -201,26 +198,24 @@ async function runTp2AutofillStep(
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    if (isStagingEnv()) {
-      const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-      if (validated) {
-        const details = gegevensFromValidatedIntake(validated.data);
-        let next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
-          overwrite: true,
-        });
-        if (next.is_ex_werknemer === true) {
-          const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
-          if (spoor2) next.tp3_activities = spoor2;
-        }
-        const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(next));
-        if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
-          shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
-            shaped.bijlage1_phases as TP2026Bijlage1Phase[],
-            true
-          );
-        }
-        return { data: shaped };
+    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
+    if (validated) {
+      const details = gegevensFromValidatedIntake(validated.data);
+      let next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
+        overwrite: true,
+      });
+      if (next.is_ex_werknemer === true) {
+        const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
+        if (spoor2) next.tp3_activities = spoor2;
       }
+      const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(next));
+      if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
+        shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
+          shaped.bijlage1_phases as TP2026Bijlage1Phase[],
+          true
+        );
+      }
+      return { data: shaped };
     }
 
     const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
@@ -279,13 +274,11 @@ async function runTp3FieldStep(
   }
 
   try {
-    if (isStagingEnv()) {
-      const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-      if (validated) {
-        const details = tp3DetailsFromValidatedIntake(fieldKey, validated.data);
-        if (details) {
-          return resolveTp3AutofillJson({ details }, currentData);
-        }
+    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
+    if (validated) {
+      const details = tp3DetailsFromValidatedIntake(fieldKey, validated.data);
+      if (details) {
+        return resolveTp3AutofillJson({ details }, currentData);
       }
     }
 

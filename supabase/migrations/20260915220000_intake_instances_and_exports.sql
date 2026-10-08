@@ -1,4 +1,4 @@
--- First-class Intake drafts and immutable PDF export snapshots (staging feature)
+-- First-class Intake drafts and immutable PDF export snapshots
 
 CREATE TABLE IF NOT EXISTS public.intake_instances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

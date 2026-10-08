@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
-import { isStagingEnv } from '@/lib/auth/staging-only';
 import { INTAKE_LAYOUT_KEY } from '@/lib/intake/schema';
 import IntakeBuilder from '@/components/intake/IntakeBuilder';
 
@@ -13,8 +12,6 @@ type Params = {
 export const dynamic = 'force-dynamic';
 
 export default async function IntakeInstancePage({ params }: { params: Promise<Params> }) {
-  if (!isStagingEnv()) notFound();
-
   const { employeeId, intakeInstanceId } = await params;
 
   const cookieStore = await cookies();

@@ -10,27 +10,10 @@ const BLOCKED_PATHS = new Set([
   '/debug-user',
 ]);
 
-function isStagingEnv(): boolean {
-  return process.env.NEXT_PUBLIC_APP_ENV === 'staging';
-}
-
-function isStagingOnlyPath(pathname: string): boolean {
-  return (
-    pathname.startsWith('/dashboard/intake') ||
-    pathname.startsWith('/intake/') ||
-    pathname.startsWith('/api/intake') ||
-    pathname.startsWith('/api/export-intake-pdf')
-  );
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (BLOCKED_PATHS.has(pathname)) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-
-  if (isStagingOnlyPath(pathname) && !isStagingEnv()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 

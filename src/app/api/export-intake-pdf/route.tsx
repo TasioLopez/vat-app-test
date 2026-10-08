@@ -5,7 +5,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { assertStagingOnly } from '@/lib/auth/staging-only';
 import { verifyEmployeeAccess } from '@/lib/auth/api-auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/auth/rate-limit';
 import { waitForPrintAssets } from '@/lib/pdf/wait-for-print-assets';
@@ -68,9 +67,6 @@ async function launchBrowser() {
 }
 
 export async function GET(req: NextRequest) {
-  const blocked = assertStagingOnly();
-  if (blocked) return blocked;
-
   const search = req.nextUrl.searchParams;
   const employeeId = search.get('employeeId');
   const intakeInstanceId = search.get('intakeInstanceId');

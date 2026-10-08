@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isStagingEnv } from '@/lib/auth/staging-only';
 import { INTAKE_LAYOUT_KEY, ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 import { intakeToGegevensFields, intakeToTpNarrativeFields } from '@/lib/intake/project';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
@@ -17,13 +16,11 @@ export type ValidatedIntakeRecord = {
   validated_at: string;
 };
 
-/** Load the latest validated intake draft for an employee (staging feature). */
+/** Load the latest validated intake draft for an employee. */
 export async function getValidatedIntakeForEmployee(
   supabase: SupabaseClient,
   employeeId: string
 ): Promise<ValidatedIntakeRecord | null> {
-  if (!isStagingEnv()) return null;
-
   const { data, error } = await (supabase as any)
     .from('intake_instances')
     .select('id, data_json, validated_at')

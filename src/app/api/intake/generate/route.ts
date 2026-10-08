@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { assertStagingOnly } from '@/lib/auth/staging-only';
 import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
 import { ensureIntakeShape } from '@/lib/intake/schema';
@@ -14,9 +13,6 @@ export const maxDuration = 300;
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
-  const blocked = assertStagingOnly();
-  if (blocked) return blocked;
-
   const body = await req.json().catch(() => null);
   const employeeId = body?.employeeId as string | undefined;
   const intakeInstanceId = body?.intakeInstanceId as string | undefined;

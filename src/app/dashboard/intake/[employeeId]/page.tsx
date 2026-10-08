@@ -1,7 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { isStagingEnv } from '@/lib/auth/staging-only';
 import { INTAKE_LAYOUT_KEY, createEmptyIntakeData } from '@/lib/intake/schema';
 
 type Params = { employeeId: string };
@@ -9,8 +8,6 @@ type Params = { employeeId: string };
 export const dynamic = 'force-dynamic';
 
 export default async function IntakeEntryPage({ params }: { params: Promise<Params> }) {
-  if (!isStagingEnv()) notFound();
-
   const { employeeId } = await params;
 
   const cookieStore = await cookies();
