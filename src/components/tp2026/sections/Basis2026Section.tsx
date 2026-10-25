@@ -93,7 +93,7 @@ function BasisSectionInfoButton({ sectionId }: { sectionId: BasisEditorSectionId
       >
         <button
           type="button"
-          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/35 text-[10px] font-bold leading-none text-muted-foreground transition-colors hover:border-[#6d2a96]/50 hover:bg-[#6d2a96]/5 hover:text-[#6d2a96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6d2a96]/40"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/35 text-[10px] font-bold leading-none text-muted-foreground transition-colors hover:border-[#702A90]/50 hover:bg-[#702A90]/5 hover:text-[#702A90] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#702A90]/40"
           aria-label={`Informatie over ${info.title}`}
           aria-expanded={tooltipOpen || dialogOpen}
           onFocus={showTooltip}
@@ -228,7 +228,7 @@ function Basis2026SectionList({
               <button
                 type="button"
                 onClick={() => onOpenSection(section.id)}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg border-2 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#6d2a96]/40 hover:bg-[#6d2a96]/5 ${BASIS_SECTION_STATUS_BORDER[status]}`}
+                className={`flex w-full items-center justify-between gap-3 rounded-lg border-2 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#702A90]/40 hover:bg-[#702A90]/5 ${BASIS_SECTION_STATUS_BORDER[status]}`}
               >
                 <span className="text-sm font-medium text-foreground">{section.label}</span>
                 <BasisSectionStatusBadge status={status} />
@@ -397,7 +397,7 @@ function BasisFieldEditorRow({
           {canAutofill ? (
             <button
               type="button"
-              className="text-xs font-medium text-[#6d2a96] underline underline-offset-2 hover:no-underline"
+              className="text-xs font-medium text-[#702A90] underline underline-offset-2 hover:no-underline"
               onClick={() => void onAutofillField!(field.key)}
             >
               Autofill

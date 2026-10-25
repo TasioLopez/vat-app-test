@@ -1,6 +1,13 @@
 export const TP2026_BORDER_GOLD = '#c4b37b';
 export const TP2026_CELL_BG_WARM = '#f3efe4';
 
+/** ValentineZ brand purple (document bold text, accents). */
+export const TP2026_PURPLE = '#702A90';
+/** Solid section bars / TOC purple band. */
+export const TP2026_PURPLE_DEEP = '#5c2278';
+/** Hover / pressed companion for brand purple controls. */
+export const TP2026_PURPLE_HOVER = '#5a1f75';
+
 /** Inline / print-safe border declaration (100% opacity). */
 export const TP2026_BORDER_CSS = `0.5pt solid ${TP2026_BORDER_GOLD}`;
 
@@ -13,7 +20,7 @@ export const TP2026_CELL_BG_WARM_CLASS = 'bg-[#f3efe4]';
 export const TP2026_BORDER_BOX_CLASS = 'tp2026-border-box';
 
 export const TP2026_DATA_ROW_LABEL_CLASS =
-  'px-2.5 py-0.5 font-bold text-[#6d2a96] bg-[#f3efe4] align-top';
+  'px-2.5 py-0.5 font-bold text-[#702A90] bg-[#f3efe4] align-top';
 
 export const TP2026_DATA_ROW_VALUE_CLASS =
   'px-2.5 py-0.5 font-normal text-neutral-900 bg-white align-top';

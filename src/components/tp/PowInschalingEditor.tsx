@@ -54,7 +54,7 @@ export function PowInschalingEditor({
 
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#6d2a96]">
+          <label className="mb-1 block text-xs font-medium text-[#702A90]">
             {INSCHALING_ROW_LABELS.huidige_trede}
           </label>
           <textarea
@@ -65,7 +65,7 @@ export function PowInschalingEditor({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#6d2a96]">
+          <label className="mb-1 block text-xs font-medium text-[#702A90]">
             {INSCHALING_ROW_LABELS.werkzame_uren}
           </label>
           <textarea
@@ -76,7 +76,7 @@ export function PowInschalingEditor({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-[#6d2a96]">
+          <label className="mb-1 block text-xs font-medium text-[#702A90]">
             {INSCHALING_ROW_LABELS.verwachting}
           </label>
           <textarea
@@ -89,7 +89,7 @@ export function PowInschalingEditor({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-[#6d2a96]">{TP2026_VISIE_PLAATSBARHEID_TITLE}</label>
+        <label className="mb-1 block text-xs font-medium text-[#702A90]">{TP2026_VISIE_PLAATSBARHEID_TITLE}</label>
         <textarea
           className={TEXTAREA_CLASS}
           value={toelichting}

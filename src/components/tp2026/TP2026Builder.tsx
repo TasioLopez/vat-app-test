@@ -560,7 +560,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
               type="button"
               variant="outline"
               size="icon"
-              className={cn('h-8 w-8', textJustified && 'border-[#6d2a96] bg-[#6d2a96]/10 text-[#6d2a96]')}
+              className={cn('h-8 w-8', textJustified && 'border-[#702A90] bg-[#702A90]/10 text-[#702A90]')}
               onClick={() => updateField('text_justified', !textJustified)}
               aria-pressed={textJustified}
               aria-label={

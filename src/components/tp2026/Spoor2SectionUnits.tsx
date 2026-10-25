@@ -24,16 +24,16 @@ type MarginAtom = {
 /** Vertical spacing between basis body atoms (Spoor 2 + default). */
 export function getAtomMarginClass(atom: MarginAtom, prev: MarginAtom | undefined): string {
   if (!prev) {
-    if (atom.kind === 'spoor2' && atom.showMainBand) return 'mt-8';
-    if (atom.kind === 'spoor2' && atom.showSubsectionTitle) return 'mt-4';
+    if (atom.kind === 'spoor2' && atom.showMainBand) return 'mt-10';
+    if (atom.kind === 'spoor2' && atom.showSubsectionTitle) return 'mt-6';
     return '';
   }
   if (atom.kind === 'spoor2') {
-    if (atom.showMainBand) return 'mt-8';
-    if (atom.showSubsectionTitle) return 'mt-4';
-    return 'mt-3';
+    if (atom.showMainBand) return 'mt-10';
+    if (atom.showSubsectionTitle) return 'mt-6';
+    return 'mt-5';
   }
-  return 'mt-3';
+  return 'mt-5';
 }
 
 export function Spoor2SubtextLogoBullet({ subText }: { subText: string }) {

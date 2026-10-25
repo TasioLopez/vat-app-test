@@ -141,7 +141,7 @@ function InterventionSectionEditor({
         const b = block(id);
         const items = b.items.length ? b.items : b.standaardtekst ? opt.defaultItems ?? [] : [];
         return (
-          <div key={id} className="space-y-3 rounded-md border border-[#6d2a96]/25 bg-[#6d2a96]/[0.03] p-3">
+          <div key={id} className="space-y-3 rounded-md border border-[#702A90]/25 bg-[#702A90]/[0.03] p-3">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-sm font-semibold text-foreground">{opt.heading}</h4>
               {opt.standardText?.length ? (
@@ -315,7 +315,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         {b.bijstellingen_belastbaarheid.aanwezig ? (
           <div className="space-y-3">
             {b.bijstellingen_belastbaarheid.revisions.map((rev) => (
-              <div key={rev.id} className="space-y-3 rounded-md border border-[#6d2a96]/25 p-3">
+              <div key={rev.id} className="space-y-3 rounded-md border border-[#702A90]/25 p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">Bijstelling {formatNLDateForDoc(rev.date)}</span>
                   <button

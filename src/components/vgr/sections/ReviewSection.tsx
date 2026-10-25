@@ -68,7 +68,7 @@ export function ReviewEditor({
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-[#6d2a96]">Samenvatting rapportage</h3>
+        <h3 className="mb-3 text-sm font-semibold text-[#702A90]">Samenvatting rapportage</h3>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <Row k="Werknemer" v={`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim() || '—'} />
           <Row k="Rapportage" v={`Versie ${data.vgr_meta.version}${data.vgr_meta.prior_vgr_instance_id ? ' (vervolg)' : ' (eerste)'}`} />
@@ -85,7 +85,7 @@ export function ReviewEditor({
 
       <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-[#6d2a96]">Controle</h3>
+          <h3 className="text-sm font-semibold text-[#702A90]">Controle</h3>
           <div className="flex items-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1 text-rose-700"><XCircle className="h-3.5 w-3.5" /> {counts.errors}</span>
             <span className="inline-flex items-center gap-1 text-amber-700"><AlertTriangle className="h-3.5 w-3.5" /> {counts.warnings}</span>
@@ -171,7 +171,7 @@ export function ReviewEditor({
       <VgrGenerateAllPanel data={data} employeeId={employeeId} vgrInstanceId={vgrInstanceId} />
 
       <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold text-[#6d2a96]">Status</h3>
+        <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Status</h3>
         <p className="mb-3 text-xs text-muted-foreground">
           Markeer de rapportage als definitief zodra alle blokkerende punten zijn opgelost. Een definitieve rapportage wordt bij
           de volgende voortgangsrapportage automatisch als basis gebruikt (doelstelling, PoW-historie, Leernavigator, planning).

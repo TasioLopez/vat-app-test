@@ -341,7 +341,7 @@ function VGRBuilderInner({
               type="button"
               onClick={() => setCurrentStep(i + 1)}
               className={`rounded px-2 py-0.5 text-xs transition ${
-                currentStep === i + 1 ? 'bg-[#6d2a96] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                currentStep === i + 1 ? 'bg-[#702A90] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {i + 1}. {s.title}

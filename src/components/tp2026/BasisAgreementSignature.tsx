@@ -45,7 +45,7 @@ function SignatureCell({
 }) {
   return (
     <div className={`${TP2026_BORDER_BOX_CLASS} rounded p-2`}>
-      <div className="mb-1 text-[13px] font-bold text-[#6d2a96]">{title}</div>
+      <div className="mb-1 text-[13px] font-bold text-[#702A90]">{title}</div>
       <div className="space-y-1.5 text-[11px] leading-relaxed text-neutral-900">{children}</div>
     </div>
   );
@@ -95,7 +95,7 @@ export function BasisSignatureBlock({
             klachtenreglement op onze website{' '}
             <a
               href="https://www.valentinez.nl"
-              className="text-[#6d2a96] underline underline-offset-2"
+              className="text-[#702A90] underline underline-offset-2"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -104,7 +104,7 @@ export function BasisSignatureBlock({
             . Een papieren versie kunt u opvragen via 085 - 800 2010 of{' '}
             <a
               href="mailto:info@valentinez.nl"
-              className="text-[#6d2a96] underline underline-offset-2"
+              className="text-[#702A90] underline underline-offset-2"
             >
               info@valentinez.nl
             </a>

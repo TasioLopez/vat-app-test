@@ -231,7 +231,7 @@ function Bijlage1Droppable({
   return (
     <div
       ref={setNodeRef}
-      className={`${className} ${isOver ? 'ring-1 ring-[#6d2a96]/40' : ''}`}
+      className={`${className} ${isOver ? 'ring-1 ring-[#702A90]/40' : ''}`}
     >
       {children}
     </div>
@@ -542,7 +542,7 @@ export function Bijlage1Editor({
             {normalized.map((phase, phaseIdx) => (
               <div
                 key={phaseIdx}
-                className={`rounded-md border p-3 ${activePhaseIdx === phaseIdx ? 'border-[#6d2a96]' : 'border-border'}`}
+                className={`rounded-md border p-3 ${activePhaseIdx === phaseIdx ? 'border-[#702A90]' : 'border-border'}`}
               >
                 <div className="mb-2 flex items-center justify-between">
                   <button
@@ -722,26 +722,26 @@ export function Bijlage1A4Pages({
               </colgroup>
               <tbody>
                 <tr>
-                  <td colSpan={2} className="!bg-white px-2 py-0.5 text-[#6d2a96] font-bold">
+                  <td colSpan={2} className="!bg-white px-2 py-0.5 text-[#702A90] font-bold">
                     Planning fase {idx + 1}
                   </td>
-                  <td className="!bg-white px-2 py-0.5 text-[#6d2a96] font-bold text-center">
+                  <td className="!bg-white px-2 py-0.5 text-[#702A90] font-bold text-center">
                     Status
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`px-2 py-0.5 text-[#702A90] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Doel
                   </td>
-                  <td className="!bg-white px-2 py-0.5 font-bold text-[#6d2a96] align-top" colSpan={2}>
+                  <td className="!bg-white px-2 py-0.5 font-bold text-[#702A90] align-top" colSpan={2}>
                     {phase.title || '—'}
                   </td>
                 </tr>
                 <tr>
                   <td
-                    className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                    className={`px-2 py-0.5 text-[#702A90] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                   >
                     Periode
                   </td>
@@ -755,7 +755,7 @@ export function Bijlage1A4Pages({
                       {rowIdx === 0 ? (
                         <td
                           rowSpan={rows.length}
-                          className={`px-2 py-0.5 text-[#6d2a96] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
+                          className={`px-2 py-0.5 text-[#702A90] font-bold align-top ${BIJLAGE1_LABEL_BG}`}
                         >
                           Activiteiten
                         </td>
@@ -774,15 +774,15 @@ export function Bijlage1A4Pages({
           ))}
         </div>
         <div className="mt-1.5 shrink-0 pb-1">
-          <p className="text-[8pt] leading-tight italic text-[#6d2a96]">
+          <p className="text-[8pt] leading-tight italic text-[#702A90]">
             * Het solliciteren geschiedt volgens planning, aanvang sollicitatiefase wordt vervroegd indien werknemer
             daar eerder klaar voor is.
           </p>
           <p className="text-[9pt] leading-tight">
-            <span className="font-bold text-[#6d2a96]">G</span> gedaan / succesvol uitgevoerd -{' '}
-            <span className="font-bold text-[#6d2a96]">P</span> nog in planning -{' '}
-            <span className="font-bold text-[#6d2a96]">N</span> niet gedaan / geen succes -{' '}
-            <span className="font-bold text-[#6d2a96]">U</span> in uitvoering
+            <span className="font-bold text-[#702A90]">G</span> gedaan / succesvol uitgevoerd -{' '}
+            <span className="font-bold text-[#702A90]">P</span> nog in planning -{' '}
+            <span className="font-bold text-[#702A90]">N</span> niet gedaan / geen succes -{' '}
+            <span className="font-bold text-[#702A90]">U</span> in uitvoering
           </p>
         </div>
       </div>

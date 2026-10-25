@@ -56,7 +56,7 @@ export function A4LogoHeader({
   if (compact) {
     return (
       <div className="mb-2 flex w-full justify-start">
-        <Image src={Logo2} alt="ValentineZ" width={120} height={40} loading="eager" />
+        <Image src={Logo2} alt="ValentineZ" width={120} height={27} loading="eager" />
       </div>
     );
   }
@@ -101,7 +101,7 @@ export function FooterIdentity({
             <span className="text-neutral-800">{dateOfBirth || '—'}</span>
           </div>
         </div>
-        <div className="text-[#6d2a96] font-semibold tabular-nums pt-px">
+        <div className="text-[#702A90] font-semibold tabular-nums pt-px">
           {typeof pageNumber === 'number' ? pageNumber : ''}
         </div>
       </div>
@@ -146,7 +146,7 @@ export function BasisToelichtingHeading({ label }: { label: string }) {
 /** Purple full-width band (Profiel werknemer, matches inhoudsopgave). */
 export function PurpleSectionBar({ title, className = '' }: { title: string; className?: string }) {
   return (
-    <div className={`${TP2026_SECTION_BAR_CLASS} bg-[#5a257d] ${className}`}>{title}</div>
+    <div className={`${TP2026_SECTION_BAR_CLASS} bg-[#5c2278] ${className}`}>{title}</div>
   );
 }
 
@@ -163,7 +163,7 @@ export function SectionBand({
 }) {
   return (
     <div
-      className={`mb-1 text-[12px] font-extrabold leading-tight text-[#6d2a96] ${underline ? 'underline underline-offset-2 decoration-[#6d2a96]/70' : ''} ${className}`}
+      className={`mb-2.5 text-[12px] font-extrabold leading-tight text-[#702A90] ${underline ? 'underline underline-offset-2 decoration-[#702A90]/70' : ''} ${className}`}
     >
       {title}
     </div>

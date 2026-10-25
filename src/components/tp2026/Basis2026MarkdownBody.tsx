@@ -17,10 +17,10 @@ const components: Components = {
   strong: ({ children }) => <strong className="font-bold text-neutral-900">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   h1: ({ children }) => (
-    <h1 className="mb-2 text-[14px] font-bold leading-tight text-[#6d2a96] first:mt-0">{children}</h1>
+    <h1 className="mb-2 text-[14px] font-bold leading-tight text-[#702A90] first:mt-0">{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 className="mb-2 mt-3 text-[13px] font-bold leading-tight text-[#6d2a96] first:mt-0">{children}</h2>
+    <h2 className="mb-2 mt-3 text-[13px] font-bold leading-tight text-[#702A90] first:mt-0">{children}</h2>
   ),
   h3: ({ children }) => (
     <h3 className="mb-1.5 mt-2 text-[12px] font-bold leading-tight text-green-800 first:mt-0">{children}</h3>
@@ -32,7 +32,7 @@ const components: Components = {
     href ? (
       <a
         href={href}
-        className="text-[#6d2a96] underline underline-offset-2"
+        className="text-[#702A90] underline underline-offset-2"
         target="_blank"
         rel="noopener noreferrer"
         {...rest}
@@ -40,7 +40,7 @@ const components: Components = {
         {children}
       </a>
     ) : (
-      <span className="text-[#6d2a96] underline underline-offset-2">{children}</span>
+      <span className="text-[#702A90] underline underline-offset-2">{children}</span>
     ),
   blockquote: ({ children }) => (
     <blockquote className="my-2 border-l-2 border-[#b8985c] pl-3 text-neutral-800">{children}</blockquote>

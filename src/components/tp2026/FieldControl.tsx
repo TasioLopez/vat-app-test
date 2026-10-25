@@ -211,7 +211,7 @@ function MultiselectControl({
               className={cn(
                 'flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors',
                 isSelected
-                  ? 'border-[#6d2a96]/60 bg-[#6d2a96]/10 text-foreground'
+                  ? 'border-[#702A90]/60 bg-[#702A90]/10 text-foreground'
                   : 'border-border bg-background hover:bg-muted/50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
@@ -241,14 +241,14 @@ function MultiselectControl({
               {custom.map((label) => (
                 <span
                   key={label}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#6d2a96]/35 bg-[#6d2a96]/10 px-2.5 py-1 text-xs font-medium text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#702A90]/35 bg-[#702A90]/10 px-2.5 py-1 text-xs font-medium text-foreground"
                 >
                   {label}
                   <button
                     type="button"
                     aria-label={`Verwijder ${label}`}
                     disabled={disabled}
-                    className="rounded-full px-1 text-muted-foreground hover:bg-[#6d2a96]/15 hover:text-foreground disabled:opacity-60"
+                    className="rounded-full px-1 text-muted-foreground hover:bg-[#702A90]/15 hover:text-foreground disabled:opacity-60"
                     onClick={() => onChange(removeTransportType(selected, label))}
                   >
                     ×

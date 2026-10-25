@@ -124,7 +124,7 @@ export function CheckboxRow({
     <label
       className={cn(
         'flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors',
-        checked ? 'border-[#6d2a96]/60 bg-[#6d2a96]/10' : 'border-border bg-background hover:bg-muted/50',
+        checked ? 'border-[#702A90]/60 bg-[#702A90]/10' : 'border-border bg-background hover:bg-muted/50',
         className
       )}
     >
@@ -224,7 +224,7 @@ export function EditorCard({
   return (
     <section id={`vgr-sec-${id}`} className="rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-[#6d2a96]">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-[#702A90]">
           {chapterColor ? <span className="inline-block h-3 w-1.5 rounded-sm" style={{ backgroundColor: chapterColor }} /> : null}
           {title}
         </h3>

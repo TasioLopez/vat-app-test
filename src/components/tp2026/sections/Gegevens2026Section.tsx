@@ -510,7 +510,7 @@ function GegevensPage2({
             <DataRow label="Startdatum" value={formatNLDateForDoc(data.tp_start_date)} />
             <DataRow label="Einddatum (planning)" value={formatNLDateForDoc(data.tp_end_date)} />
           </TP2026FieldTable>
-          <p className="mt-3 text-[11px] italic leading-snug text-[#6d2a96]/90">{NB_DEFAULT_GEEN_AD}</p>
+          <p className="mt-3 text-[11px] italic leading-snug text-[#702A90]/90">{NB_DEFAULT_GEEN_AD}</p>
         </div>
 
         {includeLegenda ? (

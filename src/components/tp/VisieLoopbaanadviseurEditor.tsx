@@ -416,7 +416,7 @@ function SuggestionRow({
     <div className="flex gap-2 rounded-md border border-border/60 bg-background p-2">
       <input
         type="checkbox"
-        className="mt-1.5 h-4 w-4 shrink-0 accent-[#6d2a96]"
+        className="mt-1.5 h-4 w-4 shrink-0 accent-[#702A90]"
         checked={checked}
         onChange={(e) => onCheckedChange(e.target.checked)}
         aria-label={`Behouden: ${naam}`}

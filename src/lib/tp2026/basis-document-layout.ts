@@ -8,7 +8,7 @@ export const TP_BASIS_TOELICHTING_CLASS =
   'mb-1.5 text-[12px] font-bold leading-tight text-neutral-900';
 
 export const TP_BASIS_DISCLAIMER_CLASS =
-  'text-[10px] leading-relaxed text-[#6d2a96]';
+  'text-[10px] leading-relaxed text-[#702A90]';
 
 /** Display footnote disclaimers with a leading asterisk and no markdown-italic wrapper. */
 export function formatBasisFootnoteDisplay(text: string): string {

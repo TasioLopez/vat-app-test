@@ -104,7 +104,7 @@ export function SectionTitle({ title, sub = false }: { title: string; sub?: bool
   return sub ? (
     <div className="pt-1 text-[11pt] font-bold leading-tight text-neutral-900">{title}</div>
   ) : (
-    <div className="pt-1.5 text-[12pt] font-extrabold leading-tight text-[#6d2a96]">{title}</div>
+    <div className="pt-2.5 text-[12pt] font-extrabold leading-tight text-[#702A90]">{title}</div>
   );
 }
 
@@ -239,7 +239,7 @@ function buildProfiel(ctx: Ctx) {
   const periode = vgrPeriodeText(data);
   push(ctx, {
     id: 'periode',
-    node: <Para className="font-bold text-[#6d2a96]">Voortgangsrapportage periode: {periode || '…'}</Para>,
+    node: <Para className="font-bold text-[#702A90]">Voortgangsrapportage periode: {periode || '…'}</Para>,
   });
 
   heading(ctx, 'vraag-h', 'Vraagstelling');
@@ -511,7 +511,7 @@ function buildActivatie(ctx: Ctx) {
       <div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={VGR_POW_CHART_SRC} alt="PoW-meter" className="mx-auto block h-auto w-full max-w-[560px]" />
-        <p className="mt-1 text-[8pt] italic leading-tight text-[#6d2a96]">{VGR_POW_FOOTNOTE}</p>
+        <p className="mt-1 text-[8pt] italic leading-tight text-[#702A90]">{VGR_POW_FOOTNOTE}</p>
       </div>
     ),
   });
@@ -529,15 +529,15 @@ function buildActivatie(ctx: Ctx) {
         </colgroup>
         <tbody>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#6d2a96]">{VGR_POW_ROW_LABELS.intake}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.intake}</td>
             <td className="px-2 py-1 align-top">Werknemer bevond zich in trede {tr(pow.intake_trede)}.</td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#6d2a96]">{VGR_POW_ROW_LABELS.huidig}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.huidig}</td>
             <td className="px-2 py-1 align-top">Werknemer bevindt zich in trede {tr(pow.huidige_trede)}.</td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#6d2a96]">{VGR_POW_ROW_LABELS.doel}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.doel}</td>
             <td className="px-2 py-1 align-top">
               {pow.doel_onbekend
                 ? 'De verwachting voor de aankomende periode is nog niet vast te stellen.'
@@ -545,7 +545,7 @@ function buildActivatie(ctx: Ctx) {
             </td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#6d2a96]">{VGR_POW_ROW_LABELS.uren}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.uren}</td>
             <td className="px-2 py-1 align-top">
               {pow.werkzame_uren.trim() ? `${pow.werkzame_uren.trim()} ${VGR_POW_UREN_SUFFIX}` : `… ${VGR_POW_UREN_SUFFIX}`}
               {pow.werkzame_uren_context.trim() ? ` ${pow.werkzame_uren_context.trim()}` : ''}
@@ -586,7 +586,7 @@ function buildActivatie(ctx: Ctx) {
   if (functies.length) {
     push(ctx, { id: 'vp-fun-lead', node: <Para>{VGR_VISIE_FUNCTIES_LEAD}</Para>, keepWithNext: true });
     push(ctx, { id: 'vp-fun-list', node: <BulletList items={functies} /> });
-    push(ctx, { id: 'vp-fun-foot', node: <p className="text-[8pt] italic leading-tight text-[#6d2a96]">{VGR_VISIE_FUNCTIES_FOOTNOTE}</p> });
+    push(ctx, { id: 'vp-fun-foot', node: <p className="text-[8pt] italic leading-tight text-[#702A90]">{VGR_VISIE_FUNCTIES_FOOTNOTE}</p> });
   }
   heading(ctx, 'vp-conc-h', 'Conclusie', true);
   prose(ctx, 'vp-conc', vp.conclusie || '—');
@@ -600,7 +600,7 @@ function buildActivatie(ctx: Ctx) {
     node: (
       <div className="grid grid-cols-2 gap-x-6">
         <div>
-          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#6d2a96]`}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
+          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#702A90]`}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
           <div className="flex flex-col gap-0.5">
             {ln.basis.map((item) => (
               <CheckLine key={item.id} checked={item.checked} label={item.label} />
@@ -608,7 +608,7 @@ function buildActivatie(ctx: Ctx) {
           </div>
         </div>
         <div>
-          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#6d2a96]`}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
+          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#702A90]`}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
           <div className="flex flex-col gap-0.5">
             {ln.activering.map((item) => (
               <CheckLine key={item.id} checked={item.checked} label={leernavigatorLabelWithUren(item)} />

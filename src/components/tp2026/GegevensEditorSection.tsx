@@ -14,8 +14,8 @@ export function GegevensEditorSection({
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-        <Icon className="h-4 w-4 shrink-0 text-[#6d2a96]" aria-hidden />
-        <h3 className="text-sm font-semibold text-[#6d2a96]">{title}</h3>
+        <Icon className="h-4 w-4 shrink-0 text-[#702A90]" aria-hidden />
+        <h3 className="text-sm font-semibold text-[#702A90]">{title}</h3>
       </div>
       <div className="space-y-4 p-4">{children}</div>
     </div>

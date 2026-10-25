@@ -7,6 +7,7 @@ import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
+import { TP2026_PURPLE } from '@/lib/tp2026/tp2026-colors';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { getWerkgeverName } from '@/lib/tp/resolve-profile-context';
 import { formatEmployeeName } from '@/lib/utils';
@@ -15,8 +16,11 @@ import { VGR_COVER_PAGE_COUNT } from '@/lib/vgr/page-numbering';
 import { VGR_COVER_TITLE } from '@/lib/vgr/content';
 import type { VGRData } from '@/lib/vgr/schema';
 
-/* Geometry mirrors TP2026 `Cover2026Section` so both documents share one visual language. */
-const COVER_ARTWORK_VERTICAL_NUDGE_PX = 50;
+/**
+ * Cover artwork geometry. TP uses a +50px nudge for the Trajectplan voorblad; the official
+ * VGR blank (`01_Voortgangsrapportage_voorkant`) sits ~44px higher, so keep a small nudge only.
+ */
+const COVER_ARTWORK_VERTICAL_NUDGE_PX = 6;
 const COVER_ARTWORK_SCALE = 1.04;
 
 const COVER_LAYOUT = {
@@ -25,7 +29,7 @@ const COVER_LAYOUT = {
   artwork: { image: '/tp2026-cover-visual.svg', size: '100% auto', position: 'center center' },
   banner: { y: 508, h: 192, px: 214, py: 0, contentOpticalShiftPx: -40 },
   title: { fontSize: '20pt', lineHeight: 1.08, mb: 14 },
-  fields: { maxW: 520, rowGap: 5, labelW: 132, fontSize: '8.5pt', purple: '#6d2a96', borderColor: '#b8985c' },
+  fields: { maxW: 520, rowGap: 5, labelW: 132, fontSize: '8.5pt', purple: TP2026_PURPLE, borderColor: '#b8985c' },
 } as const;
 
 export function CoverEditor({
@@ -110,7 +114,7 @@ export function CoverA4({ data }: { data: VGRData }) {
             }}
           >
             <h1
-              className="m-0 tracking-tight text-[#6d2a96] antialiased"
+              className="m-0 tracking-tight text-[#702A90] antialiased"
               style={{
                 fontSize: COVER_LAYOUT.title.fontSize,
                 lineHeight: COVER_LAYOUT.title.lineHeight,
@@ -121,7 +125,7 @@ export function CoverA4({ data }: { data: VGRData }) {
             >
               {VGR_COVER_TITLE}
             </h1>
-            <div style={{ rowGap: COVER_LAYOUT.fields.rowGap }} className="grid text-[#6d2a96] leading-tight">
+            <div style={{ rowGap: COVER_LAYOUT.fields.rowGap }} className="grid text-[#702A90] leading-tight">
               <CoverInfoLine label="Voor" value={employeeName} />
               <CoverInfoLine label="Datum rapportage" value={formatNLDateForDoc(data.vgr_meta.report_date)} />
               <CoverInfoLine label="Opdrachtgever" value={getWerkgeverName(data)} />

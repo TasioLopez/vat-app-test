@@ -18,12 +18,12 @@ import {
 } from '@/lib/tp2026/basis-inhoudsopgave-static';
 
 const BAR_BG: Record<BasisInhoudsopgaveBarVariant, string> = {
-  purple: 'bg-[#5a257d]',
+  purple: 'bg-[#5c2278]',
   salmon: 'bg-[#c76f5c]',
   beige: 'bg-[#c4a574]',
 };
 
-const tocItemClass = 'text-[12px] leading-relaxed text-[#6d2a96]';
+const tocItemClass = 'text-[12px] leading-relaxed text-[#702A90]';
 
 function TocSectionBar({
   variant,
@@ -48,7 +48,7 @@ export function Basis2026InhoudsopgavePage({
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
       <div className="flex min-h-0 flex-1 flex-col text-[12px]">
-        <h1 className="text-[16px] font-bold leading-tight text-[#6d2a96]">{BASIS_INHOUDSOPGAVE_TITLE}</h1>
+        <h1 className="text-[16px] font-bold leading-tight text-[#702A90]">{BASIS_INHOUDSOPGAVE_TITLE}</h1>
         <div className="mt-3 space-y-1">
           {BASIS_INHOUDSOPGAVE_INTRO_ITEMS.map((item) => (
             <ValentineZLogoBulletRow key={item} className={tocItemClass}>

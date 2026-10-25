@@ -75,7 +75,7 @@ export function ApplicationsEditor({
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-[#6d2a96]">Activiteit toevoegen</h3>
+        <h3 className="mb-3 text-sm font-semibold text-[#702A90]">Activiteit toevoegen</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Datum</label>
@@ -135,7 +135,7 @@ export function ApplicationsEditor({
       ) : (
         groups.map((g) => (
           <div key={g.monthKey} className="rounded-lg border border-border bg-card shadow-sm">
-            <div className="border-b bg-muted/40 px-4 py-2 text-sm font-semibold text-[#6d2a96]">
+            <div className="border-b bg-muted/40 px-4 py-2 text-sm font-semibold text-[#702A90]">
               {formatNLMonthYear(g.monthKey)} <span className="font-normal text-muted-foreground">({g.items.length})</span>
             </div>
             <div className="divide-y">
@@ -280,7 +280,7 @@ export function ApplicationsA4Pages({ data, printMode = false }: { data: VGRData
                           {i === 0 ? (
                             <td
                               rowSpan={c.items.length}
-                              className={`px-2 py-0.5 align-top font-bold text-[#6d2a96] ${TP2026_CELL_BG_WARM_CLASS}`}
+                              className={`px-2 py-0.5 align-top font-bold text-[#702A90] ${TP2026_CELL_BG_WARM_CLASS}`}
                             >
                               {formatNLMonthYear(c.monthKey)}
                               {c.continued ? ' (vervolg)' : ''}
@@ -296,7 +296,7 @@ export function ApplicationsA4Pages({ data, printMode = false }: { data: VGRData
               {isLast ? (
                 <div className="mt-2 shrink-0 space-y-0.5 pb-1">
                   {caveats.map((c) => (
-                    <p key={c} className="text-[8pt] italic leading-tight text-[#6d2a96]">
+                    <p key={c} className="text-[8pt] italic leading-tight text-[#702A90]">
                       {c}
                     </p>
                   ))}

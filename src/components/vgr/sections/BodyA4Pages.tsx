@@ -66,7 +66,7 @@ function TocPage({ data, pageNumber }: { data: VGRData; pageNumber: number }) {
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex min-h-0 flex-col overflow-hidden`}>
       <A4LogoHeader />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="mb-3 text-[14pt] font-extrabold leading-tight text-[#6d2a96]">Inhoudsopgave</div>
+        <div className="mb-3 text-[14pt] font-extrabold leading-tight text-[#702A90]">Inhoudsopgave</div>
         <div className="flex flex-col gap-3">
           {toc.map((group) => {
             const ch = VGR_CHAPTERS.find((c) => c.id === group.chapter)!;

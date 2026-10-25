@@ -9,6 +9,7 @@ import { TP2026CoverFields } from '@/lib/tp2026/schema';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP2026_LOGO } from '@/lib/tp2026/document-layout';
+import { TP2026_PURPLE } from '@/lib/tp2026/tp2026-colors';
 import { A4Page } from '@/components/tp2026/primitives';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { DocumentEmployerNameField } from '@/components/tp2026/DocumentEmployerNameField';
@@ -63,7 +64,7 @@ const COVER_LAYOUT = {
     /** Wide enough for "Datum rapportage" on one line at 8.5pt bold */
     labelW: 132,
     fontSize: '8.5pt',
-    purple: '#6d2a96',
+    purple: TP2026_PURPLE,
     borderColor: '#b8985c',
   },
 } as const;
@@ -149,7 +150,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
             }}
           >
             <h1
-              className="m-0 tracking-tight text-[#6d2a96] antialiased"
+              className="m-0 tracking-tight text-[#702A90] antialiased"
               style={{
                 fontSize: COVER_LAYOUT.title.fontSize,
                 lineHeight: COVER_LAYOUT.title.lineHeight,
@@ -162,7 +163,7 @@ export function Cover2026A4({ data }: { data: Record<string, any> }) {
             </h1>
             <div
               style={{ rowGap: COVER_LAYOUT.fields.rowGap }}
-              className="grid text-[#6d2a96] leading-tight"
+              className="grid text-[#702A90] leading-tight"
             >
               <CoverInfoLine label="Voor" value={employeeName} />
               <CoverInfoLine label="Datum rapportage" value={formatNLDateForDoc(data.tp_creation_date)} />

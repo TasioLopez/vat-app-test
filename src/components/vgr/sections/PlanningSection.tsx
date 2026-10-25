@@ -114,7 +114,7 @@ export function PlanningEditor({
       {phases.map((phase, phaseIdx) => (
         <div key={phase.id} className="rounded-lg border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-[#6d2a96]">Planning fase {phaseIdx + 1}</h3>
+            <h3 className="text-sm font-semibold text-[#702A90]">Planning fase {phaseIdx + 1}</h3>
             <Button
               type="button"
               variant="ghost"
@@ -174,7 +174,7 @@ export function PlanningEditor({
                         aria-pressed={a.status === s}
                         onClick={() => updateActivity(phase.id, a.id, { status: s })}
                         className={`h-8 w-8 rounded border text-sm font-bold transition-colors ${
-                          a.status === s ? `${STATUS_CLASS[s]} ring-2 ring-[#6d2a96]/40` : 'border-border bg-white text-neutral-400 hover:bg-muted'
+                          a.status === s ? `${STATUS_CLASS[s]} ring-2 ring-[#702A90]/40` : 'border-border bg-white text-neutral-400 hover:bg-muted'
                         }`}
                       >
                         {s}
@@ -290,19 +290,19 @@ function PhaseTable({ phase, index }: { phase: VGRPlanningPhase; index: number }
       </colgroup>
       <tbody>
         <tr>
-          <td colSpan={2} className="!bg-white px-2 py-0.5 font-bold text-[#6d2a96]">
+          <td colSpan={2} className="!bg-white px-2 py-0.5 font-bold text-[#702A90]">
             Planning fase {index + 1}
           </td>
-          <td className="!bg-white px-2 py-0.5 text-center font-bold text-[#6d2a96]">Status</td>
+          <td className="!bg-white px-2 py-0.5 text-center font-bold text-[#702A90]">Status</td>
         </tr>
         <tr>
-          <td className={`px-2 py-0.5 align-top font-bold text-[#6d2a96] ${LABEL_BG}`}>Doel</td>
-          <td className="!bg-white px-2 py-0.5 align-top font-bold text-[#6d2a96]" colSpan={2}>
+          <td className={`px-2 py-0.5 align-top font-bold text-[#702A90] ${LABEL_BG}`}>Doel</td>
+          <td className="!bg-white px-2 py-0.5 align-top font-bold text-[#702A90]" colSpan={2}>
             {phase.goal || '—'}
           </td>
         </tr>
         <tr>
-          <td className={`px-2 py-0.5 align-top font-bold text-[#6d2a96] ${LABEL_BG}`}>Periode</td>
+          <td className={`px-2 py-0.5 align-top font-bold text-[#702A90] ${LABEL_BG}`}>Periode</td>
           <td className="!bg-white px-2 py-0.5 align-top font-bold text-[#2d8f82]" colSpan={2}>
             {periode}
           </td>
@@ -310,7 +310,7 @@ function PhaseTable({ phase, index }: { phase: VGRPlanningPhase; index: number }
         {rows.map((a, rowIdx) => (
           <tr key={a.id}>
             {rowIdx === 0 ? (
-              <td rowSpan={rows.length} className={`px-2 py-0.5 align-top font-bold text-[#6d2a96] ${LABEL_BG}`}>
+              <td rowSpan={rows.length} className={`px-2 py-0.5 align-top font-bold text-[#702A90] ${LABEL_BG}`}>
                 Activiteiten
               </td>
             ) : null}
@@ -357,11 +357,11 @@ export function PlanningA4Pages({ data, printMode = false }: { data: VGRData; pr
               </div>
               {isLast ? (
                 <div className="mt-1.5 shrink-0 pb-1">
-                  <p className="text-[8pt] italic leading-tight text-[#6d2a96]">{VGR_PLANNING_FOOTNOTE}</p>
+                  <p className="text-[8pt] italic leading-tight text-[#702A90]">{VGR_PLANNING_FOOTNOTE}</p>
                   <p className="text-[9pt] leading-tight">
                     {VGR_PLANNING_LEGEND.map(([code, label], i) => (
                       <span key={code}>
-                        <span className="font-bold text-[#6d2a96]">{code}</span> {label}
+                        <span className="font-bold text-[#702A90]">{code}</span> {label}
                         {i < VGR_PLANNING_LEGEND.length - 1 ? ' - ' : ''}
                       </span>
                     ))}

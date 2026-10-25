@@ -66,12 +66,12 @@ export function VgrGenerateAllPanel({
 
   return (
     <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <h3 className="mb-2 text-sm font-semibold text-[#6d2a96]">Eerste concept (AI)</h3>
+      <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Eerste concept (AI)</h3>
       <p className="mb-3 text-xs text-muted-foreground">
         Genereert per onderdeel een voorstel op basis van de geselecteerde brondocumenten. Niets wordt automatisch
         overgenomen; PoW-tredes en medische ja/nee-keuzes blijven van de loopbaanadviseur.
       </p>
-      <Button type="button" size="sm" className="h-8 gap-1.5 bg-[#6d2a96] hover:bg-[#5a2280]" disabled={busy} onClick={() => void run()}>
+      <Button type="button" size="sm" className="h-8 gap-1.5 bg-[#702A90] hover:bg-[#5a1f75]" disabled={busy} onClick={() => void run()}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
         {busy ? `Bezig: ${progress}…` : 'Genereer eerste concept'}
       </Button>

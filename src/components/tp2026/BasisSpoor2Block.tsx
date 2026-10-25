@@ -11,7 +11,7 @@ import {
 export function BasisSpoor2Block({ className = '' }: { className?: string }) {
   return (
     <div className={className}>
-      <div className="mt-8">
+      <div className="mt-10">
         <Spoor2SubsectionUnit
           showMainBand
           showSubsectionTitle={false}
@@ -20,7 +20,7 @@ export function BasisSpoor2Block({ className = '' }: { className?: string }) {
         />
       </div>
       {TP_SPOOR2_SUBSECTIONS.map((sub) => (
-        <div key={sub.id} className="mt-4">
+        <div key={sub.id} className="mt-6">
           <Spoor2SubsectionUnit
             showSubsectionTitle
             subsectionTitle={sub.title}

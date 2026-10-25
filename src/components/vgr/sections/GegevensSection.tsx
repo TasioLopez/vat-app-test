@@ -435,7 +435,7 @@ function Page2({ data, pageNumber, includeLegenda }: { data: VGRData; pageNumber
             <DataRow label="Startdatum" value={formatNLDateForDoc(data.tp_start_date)} />
             <DataRow label="Einddatum (planning)" value={formatNLDateForDoc(data.tp_end_date)} />
           </TP2026FieldTable>
-          <p className="mt-3 text-[10.5px] italic leading-snug text-[#6d2a96]/90">{VGR_AVG_NOTE}</p>
+          <p className="mt-3 text-[10.5px] italic leading-snug text-[#702A90]/90">{VGR_AVG_NOTE}</p>
         </div>
 
         {includeLegenda ? (

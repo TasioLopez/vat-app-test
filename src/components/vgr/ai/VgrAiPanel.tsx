@@ -102,7 +102,7 @@ function VgrAiPanelInner({
     <div className="relative">
       <div className="flex items-center gap-1.5">
         {proposal && proposal.status === 'proposed' ? (
-          <Button type="button" size="sm" variant="outline" className="h-7 gap-1 border-[#6d2a96]/40 px-2 text-xs text-[#6d2a96]" onClick={() => setOpen((o) => !o)}>
+          <Button type="button" size="sm" variant="outline" className="h-7 gap-1 border-[#702A90]/40 px-2 text-xs text-[#702A90]" onClick={() => setOpen((o) => !o)}>
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Voorstel bekijken
           </Button>
@@ -111,7 +111,7 @@ function VgrAiPanelInner({
           type="button"
           size="sm"
           variant="ghost"
-          className="h-7 gap-1 px-2 text-xs text-[#6d2a96] hover:bg-[#6d2a96]/10"
+          className="h-7 gap-1 px-2 text-xs text-[#702A90] hover:bg-[#702A90]/10"
           disabled={busy || fieldCount === 0}
           title={fieldCount === 0 ? 'Vink eerst interventies aan' : 'Genereer voorstel op basis van de brondocumenten'}
           onClick={() => (open || instruction ? void generate() : setOpen(true))}
@@ -122,9 +122,9 @@ function VgrAiPanelInner({
       </div>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-1 w-[min(560px,80vw)] rounded-lg border border-[#6d2a96]/30 bg-white p-3 text-sm shadow-xl">
+        <div className="absolute right-0 z-20 mt-1 w-[min(560px,80vw)] rounded-lg border border-[#702A90]/30 bg-white p-3 text-sm shadow-xl">
           <div className="mb-2 flex items-center justify-between">
-            <span className="font-semibold text-[#6d2a96]">AI-voorstel · {def.label}</span>
+            <span className="font-semibold text-[#702A90]">AI-voorstel · {def.label}</span>
             <button type="button" className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Sluiten" onClick={() => setOpen(false)}>
               <X className="h-4 w-4" />
             </button>
@@ -139,7 +139,7 @@ function VgrAiPanelInner({
             onChange={(e) => setInstruction(e.target.value)}
           />
           <div className="mb-3 flex items-center gap-2">
-            <Button type="button" size="sm" className="h-7 gap-1 bg-[#6d2a96] text-xs hover:bg-[#5a2280]" disabled={busy} onClick={() => void generate()}>
+            <Button type="button" size="sm" className="h-7 gap-1 bg-[#702A90] text-xs hover:bg-[#5a1f75]" disabled={busy} onClick={() => void generate()}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
               {proposal ? 'Opnieuw genereren' : 'Genereren'}
             </Button>
