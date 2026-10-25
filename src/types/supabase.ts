@@ -614,8 +614,12 @@ export type Database = {
           filename: string | null
           id: string
           layout_key: string
+          period_end: string | null
+          period_start: string | null
+          report_date: string | null
           snapshot_json: Json
           storage_path: string | null
+          version: number | null
           vgr_instance_id: string
         }
         Insert: {
@@ -624,8 +628,12 @@ export type Database = {
           filename?: string | null
           id?: string
           layout_key: string
+          period_end?: string | null
+          period_start?: string | null
+          report_date?: string | null
           snapshot_json?: Json
           storage_path?: string | null
+          version?: number | null
           vgr_instance_id: string
         }
         Update: {
@@ -634,8 +642,12 @@ export type Database = {
           filename?: string | null
           id?: string
           layout_key?: string
+          period_end?: string | null
+          period_start?: string | null
+          report_date?: string | null
           snapshot_json?: Json
           storage_path?: string | null
+          version?: number | null
           vgr_instance_id?: string
         }
         Relationships: [
@@ -663,10 +675,18 @@ export type Database = {
           employee_id: string
           id: string
           layout_key: string
+          linked_tp_instance_id: string | null
+          period_end: string | null
+          period_start: string | null
+          prior_vgr_export_id: string | null
+          prior_vgr_instance_id: string | null
+          report_date: string | null
+          schema_version: number
           status: string
           title: string
           updated_at: string
           updated_by: string | null
+          version: number
         }
         Insert: {
           created_at?: string
@@ -675,10 +695,18 @@ export type Database = {
           employee_id: string
           id?: string
           layout_key: string
+          linked_tp_instance_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          prior_vgr_export_id?: string | null
+          prior_vgr_instance_id?: string | null
+          report_date?: string | null
+          schema_version?: number
           status?: string
           title?: string
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Update: {
           created_at?: string
@@ -687,10 +715,18 @@ export type Database = {
           employee_id?: string
           id?: string
           layout_key?: string
+          linked_tp_instance_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          prior_vgr_export_id?: string | null
+          prior_vgr_instance_id?: string | null
+          report_date?: string | null
+          schema_version?: number
           status?: string
           title?: string
           updated_at?: string
           updated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -705,6 +741,27 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_instances_linked_tp_instance_id_fkey"
+            columns: ["linked_tp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "tp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_instances_prior_vgr_export_id_fkey"
+            columns: ["prior_vgr_export_id"]
+            isOneToOne: false
+            referencedRelation: "vgr_exports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vgr_instances_prior_vgr_instance_id_fkey"
+            columns: ["prior_vgr_instance_id"]
+            isOneToOne: false
+            referencedRelation: "vgr_instances"
             referencedColumns: ["id"]
           },
           {

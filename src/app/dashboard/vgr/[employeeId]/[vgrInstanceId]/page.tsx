@@ -29,7 +29,7 @@ export default async function VGRInstanceBuilderPage({ params }: { params: Promi
 
   const { data: instance, error } = await (supabase as any)
     .from('vgr_instances')
-    .select('id, employee_id, layout_key, data_json')
+    .select('id, employee_id, layout_key, data_json, status')
     .eq('id', vgrInstanceId)
     .eq('employee_id', employeeId)
     .maybeSingle();
@@ -43,6 +43,7 @@ export default async function VGRInstanceBuilderPage({ params }: { params: Promi
       employeeId={employeeId}
       vgrInstanceId={vgrInstanceId}
       initialData={(instance.data_json || {}) as Record<string, any>}
+      initialStatus={instance.status === 'final' || instance.status === 'review' ? instance.status : 'draft'}
     />
   );
 }

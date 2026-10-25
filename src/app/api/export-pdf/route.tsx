@@ -180,7 +180,11 @@ export async function GET(req: NextRequest) {
     }
 
     const resolvedVgrLayout = vgrInstance.layout_key as VGRLayoutKey;
-    const snapshotData = ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>);
+    const vgrProfileContext = await resolveTPProfileContext(ssr, employeeId);
+    const snapshotData = applyTPProfileContext(
+      ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>),
+      vgrProfileContext
+    ) as ReturnType<typeof ensureVGRShape>;
     const vgrNameParts = resolveExportNameParts(employeeProfile, snapshotData);
     const filename = sanitizeDownloadFilename(
       buildVgrDownloadFilename(vgrNameParts.first_name, vgrNameParts.last_name, vgrNameParts.gender)
@@ -237,6 +241,10 @@ export async function GET(req: NextRequest) {
           snapshot_json: snapshotData,
           filename,
           created_by: user?.id ?? null,
+          period_start: snapshotData.vgr_meta.period_start || null,
+          period_end: snapshotData.vgr_meta.period_end || null,
+          report_date: snapshotData.vgr_meta.report_date || null,
+          version: snapshotData.vgr_meta.version ?? 1,
         })
         .select("id")
         .single();
