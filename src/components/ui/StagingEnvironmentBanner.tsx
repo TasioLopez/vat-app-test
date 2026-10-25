@@ -33,7 +33,8 @@ export function StagingEnvironmentBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-[100] flex w-full items-center justify-center bg-amber-500 px-10 py-1.5 text-center text-sm font-medium text-amber-950"
+      data-staging-banner
+      className="staging-env-banner sticky top-0 z-[100] flex w-full items-center justify-center bg-amber-500 px-10 py-1.5 text-center text-sm font-medium text-amber-950 print:hidden"
     >
       <span>Test environment — changes here do not affect production</span>
       <button

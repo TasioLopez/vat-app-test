@@ -163,6 +163,7 @@ export async function GET(req: NextRequest) {
       content: `
         @page { size: A4; margin: 12mm; }
         html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .staging-env-banner, [data-staging-banner] { display: none !important; }
       `,
     });
 

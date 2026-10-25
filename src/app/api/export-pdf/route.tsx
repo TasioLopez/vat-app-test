@@ -215,7 +215,8 @@ export async function GET(req: NextRequest) {
       await page.addStyleTag({
         content: `
         @page { size: A4; margin: 0; }
-        html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
+        .staging-env-banner, [data-staging-banner] { display: none !important; }
         .print-page { width: 210mm; height: 297mm; margin: 0 !important; overflow: hidden; break-after: page; page-break-after: always; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
         .print-page > * { width: 210mm !important; height: 297mm !important; max-height: 297mm !important; min-height: 297mm !important; }
@@ -389,7 +390,8 @@ export async function GET(req: NextRequest) {
     await page.addStyleTag({
       content: `
         @page { size: A4; margin: 0; }
-        html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
+        .staging-env-banner, [data-staging-banner] { display: none !important; }
         .print-page { width: 210mm; height: 297mm; margin: 0 !important; overflow: hidden; break-after: page; page-break-after: always; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
         .print-page > * { width: 210mm !important; height: 297mm !important; max-height: 297mm !important; min-height: 297mm !important; }

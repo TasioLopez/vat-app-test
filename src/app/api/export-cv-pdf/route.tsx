@@ -154,6 +154,7 @@ export async function GET(req: NextRequest) {
       content: `
         @page { size: A4; margin: 0; }
         html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .staging-env-banner, [data-staging-banner] { display: none !important; }
         .cv-print-root { margin: 0 !important; padding: 0 !important; }
         .cv-a4-box { display: none !important; }
       `,
