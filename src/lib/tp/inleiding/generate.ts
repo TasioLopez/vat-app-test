@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeTextForInleiding, intakeToSectie3Content, omitIntakePdfDocs } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import type { ReferentRow } from '@/lib/referents';
@@ -135,11 +137,14 @@ export async function generateInleidingContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: InleidingBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<InleidingContentResult> {
-  const fileIds = await uploadPriorityDocs(openai, supabase, docs);
+  const intakeText = intake ? intakeTextForInleiding(intake) : '';
+  const uploadDocs = intakeText ? omitIntakePdfDocs(docs) : docs;
+  const fileIds = await uploadPriorityDocs(openai, supabase, uploadDocs);
 
-  if (fileIds.length === 0) {
+  if (fileIds.length === 0 && !intakeText) {
     throw new Error('No files could be uploaded');
   }
 
@@ -147,6 +152,7 @@ export async function generateInleidingContent(
     const contextMessage = buildInleidingContextMessage(buildApiContext(ctx));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
+      ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
       ...fileIds.map(
         (file_id): OpenAI.Responses.ResponseInputContent => ({
           type: 'input_file',
@@ -191,17 +197,23 @@ export async function generateInleiding(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: InleidingBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<InleidingFields> {
-  let intakeFunctiebeschrijving: string | null = null;
-  try {
-    const sectie3 = await generateIntakeSectie3Content(openai, supabase, docs);
-    intakeFunctiebeschrijving = sectie3.korte_beschrijving_werkzaamheden?.trim() || null;
-  } catch {
-    // No intake doc — fall through to LLM fallback for functieomschrijving.
+  const intakeText = intake ? intakeTextForInleiding(intake) : '';
+  let intakeFunctiebeschrijving: string | null = intake
+    ? intakeToSectie3Content(intake)?.korte_beschrijving_werkzaamheden ?? null
+    : null;
+  if (!intakeText) {
+    try {
+      const sectie3 = await generateIntakeSectie3Content(openai, supabase, docs);
+      intakeFunctiebeschrijving = sectie3.korte_beschrijving_werkzaamheden?.trim() || null;
+    } catch {
+      // No intake doc — fall through to LLM fallback for functieomschrijving.
+    }
   }
 
-  const content = await generateInleidingContent(openai, supabase, ctx, docs);
+  const content = await generateInleidingContent(openai, supabase, ctx, docs, intake);
 
   if (intakeFunctiebeschrijving) {
     content.functieomschrijving = stripLeadingIntakeQuoteLabels(

@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeTextForPowMeter, omitIntakePdfDocs } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { buildPowMeterFields, nlDate, type PowMeterFields } from './build-fields';
@@ -139,11 +141,14 @@ export async function generatePowMeterContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   docs: EmployeeDoc[],
-  ctx: PowMeterBuildContext = {}
+  ctx: PowMeterBuildContext = {},
+  intake?: IntakeData | null
 ): Promise<PowMeterContentResult> {
-  const fileIds = await uploadPowMeterDocs(openai, supabase, docs);
+  const intakeText = intake ? intakeTextForPowMeter(intake) : '';
+  const uploadDocs = intakeText ? omitIntakePdfDocs(docs) : docs;
+  const fileIds = await uploadPowMeterDocs(openai, supabase, uploadDocs);
 
-  if (fileIds.length === 0) {
+  if (fileIds.length === 0 && !intakeText) {
     throw new Error('No POW-meter files could be uploaded');
   }
 
@@ -155,6 +160,7 @@ export async function generatePowMeterContent(
     const contextMessage = buildPowMeterContextMessage(buildApiContext(ctx));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
+      ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
       ...fileIds.map(
         (file_id): OpenAI.Responses.ResponseInputContent => ({
           type: 'input_file',
@@ -195,9 +201,10 @@ export async function generatePowMeter(
   openai: OpenAI,
   supabase: SupabaseClient,
   docs: EmployeeDoc[],
-  ctx: PowMeterBuildContext = {}
+  ctx: PowMeterBuildContext = {},
+  intake?: IntakeData | null
 ): Promise<PowMeterFields> {
-  const content = await generatePowMeterContent(openai, supabase, docs, ctx);
+  const content = await generatePowMeterContent(openai, supabase, docs, ctx, intake);
   return buildPowMeterFields(content);
 }
 

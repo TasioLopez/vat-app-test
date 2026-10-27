@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeTextForVisieLoopbaanadviseur } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   FUNCTIE_FINAL_MIN_COUNT,
@@ -73,20 +75,23 @@ export async function GET(req: NextRequest) {
     const { employeeId } = access;
 
     const { details, meta, docs } = await loadCtxAndDocs(employeeId);
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForVisieLoopbaanadviseur(intake) : '';
 
-    if (!docs.length) {
+    if (!docs.length && !intakeText) {
       return NextResponse.json({ error: 'Geen documenten gevonden', details: {} }, { status: 200 });
     }
 
     const relevantDocs = filterVisieLoopbaanadviseurDocs(docs);
-    if (!hasIntakeDoc(docs)) {
+    if (!hasIntakeDoc(docs) && !intakeText) {
       return NextResponse.json(
         { error: 'Geen intakeformulier gevonden (verplicht voor visie loopbaanadviseur)', details: {} },
         { status: 200 }
       );
     }
 
-    if (relevantDocs.length === 0) {
+    if (relevantDocs.length === 0 && !intakeText) {
       return NextResponse.json(
         { error: 'Geen relevante documenten gevonden', details: {} },
         { status: 200 }
@@ -102,7 +107,7 @@ export async function GET(req: NextRequest) {
     let draft: VisieLaFunctieDraft = createEmptyDraft();
 
     try {
-      const result = await generateVisieLoopbaanadviseur(openai, supabase, ctx, docs);
+      const result = await generateVisieLoopbaanadviseur(openai, supabase, ctx, docs, intake);
       visie_loopbaanadviseur = result.visie_loopbaanadviseur;
       draft = result.draft;
       if (!visie_loopbaanadviseur.trim()) {
@@ -146,11 +151,14 @@ export async function POST(req: NextRequest) {
     const mode = String(body.mode ?? '').trim();
 
     const { details, meta, docs } = await loadCtxAndDocs(employeeId);
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForVisieLoopbaanadviseur(intake) : '';
 
-    if (!docs.length) {
+    if (!docs.length && !intakeText) {
       return NextResponse.json({ error: 'Geen documenten gevonden' }, { status: 200 });
     }
-    if (!hasIntakeDoc(docs)) {
+    if (!hasIntakeDoc(docs) && !intakeText) {
       return NextResponse.json(
         { error: 'Geen intakeformulier gevonden (verplicht voor visie loopbaanadviseur)' },
         { status: 200 }
@@ -259,6 +267,7 @@ export async function POST(req: NextRequest) {
         kept: mode === 'regenerate' ? kept : [],
         rejectedNames: mode === 'regenerate' ? rejected : [],
         userFeedback: mode === 'regenerate' ? userFeedback : undefined,
+        intake,
       }
     );
 

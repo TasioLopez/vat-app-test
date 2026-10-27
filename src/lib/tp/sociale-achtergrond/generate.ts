@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeTextForSociale } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
@@ -100,11 +102,13 @@ export async function generateSocialeAchtergrondContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: SocialeAchtergrondBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<SocialeAchtergrondContentResult> {
-  const fileIds = await uploadIntakeDocs(openai, supabase, docs);
+  const intakeText = intake ? intakeTextForSociale(intake) : '';
+  const fileIds = intakeText ? [] : await uploadIntakeDocs(openai, supabase, docs);
 
-  if (fileIds.length === 0) {
+  if (!intakeText && fileIds.length === 0) {
     throw new Error('No intake files could be uploaded');
   }
 
@@ -112,6 +116,7 @@ export async function generateSocialeAchtergrondContent(
     const contextMessage = buildSocialeAchtergrondContextMessage(buildApiContext(ctx));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
+      ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
       ...fileIds.map(
         (file_id): OpenAI.Responses.ResponseInputContent => ({
           type: 'input_file',
@@ -152,9 +157,10 @@ export async function generateSocialeAchtergrond(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: SocialeAchtergrondBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<SocialeAchtergrondFields> {
-  const content = await generateSocialeAchtergrondContent(openai, supabase, ctx, docs);
+  const content = await generateSocialeAchtergrondContent(openai, supabase, ctx, docs, intake);
   return buildSocialeAchtergrondFields(ctx, content);
 }
 

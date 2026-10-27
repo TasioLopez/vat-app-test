@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeToSectie7Content } from '@/lib/intake/tp-source';
 import {
   generateIntakeSectie7Content,
   type EmployeeDoc,
@@ -30,8 +32,14 @@ export async function generateAdAdviesContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: AdAdviesBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  validatedIntake?: IntakeData | null
 ): Promise<AdAdviesContentResult> {
+  const structured = validatedIntake ? intakeToSectie7Content(validatedIntake) : null;
+  if (structured) {
+    return mapIntakeToAdAdviesContent(structured, ctx);
+  }
+
   const sectie7Ctx: IntakeSectie7Context = {
     meta: {
       ad_report_date: ctx.meta.ad_report_date,
@@ -40,17 +48,18 @@ export async function generateAdAdviesContent(
       ad_report_concept: ctx.meta.ad_report_concept,
     },
   };
-  const intake = await generateIntakeSectie7Content(openai, supabase, docs, sectie7Ctx);
-  return mapIntakeToAdAdviesContent(intake, ctx);
+  const extracted = await generateIntakeSectie7Content(openai, supabase, docs, sectie7Ctx);
+  return mapIntakeToAdAdviesContent(extracted, ctx);
 }
 
 export async function generateAdAdvies(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: AdAdviesBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  validatedIntake?: IntakeData | null
 ): Promise<AdAdviesFields> {
-  const content = await generateAdAdviesContent(openai, supabase, ctx, docs);
+  const content = await generateAdAdviesContent(openai, supabase, ctx, docs, validatedIntake);
   return buildAdAdviesFields(ctx, content);
 }
 

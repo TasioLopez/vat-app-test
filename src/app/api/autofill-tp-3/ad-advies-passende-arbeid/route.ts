@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeToSectie7Content } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   ADVIES_NB_NO_REPORT,
@@ -30,7 +32,11 @@ export async function GET(req: NextRequest) {
       .eq('employee_id', employeeId)
       .order('uploaded_at', { ascending: false });
 
-    if (!docs?.length) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const sectie7 = intake ? intakeToSectie7Content(intake) : null;
+
+    if (!docs?.length && !sectie7) {
       return NextResponse.json(
         { error: 'Geen intakeformulier gevonden', details: {} },
         { status: 200 }
@@ -42,7 +48,7 @@ export async function GET(req: NextRequest) {
     let advies_ad_passende_arbeid: string;
 
     try {
-      const result = await generateAdAdvies(openai, supabase, ctx, docs);
+      const result = await generateAdAdvies(openai, supabase, ctx, docs ?? [], intake);
       advies_ad_passende_arbeid = result.advies_ad_passende_arbeid;
       const { citaat } = parseAdAdvies(advies_ad_passende_arbeid);
 

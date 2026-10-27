@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeTextForVisieLoopbaanadviseur, omitIntakePdfDocs } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
@@ -231,10 +233,13 @@ async function callVisieLoopbaanadviseurModel(
   openai: OpenAI,
   fileIds: string[],
   contextMessage: string,
-  extraMessage?: string
+  extraMessage?: string,
+  intakeText?: string
 ): Promise<VisieLoopbaanadviseurContentResult> {
+  const sourceText = intakeText?.trim() ?? '';
   const userContent: OpenAI.Responses.ResponseInputContent[] = [
     { type: 'input_text', text: contextMessage },
+    ...(sourceText ? [{ type: 'input_text' as const, text: sourceText }] : []),
     ...fileIds.map(
       (file_id): OpenAI.Responses.ResponseInputContent => ({
         type: 'input_file',
@@ -275,6 +280,8 @@ export type GenerateFunctieSuggestionsOptions = {
   rejectedNames?: string[];
   userFeedback?: string;
   batchSize?: number;
+  /** Validated digitized intake. Replaces the intake PDF; FML and AD files stay attached. */
+  intake?: IntakeData | null;
 };
 
 export type GenerateFunctieSuggestionsResult = {
@@ -289,7 +296,8 @@ export async function generateFunctieSuggestions(
   docs: EmployeeDoc[],
   options: GenerateFunctieSuggestionsOptions = {}
 ): Promise<GenerateFunctieSuggestionsResult> {
-  if (!hasIntakeDoc(docs)) {
+  const intakeText = options.intake ? intakeTextForVisieLoopbaanadviseur(options.intake) : '';
+  if (!hasIntakeDoc(docs) && !intakeText) {
     throw new Error('No intake document found for visie loopbaanadviseur');
   }
 
@@ -302,9 +310,10 @@ export async function generateFunctieSuggestions(
   const rejectedNames = options.rejectedNames ?? [];
   const keptNames = kept.map((f) => f.naam);
 
-  const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, docs);
+  const uploadDocs = intakeText ? omitIntakePdfDocs(docs) : docs;
+  const fileIds = await uploadVisieLoopbaanadviseurDocs(openai, supabase, uploadDocs);
 
-  if (fileIds.length === 0) {
+  if (fileIds.length === 0 && !intakeText) {
     throw new Error('No visie loopbaanadviseur files could be uploaded');
   }
 
@@ -332,7 +341,8 @@ export async function generateFunctieSuggestions(
       openai,
       fileIds,
       contextMessage,
-      regenerateMessage
+      regenerateMessage,
+      intakeText
     );
     let quality = assessFunctieQuality(content, qualityExclusions);
 
@@ -351,7 +361,8 @@ export async function generateFunctieSuggestions(
         openai,
         fileIds,
         contextMessage,
-        [regenerateMessage, repairMessage].filter(Boolean).join('\n\n')
+        [regenerateMessage, repairMessage].filter(Boolean).join('\n\n'),
+        intakeText
       );
       quality = assessFunctieQuality(content, qualityExclusions);
       if (!quality.ok) {
@@ -381,9 +392,10 @@ export async function generateVisieLoopbaanadviseurContent(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<VisieLoopbaanadviseurContentResult> {
-  const result = await generateFunctieSuggestions(openai, supabase, ctx, docs);
+  const result = await generateFunctieSuggestions(openai, supabase, ctx, docs, { intake });
   return { functies: result.suggestions };
 }
 
@@ -396,7 +408,8 @@ export async function generateVisieLoopbaanadviseur(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: VisieLoopbaanadviseurBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<VisieLoopbaanadviseurGenerateResult> {
   const scenario = detectDocumentScenario(docs, ctx.meta);
 
@@ -414,7 +427,8 @@ export async function generateVisieLoopbaanadviseur(
     openai,
     supabase,
     ctx,
-    docs
+    docs,
+    { intake }
   );
   const published = toPublishedFuncties(suggestions);
   const fields = buildVisieLoopbaanadviseurFields(ctx, { functies: published }, scenario);

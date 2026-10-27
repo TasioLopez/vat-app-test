@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import { getIntakeContextForTp } from "@/lib/document-analysis";
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakePraktischeBelemmeringen } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { PRACTISCHE_BELEMMERINGEN_DEFAULT } from "@/lib/tp2026/mapping";
 
@@ -28,6 +30,19 @@ export async function GET(req: NextRequest) {
     const access = await requireEmployeeAutofillAccess(req);
     if (access instanceof NextResponse) return access;
     const { employeeId } = access;
+
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const verbatim = validated ? intakePraktischeBelemmeringen(validated.data) : '';
+    if (verbatim) {
+      await supabase.from("tp_meta").upsert(
+        { employee_id: employeeId, praktische_belemmeringen: verbatim } as any,
+        { onConflict: "employee_id" }
+      );
+      return NextResponse.json({
+        details: { praktische_belemmeringen: verbatim },
+        autofilled_fields: ["praktische_belemmeringen"],
+      });
+    }
 
     const INTAKE = await getIntakeContextForTp(
       openai,

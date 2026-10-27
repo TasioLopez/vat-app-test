@@ -1,5 +1,7 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeTextForZoekprofiel, omitIntakePdfDocs } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
@@ -160,6 +162,8 @@ export type GenerateZoekprofielOptions = {
   clarificationHistory?: { question: string; answer: string }[];
   userAnswer?: string;
   pendingQuestion?: string;
+  /** Validated digitized intake. Replaces the intake PDF; other documents stay attached. */
+  intake?: IntakeData | null;
 };
 
 type GenerateContentOptions = GenerateZoekprofielOptions;
@@ -168,11 +172,13 @@ async function callZoekprofielModel(
   openai: OpenAI,
   fileIds: string[],
   ctx: ZoekprofielBuildContext,
-  options?: GenerateContentOptions
+  options?: GenerateContentOptions & { intakeText?: string }
 ): Promise<ZoekprofielContentResult> {
   const contextMessage = buildZoekprofielContextMessage(buildApiContext(ctx));
+  const intakeText = options?.intakeText?.trim() ?? '';
   const userContent: OpenAI.Responses.ResponseInputContent[] = [
     { type: 'input_text', text: contextMessage },
+    ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
     ...fileIds.map(
       (file_id): OpenAI.Responses.ResponseInputContent => ({
         type: 'input_file',
@@ -228,14 +234,16 @@ export async function generateZoekprofielContent(
   docs: EmployeeDoc[],
   options?: GenerateContentOptions
 ): Promise<ZoekprofielContentResult> {
-  const fileIds = await uploadZoekprofielDocs(openai, supabase, docs);
+  const intakeText = options?.intake ? intakeTextForZoekprofiel(options.intake) : '';
+  const uploadDocs = intakeText ? omitIntakePdfDocs(docs) : docs;
+  const fileIds = await uploadZoekprofielDocs(openai, supabase, uploadDocs);
 
-  if (fileIds.length === 0) {
+  if (fileIds.length === 0 && !intakeText) {
     throw new Error('No zoekprofiel files could be uploaded');
   }
 
   try {
-    return await callZoekprofielModel(openai, fileIds, ctx, options);
+    return await callZoekprofielModel(openai, fileIds, ctx, { ...options, intakeText });
   } finally {
     await deleteUploadedFiles(openai, fileIds);
   }

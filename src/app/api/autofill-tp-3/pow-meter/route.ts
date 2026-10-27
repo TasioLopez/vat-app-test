@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeTextForPowMeter } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   buildPowMeterContextFromMeta,
@@ -29,12 +31,11 @@ export async function GET(req: NextRequest) {
       .eq('employee_id', employeeId)
       .order('uploaded_at', { ascending: false });
 
-    if (!docs?.length) {
-      return NextResponse.json({ error: 'Geen documenten gevonden', details: {} }, { status: 200 });
-    }
-
-    const relevantDocs = filterPowMeterDocs(docs);
-    if (relevantDocs.length === 0) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForPowMeter(intake) : '';
+    const relevantDocs = filterPowMeterDocs(docs ?? []);
+    if ((!docs?.length || relevantDocs.length === 0) && !intakeText) {
       return NextResponse.json(
         { error: 'Geen intake-, AD- of FML/IZP-document gevonden', details: {} },
         { status: 200 }
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     let pow_meter: string;
 
     try {
-      const result = await generatePowMeter(openai, supabase, docs, ctx);
+      const result = await generatePowMeter(openai, supabase, docs ?? [], ctx, intake);
       pow_meter = result.pow_meter;
       if (!pow_meter.trim()) {
         return NextResponse.json(

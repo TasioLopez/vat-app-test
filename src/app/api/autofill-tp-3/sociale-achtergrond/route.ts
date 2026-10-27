@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeTextForSociale } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { generateSocialeAchtergrond } from "@/lib/tp/sociale-achtergrond";
 
@@ -36,7 +38,10 @@ export async function GET(req: NextRequest) {
       .order("uploaded_at", { ascending: false });
 
     const intakeDocs = (docs || []).filter((d) => isIntakeDoc(d.type));
-    if (intakeDocs.length === 0) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForSociale(intake) : '';
+    if (intakeDocs.length === 0 && !intakeText) {
       return NextResponse.json(
         { error: "Geen intakeformulier gevonden", details: {} },
         { status: 200 }
@@ -51,7 +56,7 @@ export async function GET(req: NextRequest) {
     let sociale_achtergrond: string;
 
     try {
-      const result = await generateSocialeAchtergrond(openai, supabase, ctx, intakeDocs);
+      const result = await generateSocialeAchtergrond(openai, supabase, ctx, intakeDocs, intake);
       sociale_achtergrond = result.sociale_achtergrond;
       if (!sociale_achtergrond.trim()) {
         return NextResponse.json(

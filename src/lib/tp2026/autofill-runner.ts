@@ -25,7 +25,6 @@ import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import {
   getValidatedIntakeForEmployee,
   gegevensFromValidatedIntake,
-  tp3DetailsFromValidatedIntake,
 } from '@/lib/intake/tp-hydrate';
 
 export type AutofillScope = 'all' | 'current_step';
@@ -274,14 +273,6 @@ async function runTp3FieldStep(
   }
 
   try {
-    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-    if (validated) {
-      const details = tp3DetailsFromValidatedIntake(fieldKey, validated.data);
-      if (details) {
-        return resolveTp3AutofillJson({ details }, currentData);
-      }
-    }
-
     const res = await fetch(`${endpoint}?employeeId=${ctx.employeeId}`, {
       signal: ctx.signal,
     });

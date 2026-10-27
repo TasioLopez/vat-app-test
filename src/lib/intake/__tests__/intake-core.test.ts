@@ -10,7 +10,7 @@ import {
   mergeExtractionsIntoIntake,
 } from '@/lib/intake/merge-extractions';
 import { intakeToGegevensFields } from '@/lib/intake/project';
-import { tp3DetailsFromValidatedIntake } from '@/lib/intake/tp-hydrate';
+import * as intakeHydrate from '@/lib/intake/tp-hydrate';
 import { isStagingEnv, assertStagingOnly } from '@/lib/auth/staging-only';
 import { formatIntakeDateNl } from '@/lib/intake/format-date';
 import {
@@ -137,19 +137,8 @@ describe('intake project + tp hydrate', () => {
     assert.equal(flat.client_referent_name, 'D. Viets');
   });
 
-  it('tp3DetailsFromValidatedIntake returns inleiding from quotes', () => {
-    const data = createEmptyIntakeData();
-    data.s3.korte_beschrijving_werkzaamheden = 'Als Beveiliger is werknemer actief.';
-    data.s7.quote_advies_spoor2 = 'Spoor 2 is geïndiceerd.';
-    const details = tp3DetailsFromValidatedIntake('inleiding', data);
-    assert.ok(details);
-    assert.equal(details!.inleiding, 'Spoor 2 is geïndiceerd.');
-    assert.match(String(details!.inleiding_sub), /Functieomschrijving/);
-  });
-
-  it('tp3DetailsFromValidatedIntake returns null when empty', () => {
-    const details = tp3DetailsFromValidatedIntake('prognose_bedrijfsarts', createEmptyIntakeData());
-    assert.equal(details, null);
+  it('does not paste validated intake into TP narrative fields', () => {
+    assert.equal('tp3DetailsFromValidatedIntake' in intakeHydrate, false);
   });
 });
 

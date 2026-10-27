@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import { resolveReferentForEmployee } from "@/lib/referents";
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeTextForInleiding } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { generateInleiding } from "@/lib/tp/inleiding";
 
@@ -48,7 +50,11 @@ export async function GET(req: NextRequest) {
       .eq("employee_id", employeeId)
       .order("uploaded_at", { ascending: false });
 
-    if (!docs?.length) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForInleiding(intake) : '';
+
+    if (!docs?.length && !intakeText) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
 
@@ -64,7 +70,7 @@ export async function GET(req: NextRequest) {
     let inleiding_sub: string;
 
     try {
-      const result = await generateInleiding(openai, supabase, ctx, docs);
+      const result = await generateInleiding(openai, supabase, ctx, docs ?? [], intake);
       inleiding = result.inleiding;
       inleiding_sub = result.inleiding_sub;
     } catch (error) {

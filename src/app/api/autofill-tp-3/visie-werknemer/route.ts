@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeTextForVisieWerknemer } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { generateVisieWerknemer } from "@/lib/tp/visie-werknemer";
 
@@ -36,7 +38,10 @@ export async function GET(req: NextRequest) {
       .order("uploaded_at", { ascending: false });
 
     const intakeDocs = (docs || []).filter((d) => isIntakeDoc(d.type));
-    if (intakeDocs.length === 0) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const intakeText = intake ? intakeTextForVisieWerknemer(intake) : '';
+    if (intakeDocs.length === 0 && !intakeText) {
       return NextResponse.json(
         { error: "Geen intakeformulier gevonden", details: {} },
         { status: 200 }
@@ -51,7 +56,7 @@ export async function GET(req: NextRequest) {
     let visie_werknemer: string;
 
     try {
-      const result = await generateVisieWerknemer(openai, supabase, ctx, intakeDocs);
+      const result = await generateVisieWerknemer(openai, supabase, ctx, intakeDocs, intake);
       visie_werknemer = result.visie_werknemer;
       if (!visie_werknemer.trim()) {
         return NextResponse.json(

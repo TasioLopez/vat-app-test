@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
+import type { IntakeData } from '@/lib/intake/schema';
+import { intakeToSectie5Content } from '@/lib/intake/tp-source';
 import { generateIntakeSectie5Content } from '@/lib/tp/intake-sectie5';
 import {
   buildBelastbaarheidsprofielFields,
@@ -26,6 +28,7 @@ import {
 import {
   hasBelastbaarheidsSource,
   hasIntakeDoc,
+  isIntakeDoc,
   type EmployeeDoc,
 } from './sources';
 import { extractSpreekuurContent } from './spreekuur-extract';
@@ -184,15 +187,19 @@ export async function generateBelastbaarheidsprofiel(
   openai: OpenAI,
   supabase: SupabaseClient,
   ctx: BelastbaarheidsprofielBuildContext,
-  docs: EmployeeDoc[]
+  docs: EmployeeDoc[],
+  intake?: IntakeData | null
 ): Promise<BelastbaarheidsprofielFields> {
-  if (!hasBelastbaarheidsSource(docs)) {
+  const digitizedSectie5 = intake ? intakeToSectie5Content(intake) : null;
+  const hasDigitizedIntake = Boolean(digitizedSectie5);
+  if (!hasBelastbaarheidsSource(docs) && !hasDigitizedIntake) {
     return buildBelastbaarheidsprofielGeenProfielFields();
   }
 
   const spreekuurDoc = pickNewestSpreekuurDoc(docs);
   const hasSpreekuurDoc = Boolean(spreekuurDoc);
-  const hasIntake = hasIntakeDoc(docs);
+  const hasIntake = hasIntakeDoc(docs) || hasDigitizedIntake;
+  const docsForMain = hasDigitizedIntake ? docs.filter((doc) => !isIntakeDoc(doc.type)) : docs;
 
   const buildCtx: BelastbaarheidsprofielBuildContext = {
     ...ctx,
@@ -203,31 +210,31 @@ export async function generateBelastbaarheidsprofiel(
     ? extractSpreekuurContent(openai, supabase, spreekuurDoc)
     : Promise.resolve(null as SpreekuurContentResult | null);
 
-  const mainContentPromise = generateBelastbaarheidsprofielContent(
-    openai,
-    supabase,
-    buildCtx,
-    docs
-  ).catch((error) => {
-    // Soft-fail when intake or spreekuur can still supply content.
-    if (!hasSpreekuurDoc && !hasIntake) throw error;
-    console.warn(
-      '⚠️ Belastbaarheidsprofiel: main FML/AD extract mislukt — verder met intake/spreekuur',
-      error
-    );
-    return {
-      rubrieken: [],
-      prognose_citaat: null,
-      spreekuur_meta: null,
-    } satisfies BelastbaarheidsprofielContentResult;
-  });
+  const mainDocs = docsForMain.filter((doc) => !isSpreekReportageDocType(doc.type) && doc.url);
+  const emptyMain: BelastbaarheidsprofielContentResult = {
+    rubrieken: [],
+    prognose_citaat: null,
+    spreekuur_meta: null,
+  };
+  const mainContentPromise = mainDocs.length
+    ? generateBelastbaarheidsprofielContent(openai, supabase, buildCtx, docsForMain).catch(
+        (error) => {
+          if (!hasSpreekuurDoc && !hasIntake) throw error;
+          console.warn(
+            '⚠️ Belastbaarheidsprofiel: main FML/AD extract mislukt — verder met intake/spreekuur',
+            error
+          );
+          return emptyMain;
+        }
+      )
+    : Promise.resolve(emptyMain);
 
-  const intakeSectie5Promise = generateIntakeSectie5Content(openai, supabase, docs).catch(
-    (error) => {
-      console.warn('⚠️ Belastbaarheidsprofiel: intake Sectie 5 extractie mislukt', error);
-      return { quote_prognose_advies_belastbaarheid: null, rubrieken: [] };
-    }
-  );
+  const intakeSectie5Promise = digitizedSectie5
+    ? Promise.resolve(digitizedSectie5)
+    : generateIntakeSectie5Content(openai, supabase, docs).catch((error) => {
+        console.warn('⚠️ Belastbaarheidsprofiel: intake Sectie 5 extractie mislukt', error);
+        return { quote_prognose_advies_belastbaarheid: null, rubrieken: [] as string[] };
+      });
 
   const [spreekuurResult, mainContent, intakeSectie5] = await Promise.all([
     spreekuurPromise,

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import { intakeToSectie5Content } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   generateBelastbaarheidsprofiel,
@@ -27,7 +29,11 @@ export async function GET(req: NextRequest) {
       .eq('employee_id', employeeId)
       .order('uploaded_at', { ascending: false });
 
-    if (!docs?.length) {
+    const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
+    const intake = validated?.data ?? null;
+    const sectie5 = intake ? intakeToSectie5Content(intake) : null;
+
+    if (!docs?.length && !sectie5) {
       return NextResponse.json({ error: 'Geen documenten gevonden', details: {} }, { status: 200 });
     }
 
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest) {
     let prognose_bedrijfsarts: string;
 
     try {
-      const result = await generateBelastbaarheidsprofiel(openai, supabase, ctx, docs);
+      const result = await generateBelastbaarheidsprofiel(openai, supabase, ctx, docs ?? [], intake);
       prognose_bedrijfsarts = result.prognose_bedrijfsarts;
       if (!prognose_bedrijfsarts.trim()) {
         return NextResponse.json(

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
+import type { IntakeData } from '@/lib/intake/schema';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import {
   AD_ONLY_BELASTBAARHEID_WARNING,
@@ -29,6 +31,7 @@ type LoadedZoekprofielContext = {
   docs: EmployeeDoc[];
   scenarioResult: ReturnType<typeof detectZoekprofielScenario>;
   relevantDocs: EmployeeDoc[];
+  intake: IntakeData | null;
 };
 
 async function loadZoekprofielContext(employeeId: string): Promise<LoadedZoekprofielContext> {
@@ -53,6 +56,7 @@ async function loadZoekprofielContext(employeeId: string): Promise<LoadedZoekpro
   const allDocs = docs ?? [];
   const scenarioResult = detectZoekprofielScenario(allDocs, meta);
   const relevantDocs = filterZoekprofielDocs(allDocs);
+  const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
 
   return {
     employee: employee ?? {},
@@ -60,6 +64,7 @@ async function loadZoekprofielContext(employeeId: string): Promise<LoadedZoekpro
     docs: allDocs,
     scenarioResult,
     relevantDocs,
+    intake: validated?.data ?? null,
   };
 }
 
@@ -123,6 +128,7 @@ async function runZoekprofielGeneration(
       clarificationHistory: options?.clarificationHistory,
       userAnswer: options?.userAnswer,
       pendingQuestion: options?.pendingQuestion,
+      intake: loaded.intake,
     });
 
     const round = options?.generationRound ?? 1;
