@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
-import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
+import { isGespreksverslagDocType, isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { INTAKE_TYPE_VARIANTS } from '@/lib/document-analysis/storage';
 
 export function isIntakeDocumentType(type: string | null | undefined): boolean {
@@ -15,6 +15,7 @@ export function isDossierSourceType(type: string | null | undefined): boolean {
     isAdDocumentType(type) ||
     isFmlDocumentType(type) ||
     isSpreekReportageDocType(type) ||
+    isGespreksverslagDocType(type) ||
     t === 'extra' ||
     t.includes('extra')
   );

@@ -75,9 +75,16 @@ export type MultiFilePdfInput = {
   label?: string;
 };
 
+export type InlineTextInput = {
+  label: string;
+  text: string;
+};
+
 export type StructuredMultiFileExtractionOptions<T> = {
   openai: OpenAI;
   files: MultiFilePdfInput[];
+  /** Plain-text sources sent in the user message, not as PDF uploads. */
+  inlineTexts?: InlineTextInput[];
   instructions: string;
   userMessage: string;
   schemaName: string;
@@ -90,6 +97,33 @@ export type StructuredMultiFileExtractionOptions<T> = {
   maxRetries?: number;
   logLabel?: string;
 };
+
+export function composeMultiFileUserMessage(
+  userMessage: string,
+  files: MultiFilePdfInput[],
+  inlineTexts: InlineTextInput[],
+  correction?: string
+): string {
+  const parts = [userMessage];
+  if (files.length) {
+    const labels = files
+      .map((file, index) => file.label || file.analysisFilename || `document-${index + 1}`)
+      .join(', ');
+    parts.push(`Geüploade documenten (${files.length}): ${labels}`);
+  }
+  const blocks = inlineTexts
+    .map((item) => {
+      const text = item.text.trim();
+      if (!text) return '';
+      return `### ${item.label}\n${text}`;
+    })
+    .filter(Boolean);
+  if (blocks.length) {
+    parts.push(`Inline brontekst:\n\n${blocks.join('\n\n')}`);
+  }
+  if (correction?.trim()) parts.push(correction.trim());
+  return parts.join('\n\n');
+}
 
 export type ChatlikeMultiFileExtractionOptions = {
   openai: OpenAI;
@@ -397,10 +431,12 @@ export async function runStructuredMultiFileExtraction<T>(
     validate,
     maxRetries = 0,
     logLabel,
+    inlineTexts = [],
   } = options;
 
-  if (!files.length) {
-    throw new Error('runStructuredMultiFileExtraction requires at least one PDF');
+  const usableInline = inlineTexts.filter((item) => item.text.trim());
+  if (!files.length && !usableInline.length) {
+    throw new Error('runStructuredMultiFileExtraction requires at least one PDF or inline text');
   }
 
   const fileIds: string[] = [];
@@ -411,10 +447,7 @@ export async function runStructuredMultiFileExtraction<T>(
       fileIds.push(id);
     }
 
-    const labels = files
-      .map((f, i) => f.label || f.analysisFilename || `document-${i + 1}`)
-      .join(', ');
-    let message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}`;
+    let message = composeMultiFileUserMessage(userMessage, files, usableInline);
 
     let lastParsed: T | null = null;
     let lastErrors: string[] = [];
@@ -449,7 +482,12 @@ export async function runStructuredMultiFileExtraction<T>(
         `⚠️ ${logLabel ?? schemaName} soft validation failed (attempt ${attempt + 1}): ${lastErrors.join('; ')}`
       );
       if (attempt < maxRetries) {
-        message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}\n\n${buildCorrectionMessage(lastErrors)}`;
+        message = composeMultiFileUserMessage(
+          userMessage,
+          files,
+          usableInline,
+          buildCorrectionMessage(lastErrors)
+        );
         continue;
       }
     }

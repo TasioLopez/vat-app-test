@@ -243,9 +243,11 @@ function IntakeBuilderInner({
       } else {
         showSuccess(
           'Ingevuld',
-          json.gap_filled
-            ? 'Intake is gevuld vanuit het intakeformulier en aangevuld vanuit het dossier.'
-            : 'Intake is gevuld vanuit het intakeformulier.'
+          json.generated_from_dossier
+            ? 'Intake is gegenereerd vanuit de dossierdocumenten.'
+            : json.gap_filled
+              ? 'Intake is gevuld vanuit het intakeformulier en aangevuld vanuit het dossier.'
+              : 'Intake is gevuld vanuit het intakeformulier.'
         );
       }
     } catch (e) {

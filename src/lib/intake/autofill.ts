@@ -1,5 +1,6 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isStagingEnv } from '@/lib/auth/staging-only';
 import { importIntakeFromPdf } from '@/lib/intake/import-from-pdf';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
 import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
@@ -11,6 +12,8 @@ export type AutofillIntakeResult = {
   error?: string;
   warning?: string | null;
   gapFilled: boolean;
+  /** Staging: the form was built from dossier documents because no intake PDF exists. */
+  generatedFromDossier?: boolean;
 };
 
 /**
@@ -31,6 +34,27 @@ export async function autofillIntakeFromDocuments(params: {
   });
 
   if (imported.error && !imported.sourceDocumentId) {
+    if (isStagingEnv()) {
+      try {
+        const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
+        if (!dossier.error) {
+          const data = ensureIntakeShape(dossier.data);
+          data.meta.generation_notes = [
+            'Intake gegenereerd vanuit dossierdocumenten (geen intakeformulier).',
+            ...data.meta.generation_notes,
+          ];
+          return {
+            data,
+            sourceDocumentId: null,
+            warning: null,
+            gapFilled: false,
+            generatedFromDossier: true,
+          };
+        }
+      } catch (e) {
+        console.warn('Staging dossier-only intake generate failed', e);
+      }
+    }
     return {
       data: ensureIntakeShape(imported.data),
       sourceDocumentId: null,

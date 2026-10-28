@@ -5,6 +5,7 @@ import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalys
 import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/lib/intake/generate-prompt';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
+import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { isDossierSourceType } from '@/lib/intake/sources';
 
 function nullableString(description: string) {
@@ -413,11 +414,12 @@ export async function generateIntakeFromDossier(params: {
   if (sources.length === 0) {
     return {
       data: createEmptyIntakeData(),
-      error: 'Geen AD/FML/spreekuur/overige documenten gevonden om te genereren.',
+      error: 'Geen AD/FML/spreekuur/gespreksverslag/overige documenten gevonden om te genereren.',
     };
   }
 
   const files: { pdfBuffer: Buffer; analysisFilename: string; label?: string }[] = [];
+  const inlineTexts: { label: string; text: string }[] = [];
   const notes: string[] = [];
 
   for (const doc of sources.slice(0, 8)) {
@@ -427,20 +429,28 @@ export async function generateIntakeFromDossier(params: {
     if (!file) continue;
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = doc.name || path;
+    const label = `${doc.type || 'doc'}: ${name}`;
+    if (classifyDossierFileName(name) === 'inline-text') {
+      const text = buffer.toString('utf8').trim();
+      if (!text) continue;
+      inlineTexts.push({ label, text });
+      notes.push(label);
+      continue;
+    }
     try {
       const { pdfBuffer, analysisFilename } = await normalizeForAnalysis(buffer, name);
       files.push({
         pdfBuffer,
         analysisFilename,
-        label: `${doc.type || 'doc'}: ${name}`,
+        label,
       });
-      notes.push(`${doc.type || 'doc'}: ${name}`);
+      notes.push(label);
     } catch (e) {
       console.warn('Skip dossier doc for intake generate', name, e);
     }
   }
 
-  if (files.length === 0) {
+  if (files.length === 0 && inlineTexts.length === 0) {
     return {
       data: createEmptyIntakeData(),
       error: 'Kon geen dossierdocumenten lezen voor generatie.',
@@ -458,6 +468,7 @@ export async function generateIntakeFromDossier(params: {
   const raw = await runStructuredMultiFileExtraction({
     openai,
     files,
+    inlineTexts,
     instructions: INTAKE_GENERATE_SYSTEM_PROMPT,
     userMessage: `${INTAKE_GENERATE_USER_MESSAGE}\nWerknemer: ${employeeName || 'onbekend'}`,
     schemaName: 'intake_generate_full',

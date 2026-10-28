@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       data_json: data,
       source_document_id: result.sourceDocumentId,
       gap_filled: result.gapFilled,
+      generated_from_dossier: result.generatedFromDossier === true,
       warning: result.warning || null,
       conflicts: data.meta.conflicts,
     });

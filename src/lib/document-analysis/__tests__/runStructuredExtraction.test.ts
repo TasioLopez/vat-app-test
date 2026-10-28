@@ -358,6 +358,48 @@ describe('runStructuredMultiFileExtraction', () => {
     assert.equal(result.dutch_speaking, 'Goed');
     assert.deepEqual(result.transport_type, []);
   });
+
+  it('sends inline text without uploading a PDF when there are no files', async () => {
+    let uploadCount = 0;
+    const createPayloads: unknown[] = [];
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: 'file-txt', status: 'processed' };
+        }),
+        retrieve: mock.fn(async () => ({ id: 'file-txt', status: 'processed' })),
+        delete: mock.fn(async () => {}),
+      },
+      responses: {
+        create: mock.fn(async (payload: unknown) => {
+          createPayloads.push(payload);
+          return { output_text: '{"ok":true}' };
+        }),
+      },
+    };
+
+    const result = await runStructuredMultiFileExtraction({
+      openai: openai as never,
+      files: [],
+      inlineTexts: [{ label: 'gespreksverslag: gespreksverslag.txt', text: 'Werknemer wil in de logistiek blijven.' }],
+      instructions: 'Extract',
+      userMessage: 'Analyze',
+      schemaName: 'test',
+      schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+      parse: (raw) => raw as { ok: boolean },
+    });
+
+    assert.equal(uploadCount, 0);
+    assert.equal(result.ok, true);
+    const payload = createPayloads[0] as {
+      input: { content: { type: string; text?: string }[] }[];
+    };
+    const text = payload.input[0].content.find((item) => item.type === 'input_text')?.text ?? '';
+    assert.match(text, /gespreksverslag: gespreksverslag.txt/);
+    assert.match(text, /logistiek/);
+    assert.equal(payload.input[0].content.some((item) => item.type === 'input_file'), false);
+  });
 });
 
 describe('runChatlikeMultiFileExtraction', () => {

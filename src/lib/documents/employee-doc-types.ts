@@ -4,6 +4,7 @@ export const EMPLOYEE_DOC_TYPES = [
   'fml_izp',
   'cv',
   'spreek_reportage',
+  'gespreksverslag',
   'extra',
 ] as const;
 
@@ -15,8 +16,15 @@ export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   fml_izp: 'FML/IZP',
   cv: 'CV',
   spreek_reportage: 'Spreekuurrapportage',
+  gespreksverslag: 'Gespreksverslag',
   extra: 'Overig',
 };
+
+/** Staging shows the gespreksverslag slot. Production keeps the previous list. */
+export function visibleEmployeeDocTypes(): EmployeeDocType[] {
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'staging') return [...EMPLOYEE_DOC_TYPES];
+  return EMPLOYEE_DOC_TYPES.filter((type) => type !== 'gespreksverslag');
+}
 
 export function getEmployeeDocLabel(type: string): string {
   return EMPLOYEE_DOC_LABELS[type as EmployeeDocType] ?? type;
@@ -25,6 +33,11 @@ export function getEmployeeDocLabel(type: string): string {
 export function isReservedEmployeeDocType(type: string | null | undefined): boolean {
   const normalized = (type || '').toLowerCase().trim();
   return EMPLOYEE_DOC_TYPES.some((docType) => docType === normalized);
+}
+
+export function isGespreksverslagDocType(type: string | null | undefined): boolean {
+  const normalized = (type || '').toLowerCase().trim();
+  return normalized === 'gespreksverslag' || normalized.includes('gespreksverslag');
 }
 
 export function isSpreekReportageDocType(type: string | null | undefined): boolean {

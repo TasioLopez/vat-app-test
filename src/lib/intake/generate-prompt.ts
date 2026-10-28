@@ -38,6 +38,13 @@ Alleen als duidelijk blijkt dat werknemer dit zelf heeft gezegd.
 OPLEIDINGEN / WERKERVARING / VAARDIGHEDEN (s17)
 Vul opleidingen/werkervaring rijen en checkboxes (rijbewijs, vervoer, devices, computer, talen) alleen bij aantoonbare feiten.
 
+GESPREKSVERSLAG
+Een bron met label gespreksverslag is het verslag van wat de werknemer zelf heeft verteld.
+Gebruik die bron voor de functieomschrijving (s3), de eigen ervaring in s6, de narratieve delen s8–s16 en s17 (opleiding, werkervaring, vaardigheden en praktische belemmeringen die de werknemer noemde).
+FML/IZP en spreekuurrapportage blijven leidend voor beperkingsvakjes, prognose en andere medische quotes.
+Quotes uit het AD-rapport blijven letterlijk uit het AD-rapport.
+Als het gespreksverslag iets anders zegt dan FML of AD: laat het veld leeg en noteer het conflict in meta.conflicts.
+
 meta.conflicts: array van { field, message } bij tegenstrijdigheden.
 meta.generation_notes: korte lijst verwerkte bestanden.
 `;

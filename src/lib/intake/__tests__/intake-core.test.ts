@@ -12,6 +12,8 @@ import {
 import { intakeToGegevensFields } from '@/lib/intake/project';
 import * as intakeHydrate from '@/lib/intake/tp-hydrate';
 import { isStagingEnv, assertStagingOnly } from '@/lib/auth/staging-only';
+import { isAdDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { formatIntakeDateNl } from '@/lib/intake/format-date';
 import {
   intakeDraftHasContent,
@@ -171,6 +173,16 @@ describe('intake sources helpers', () => {
     assert.equal(isIntakeDocumentType('extra'), false);
     assert.equal(isDossierSourceType('extra'), true);
     assert.equal(isDossierSourceType('intakeformulier'), false);
+    assert.equal(isDossierSourceType('gespreksverslag'), true);
+    assert.equal(isIntakeDocumentType('gespreksverslag'), false);
+    assert.equal(isAdDocumentType('gespreksverslag'), false);
+  });
+
+  it('keeps plain-text dossier notes out of the PDF upload path', () => {
+    assert.equal(classifyDossierFileName('gespreksverslag.txt'), 'inline-text');
+    assert.equal(classifyDossierFileName('folder/Note.TXT'), 'inline-text');
+    assert.equal(classifyDossierFileName('ad-rapport.pdf'), 'document');
+    assert.equal(classifyDossierFileName('verslag.docx'), 'document');
   });
 
   it('detects draft content', () => {
