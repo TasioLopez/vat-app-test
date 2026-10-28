@@ -313,7 +313,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
-    const [gesprekOpen, setGesprekOpen] = useState(false);
+    const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [referentDialogOpen, setReferentDialogOpen] = useState(false);
     const [referentDialogMode, setReferentDialogMode] = useState<'edit' | 'create'>('edit');
@@ -1385,7 +1385,13 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             Documenten
                         </h2>
                         <div className="flex flex-col gap-3">
-                            <Dialog open={sourcesModalOpen} onOpenChange={setSourcesModalOpen}>
+                            <Dialog
+                                open={sourcesModalOpen}
+                                onOpenChange={(open) => {
+                                    setSourcesModalOpen(open);
+                                    if (!open) setSourcesView('list');
+                                }}
+                            >
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -1399,7 +1405,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         <span className="font-semibold text-gray-900">Bronnen beheren</span>
                                         <span className="text-xs font-normal text-gray-600">
                                             {stagingGesprek
-                                                ? 'Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, gespreksverslag, overig'
+                                                ? 'Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
                                                 : 'Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
                                         </span>
                                         <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
@@ -1409,9 +1415,22 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     </span>
                                 </Button>
                                 <DialogContent
-                                    className="max-w-md sm:max-w-lg"
+                                    className={sourcesView === 'gesprek' ? 'max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl' : 'max-w-md sm:max-w-lg'}
                                     onOpenAutoFocus={(e) => e.preventDefault()}
                                 >
+                                    {sourcesView === 'gesprek' ? (
+                                        <GesprekPanel
+                                            embedded
+                                            employeeId={employeeId}
+                                            open={sourcesModalOpen}
+                                            onOpenChange={setSourcesModalOpen}
+                                            onBack={() => setSourcesView('list')}
+                                            onDocumentsChanged={() => {
+                                                void fetchDocuments();
+                                            }}
+                                        />
+                                    ) : (
+                                    <>
                                     <DialogHeader>
                                         <DialogTitle className="flex items-center gap-2 text-gray-900">
                                             <FolderOpen className="h-5 w-5 text-emerald-600" />
@@ -1421,19 +1440,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             Kies een documenttype om te uploaden of te vervangen.
                                         </p>
                                     </DialogHeader>
-                                    {stagingGesprek ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="mb-2 w-full justify-start"
-                                            onClick={() => {
-                                                setSourcesModalOpen(false);
-                                                setGesprekOpen(true);
-                                            }}
-                                        >
-                                            Gesprek opnemen of transcript plakken
-                                        </Button>
-                                    ) : null}
                                     <div className="grid grid-cols-2 gap-2 pt-1">
                                         {docTypes.map((type) => {
                                             const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
@@ -1451,6 +1457,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                     <button
                                                         type="button"
                                                         onClick={() => {
+                                                            if (type === 'gespreksverslag') {
+                                                                setSourcesView('gesprek');
+                                                                return;
+                                                            }
                                                             setSourcesModalOpen(false);
                                                             setActiveDocType(type);
                                                         }}
@@ -1464,13 +1474,17 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                             )}
                                                             {DOC_LABELS[type]}
                                                         </p>
-                                                        {doc ? (
+                                                        {type === 'gespreksverslag' ? (
+                                                            <p className="text-xs text-gray-500">
+                                                                {doc ? 'Notities bewaard' : 'Transcript en notities'}
+                                                            </p>
+                                                        ) : doc ? (
                                                             <p className="text-xs text-emerald-700">Geüpload</p>
                                                         ) : (
                                                             <p className="text-xs text-gray-500">Niet geüpload</p>
                                                         )}
                                                     </button>
-                                                    {doc ? (
+                                                    {doc && type !== 'gespreksverslag' ? (
                                                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
                                                             <button
                                                                 type="button"
@@ -1522,6 +1536,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             );
                                         })}
                                     </div>
+                                    </>
+                                    )}
                                 </DialogContent>
                             </Dialog>
 
@@ -2332,17 +2348,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 <Save className="w-4 h-4 mr-2" />
                 {updating ? 'Opslaan...' : hasUnsavedChanges ? 'Alles opslaan' : 'Alles opgeslagen'}
             </Button>
-
-            {stagingGesprek ? (
-                <GesprekPanel
-                    employeeId={employeeId}
-                    open={gesprekOpen}
-                    onOpenChange={setGesprekOpen}
-                    onDocumentsChanged={() => {
-                        void fetchDocuments();
-                    }}
-                />
-            ) : null}
 
             {activeDocType && (
                 <DocumentModal

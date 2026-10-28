@@ -16,7 +16,7 @@ export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   fml_izp: 'FML/IZP',
   cv: 'CV',
   spreek_reportage: 'Spreekuurrapportage',
-  gespreksverslag: 'Gespreksverslag',
+  gespreksverslag: 'Gesprek',
   extra: 'Overig',
 };
 

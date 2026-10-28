@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Mic, Square, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileUp, Loader2, Mic, Square, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import {
   MEETING_AUDIO_MAX_BYTES,
@@ -17,6 +17,9 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentsChanged: () => void;
+  /** Render inside the Bronnen dialog instead of a second window. */
+  embedded?: boolean;
+  onBack?: () => void;
 };
 
 const STATUS_LABEL: Record<MeetingCaptureStatus, string> = {
@@ -47,6 +50,8 @@ export default function GesprekPanel({
   open,
   onOpenChange,
   onDocumentsChanged,
+  embedded = false,
+  onBack,
 }: Props) {
   const [captures, setCaptures] = useState<MeetingCapture[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -381,6 +386,22 @@ export default function GesprekPanel({
     }
   }
 
+  async function uploadTranscriptFile(file: File | null) {
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.txt') && !name.endsWith('.md')) {
+      setError('Upload een tekstbestand (.txt).');
+      return;
+    }
+    setError(null);
+    const text = (await file.text()).trim();
+    if (!text) {
+      setError('Het bestand is leeg.');
+      return;
+    }
+    setTranscript(text);
+  }
+
   function startNew() {
     captureIdRef.current = null;
     setActiveId(null);
@@ -391,135 +412,172 @@ export default function GesprekPanel({
     setError(null);
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900">
-            <Mic className="h-5 w-5 text-emerald-600" />
+  const body = (
+    <div className="space-y-5">
+      <div className="flex items-start gap-2">
+        {embedded && onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"
+            aria-label="Terug naar bronnen"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+        ) : null}
+        <div>
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
+            <Mic className="h-4 w-4 text-emerald-600" />
             Gesprek
           </DialogTitle>
           <p className="text-sm text-gray-600">
-            Neem op met de microfoon of plak een transcript. Het verslag wordt pas een bron nadat je
-            het hebt nagekeken.
+            Zet het transcript klaar, maak daarna de notities die de intake gebruikt.
           </p>
-        </DialogHeader>
+        </div>
+      </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={startNew} disabled={Boolean(busy) || recording}>
-              Nieuw gesprek
-            </Button>
-            {captures.map((capture) => (
-              <button
-                key={capture.id}
-                type="button"
-                onClick={() => applyCapture(capture)}
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  capture.id === activeId
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                    : 'border-gray-200 text-gray-600'
-                }`}
-              >
-                {new Date(capture.created_at).toLocaleString('nl-NL', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                · {STATUS_LABEL[capture.status]}
-              </button>
-            ))}
-          </div>
-
-          <label className="flex items-start gap-2 text-sm text-gray-700">
+      <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50/70 p-3">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900">Transcript</h4>
+          <p className="text-xs text-gray-600">Upload een tekstbestand of start een opname.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-lg border-2 border-purple-200 bg-white px-3 text-sm font-medium text-purple-700 hover:bg-purple-50">
+            <FileUp className="mr-2 h-4 w-4" />
+            Upload transcript
             <input
-              type="checkbox"
-              className="mt-1"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
+              type="file"
+              accept=".txt,.md,text/plain"
+              className="sr-only"
               disabled={recording || Boolean(busy)}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.target.value = '';
+                void uploadTranscriptFile(file);
+              }}
             />
-            <span>
-              De werknemer weet dat dit gesprek wordt opgenomen en dat de opname wordt gebruikt om
-              een gespreksverslag te maken.
-            </span>
           </label>
-
-          <div className="flex flex-wrap gap-2">
-            {recording ? (
-              <Button type="button" variant="destructive" onClick={stopRecording}>
-                <Square className="mr-2 h-4 w-4" />
-                Stop opname
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => void startRecording()} disabled={Boolean(busy)}>
-                <Mic className="mr-2 h-4 w-4" />
-                Opnemen
-              </Button>
-            )}
-            {activeId ? (
-              <Button type="button" variant="ghost" onClick={() => void removeCapture()} disabled={Boolean(busy) || recording}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Verwijder gesprek
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-800" htmlFor="gesprek-transcript">
-              Transcript
-            </label>
-            <Textarea
-              id="gesprek-transcript"
-              value={transcript}
-              onChange={(event) => setTranscript(event.target.value)}
-              className="min-h-32"
-              placeholder="Plak hier een transcript, of neem het gesprek op."
-              disabled={recording}
-            />
-            <Button type="button" variant="outline" size="sm" onClick={() => void saveTranscript()} disabled={Boolean(busy) || recording}>
-              Transcript bewaren
-            </Button>
-          </div>
-
-          <Button type="button" onClick={() => void generateNotes()} disabled={Boolean(busy) || recording || !transcript.trim()}>
-            Maak gespreksverslag
-          </Button>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-800" htmlFor="gesprek-notes">
-              Gespreksverslag
-            </label>
-            <Textarea
-              id="gesprek-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              className="min-h-40"
-              placeholder="Het verslag verschijnt hier. Pas het aan voordat je het als bron opslaat."
-              disabled={recording}
-            />
-          </div>
-
-          {needsReplace ? (
-            <Button type="button" variant="destructive" onClick={() => void acceptNotes(true)} disabled={Boolean(busy)}>
-              Vervang het bestaande gespreksverslag
+          {recording ? (
+            <Button type="button" variant="destructive" onClick={stopRecording}>
+              <Square className="mr-2 h-4 w-4" />
+              Stop opname
             </Button>
           ) : (
-            <Button type="button" onClick={() => void acceptNotes(false)} disabled={Boolean(busy) || recording || !notes.trim()}>
-              Opslaan als bron
+            <Button type="button" variant="outline" onClick={() => void startRecording()} disabled={Boolean(busy)}>
+              <Mic className="mr-2 h-4 w-4" />
+              Start opname
             </Button>
           )}
+        </div>
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={consent}
+            onChange={(event) => setConsent(event.target.checked)}
+            disabled={recording || Boolean(busy)}
+          />
+          <span>De werknemer weet dat dit gesprek wordt opgenomen.</span>
+        </label>
+        <Textarea
+          id="gesprek-transcript"
+          value={transcript}
+          onChange={(event) => setTranscript(event.target.value)}
+          className="min-h-32 bg-white"
+          placeholder="Het transcript verschijnt hier. Je kunt het ook plakken."
+          disabled={recording}
+          aria-label="Transcript"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={() => void saveTranscript()} disabled={Boolean(busy) || recording || !transcript.trim()}>
+          Transcript bewaren
+        </Button>
+      </section>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {busy ? (
-            <p className="flex items-center gap-2 text-sm text-gray-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {busy}
-            </p>
+      <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900">Notities</h4>
+          <p className="text-xs text-gray-600">Dit verslag wordt gebruikt bij het invullen van de intake.</p>
+        </div>
+        <Button type="button" onClick={() => void generateNotes()} disabled={Boolean(busy) || recording || !transcript.trim()}>
+          Maak notities uit transcript
+        </Button>
+        <Textarea
+          id="gesprek-notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          className="min-h-40 bg-white"
+          placeholder="Notities verschijnen hier. Pas ze aan voordat je ze bewaart."
+          disabled={recording}
+          aria-label="Notities"
+        />
+        {needsReplace ? (
+          <Button type="button" variant="destructive" onClick={() => void acceptNotes(true)} disabled={Boolean(busy)}>
+            Vervang de bestaande notities
+          </Button>
+        ) : (
+          <Button type="button" onClick={() => void acceptNotes(false)} disabled={Boolean(busy) || recording || !notes.trim()}>
+            Notities bewaren
+          </Button>
+        )}
+      </section>
+
+      {captures.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-gray-500">Eerdere gesprekken</span>
+          <button
+            type="button"
+            onClick={startNew}
+            disabled={Boolean(busy) || recording}
+            className={`rounded-full border px-3 py-1 text-xs ${
+              activeId ? 'border-gray-200 text-gray-600' : 'border-emerald-500 bg-emerald-50 text-emerald-800'
+            }`}
+          >
+            Nieuw
+          </button>
+          {captures.map((capture) => (
+            <button
+              key={capture.id}
+              type="button"
+              onClick={() => applyCapture(capture)}
+              className={`rounded-full border px-3 py-1 text-xs ${
+                capture.id === activeId
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                  : 'border-gray-200 text-gray-600'
+              }`}
+            >
+              {new Date(capture.created_at).toLocaleString('nl-NL', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              · {STATUS_LABEL[capture.status]}
+            </button>
+          ))}
+          {activeId ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => void removeCapture()} disabled={Boolean(busy) || recording}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Verwijder
+            </Button>
           ) : null}
         </div>
-      </DialogContent>
+      ) : null}
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {busy ? (
+        <p className="flex items-center gap-2 text-sm text-gray-600">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {busy}
+        </p>
+      ) : null}
+    </div>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl">{body}</DialogContent>
     </Dialog>
   );
 }
