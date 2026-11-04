@@ -85,11 +85,10 @@ describe('fase motivatie layout', () => {
     assert.equal(parts[1].panel, 'im-empowerment');
   });
 
-  it('leaves later section titles and the activatie intro without a panel', () => {
+  it('leaves later section titles without a panel', () => {
     assert.equal(byId.get('ko-h')?.panel, undefined);
     assert.equal(byId.get('ko-lead')?.panel, undefined);
     assert.equal(byId.get('sc-h')?.panel, undefined);
-    assert.equal(byId.get('ac-alg')?.panel, undefined);
     assert.equal(byId.get('ia-h')?.panel, undefined);
   });
 });

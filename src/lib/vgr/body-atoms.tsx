@@ -100,8 +100,24 @@ const VGR_PANEL_LABEL_CLASS = 'text-[10pt] font-bold leading-[1.42] text-[#782A9
 /** 10.5pt bold purple Z-mark row (Taal links, beroep criteria titles). */
 const VGR_PURPLE_Z_CLASS = 'text-[10.5pt] font-bold leading-[1.42] text-[#782A90]';
 
+/** Italic bijlage reference inside Wekelijks solliciteren. Not a Para: that class forces black text. */
+const VGR_BIJLAGE_CLASS = 'whitespace-pre-line text-[10.5pt] italic leading-[1.42] text-[#660066]';
+
+/** Italic purple quote and the small PoW / visie footnotes. */
+const VGR_PURPLE_ITALIC_QUOTE_CLASS = 'whitespace-pre-line text-[10.5pt] italic leading-[1.42] text-[#782A90]';
+const VGR_FOOTNOTE_CLASS = 'text-[8pt] italic leading-tight text-[#782A90]';
+
 function PanelLabel({ children }: { children: React.ReactNode }) {
   return <div className={VGR_PANEL_LABEL_CLASS}>{children}</div>;
+}
+
+function BijlageSentence({ text }: { text: string }) {
+  return <p className={VGR_BIJLAGE_CLASS}>{text}</p>;
+}
+
+function PurpleItalicQuote({ text }: { text: string }) {
+  const t = text.trim() || '—';
+  return <p className={VGR_PURPLE_ITALIC_QUOTE_CLASS}>“{t}”</p>;
 }
 
 export function ChapterBand({ chapter }: { chapter: VGRChapterId }) {
@@ -225,20 +241,36 @@ type InterventionPanels = {
   itemsLead?: 'purple' | 'body';
   /** Black Z rows, or a per-option choice. Taal uses purple. */
   items?: 'z' | ((opt: VGRInterventionOption) => 'z' | 'z-purple');
+  /**
+   * Replaces `prose` for one standard paragraph. Return null to keep the black paragraph.
+   * Used for the italic bijlage sentence in Wekelijks solliciteren.
+   */
+  standardParagraph?: (opt: VGRInterventionOption, index: number, text: string) => React.ReactNode | null;
 };
 
 function resolvePanels(panels: boolean | InterventionPanels) {
   if (!panels) {
-    return { on: false, itemsLead: 'body' as const, items: (_opt: VGRInterventionOption) => 'disc' as const };
+    return {
+      on: false,
+      itemsLead: 'body' as const,
+      items: (_opt: VGRInterventionOption) => 'disc' as const,
+      standardParagraph: undefined as InterventionPanels['standardParagraph'],
+    };
   }
   if (panels === true) {
-    return { on: true, itemsLead: 'purple' as const, items: (_opt: VGRInterventionOption) => 'z' as const };
+    return {
+      on: true,
+      itemsLead: 'purple' as const,
+      items: (_opt: VGRInterventionOption) => 'z' as const,
+      standardParagraph: undefined as InterventionPanels['standardParagraph'],
+    };
   }
   const items = panels.items ?? 'z';
   return {
     on: true,
     itemsLead: panels.itemsLead ?? 'body',
     items: typeof items === 'function' ? items : (_opt: VGRInterventionOption) => items,
+    standardParagraph: panels.standardParagraph,
   };
 }
 
@@ -277,7 +309,23 @@ function interventionBlocks(
       heading(ctx, `${idPrefix}-${opt.id}-h`, opt.heading, true);
     }
     if (block.standaardtekst && opt.standardText) {
-      opt.standardText.forEach((p, i) => prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, '', panel));
+      opt.standardText.forEach((p, i) => {
+        const custom = mode.standardParagraph?.(opt, i, p);
+        const text = p.trim();
+        if (custom && text) {
+          push(ctx, {
+            id: `${idPrefix}-${opt.id}-std-${i}`,
+            panel,
+            node: custom,
+            splitText: {
+              text,
+              render: (part) => mode.standardParagraph?.(opt, i, part) ?? <Para>{part}</Para>,
+            },
+          });
+          return;
+        }
+        prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, '', panel);
+      });
     }
     if (extra) extra(opt, ctx, panel);
     const items = block.items.length ? block.items : block.standaardtekst ? opt.defaultItems ?? [] : [];
@@ -650,21 +698,41 @@ function buildActivatie(ctx: Ctx) {
   const { body, data } = ctx;
   push(ctx, { id: 'ch-activatie', node: <ChapterBand chapter="activatie" />, pageBreakBefore: true, keepWithNext: true });
 
-  heading(ctx, 'ac-alg-h', 'Algemene toelichting');
-  prose(ctx, 'ac-alg', VGR_ACTIVATIE_ALGEMEEN);
+  push(ctx, {
+    id: 'ac-alg-h',
+    panel: 'ac-alg',
+    node: <PanelLabel>Algemene toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'ac-alg', VGR_ACTIVATIE_ALGEMEEN, '', 'ac-alg');
 
   const ia = body.interventies_activatie;
   heading(ctx, 'ia-h', 'Interventies activatie en arbeidsbemiddeling');
   selectionChecklist(ctx, 'ia-checks', ia, VGR_ACTIVATIE_OPTIONS);
-  vervolgLine(ctx, 'ia-vervolg', ia);
-  interventionBlocks(ctx, 'ia', ia, VGR_ACTIVATIE_OPTIONS);
+  vervolgLine(ctx, 'ia-vervolg', ia, 'ia-vervolg');
+  interventionBlocks(ctx, 'ia', ia, VGR_ACTIVATIE_OPTIONS, undefined, {
+    itemsLead: 'body',
+    items: 'z',
+    standardParagraph: (opt, index, text) =>
+      opt.id === 'wekelijks_solliciteren' && index === 1 ? <BijlageSentence text={text} /> : null,
+  });
 
   // Perspectief op werk
   heading(ctx, 'pw-h', 'Perspectief op werk');
-  heading(ctx, 'pw-alg-h', 'Algemene toelichting', true);
-  prose(ctx, 'pw-alg', VGR_PERSPECTIEF_ALGEMEEN);
-  heading(ctx, 'pw-pow-h', 'PoW-meter™', true);
-  prose(ctx, 'pw-pow', VGR_POW_METER_TEKST);
+  push(ctx, {
+    id: 'pw-alg-h',
+    panel: 'pw-alg',
+    node: <PanelLabel>Algemene toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'pw-alg', VGR_PERSPECTIEF_ALGEMEEN, '', 'pw-alg');
+  push(ctx, {
+    id: 'pw-pow-h',
+    panel: 'pw-pow',
+    node: <PanelLabel>PoW-meter™</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'pw-pow', VGR_POW_METER_TEKST, '', 'pw-pow');
 
   heading(ctx, 'pw-chart-h', 'Grafische weergave PoW-meter™');
   push(ctx, {
@@ -673,7 +741,7 @@ function buildActivatie(ctx: Ctx) {
       <div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={VGR_POW_CHART_SRC} alt="PoW-meter" className="mx-auto block h-auto w-full max-w-[560px]" />
-        <p className="mt-1 text-[8pt] italic leading-tight text-[#702A90]">{VGR_POW_FOOTNOTE}</p>
+        <p className={`mt-1 ${VGR_FOOTNOTE_CLASS}`}>{VGR_POW_FOOTNOTE}</p>
       </div>
     ),
   });
@@ -691,15 +759,15 @@ function buildActivatie(ctx: Ctx) {
         </colgroup>
         <tbody>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.intake}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#782A90]">{VGR_POW_ROW_LABELS.intake}</td>
             <td className="px-2 py-1 align-top">Werknemer bevond zich in trede {tr(pow.intake_trede)}.</td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.huidig}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#782A90]">{VGR_POW_ROW_LABELS.huidig}</td>
             <td className="px-2 py-1 align-top">Werknemer bevindt zich in trede {tr(pow.huidige_trede)}.</td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.doel}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#782A90]">{VGR_POW_ROW_LABELS.doel}</td>
             <td className="px-2 py-1 align-top">
               {pow.doel_onbekend
                 ? 'De verwachting voor de aankomende periode is nog niet vast te stellen.'
@@ -707,7 +775,7 @@ function buildActivatie(ctx: Ctx) {
             </td>
           </tr>
           <tr>
-            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#702A90]">{VGR_POW_ROW_LABELS.uren}</td>
+            <td className="bg-[#f3efe4] px-2 py-1 align-top font-bold text-[#782A90]">{VGR_POW_ROW_LABELS.uren}</td>
             <td className="px-2 py-1 align-top">
               {pow.werkzame_uren.trim() ? `${pow.werkzame_uren.trim()} ${VGR_POW_UREN_SUFFIX}` : `… ${VGR_POW_UREN_SUFFIX}`}
               {pow.werkzame_uren_context.trim() ? ` ${pow.werkzame_uren_context.trim()}` : ''}
@@ -717,41 +785,67 @@ function buildActivatie(ctx: Ctx) {
       </table>
     ),
   });
-  heading(ctx, 'pw-toel-h', 'Toelichting onderbouwing PoW-meter™', true);
+  push(ctx, {
+    id: 'pw-toel-h',
+    panel: 'pw-toel',
+    node: <PanelLabel>Toelichting onderbouwing PoW-meter™</PanelLabel>,
+    keepWithNext: true,
+  });
   if (pow.history.length === 0) {
-    prose(ctx, 'pw-toel-empty', '—');
+    prose(ctx, 'pw-toel-empty', '—', '', 'pw-toel');
   }
   pow.history.forEach((m) => {
     push(ctx, {
       id: `pw-m-${m.id}-h`,
-      node: <div className={`${VGR_BODY_TEXT_CLASS} pt-0.5 font-semibold`}>Onderbouwing PoW-meter™ – {formatNLDate(m.date)}</div>,
+      panel: 'pw-toel',
+      node: <div className={`${VGR_BODY_TEXT_CLASS} font-bold`}>Onderbouwing PoW-meter™ – {formatNLDate(m.date)}</div>,
       keepWithNext: true,
     });
-    prose(ctx, `pw-m-${m.id}`, m.toelichting || '—');
+    prose(ctx, `pw-m-${m.id}`, m.toelichting || '—', '', 'pw-toel');
   });
 
   // Visie op plaatsbaarheid
   const vp = body.visie_plaatsbaarheid;
+  const visiePanel = 'vp';
   heading(ctx, 'vp-h', 'Visie op plaatsbaarheid');
   if (data.has_ad_report !== false || vp.ad.citaat.trim()) {
     push(ctx, {
       id: 'vp-ad-lead',
-      node: <Para>{vgrVisieAdLead(vp.ad.bron_naam || String(data.occupational_doctor_name || ''), formatNLDate(vp.ad.bron_datum || data.ad_report_date))}</Para>,
+      panel: visiePanel,
+      node: (
+        <PanelLabel>
+          {vgrVisieAdLead(vp.ad.bron_naam || String(data.occupational_doctor_name || ''), formatNLDate(vp.ad.bron_datum || data.ad_report_date))}
+        </PanelLabel>
+      ),
       keepWithNext: true,
     });
-    push(ctx, { id: 'vp-ad-q', node: <Quote text={vp.ad.citaat} /> });
+    push(ctx, { id: 'vp-ad-q', panel: visiePanel, node: <PurpleItalicQuote text={vp.ad.citaat} /> });
   }
-  heading(ctx, 'vp-la-h', VGR_VISIE_LA_TITLE, true);
+  push(ctx, {
+    id: 'vp-la-h',
+    panel: visiePanel,
+    node: <PanelLabel>{VGR_VISIE_LA_TITLE}</PanelLabel>,
+    keepWithNext: true,
+  });
   const kansenLabel = VGR_KANSEN_OPTIONS.find((o) => o.value === vp.kansen)?.label ?? '';
-  prose(ctx, 'vp-kansen', vgrVisieKansenZin(kansenLabel));
+  prose(ctx, 'vp-kansen', vgrVisieKansenZin(kansenLabel), '', visiePanel);
   const functies = vp.functies.filter((f) => f.trim());
   if (functies.length) {
-    push(ctx, { id: 'vp-fun-lead', node: <Para>{VGR_VISIE_FUNCTIES_LEAD}</Para>, keepWithNext: true });
-    push(ctx, { id: 'vp-fun-list', node: <BulletList items={functies} /> });
-    push(ctx, { id: 'vp-fun-foot', node: <p className="text-[8pt] italic leading-tight text-[#702A90]">{VGR_VISIE_FUNCTIES_FOOTNOTE}</p> });
+    push(ctx, { id: 'vp-fun-lead', panel: visiePanel, node: <Para>{VGR_VISIE_FUNCTIES_LEAD}</Para>, keepWithNext: true });
+    push(ctx, { id: 'vp-fun-list', panel: visiePanel, node: zBulletList(functies) });
+    push(ctx, {
+      id: 'vp-fun-foot',
+      panel: visiePanel,
+      node: <p className={VGR_FOOTNOTE_CLASS}>{VGR_VISIE_FUNCTIES_FOOTNOTE}</p>,
+    });
   }
-  heading(ctx, 'vp-conc-h', 'Conclusie', true);
-  prose(ctx, 'vp-conc', vp.conclusie || '—');
+  push(ctx, {
+    id: 'vp-conc-h',
+    panel: visiePanel,
+    node: <PanelLabel>Conclusie</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'vp-conc', vp.conclusie || '—', '', visiePanel);
 
   // Leernavigator
   const ln = body.leernavigator;
@@ -760,17 +854,17 @@ function buildActivatie(ctx: Ctx) {
   push(ctx, {
     id: 'ln-grid',
     node: (
-      <div className="grid grid-cols-2 gap-x-6">
-        <div>
-          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#702A90]`}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
+      <div>
+        <div className="grid grid-cols-2 gap-x-6 bg-[#F3EFE4] px-2 py-1">
+          <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
+          <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 pt-1">
           <div className="flex flex-col gap-0.5">
             {ln.basis.map((item) => (
               <CheckLine key={item.id} checked={item.checked} label={item.label} />
             ))}
           </div>
-        </div>
-        <div>
-          <div className={`${VGR_BODY_TEXT_CLASS} mb-1 font-bold text-[#702A90]`}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
           <div className="flex flex-col gap-0.5">
             {ln.activering.map((item) => (
               <CheckLine key={item.id} checked={item.checked} label={leernavigatorLabelWithUren(item)} />

@@ -125,7 +125,7 @@ describe('fase oriëntatie layout', () => {
     assert.doesNotMatch(all, /Let op: controleer bij inzet/);
   });
 
-  it('puts the sollicitatie vervolg in a panel and leaves activatie unpaneled', () => {
+  it('puts the sollicitatie vervolg in a panel and leaves the activatie title outside', () => {
     assert.equal(byId.get('sv-vervolg-lead')?.panel, 'sv-vervolg');
     assert.equal(byId.get('sv-vervolg-text')?.panel, 'sv-vervolg');
     const vervolgLead = markup(byId.get('sv-vervolg-lead'));
@@ -135,11 +135,6 @@ describe('fase oriëntatie layout', () => {
     assert.match(vervolg, /val-logo\.jpg/);
     assert.match(vervolg, /Netwerken afronden/);
 
-    assert.equal(byId.get('ac-alg')?.panel, undefined);
     assert.equal(byId.get('ia-h')?.panel, undefined);
-    assert.equal(byId.get('ia-vervolg-lead')?.panel, undefined);
-    assert.match(markup(byId.get('ia-vervolg-lead')), /Onderstaande activiteiten komen in fase 2\/3/);
-    assert.match(markup(byId.get('ia-vervolg-text')), /Solliciteren op interne vacatures/);
-    assert.doesNotMatch(markup(byId.get('ia-vervolg-text')), /val-logo\.jpg/);
   });
 });
