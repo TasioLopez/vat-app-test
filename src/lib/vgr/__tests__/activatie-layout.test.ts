@@ -1,6 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
+import {
+  FUNCTIE_FOOTER,
+  FUNCTIES_DELIMITER,
+  TOELICHTING_DELIMITER,
+} from '@/lib/tp/visie-loopbaanadviseur/constants';
+import { VGR_LEERNAVIGATOR_ACTIVERING_DEFS, VGR_LEERNAVIGATOR_BASIS_DEFS } from '@/lib/vgr/content';
 import { ensureVGRShape } from '@/lib/vgr/mapping';
 import { buildVgrBodyAtoms, splitVgrBodyAtom, type VGRBodyAtom } from '@/lib/vgr/body-atoms';
 
@@ -140,12 +147,96 @@ describe('fase activatie layout', () => {
 
   it('puts the Leernavigator titles on a cream strip and the intro on the white page', () => {
     assert.equal(byId.get('ln-h')?.panel, undefined);
+    assert.equal(byId.get('ln-h')?.keepWithNext, true);
     assert.equal(byId.get('ln-intro')?.panel, undefined);
-    const grid = markup(byId.get('ln-grid'));
-    assert.match(grid, /bg-\[#F3EFE4\]/);
-    assert.match(grid, /Basisinterventies ontwikkeling/);
-    assert.match(grid, /Activeringsinterventies/);
-    assert.match(grid, /text-\[#782A90\]/);
-    assert.match(grid, /De eigen talenten en valkuilen/);
+    assert.equal(byId.get('ln-intro')?.keepWithNext, true);
+    assert.equal(byId.get('ln-head')?.frame, 'ln');
+    assert.equal(byId.get('ln-head')?.keepWithNext, true);
+    const head = markup(byId.get('ln-head'));
+    assert.match(head, /bg-\[#F3EFE4\]/);
+    assert.match(head, /border-\[#C4B37B\]/);
+    assert.match(head, /border-b/);
+    assert.match(head, /Basisinterventies ontwikkeling/);
+    assert.match(head, /Activeringsinterventies/);
+    assert.match(head, /text-\[#782A90\]/);
+
+    const rows = atoms.filter((a) => a.id.startsWith('ln-row-'));
+    assert.equal(rows.length, VGR_LEERNAVIGATOR_BASIS_DEFS.length);
+    assert.ok(rows.every((row) => row.frame === 'ln'));
+    const first = markup(rows[0]);
+    assert.match(first, /border-r/);
+    assert.match(first, /border-\[#C4B37B\]/);
+    assert.doesNotMatch(first, /border-b/);
+    assert.match(first, /De eigen talenten en valkuilen/);
+    assert.match(first, /Werknemer verricht minimaal 3x per week/);
+    const last = markup(rows[rows.length - 1]);
+    assert.match(last, /De WIA-aanvraag/);
+    assert.doesNotMatch(last, /fulltime functie/);
+    assert.equal(rows.length > VGR_LEERNAVIGATOR_ACTIVERING_DEFS.length, true);
+  });
+});
+
+describe('fase activatie visie from a trajectplan blob', () => {
+  function blobDraft() {
+    const data = draft();
+    data.body.visie_plaatsbaarheid.functies = [];
+    data.body.visie_plaatsbaarheid.ad.citaat = [
+      'In het arbeidsdeskundig rapport opgesteld door G. Verheul op 31 mei 2026 staat het volgende advies over passend arbeid:',
+      ADVIES_DELIMITER,
+      'Er zijn een beperkt aantal theoretisch passende functies.',
+    ].join('\n\n');
+    data.body.visie_plaatsbaarheid.conclusie = [
+      TOELICHTING_DELIMITER,
+      'Gezien de opleiding acht ValentineZ de kansen op dit moment als “voldoende”.',
+      FUNCTIES_DELIMITER,
+      'Naast de functies denkt de loopbaanadviseur ook aan onderstaande functies:',
+      '• Taalredacteur',
+      '- Toetsontwikkelaar',
+      FUNCTIE_FOOTER,
+    ].join('\n\n');
+    return data;
+  }
+
+  const atoms = buildVgrBodyAtoms(blobDraft());
+  const byId = new Map(atoms.map((a) => [a.id, a]));
+  const all = atoms.map((a) => renderToStaticMarkup(a.node as Parameters<typeof renderToStaticMarkup>[0])).join('\n');
+
+  it('quotes only the text after the advies delimiter', () => {
+    const quote = markup(byId.get('vp-ad-q'));
+    assert.match(quote, /theoretisch passende functies/);
+    assert.match(quote, /italic/);
+    assert.match(quote, /text-\[#782A90\]/);
+    assert.doesNotMatch(quote, /ADVIES/);
+    assert.doesNotMatch(quote, /staat het volgende advies/);
+    assert.match(markup(byId.get('vp-ad-lead')), /staat het volgende advies/);
+  });
+
+  it('prints the kansen sentence once and the functions as Z marks, without a dumped conclusie', () => {
+    assert.match(markup(byId.get('vp-kansen')), /“goed”/);
+    assert.doesNotMatch(all, /voldoende/);
+    assert.equal(byId.get('vp-conc-h'), undefined);
+    assert.equal(byId.get('vp-conc'), undefined);
+    assert.doesNotMatch(all, /TOELICHTING/);
+    assert.doesNotMatch(all, /FUNCTIES/);
+    assert.doesNotMatch(all, /onderstaande functies/);
+    assert.doesNotMatch(all, /Ook andere werkmogelijkheden/);
+    const list = markup(byId.get('vp-fun-list'));
+    assert.match(list, /val-logo\.jpg/);
+    assert.match(list, /Taalredacteur/);
+    assert.match(list, /Toetsontwikkelaar/);
+    assert.match(markup(byId.get('vp-fun-lead')), /de volgende functies/);
+    assert.match(markup(byId.get('vp-fun-foot')), /momentopname/);
+  });
+
+  it('uses the parsed toelichting once when the kansen dropdown is empty', () => {
+    const data = blobDraft();
+    data.body.visie_plaatsbaarheid.kansen = '' as typeof data.body.visie_plaatsbaarheid.kansen;
+    const parsed = buildVgrBodyAtoms(data);
+    const joined = parsed.map((a) => renderToStaticMarkup(a.node as Parameters<typeof renderToStaticMarkup>[0])).join('\n');
+    const kansen = markup(parsed.find((a) => a.id === 'vp-kansen'));
+    assert.match(kansen, /voldoende/);
+    assert.doesNotMatch(kansen, /“…”/);
+    assert.equal(joined.split('voldoende').length - 1, 1);
+    assert.equal(parsed.find((a) => a.id === 'vp-conc-h'), undefined);
   });
 });

@@ -55,6 +55,10 @@ import {
   type VGRInterventionOption,
 } from '@/lib/vgr/content';
 import { vgrPeriodeText, vgrVervolgPeriodeText } from '@/lib/vgr/period';
+import { parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
+import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
+import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
+import { FUNCTIES_DELIMITER, TOELICHTING_DELIMITER } from '@/lib/tp/visie-loopbaanadviseur/constants';
 import {
   VGR_FML_RUBRIEKEN,
   VGR_KANSEN_OPTIONS,
@@ -86,6 +90,11 @@ export type VGRBodyAtom = {
    * and a split continues the box on the next page.
    */
   panel?: string;
+  /**
+   * Bordered table id. Consecutive atoms with the same id share one outline per page.
+   * A split redraws the outline on the next page without repeating earlier rows.
+   */
+  frame?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -232,6 +241,41 @@ function zBulletList(items: string[], className = VGR_BODY_TEXT_CLASS) {
           {item}
         </ValentineZLogoBulletRow>
       ))}
+    </div>
+  );
+}
+
+/** Quote text after <<<ADVIES>>>. A citaat without the delimiter is printed as stored. */
+function adCitaatForPrint(raw: string): string {
+  const text = raw.trim();
+  if (!text.includes(ADVIES_DELIMITER)) return text;
+  return parseAdAdvies(text).citaat.trim();
+}
+
+/** Trajectplan visie block stored in the conclusie field. Null when the conclusie is adviser text. */
+function storedVisieBlock(raw: string) {
+  const text = raw.trim();
+  if (!text.includes(TOELICHTING_DELIMITER) && !text.includes(FUNCTIES_DELIMITER)) return null;
+  const source = text.includes(TOELICHTING_DELIMITER) ? text : `${TOELICHTING_DELIMITER}\n${text}`;
+  return parseVisieLoopbaanadviseur(source);
+}
+
+function functieLines(bullets: string): string[] {
+  return bullets
+    .split('\n')
+    .map((line) => line.trim().replace(/^[•☑✓\-–—]\s*/, ''))
+    .filter(Boolean);
+}
+
+const LN_FRAME = 'ln';
+const LN_RULE = 'border-[#C4B37B]';
+
+function leernavigatorTableRow(left: React.ReactNode, right: React.ReactNode, header = false) {
+  const cell = header ? `bg-[#F3EFE4] border-b ${LN_RULE} px-2 py-1` : 'px-2 py-0.5';
+  return (
+    <div className="grid grid-cols-2">
+      <div className={`${cell} border-r ${LN_RULE}`}>{left}</div>
+      <div className={cell}>{right}</div>
     </div>
   );
 }
@@ -819,7 +863,7 @@ function buildActivatie(ctx: Ctx) {
       ),
       keepWithNext: true,
     });
-    push(ctx, { id: 'vp-ad-q', panel: visiePanel, node: <PurpleItalicQuote text={vp.ad.citaat} /> });
+    push(ctx, { id: 'vp-ad-q', panel: visiePanel, node: <PurpleItalicQuote text={adCitaatForPrint(vp.ad.citaat)} /> });
   }
   push(ctx, {
     id: 'vp-la-h',
@@ -828,8 +872,13 @@ function buildActivatie(ctx: Ctx) {
     keepWithNext: true,
   });
   const kansenLabel = VGR_KANSEN_OPTIONS.find((o) => o.value === vp.kansen)?.label ?? '';
-  prose(ctx, 'vp-kansen', vgrVisieKansenZin(kansenLabel), '', visiePanel);
-  const functies = vp.functies.filter((f) => f.trim());
+  const visieBlock = storedVisieBlock(vp.conclusie);
+  const parsedToelichting = visieBlock?.toelichting.trim() ?? '';
+  const kansenText =
+    kansenLabel || !parsedToelichting ? vgrVisieKansenZin(kansenLabel) : parsedToelichting;
+  prose(ctx, 'vp-kansen', kansenText, '', visiePanel);
+  const storedFuncties = vp.functies.map((f) => f.trim()).filter(Boolean);
+  const functies = storedFuncties.length ? storedFuncties : functieLines(visieBlock?.functieBullets ?? '');
   if (functies.length) {
     push(ctx, { id: 'vp-fun-lead', panel: visiePanel, node: <Para>{VGR_VISIE_FUNCTIES_LEAD}</Para>, keepWithNext: true });
     push(ctx, { id: 'vp-fun-list', panel: visiePanel, node: zBulletList(functies) });
@@ -839,41 +888,47 @@ function buildActivatie(ctx: Ctx) {
       node: <p className={VGR_FOOTNOTE_CLASS}>{VGR_VISIE_FUNCTIES_FOOTNOTE}</p>,
     });
   }
-  push(ctx, {
-    id: 'vp-conc-h',
-    panel: visiePanel,
-    node: <PanelLabel>Conclusie</PanelLabel>,
-    keepWithNext: true,
-  });
-  prose(ctx, 'vp-conc', vp.conclusie || '—', '', visiePanel);
+  if (!visieBlock) {
+    push(ctx, {
+      id: 'vp-conc-h',
+      panel: visiePanel,
+      node: <PanelLabel>Conclusie</PanelLabel>,
+      keepWithNext: true,
+    });
+    prose(ctx, 'vp-conc', vp.conclusie || '—', '', visiePanel);
+  }
 
   // Leernavigator
   const ln = body.leernavigator;
   heading(ctx, 'ln-h', 'Leernavigator');
-  prose(ctx, 'ln-intro', VGR_LEERNAVIGATOR_INTRO);
   push(ctx, {
-    id: 'ln-grid',
-    node: (
-      <div>
-        <div className="grid grid-cols-2 gap-x-6 bg-[#F3EFE4] px-2 py-1">
-          <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
-          <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
-        </div>
-        <div className="grid grid-cols-2 gap-x-6 pt-1">
-          <div className="flex flex-col gap-0.5">
-            {ln.basis.map((item) => (
-              <CheckLine key={item.id} checked={item.checked} label={item.label} />
-            ))}
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {ln.activering.map((item) => (
-              <CheckLine key={item.id} checked={item.checked} label={leernavigatorLabelWithUren(item)} />
-            ))}
-          </div>
-        </div>
-      </div>
+    id: 'ln-intro',
+    keepWithNext: true,
+    node: <Para>{VGR_LEERNAVIGATOR_INTRO}</Para>,
+  });
+  push(ctx, {
+    id: 'ln-head',
+    frame: LN_FRAME,
+    keepWithNext: true,
+    node: leernavigatorTableRow(
+      <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>,
+      <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>,
+      true,
     ),
   });
+  const lnRows = Math.max(ln.basis.length, ln.activering.length);
+  for (let i = 0; i < lnRows; i++) {
+    const basis = ln.basis[i];
+    const act = ln.activering[i];
+    push(ctx, {
+      id: `ln-row-${i}`,
+      frame: LN_FRAME,
+      node: leernavigatorTableRow(
+        basis ? <CheckLine checked={basis.checked} label={basis.label} /> : null,
+        act ? <CheckLine checked={act.checked} label={leernavigatorLabelWithUren(act)} /> : null,
+      ),
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -906,6 +961,7 @@ export function splitVgrBodyAtom(atom: VGRBodyAtom): VGRBodyAtom[] | null {
     node: render(part, i),
     splitText: { text: part, render },
     panel: atom.panel,
+    frame: atom.frame,
   }));
 }
 

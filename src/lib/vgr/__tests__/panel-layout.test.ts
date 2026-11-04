@@ -4,6 +4,7 @@ import {
   groupVgrPageAtoms,
   vgrPackedHeight,
   VGR_ATOM_GAP_PX,
+  VGR_FRAME_BORDER_PX,
   VGR_PANEL_INNER_GAP_PX,
   VGR_PANEL_PAD_Y_PX,
 } from '@/lib/vgr/panel-layout';
@@ -51,6 +52,24 @@ describe('vgr panel layout', () => {
       [
         { panel: 'bp', indices: [3] },
         { panel: undefined, indices: [4] },
+      ],
+    );
+  });
+
+  it('wraps a continued table frame without padding or a gap between rows', () => {
+    const rows = [
+      { id: 'head', frame: 'ln' },
+      { id: 'r0', frame: 'ln' },
+      { id: 'r1', frame: 'ln' },
+      { id: 'after' },
+    ];
+    assert.equal(vgrPackedHeight(rows, [20, 18, 18, 10], [0, 1, 2]), VGR_FRAME_BORDER_PX + 20 + 18 + 18 + VGR_FRAME_BORDER_PX);
+    const continued = groupVgrPageAtoms(rows, [1, 2, 3]);
+    assert.deepEqual(
+      continued.map((g) => ({ frame: g.frame, indices: g.indices })),
+      [
+        { frame: 'ln', indices: [1, 2] },
+        { frame: undefined, indices: [3] },
       ],
     );
   });

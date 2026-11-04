@@ -161,7 +161,13 @@ function measureAtomHeights(atoms: VGRBodyAtom[]): number[] {
               key={a.id}
               data-atom-idx={i}
               className="flex flex-col"
-              style={{ width: a.panel ? CONTENT_WIDTH_PX - 2 * VGR_PANEL_PAD_X_PX : CONTENT_WIDTH_PX }}
+              style={{
+                width: a.panel
+                  ? CONTENT_WIDTH_PX - 2 * VGR_PANEL_PAD_X_PX
+                  : a.frame
+                    ? CONTENT_WIDTH_PX - 2
+                    : CONTENT_WIDTH_PX,
+              }}
             >
               {a.node}
             </div>
@@ -329,6 +335,12 @@ export function BodyA4Pages({
             rowGap: VGR_PANEL_INNER_GAP_PX,
           }}
         >
+          {g.indices.map((i) => (
+            <div key={displayAtoms[i]?.id ?? i}>{displayAtoms[i]?.node}</div>
+          ))}
+        </div>
+      ) : g.frame ? (
+        <div key={g.key} className="flex flex-col border border-[#C4B37B]">
           {g.indices.map((i) => (
             <div key={displayAtoms[i]?.id ?? i}>{displayAtoms[i]?.node}</div>
           ))}
