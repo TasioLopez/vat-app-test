@@ -205,30 +205,63 @@ function quoteBlock(
   push(ctx, { id: `${id}-q`, panel, node: <Quote text={q.citaat} plain /> });
 }
 
+function zBulletList(items: string[]) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {items.map((item, i) => (
+        <ValentineZLogoBulletRow key={`${i}-${item}`} className={VGR_BODY_TEXT_CLASS} eagerLoading>
+          {item}
+        </ValentineZLogoBulletRow>
+      ))}
+    </div>
+  );
+}
+
 function interventionBlocks(
   ctx: Ctx,
   idPrefix: string,
   section: VGRInterventionSection,
   options: VGRInterventionOption[],
-  extra?: (opt: VGRInterventionOption, ctx: Ctx) => void
+  extra?: (opt: VGRInterventionOption, ctx: Ctx) => void,
+  /** Fase motivatie: each selected option is its own shaded panel with Z-mark items. */
+  panels = false,
 ) {
   for (const optId of section.selected) {
     const opt = options.find((o) => o.id === optId);
     if (!opt) continue;
     const block = section.blocks[opt.id] ?? { toelichting: '', items: [], standaardtekst: true };
-    heading(ctx, `${idPrefix}-${opt.id}-h`, opt.heading, true);
+    const panel = panels ? `${idPrefix}-${opt.id}` : undefined;
+    if (panel) {
+      push(ctx, {
+        id: `${idPrefix}-${opt.id}-h`,
+        panel,
+        node: <PanelLabel>{opt.heading}</PanelLabel>,
+        keepWithNext: true,
+      });
+    } else {
+      heading(ctx, `${idPrefix}-${opt.id}-h`, opt.heading, true);
+    }
     if (block.standaardtekst && opt.standardText) {
-      opt.standardText.forEach((p, i) => prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p));
+      opt.standardText.forEach((p, i) => prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, '', panel));
     }
     if (extra) extra(opt, ctx);
     const items = block.items.length ? block.items : block.standaardtekst ? opt.defaultItems ?? [] : [];
     if (items.length) {
       if (opt.itemsLead) {
-        push(ctx, { id: `${idPrefix}-${opt.id}-il`, node: <Para>{opt.itemsLead}</Para>, keepWithNext: true });
+        push(ctx, {
+          id: `${idPrefix}-${opt.id}-il`,
+          panel,
+          node: panel ? <PanelLabel>{opt.itemsLead}</PanelLabel> : <Para>{opt.itemsLead}</Para>,
+          keepWithNext: true,
+        });
       }
-      push(ctx, { id: `${idPrefix}-${opt.id}-items`, node: <BulletList items={items} /> });
+      push(ctx, {
+        id: `${idPrefix}-${opt.id}-items`,
+        panel,
+        node: panel ? zBulletList(items) : <BulletList items={items} />,
+      });
     }
-    prose(ctx, `${idPrefix}-${opt.id}-toel`, block.toelichting);
+    prose(ctx, `${idPrefix}-${opt.id}-toel`, block.toelichting, '', panel);
   }
 }
 
@@ -445,15 +478,25 @@ function buildMotivatie(ctx: Ctx) {
   heading(ctx, 'ih-h', 'Inzet en houding werknemer');
   push(ctx, { id: 'ih-q', node: <Para>{VGR_INZET_VRAAG}</Para>, keepWithNext: true });
   push(ctx, { id: 'ih-jn', node: <JaNeeLine value={ih.werkt_mee} /> });
-  heading(ctx, 'ih-toel-h', 'Toelichting', true);
-  prose(ctx, 'ih-toel', ih.toelichting || '—');
+  push(ctx, {
+    id: 'ih-toel-h',
+    panel: 'ih-toel',
+    node: <PanelLabel>Toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'ih-toel', ih.toelichting || '—', '', 'ih-toel');
 
   heading(ctx, 'im-h', 'Interventies gericht op motivatie');
-  heading(ctx, 'im-alg-h', 'Algemene toelichting', true);
-  prose(ctx, 'im-alg', VGR_MOTIVATIE_ALGEMEEN);
-  push(ctx, { id: 'im-lead', node: <Para>{VGR_MOTIVATIE_LEAD}</Para>, keepWithNext: true });
+  push(ctx, {
+    id: 'im-alg-h',
+    panel: 'im-alg',
+    node: <PanelLabel>Algemene toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'im-alg', VGR_MOTIVATIE_ALGEMEEN, '', 'im-alg');
+  push(ctx, { id: 'im-lead', node: <PanelLabel>{VGR_MOTIVATIE_LEAD}</PanelLabel>, keepWithNext: true });
   selectionChecklist(ctx, 'im-checks', body.interventies_motivatie, VGR_MOTIVATIE_OPTIONS);
-  interventionBlocks(ctx, 'im', body.interventies_motivatie, VGR_MOTIVATIE_OPTIONS);
+  interventionBlocks(ctx, 'im', body.interventies_motivatie, VGR_MOTIVATIE_OPTIONS, undefined, true);
 }
 
 /* --------------------------- C. Oriëntatie ------------------------- */
