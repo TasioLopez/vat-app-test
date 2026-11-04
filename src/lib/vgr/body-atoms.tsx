@@ -4,6 +4,8 @@
  */
 import React from 'react';
 import { PrintCheckbox } from '@/components/tp2026/PrintCheckbox';
+import { ValentineZLogoBulletRow } from '@/components/tp2026/ValentineZLogoBullet';
+import { VGR_PANEL_INNER_GAP_PX } from '@/lib/vgr/panel-layout';
 import {
   VGR_ACTIVATIE_ALGEMEEN,
   VGR_ACTIVATIE_OPTIONS,
@@ -79,6 +81,11 @@ export type VGRBodyAtom = {
   pageBreakBefore?: boolean;
   /** Long prose: can be split into paragraphs when it does not fit. */
   splitText?: { text: string; render: (part: string, partIndex: number) => React.ReactNode };
+  /**
+   * Shaded panel id. Consecutive atoms with the same id are wrapped in one box per page,
+   * and a split continues the box on the next page.
+   */
+  panel?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -86,6 +93,13 @@ export type VGRBodyAtom = {
 /* ------------------------------------------------------------------ */
 
 export const VGR_BODY_TEXT_CLASS = 'text-[10.5pt] leading-[1.42] text-neutral-900';
+
+/** 10pt bold purple label inside a shaded panel (Prognose, Toelichting, doelstelling date). */
+const VGR_PANEL_LABEL_CLASS = 'text-[10pt] font-bold leading-[1.42] text-[#782A90]';
+
+function PanelLabel({ children }: { children: React.ReactNode }) {
+  return <div className={VGR_PANEL_LABEL_CLASS}>{children}</div>;
+}
 
 export function ChapterBand({ chapter }: { chapter: VGRChapterId }) {
   const def = VGR_CHAPTERS.find((c) => c.id === chapter)!;
@@ -104,7 +118,7 @@ export function SectionTitle({ title, sub = false }: { title: string; sub?: bool
   return sub ? (
     <div className="pt-1 text-[11pt] font-bold leading-tight text-neutral-900">{title}</div>
   ) : (
-    <div className="pt-2.5 text-[12pt] font-extrabold leading-tight text-[#702A90]">{title}</div>
+    <div className="pt-2.5 text-[11pt] font-bold leading-tight text-[#782A90]">{title}</div>
   );
 }
 
@@ -112,10 +126,10 @@ export function Para({ children, className = '' }: { children: React.ReactNode; 
   return <p className={`${VGR_BODY_TEXT_CLASS} whitespace-pre-line ${className}`}>{children}</p>;
 }
 
-export function Quote({ text }: { text: string }) {
+export function Quote({ text, plain = false }: { text: string; plain?: boolean }) {
   const t = text.trim();
-  if (!t) return <Para className="italic text-neutral-500">“—”</Para>;
-  return <Para className="italic">“{t}”</Para>;
+  if (!t) return <Para className={plain ? 'text-neutral-500' : 'italic text-neutral-500'}>“—”</Para>;
+  return <Para className={plain ? '' : 'italic'}>“{t}”</Para>;
 }
 
 export function CheckLine({ checked, label }: { checked: boolean; label: React.ReactNode }) {
@@ -162,24 +176,33 @@ function heading(ctx: Ctx, id: string, title: string, sub = false) {
   push(ctx, { id, node: <SectionTitle title={title} sub={sub} />, keepWithNext: true });
 }
 
-function prose(ctx: Ctx, id: string, text: string, className = '') {
+function prose(ctx: Ctx, id: string, text: string, className = '', panel?: string) {
   const t = text.trim();
   if (!t) return;
   push(ctx, {
     id,
+    panel,
     node: <Para className={className}>{t}</Para>,
     splitText: { text: t, render: (part) => <Para className={className}>{part}</Para> },
   });
 }
 
-function quoteBlock(ctx: Ctx, id: string, kind: 'prognose' | 'conclusie' | 'advies', q: VGRQuoteBlock, title: string) {
-  heading(ctx, `${id}-h`, title, true);
+function quoteBlock(
+  ctx: Ctx,
+  id: string,
+  kind: 'prognose' | 'conclusie' | 'advies',
+  q: VGRQuoteBlock,
+  title: string,
+  panel: string,
+) {
+  push(ctx, { id: `${id}-h`, panel, node: <PanelLabel>{title}</PanelLabel>, keepWithNext: true });
   push(ctx, {
     id: `${id}-lead`,
-    node: <Para>{vgrQuoteLead(kind, q.bron_naam, formatNLDate(q.bron_datum), q.bron_type)}</Para>,
+    panel,
+    node: <PanelLabel>{vgrQuoteLead(kind, q.bron_naam, formatNLDate(q.bron_datum), q.bron_type)}</PanelLabel>,
     keepWithNext: true,
   });
-  push(ctx, { id: `${id}-q`, node: <Quote text={q.citaat} /> });
+  push(ctx, { id: `${id}-q`, panel, node: <Quote text={q.citaat} plain /> });
 }
 
 function interventionBlocks(
@@ -234,43 +257,68 @@ function vervolgLine(ctx: Ctx, id: string, section: VGRInterventionSection) {
 
 function buildProfiel(ctx: Ctx) {
   const { body, data } = ctx;
-  push(ctx, { id: 'ch-profiel', node: <ChapterBand chapter="profiel" />, pageBreakBefore: true, keepWithNext: true });
-
   const periode = vgrPeriodeText(data);
   push(ctx, {
     id: 'periode',
-    node: <Para className="font-bold text-[#702A90]">Voortgangsrapportage periode: {periode || '…'}</Para>,
+    pageBreakBefore: true,
+    keepWithNext: true,
+    node: (
+      <div className="text-[11pt] font-bold leading-tight text-[#782A90]">
+        Voortgangsrapportage periode: {periode || '…'}
+      </div>
+    ),
   });
+  push(ctx, { id: 'ch-profiel', node: <ChapterBand chapter="profiel" />, keepWithNext: true });
 
   heading(ctx, 'vraag-h', 'Vraagstelling');
-  push(ctx, { id: 'vraag-list', node: <BulletList items={VGR_VRAAGSTELLING} /> });
+  push(ctx, {
+    id: 'vraag-list',
+    panel: 'vraag',
+    node: (
+      <div className="flex flex-col gap-3">
+        {VGR_VRAAGSTELLING.map((item) => (
+          <ValentineZLogoBulletRow key={item} className={VGR_BODY_TEXT_CLASS} eagerLoading>
+            {item}
+          </ValentineZLogoBulletRow>
+        ))}
+      </div>
+    ),
+  });
 
-  // Benutbare mogelijkheden
+  // Benutbare mogelijkheden — Ja/Nee stays outside; prognose, conclusie and advies share one panel.
   const bm = body.benutbare_mogelijkheden;
   heading(ctx, 'bm-h', 'Benutbare mogelijkheden');
   push(ctx, { id: 'bm-q', node: <Para>{VGR_BENUTBARE_VRAAG}</Para>, keepWithNext: true });
   push(ctx, { id: 'bm-jn', node: <JaNeeLine value={bm.heeft} /> });
-  quoteBlock(ctx, 'bm-prog', 'prognose', bm.prognose, 'Prognose');
+  quoteBlock(ctx, 'bm-prog', 'prognose', bm.prognose, 'Prognose', 'bm-quotes');
   if (bm.eerdere_prognose.trim()) {
-    push(ctx, { id: 'bm-eerder-lead', node: <Para className="text-neutral-600">Eerdere prognose (vorige rapportage):</Para>, keepWithNext: true });
-    push(ctx, { id: 'bm-eerder', node: <Quote text={bm.eerdere_prognose} /> });
+    push(ctx, {
+      id: 'bm-eerder-lead',
+      panel: 'bm-quotes',
+      node: <PanelLabel>Eerdere prognose (vorige rapportage):</PanelLabel>,
+      keepWithNext: true,
+    });
+    push(ctx, { id: 'bm-eerder', panel: 'bm-quotes', node: <Quote text={bm.eerdere_prognose} plain /> });
   }
-  quoteBlock(ctx, 'bm-conc', 'conclusie', bm.conclusie, 'Conclusie');
-  quoteBlock(ctx, 'bm-adv', 'advies', bm.advies, 'Advies');
+  quoteBlock(ctx, 'bm-conc', 'conclusie', bm.conclusie, 'Conclusie', 'bm-quotes');
+  quoteBlock(ctx, 'bm-adv', 'advies', bm.advies, 'Advies', 'bm-quotes');
 
   // Praktische belemmeringen
   const pb = body.praktische_belemmeringen;
   heading(ctx, 'pb-h', 'Praktische belemmeringen');
   push(ctx, { id: 'pb-q', node: <Para>{VGR_PRAKTISCHE_VRAAG}</Para>, keepWithNext: true });
   push(ctx, { id: 'pb-jn', node: <JaNeeLine value={pb.aanwezig} /> });
-  if (pb.aanwezig && pb.toelichting.trim()) {
-    heading(ctx, 'pb-toel-h', 'Toelichting', true);
-    prose(ctx, 'pb-toel', pb.toelichting);
-  } else if (pb.aanwezig === false && pb.toelichting.trim()) {
-    prose(ctx, 'pb-toel', pb.toelichting);
+  if (pb.toelichting.trim()) {
+    push(ctx, {
+      id: 'pb-toel-h',
+      panel: 'pb-toel',
+      node: <PanelLabel>Toelichting</PanelLabel>,
+      keepWithNext: true,
+    });
+    prose(ctx, 'pb-toel', pb.toelichting, '', 'pb-toel');
   }
 
-  // Doelstelling traject
+  // Doelstelling traject — date line, wijziging sentence and narrative share one panel.
   const dt = body.doelstelling_traject;
   heading(ctx, 'dt-h', 'Doelstelling traject');
   prose(ctx, 'dt-intro', VGR_DOELSTELLING_INTRO);
@@ -289,11 +337,12 @@ function buildProfiel(ctx: Ctx) {
     : [{ id: 'now', date: data.vgr_meta.report_date, from: dt.bij_intake, to: dt.huidige || dt.bij_intake, changed: false, toelichting: '' }];
   push(ctx, {
     id: 'dt-history',
+    panel: 'dt',
     node: (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col" style={{ rowGap: VGR_PANEL_INNER_GAP_PX }}>
         {history.map((h) => (
-          <div key={h.id}>
-            <div className={`${VGR_BODY_TEXT_CLASS} font-semibold`}>Doelstelling {formatNLDate(h.date)}</div>
+          <div key={h.id} className="flex flex-col" style={{ rowGap: VGR_PANEL_INNER_GAP_PX }}>
+            <PanelLabel>Doelstelling {formatNLDate(h.date)}</PanelLabel>
             <Para>{vgrDoelstellingWijzigingZin(h.changed, trajectDoelLabel(h.from), trajectDoelLabel(h.to))}</Para>
             {h.toelichting.trim() ? <Para>{h.toelichting.trim()}</Para> : null}
           </div>
@@ -301,25 +350,24 @@ function buildProfiel(ctx: Ctx) {
       </div>
     ),
   });
-  if (dt.toelichting.trim()) {
-    heading(ctx, 'dt-toel-h', 'Toelichting', true);
-    prose(ctx, 'dt-toel', dt.toelichting);
-  }
+  prose(ctx, 'dt-toel', dt.toelichting, '', 'dt');
 
   // Persoonlijk profiel
   heading(ctx, 'pp-h', 'Persoonlijk profiel werknemer');
-  prose(ctx, 'pp-text', body.persoonlijk_profiel.tekst || '—');
+  prose(ctx, 'pp-text', body.persoonlijk_profiel.tekst || '—', '', 'pp');
 
   // Belastbaarheidsprofiel
   const bp = body.belastbaarheidsprofiel;
   heading(ctx, 'bp-h', 'Belastbaarheidsprofiel werknemer');
   push(ctx, {
     id: 'bp-intro',
-    node: <Para>{vgrBelastbaarheidIntro(kindLabel(bp.kind), formatNLDate(bp.datum), bp.auteur)}</Para>,
+    panel: 'bp',
+    node: <PanelLabel>{vgrBelastbaarheidIntro(kindLabel(bp.kind), formatNLDate(bp.datum), bp.auteur)}</PanelLabel>,
     keepWithNext: true,
   });
   push(ctx, {
     id: 'bp-rubrieken',
+    panel: 'bp',
     node: (
       <div className="flex flex-col gap-0.5">
         {VGR_FML_RUBRIEKEN.map((r) => (
@@ -328,22 +376,24 @@ function buildProfiel(ctx: Ctx) {
       </div>
     ),
   });
-  prose(ctx, 'bp-toel', bp.toelichting);
+  prose(ctx, 'bp-toel', bp.toelichting, '', 'bp');
 
-  // Bijstellingen
+  // Bijstellingen — Ja/Nee stays outside; the revision text shares one panel.
   const bb = body.bijstellingen_belastbaarheid;
   heading(ctx, 'bb-h', 'Bijstellingen van het belastbaarheidsprofiel');
   push(ctx, { id: 'bb-q', node: <Para>{VGR_BIJSTELLING_VRAAG}</Para>, keepWithNext: true });
   push(ctx, { id: 'bb-jn', node: <JaNeeLine value={bb.aanwezig} /> });
   if (bb.aanwezig && bb.revisions.length) {
-    bb.revisions.forEach((rev, i) => {
+    bb.revisions.forEach((rev) => {
       push(ctx, {
         id: `bb-rev-${rev.id}-intro`,
-        node: <Para>{vgrBijstellingIntro(kindLabel(rev.kind), rev.auteur, formatNLDate(rev.date))}</Para>,
+        panel: 'bb',
+        node: <PanelLabel>{vgrBijstellingIntro(kindLabel(rev.kind), rev.auteur, formatNLDate(rev.date))}</PanelLabel>,
         keepWithNext: true,
       });
       push(ctx, {
         id: `bb-rev-${rev.id}-rub`,
+        panel: 'bb',
         node: (
           <div className="flex flex-col gap-0.5">
             {VGR_FML_RUBRIEKEN.map((r) => (
@@ -353,13 +403,17 @@ function buildProfiel(ctx: Ctx) {
         ),
       });
       if (rev.toelichting.trim()) {
-        heading(ctx, `bb-rev-${rev.id}-toel-h`, 'Toelichting', true);
-        prose(ctx, `bb-rev-${rev.id}-toel`, rev.toelichting);
+        push(ctx, {
+          id: `bb-rev-${rev.id}-toel-h`,
+          panel: 'bb',
+          node: <PanelLabel>Toelichting</PanelLabel>,
+          keepWithNext: true,
+        });
+        prose(ctx, `bb-rev-${rev.id}-toel`, rev.toelichting, '', 'bb');
       }
-      if (i < bb.revisions.length - 1) push(ctx, { id: `bb-rev-${rev.id}-sep`, node: <div className="h-1" /> });
     });
   } else {
-    prose(ctx, 'bb-geen', bb.toelichting_geen);
+    prose(ctx, 'bb-geen', bb.toelichting_geen, '', 'bb');
   }
 
   // Wijzigingen doelstelling
@@ -367,11 +421,11 @@ function buildProfiel(ctx: Ctx) {
   heading(ctx, 'wd-h', 'Wijzigingen doelstelling');
   push(ctx, { id: 'wd-q', node: <Para>{VGR_WIJZIGING_DOEL_VRAAG}</Para>, keepWithNext: true });
   push(ctx, { id: 'wd-jn', node: <JaNeeLine value={wd.aanwezig} /> });
-  if (wd.aanwezig) prose(ctx, 'wd-toel', wd.toelichting);
+  if (wd.aanwezig) prose(ctx, 'wd-toel', wd.toelichting, '', 'wd');
 
   // Zoekprofiel
   heading(ctx, 'zp-h', 'Zoekprofiel');
-  prose(ctx, 'zp-text', body.zoekprofiel.tekst || '—');
+  prose(ctx, 'zp-text', body.zoekprofiel.tekst || '—', '', 'zp');
 }
 
 function kindLabel(kind: string): string {
@@ -649,6 +703,7 @@ export function splitVgrBodyAtom(atom: VGRBodyAtom): VGRBodyAtom[] | null {
     id: `${atom.id}#${i}`,
     node: render(part, i),
     splitText: { text: part, render },
+    panel: atom.panel,
   }));
 }
 

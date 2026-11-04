@@ -3,23 +3,38 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { A4LogoHeader, A4Page, FooterIdentity, TP2026_A4_PAGE_CLASS } from '@/components/tp2026/primitives';
+import {
+  A4LogoHeader,
+  A4Page,
+  FooterIdentity,
+  TP2026_A4_PAGE_CLASS,
+  ValentineZLogoBulletRow,
+} from '@/components/tp2026/primitives';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { useVGRPageNumber } from '@/context/VGRPageNumberContext';
 import { VGR_CHAPTERS, VGR_POW_CHART_SRC } from '@/lib/vgr/content';
 import {
-  VGR_BODY_TEXT_CLASS,
   buildVgrBodyAtoms,
   splitVgrBodyAtom,
   vgrTocEntries,
   type VGRBodyAtom,
 } from '@/lib/vgr/body-atoms';
+import {
+  groupVgrPageAtoms,
+  vgrPackedHeight,
+  VGR_ATOM_GAP_PX,
+  VGR_PANEL_INNER_GAP_PX,
+  VGR_PANEL_PAD_X_PX,
+  VGR_PANEL_PAD_Y_PX,
+} from '@/lib/vgr/panel-layout';
 import type { VGRData } from '@/lib/vgr/schema';
 
 /** A4 794px minus 2 × 96px body margin. */
 const CONTENT_WIDTH_PX = 602;
-const ATOM_GAP_PX = 6;
+const ATOM_GAP_PX = VGR_ATOM_GAP_PX;
 const MAX_SPLIT_ROUNDS = 12;
+/** TOC entries: Z-logo bullets and brand purple, matching the Word template. */
+const TOC_ITEM_CLASS = 'text-[10.5pt] leading-[1.42] text-[#702A90]';
 
 /* ------------------------------------------------------------------ */
 /* Page shells                                                         */
@@ -78,11 +93,13 @@ function TocPage({ data, pageNumber }: { data: VGRData; pageNumber: number }) {
                 >
                   {ch.title}
                 </div>
-                <ul className={`${VGR_BODY_TEXT_CLASS} mt-1 flex flex-col gap-0.5 pl-2.5`}>
+                <div className="mt-1 flex flex-col gap-0.5">
                   {group.entries.map((e) => (
-                    <li key={e}>{e}</li>
+                    <ValentineZLogoBulletRow key={e} className={TOC_ITEM_CLASS} eagerLoading>
+                      {e}
+                    </ValentineZLogoBulletRow>
                   ))}
-                </ul>
+                </div>
               </div>
             );
           })}
@@ -140,7 +157,12 @@ function measureAtomHeights(atoms: VGRBodyAtom[]): number[] {
           className="flex flex-col"
         >
           {atoms.map((a, i) => (
-            <div key={a.id} data-atom-idx={i} className="flex flex-col">
+            <div
+              key={a.id}
+              data-atom-idx={i}
+              className="flex flex-col"
+              style={{ width: a.panel ? CONTENT_WIDTH_PX - 2 * VGR_PANEL_PAD_X_PX : CONTENT_WIDTH_PX }}
+            >
               {a.node}
             </div>
           ))}
@@ -164,23 +186,21 @@ type PackResult = { ok: true; pages: number[][] } | { ok: false; oversized: numb
 function packAtoms(atoms: VGRBodyAtom[], heights: number[], avail: number): PackResult {
   const pages: number[][] = [];
   let current: number[] = [];
-  let used = 0;
 
-  const heightOf = (i: number) => heights[i] + (current.length ? ATOM_GAP_PX : 0);
+  const fits = (page: number[], i: number) => vgrPackedHeight(atoms, heights, [...page, i]) <= avail;
 
   const flush = () => {
     if (current.length) pages.push(current);
     current = [];
-    used = 0;
   };
 
   for (let i = 0; i < atoms.length; i++) {
     const atom = atoms[i];
-    if (heights[i] > avail) return { ok: false, oversized: i };
+    if (vgrPackedHeight(atoms, heights, [i]) > avail) return { ok: false, oversized: i };
 
     if (atom.pageBreakBefore && current.length) flush();
 
-    if (used + heightOf(i) > avail) {
+    if (current.length && !fits(current, i)) {
       // keepWithNext chain: pull trailing headings over to the next page.
       const carried: number[] = [];
       while (current.length && atoms[current[current.length - 1]].keepWithNext) {
@@ -188,15 +208,14 @@ function packAtoms(atoms: VGRBodyAtom[], heights: number[], avail: number): Pack
       }
       flush();
       for (const c of carried) {
-        used += heights[c] + (current.length ? ATOM_GAP_PX : 0);
+        if (current.length && !fits(current, c)) flush();
         current.push(c);
       }
-      if (used + heightOf(i) > avail) {
+      if (!fits(current, i)) {
         // carried headings + atom still too big: give up on keep-with-next for this spot
         flush();
       }
     }
-    used += heightOf(i);
     current.push(i);
   }
   flush();
@@ -270,7 +289,8 @@ export function BodyA4Pages({
         const idx = result.oversized;
         const forced = [...atoms];
         forced[idx] = { ...forced[idx], pageBreakBefore: true, splitText: undefined };
-        const heights2 = measureAtomHeights(forced).map((h, i) => (i === idx ? avail : h));
+        const pad = forced[idx].panel ? VGR_PANEL_PAD_Y_PX * 2 : 0;
+        const heights2 = measureAtomHeights(forced).map((h, i) => (i === idx ? Math.max(1, avail - pad) : h));
         const r2 = packAtoms(forced, heights2, avail);
         result = r2.ok ? r2 : { ok: true, pages: forced.map((_, i) => [i]) };
         atoms = forced;
@@ -297,6 +317,28 @@ export function BodyA4Pages({
 
   const start = getSectionStartPage('body');
 
+  const pageAtoms = (indices: number[]) => {
+    const groups = groupVgrPageAtoms(displayAtoms, indices);
+    return groups.map((g) =>
+      g.panel ? (
+        <div
+          key={g.key}
+          className="flex flex-col bg-[#F3EFE4]"
+          style={{
+            padding: `${VGR_PANEL_PAD_Y_PX}px ${VGR_PANEL_PAD_X_PX}px`,
+            rowGap: VGR_PANEL_INNER_GAP_PX,
+          }}
+        >
+          {g.indices.map((i) => (
+            <div key={displayAtoms[i]?.id ?? i}>{displayAtoms[i]?.node}</div>
+          ))}
+        </div>
+      ) : (
+        <div key={g.key}>{displayAtoms[g.indices[0]]?.node}</div>
+      ),
+    );
+  };
+
   const wrap = (node: React.ReactNode, key: React.Key) =>
     printMode ? (
       <section className="print-page" key={key}>
@@ -320,11 +362,7 @@ export function BodyA4Pages({
       {pages.map((idxs, pi) =>
         wrap(
           <BodyPage data={data} pageNumber={start + 1 + pi}>
-            {idxs.map((i) => (
-              <div key={displayAtoms[i]?.id ?? i} className="flex flex-col" style={{ rowGap: ATOM_GAP_PX }}>
-                {displayAtoms[i]?.node}
-              </div>
-            ))}
+            {pageAtoms(idxs)}
           </BodyPage>,
           `body-${pi}`
         )

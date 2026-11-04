@@ -8,7 +8,6 @@
  *  - INSTRUCTION: authoring guidance for the adviser; shown in the editor only, never exported.
  */
 import type { VGRLeernavigatorItem } from '@/lib/vgr/schema';
-import { TP2026_PURPLE_DEEP } from '@/lib/tp2026/tp2026-colors';
 
 /* ------------------------------------------------------------------ */
 /* 01 / 02                                                             */
@@ -43,10 +42,10 @@ export const VGR_LEGENDA: [string, string][] = [
 /* ------------------------------------------------------------------ */
 
 export const VGR_CHAPTERS = [
-  { id: 'profiel', title: 'Profiel werknemer', color: TP2026_PURPLE_DEEP },
-  { id: 'motivatie', title: 'Fase motivatie', color: '#c76f5c' },
-  { id: 'orientatie', title: 'Fase oriëntatie', color: '#2d8f82' },
-  { id: 'activatie', title: 'Fase activatie en arbeidsbemiddeling', color: '#b8985c' },
+  { id: 'profiel', title: 'Profiel werknemer', color: '#782a90' },
+  { id: 'motivatie', title: 'Fase motivatie', color: '#df9180' },
+  { id: 'orientatie', title: 'Fase oriëntatie', color: '#64b6a6' },
+  { id: 'activatie', title: 'Fase activatie en arbeidsbemiddeling', color: '#bebdaf' },
 ] as const;
 
 export type VGRChapterId = (typeof VGR_CHAPTERS)[number]['id'];

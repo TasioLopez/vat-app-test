@@ -2,7 +2,8 @@ import React from 'react';
 import Image from 'next/image';
 import Logo2 from '@/assets/images/logo-2.png';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
-import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO, TP2026_LOGO_BULLET_PX } from '@/lib/tp2026/document-layout';
+import { TP2026_BODY_FLOW_START_SPACER_PX, TP2026_LOGO } from '@/lib/tp2026/document-layout';
+import { ValentineZLogoBullet, ValentineZLogoBulletRow } from '@/components/tp2026/ValentineZLogoBullet';
 import {
   TP2026_DATA_ROW_LABEL_CLASS,
   TP2026_DATA_ROW_VALUE_CLASS,
@@ -10,6 +11,8 @@ import {
   TP2026_HTML_TABLE_CLASS,
 } from '@/lib/tp2026/tp2026-colors';
 import { formatTP2026CoverVoorName } from '@/lib/utils';
+
+export { ValentineZLogoBullet, ValentineZLogoBulletRow };
 
 export const A4_W = 794;
 export const A4_H = 1123;
@@ -166,49 +169,6 @@ export function SectionBand({
       className={`mb-2.5 text-[12px] font-extrabold leading-tight text-[#702A90] ${underline ? 'underline underline-offset-2 decoration-[#702A90]/70' : ''} ${className}`}
     >
       {title}
-    </div>
-  );
-}
-
-/** ValentineZ Z-logo list bullet (shared size for print/PDF). */
-export function ValentineZLogoBullet({
-  size = TP2026_LOGO_BULLET_PX,
-  className = 'shrink-0',
-  eagerLoading = false,
-}: {
-  size?: number;
-  className?: string;
-  eagerLoading?: boolean;
-}) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/val-logo.jpg"
-      alt=""
-      width={size}
-      height={size}
-      className={className}
-      loading={eagerLoading ? 'eager' : undefined}
-    />
-  );
-}
-
-/** Flex row with Z-logo bullet aligned to the first text line. */
-export function ValentineZLogoBulletRow({
-  children,
-  className = '',
-  eagerLoading = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  eagerLoading?: boolean;
-}) {
-  return (
-    <div className={`flex items-start gap-2 ${className}`}>
-      <span className="flex h-[1lh] shrink-0 items-center" aria-hidden>
-        <ValentineZLogoBullet eagerLoading={eagerLoading} />
-      </span>
-      <span className="min-w-0 flex-1">{children}</span>
     </div>
   );
 }
