@@ -97,6 +97,9 @@ export const VGR_BODY_TEXT_CLASS = 'text-[10.5pt] leading-[1.42] text-neutral-90
 /** 10pt bold purple label inside a shaded panel (Prognose, Toelichting, doelstelling date). */
 const VGR_PANEL_LABEL_CLASS = 'text-[10pt] font-bold leading-[1.42] text-[#782A90]';
 
+/** 10.5pt bold purple Z-mark row (Taal links, beroep criteria titles). */
+const VGR_PURPLE_Z_CLASS = 'text-[10.5pt] font-bold leading-[1.42] text-[#782A90]';
+
 function PanelLabel({ children }: { children: React.ReactNode }) {
   return <div className={VGR_PANEL_LABEL_CLASS}>{children}</div>;
 }
@@ -205,11 +208,11 @@ function quoteBlock(
   push(ctx, { id: `${id}-q`, panel, node: <Quote text={q.citaat} plain /> });
 }
 
-function zBulletList(items: string[]) {
+function zBulletList(items: string[], className = VGR_BODY_TEXT_CLASS) {
   return (
     <div className="flex flex-col gap-1.5">
       {items.map((item, i) => (
-        <ValentineZLogoBulletRow key={`${i}-${item}`} className={VGR_BODY_TEXT_CLASS} eagerLoading>
+        <ValentineZLogoBulletRow key={`${i}-${item}`} className={className} eagerLoading>
           {item}
         </ValentineZLogoBulletRow>
       ))}
@@ -217,20 +220,52 @@ function zBulletList(items: string[]) {
   );
 }
 
+type InterventionPanels = {
+  /** Purple panel label (motivatie) or regular black body text (oriëntatie). */
+  itemsLead?: 'purple' | 'body';
+  /** Black Z rows, or a per-option choice. Taal uses purple. */
+  items?: 'z' | ((opt: VGRInterventionOption) => 'z' | 'z-purple');
+};
+
+function resolvePanels(panels: boolean | InterventionPanels) {
+  if (!panels) {
+    return { on: false, itemsLead: 'body' as const, items: (_opt: VGRInterventionOption) => 'disc' as const };
+  }
+  if (panels === true) {
+    return { on: true, itemsLead: 'purple' as const, items: (_opt: VGRInterventionOption) => 'z' as const };
+  }
+  const items = panels.items ?? 'z';
+  return {
+    on: true,
+    itemsLead: panels.itemsLead ?? 'body',
+    items: typeof items === 'function' ? items : (_opt: VGRInterventionOption) => items,
+  };
+}
+
+function interventionItemNode(kind: 'disc' | 'z' | 'z-purple', items: string[]) {
+  if (kind === 'z-purple') return zBulletList(items, VGR_PURPLE_Z_CLASS);
+  if (kind === 'z') return zBulletList(items);
+  return <BulletList items={items} />;
+}
+
 function interventionBlocks(
   ctx: Ctx,
   idPrefix: string,
   section: VGRInterventionSection,
   options: VGRInterventionOption[],
-  extra?: (opt: VGRInterventionOption, ctx: Ctx) => void,
-  /** Fase motivatie: each selected option is its own shaded panel with Z-mark items. */
-  panels = false,
+  extra?: (opt: VGRInterventionOption, ctx: Ctx, panel?: string) => void,
+  /**
+   * `true` keeps Fase motivatie: a panel per option, purple items lead, black Z rows.
+   * An object is Fase oriëntatie: same panels, with a black items lead and optional purple rows.
+   */
+  panels: boolean | InterventionPanels = false,
 ) {
+  const mode = resolvePanels(panels);
   for (const optId of section.selected) {
     const opt = options.find((o) => o.id === optId);
     if (!opt) continue;
     const block = section.blocks[opt.id] ?? { toelichting: '', items: [], standaardtekst: true };
-    const panel = panels ? `${idPrefix}-${opt.id}` : undefined;
+    const panel = mode.on ? `${idPrefix}-${opt.id}` : undefined;
     if (panel) {
       push(ctx, {
         id: `${idPrefix}-${opt.id}-h`,
@@ -244,21 +279,21 @@ function interventionBlocks(
     if (block.standaardtekst && opt.standardText) {
       opt.standardText.forEach((p, i) => prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, '', panel));
     }
-    if (extra) extra(opt, ctx);
+    if (extra) extra(opt, ctx, panel);
     const items = block.items.length ? block.items : block.standaardtekst ? opt.defaultItems ?? [] : [];
     if (items.length) {
       if (opt.itemsLead) {
         push(ctx, {
           id: `${idPrefix}-${opt.id}-il`,
           panel,
-          node: panel ? <PanelLabel>{opt.itemsLead}</PanelLabel> : <Para>{opt.itemsLead}</Para>,
+          node: mode.itemsLead === 'purple' ? <PanelLabel>{opt.itemsLead}</PanelLabel> : <Para>{opt.itemsLead}</Para>,
           keepWithNext: true,
         });
       }
       push(ctx, {
         id: `${idPrefix}-${opt.id}-items`,
         panel,
-        node: panel ? zBulletList(items) : <BulletList items={items} />,
+        node: interventionItemNode(mode.items(opt), items),
       });
     }
     prose(ctx, `${idPrefix}-${opt.id}-toel`, block.toelichting, '', panel);
@@ -278,11 +313,25 @@ function selectionChecklist(ctx: Ctx, id: string, section: VGRInterventionSectio
   });
 }
 
-function vervolgLine(ctx: Ctx, id: string, section: VGRInterventionSection) {
+function vervolgLine(ctx: Ctx, id: string, section: VGRInterventionSection, panel?: string) {
   const text = section.vervolg_activiteiten.trim();
   if (!text) return;
   const periode = vgrVervolgPeriodeText(section.vervolg_periode_van, section.vervolg_periode_tot);
-  push(ctx, { id: `${id}-lead`, node: <Para className="font-semibold">{VGR_VERVOLG_LEAD(periode)}</Para>, keepWithNext: true });
+  const lead = VGR_VERVOLG_LEAD(periode);
+  if (panel) {
+    push(ctx, { id: `${id}-lead`, panel, node: <PanelLabel>{lead}</PanelLabel>, keepWithNext: true });
+    push(ctx, {
+      id: `${id}-text`,
+      panel,
+      node: (
+        <ValentineZLogoBulletRow className={`${VGR_BODY_TEXT_CLASS} whitespace-pre-line`} eagerLoading>
+          {text}
+        </ValentineZLogoBulletRow>
+      ),
+    });
+    return;
+  }
+  push(ctx, { id: `${id}-lead`, node: <Para className="font-semibold">{lead}</Para>, keepWithNext: true });
   prose(ctx, `${id}-text`, text);
 }
 
@@ -505,78 +554,94 @@ function buildOrientatie(ctx: Ctx) {
   const { body } = ctx;
   push(ctx, { id: 'ch-orientatie', node: <ChapterBand chapter="orientatie" />, pageBreakBefore: true, keepWithNext: true });
 
-  heading(ctx, 'or-alg-h', 'Algemene toelichting');
-  prose(ctx, 'or-alg', VGR_ORIENTATIE_ALGEMEEN);
+  push(ctx, {
+    id: 'or-alg-h',
+    panel: 'or-alg',
+    node: <PanelLabel>Algemene toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'or-alg', VGR_ORIENTATIE_ALGEMEEN, '', 'or-alg');
 
   const ko = body.kwaliteiten_onderzoek;
   heading(ctx, 'ko-h', 'Kwaliteiten en vaardigheden onderzoek');
   push(ctx, { id: 'ko-lead', node: <Para>{VGR_KWALITEITEN_LEAD}</Para>, keepWithNext: true });
   selectionChecklist(ctx, 'ko-checks', ko, VGR_KWALITEITEN_OPTIONS);
-  interventionBlocks(ctx, 'ko', ko, VGR_KWALITEITEN_OPTIONS, (opt, c) => {
+  interventionBlocks(ctx, 'ko', ko, VGR_KWALITEITEN_OPTIONS, (opt, c, panel) => {
     if (opt.id === 'persoonlijkheidstest') {
       const scores = ko.persoonlijkheid_scores;
       const texts = ko.persoonlijkheid_teksten;
       push(c, {
         id: 'ko-pt-scores',
-        node: (
-          <div className={`${VGR_BODY_TEXT_CLASS} flex flex-col`}>
-            {VGR_PERSONALITY_TRAITS.map((t) => (
-              <div key={t.key}>
-                {t.label}: {scores[t.key] ? `${scores[t.key]}%` : '…'}
-              </div>
-            ))}
-          </div>
+        panel,
+        node: zBulletList(
+          VGR_PERSONALITY_TRAITS.map((t) => `${t.label}: ${scores[t.key] ? `${scores[t.key]}%` : '…'}`),
         ),
       });
       for (const t of VGR_PERSONALITY_TRAITS) {
         const txt = texts[t.key].trim();
         if (!txt) continue;
+        const pct = scores[t.key] ? `${scores[t.key]}%` : '';
         push(c, {
           id: `ko-pt-${t.key}-h`,
-          node: <div className={`${VGR_BODY_TEXT_CLASS} pt-1 font-semibold`}>{t.label}: {scores[t.key] ? `${scores[t.key]}%` : ''}</div>,
+          panel,
+          node: <PanelLabel>{t.label}: {pct}</PanelLabel>,
           keepWithNext: true,
         });
-        prose(c, `ko-pt-${t.key}`, txt);
+        prose(c, `ko-pt-${t.key}`, txt, '', panel);
       }
     }
     if (opt.id === 'beroepen_arbeidsmarkt') {
       const beroepen = ko.beroepen.filter((b) => b.trim());
       if (beroepen.length) {
-        push(c, { id: 'ko-ber-list', node: <BulletList items={[...beroepen, 'En vergelijkbaar']} /> });
+        push(c, { id: 'ko-ber-list', panel, node: zBulletList([...beroepen, 'En vergelijkbaar']) });
       }
-      prose(c, 'ko-ber-crit-intro', VGR_BEROEPEN_CRITERIA_INTRO);
+      prose(c, 'ko-ber-crit-intro', VGR_BEROEPEN_CRITERIA_INTRO, '', panel);
       push(c, {
         id: 'ko-ber-crit',
+        panel,
         node: (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {VGR_BEROEPEN_CRITERIA.map((cr) => (
-              <div key={cr.title}>
-                <div className={`${VGR_BODY_TEXT_CLASS} font-semibold`}>{cr.title}</div>
-                <Para>{cr.doel}</Para>
-              </div>
+              <ValentineZLogoBulletRow key={cr.title} eagerLoading>
+                <span className={`block ${VGR_PURPLE_Z_CLASS}`}>{cr.title}</span>
+                <span className={`block font-normal ${VGR_BODY_TEXT_CLASS}`}>{cr.doel}</span>
+              </ValentineZLogoBulletRow>
             ))}
           </div>
         ),
       });
-      prose(c, 'ko-ber-crit-outro', VGR_BEROEPEN_CRITERIA_OUTRO);
-      heading(c, 'ko-ber-conc-h', 'Conclusie', true);
-      prose(c, 'ko-ber-conc', ko.beroepen_conclusie || '—');
+      prose(c, 'ko-ber-crit-outro', VGR_BEROEPEN_CRITERIA_OUTRO, '', panel);
+      push(c, {
+        id: 'ko-ber-conc-h',
+        panel,
+        node: <PanelLabel>Conclusie</PanelLabel>,
+        keepWithNext: true,
+      });
+      prose(c, 'ko-ber-conc', ko.beroepen_conclusie || '—', '', panel);
     }
-  });
+  }, { itemsLead: 'body', items: 'z' });
 
   const sc = body.scholing;
   heading(ctx, 'sc-h', 'Scholingsmogelijkheden');
   selectionChecklist(ctx, 'sc-checks', sc, VGR_SCHOLING_OPTIONS);
-  heading(ctx, 'sc-alg-h', 'Algemene toelichting', true);
-  prose(ctx, 'sc-alg', VGR_SCHOLING_ALGEMEEN);
-  interventionBlocks(ctx, 'sc', sc, VGR_SCHOLING_OPTIONS);
+  push(ctx, {
+    id: 'sc-alg-h',
+    panel: 'sc-alg',
+    node: <PanelLabel>Algemene toelichting</PanelLabel>,
+    keepWithNext: true,
+  });
+  prose(ctx, 'sc-alg', VGR_SCHOLING_ALGEMEEN, '', 'sc-alg');
+  interventionBlocks(ctx, 'sc', sc, VGR_SCHOLING_OPTIONS, undefined, {
+    itemsLead: 'body',
+    items: (opt) => (opt.id === 'taal' ? 'z-purple' : 'z'),
+  });
 
   const sv = body.sollicitatie_vaardigheden;
   heading(ctx, 'sv-h', 'Sollicitatie vaardigheden');
   push(ctx, { id: 'sv-lead', node: <Para>{VGR_SOLLICITATIE_LEAD}</Para>, keepWithNext: true });
   selectionChecklist(ctx, 'sv-checks', sv, VGR_SOLLICITATIE_OPTIONS);
-  vervolgLine(ctx, 'sv-vervolg', sv);
-  interventionBlocks(ctx, 'sv', sv, VGR_SOLLICITATIE_OPTIONS);
+  vervolgLine(ctx, 'sv-vervolg', sv, 'sv-vervolg');
+  interventionBlocks(ctx, 'sv', sv, VGR_SOLLICITATIE_OPTIONS, undefined, { itemsLead: 'body', items: 'z' });
 }
 
 /* --------------------------- D. Activatie -------------------------- */
