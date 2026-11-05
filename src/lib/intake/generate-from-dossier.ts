@@ -344,6 +344,7 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         transport_types: { type: 'array', items: { type: 'string' } },
         dutch_speaking: nullableString('NL spreken'),
         dutch_writing: nullableString('NL schrijven'),
+        dutch_reading: nullableString('NL lezen'),
         other_languages: nullableString('Andere talen'),
       },
       required: [
@@ -364,6 +365,7 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         'transport_types',
         'dutch_speaking',
         'dutch_writing',
+        'dutch_reading',
         'other_languages',
       ],
       additionalProperties: false,

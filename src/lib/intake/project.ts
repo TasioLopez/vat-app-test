@@ -56,6 +56,7 @@ export function intakeToGegevensFields(raw: unknown): Record<string, unknown> {
     transport_type: transport.length > 0 ? transport : null,
     dutch_speaking: data.s17.dutch_speaking || null,
     dutch_writing: data.s17.dutch_writing || null,
+    dutch_reading: data.s17.dutch_reading || null,
     has_computer: data.s17.has_pc || data.s17.computer_skills ? true : null,
     computer_skills: data.s17.computer_skills || null,
     computer_skills_description: data.s17.computer_skills_extra || null,

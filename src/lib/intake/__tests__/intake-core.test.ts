@@ -128,6 +128,12 @@ describe('intake project + tp hydrate', () => {
     data.s4.referent_name = 'D. Viets';
     data.s4.referent_email = 'a@b.nl';
 
+    data.s17.dutch_speaking = 'Goed';
+    data.s17.dutch_writing = 'Voldoende';
+    data.s17.dutch_reading = 'Matig';
+    data.s17.computer_skills = '3';
+    data.s17.computer_skills_extra = 'Word, Excel';
+
     const flat = intakeToGegevensFields(data);
     assert.equal(flat.gender, 'Man');
     assert.equal(flat.current_job, 'Beveiliger');
@@ -135,6 +141,27 @@ describe('intake project + tp hydrate', () => {
     assert.equal(flat.fml_izp_lab_kind, 'fml');
     assert.equal(flat.intake_date, '2026-01-10');
     assert.equal(flat.client_referent_name, 'D. Viets');
+    assert.equal(flat.dutch_speaking, 'Goed');
+    assert.equal(flat.dutch_writing, 'Voldoende');
+    assert.equal(flat.dutch_reading, 'Matig');
+    assert.equal(flat.computer_skills, '3');
+    assert.equal(flat.computer_skills_description, 'Word, Excel');
+  });
+
+  it('keeps lezen and the computer-skills description from algemene info', () => {
+    const merged = mergeExtractionsIntoIntake(createEmptyIntakeData(), {
+      algemene: {
+        dutch_speaking: 'Goed',
+        dutch_reading: 'Goed',
+        computer_skills: '4',
+        computer_skills_description: 'SAP ERP',
+      },
+    });
+
+    assert.equal(merged.s17.dutch_speaking, 'Goed');
+    assert.equal(merged.s17.dutch_reading, 'Goed');
+    assert.equal(merged.s17.computer_skills, '4');
+    assert.equal(merged.s17.computer_skills_extra, 'SAP ERP');
   });
 
   it('does not paste validated intake into TP narrative fields', () => {

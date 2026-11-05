@@ -186,7 +186,12 @@ export function mergeExtractionsIntoIntake(
   data.s17.work_experience = fillIfEmpty(data.s17.work_experience, alg.work_experience);
   data.s17.dutch_speaking = fillIfEmpty(data.s17.dutch_speaking, alg.dutch_speaking);
   data.s17.dutch_writing = fillIfEmpty(data.s17.dutch_writing, alg.dutch_writing);
+  data.s17.dutch_reading = fillIfEmpty(data.s17.dutch_reading, alg.dutch_reading);
   data.s17.computer_skills = fillIfEmpty(data.s17.computer_skills, alg.computer_skills);
+  data.s17.computer_skills_extra = fillIfEmpty(
+    data.s17.computer_skills_extra,
+    alg.computer_skills_description
+  );
   if (Array.isArray(alg.transport_type) && alg.transport_type.length) {
     data.s17.transport_types = alg.transport_type.map(String);
   } else {

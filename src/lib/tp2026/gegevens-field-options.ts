@@ -695,6 +695,14 @@ export function getComputerSkillsLabel(level: string | number | null | undefined
   return opt?.label ?? '';
 }
 
+/** Dropdown label used on the werknemer card and the intake form, e.g. "3 - Gemiddeld". */
+export function formatComputerSkillsOption(level: string | number | null | undefined): string {
+  const key = String(level ?? '').trim();
+  if (!key) return '';
+  const label = getComputerSkillsLabel(key);
+  return label ? `${key} - ${label}` : key;
+}
+
 /** Reset description on level change only when empty or still the previous default. */
 export function nextComputerSkillsDescriptionOnLevelChange(
   previousLevel: string | null | undefined,
