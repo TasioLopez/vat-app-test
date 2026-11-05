@@ -246,7 +246,7 @@ export function CvHeaderLockup({
   if (timeline) {
     return (
       <header>
-        <div className="mb-4 h-1 w-full" style={{ backgroundColor: accent }} />
+        <div className="mb-2 h-1 w-full" style={{ backgroundColor: accent }} />
         <div className="flex items-center gap-4">
           {showPhoto ? <LockupPhoto size={photoSize} rounded readOnly={readOnly} /> : null}
           <div className="min-w-0 flex-1">
@@ -265,7 +265,7 @@ export function CvHeaderLockup({
   }
 
   return (
-    <header className="flex items-start justify-between gap-6 border-b border-gray-300 pb-4">
+    <header className="flex items-start justify-between gap-6 border-b border-gray-300 pb-3">
       <div className="min-w-0 flex-1">
         {showName ? (
           <NameFields

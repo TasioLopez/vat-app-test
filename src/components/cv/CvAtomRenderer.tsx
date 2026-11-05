@@ -85,39 +85,18 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
     const footerSections = atom.sectionIds
       .map((id) => findSectionById(sections, id))
       .filter((s): s is NonNullable<typeof s> => Boolean(s && s.visible));
-    const listTypes = new Set(['skills', 'languages', 'interests']);
-    const lists = footerSections.filter((s) => listTypes.has(s.type));
-    const rest = footerSections.filter((s) => !listTypes.has(s.type));
     return (
-      <div className="border-t border-gray-200 pt-3">
-        {lists.length ? (
-          <div className="grid grid-cols-3 gap-4">
-            {lists.map((section) => (
-              <CvSectionRenderer
-                key={section.id}
-                section={section}
-                variant="default"
-                accent={accent}
-                density="footer"
-                forceReadOnly={readOnly}
-              />
-            ))}
-          </div>
-        ) : null}
-        {rest.length ? (
-          <div className="mt-3 flex flex-col gap-3">
-            {rest.map((section) => (
-              <CvSectionRenderer
-                key={section.id}
-                section={section}
-                variant="default"
-                accent={accent}
-                density="footer"
-                forceReadOnly={readOnly}
-              />
-            ))}
-          </div>
-        ) : null}
+      <div className="flex flex-col gap-1 border-t border-gray-200 pt-2">
+        {footerSections.map((section) => (
+          <CvSectionRenderer
+            key={section.id}
+            section={section}
+            variant="default"
+            accent={accent}
+            density="inline"
+            forceReadOnly={readOnly}
+          />
+        ))}
       </div>
     );
   }

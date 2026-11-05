@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Mail, Phone, MapPin, Plus, X, GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -36,8 +37,8 @@ type Props = {
   /** Pagination fragment: header-only or single experience/education item. */
   fragment?: CvSectionFragment;
   itemId?: string;
-  /** Footer strip uses tighter titles and lists. */
-  density?: 'default' | 'footer';
+  /** inline: one compact fact line. footer: legacy tighter list. */
+  density?: 'default' | 'footer' | 'inline';
   /** Measure tree passes true so editor chrome does not inflate height. */
   forceReadOnly?: boolean;
 };
@@ -119,6 +120,47 @@ function SortableExperienceItem({
   );
 }
 
+function TimelineSpine({
+  accent,
+  gapPx,
+  continueAbove,
+  continueBelow,
+  showDot = false,
+  period,
+  children,
+}: {
+  accent: string;
+  gapPx: number;
+  continueAbove: boolean;
+  continueBelow: boolean;
+  showDot?: boolean;
+  period?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[4.25rem_14px_minmax(0,1fr)] gap-x-2.5">
+      <div className="pt-0.5 text-right text-[11px] font-medium leading-tight text-gray-500">{period}</div>
+      <div className="relative">
+        <div
+          className="absolute left-1/2 w-[2px] -translate-x-1/2"
+          style={{
+            backgroundColor: accent,
+            top: continueAbove ? 0 : showDot ? 7 : 4,
+            bottom: continueBelow ? -gapPx : 0,
+          }}
+        />
+        {showDot ? (
+          <div
+            className="relative z-[1] mx-auto mt-1 h-2.5 w-2.5 rounded-full ring-2 ring-white"
+            style={{ backgroundColor: accent }}
+          />
+        ) : null}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
 export default function CvSectionRenderer({
   section,
   variant = 'default',
@@ -169,22 +211,26 @@ export default function CvSectionRenderer({
   const isTimeline = chrome === 'timeline';
   const isBand = chrome === 'band';
   const isFooter = density === 'footer';
+  const isInline = density === 'inline';
+  const isTight = isBand || isEditorial || isTimeline;
   const labels = (key: string) => uiLabel(locale, key);
   const title = getSectionTitle(section.type, locale, section.title);
   const isSidebar = variant === 'sidebar';
   const titleClass = isSidebar
     ? 'mt-1 border-b border-white/30 pb-1 text-xs font-semibold uppercase tracking-wide text-white'
-    : isFooter
-      ? 'mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-700'
-      : isEditorial
-        ? 'mb-2 mt-1 text-xs font-semibold uppercase tracking-widest text-gray-800'
-        : isTimeline
-          ? 'mb-2 mt-1 text-sm font-semibold'
-          : isBand
-            ? 'mb-2 mt-1 border-b pb-1 text-xs font-semibold uppercase tracking-wide'
-            : 'mb-2 mt-1 text-sm font-semibold uppercase tracking-wide';
+    : isInline
+      ? 'text-[10px] font-semibold uppercase tracking-[0.12em]'
+      : isFooter
+        ? 'mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-700'
+        : isEditorial
+          ? 'mb-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-800'
+          : isTimeline
+            ? 'text-[13px] font-semibold leading-none'
+            : isBand
+              ? 'mb-0.5 border-b pb-0.5 text-[11px] font-semibold uppercase tracking-wide'
+              : 'mb-2 mt-1 text-sm font-semibold uppercase tracking-wide';
   const titleStyle: React.CSSProperties | undefined =
-    isSidebar || isEditorial || isFooter
+    isSidebar || (isEditorial && !isInline) || isFooter
       ? undefined
       : { color: accent, ...(isBand ? { borderColor: accent } : {}) };
   const bodyTextClass = isSidebar ? 'text-white/95' : 'text-gray-700';
@@ -329,7 +375,7 @@ export default function CvSectionRenderer({
           value={cvData.profile}
           onChange={setProfile}
           multiline
-          className="block w-full text-sm text-gray-700"
+          className={cn('block w-full text-gray-700', isTight ? 'text-[13px] leading-snug' : 'text-sm')}
           placeholder={labels('profilePlaceholder')}
           readOnly={readOnly}
         />
@@ -339,6 +385,24 @@ export default function CvSectionRenderer({
 
   if (section.type === 'digital_skills') {
     if (!cvData.digitalSkills?.trim() && readOnly) return null;
+    if (isInline) {
+      return (
+        <div className="flex items-baseline gap-x-2 text-[12.5px] leading-snug text-gray-800">
+          {title ? (
+            <span className={cn(titleClass, 'shrink-0')} style={{ color: accent }}>
+              {title}
+            </span>
+          ) : null}
+          <InlineEditableText
+            value={cvData.digitalSkills ?? ''}
+            onChange={setDigitalSkills}
+            className="min-w-0 flex-1 text-[12.5px] leading-snug text-gray-800"
+            placeholder={labels('digitalSkillsPlaceholder')}
+            readOnly={readOnly}
+          />
+        </div>
+      );
+    }
     return (
       <section>
         {title ? (
@@ -360,6 +424,8 @@ export default function CvSectionRenderer({
   }
 
   if (section.type === 'skills') {
+    if (isInline && readOnly && !cvData.skills.some((s) => s.text?.trim())) return null;
+    const listDisplay = isInline ? 'row' : isEditorial ? 'inline' : 'list';
     return (
       <InlineEditableList
         title={title}
@@ -370,12 +436,19 @@ export default function CvSectionRenderer({
         onRemove={removeSkill}
         onReorder={reorderSkills}
         sortable={!readOnly}
-        showBullets={!isSidebar}
+        showBullets={!isSidebar && listDisplay === 'list'}
         variant={isSidebar ? 'sidebar' : 'default'}
-        display={isEditorial && !isFooter ? 'chips' : 'list'}
-        titleClassName={isEditorial || isFooter ? titleClass : undefined}
+        display={listDisplay}
+        titleClassName={isEditorial || isInline ? titleClass : undefined}
+        titleStyle={isInline ? { color: accent } : undefined}
         itemTextClassName={
-          isFooter ? 'text-xs text-gray-800' : isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'
+          isInline || isEditorial
+            ? 'text-[13px] leading-snug text-gray-800'
+            : isFooter
+              ? 'text-xs text-gray-800'
+              : isSidebar
+                ? 'text-sm text-white'
+                : 'text-sm text-gray-800'
         }
         readOnly={readOnly}
         selectionItemType="skill"
@@ -384,8 +457,48 @@ export default function CvSectionRenderer({
   }
 
   if (section.type === 'languages') {
+    if (isInline && readOnly && !cvData.languages.some((l) => l.language?.trim() || l.level?.trim())) {
+      return null;
+    }
+    if (isInline) {
+      return (
+        <div className="flex items-baseline gap-x-2 text-[12.5px] leading-snug">
+          {title ? (
+            <span className={cn(titleClass, 'shrink-0')} style={{ color: accent }}>
+              {title}
+            </span>
+          ) : null}
+          <div className="flex min-w-0 flex-1 flex-wrap items-baseline">
+            {cvData.languages.map((item, index) => (
+              <LanguageRow
+                key={item.id}
+                item={item}
+                isSidebar={false}
+                presentation="row"
+                showMark={index > 0}
+                readOnly={readOnly}
+                onUpdate={(patch) => updateLanguage(item.id, patch)}
+                onRemove={() => removeLanguage(item.id)}
+                labels={labels}
+              />
+            ))}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={addLanguage}
+                className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 print:hidden hover:bg-gray-50"
+                aria-label={labels('add')}
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+    const languagePresentation = isEditorial ? 'line' : 'list';
     return (
-      <div className="space-y-2">
+      <div className={isEditorial ? 'space-y-0.5' : 'space-y-2'}>
         <div className="flex items-center justify-between gap-2">
           {title ? (
             <EditableSectionTitle
@@ -407,10 +520,13 @@ export default function CvSectionRenderer({
             <button
               type="button"
               onClick={addLanguage}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm print:hidden hover:bg-gray-50"
+              className={cn(
+                'inline-flex shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 print:hidden hover:bg-gray-50',
+                isTight ? 'h-5 w-5' : 'h-7 w-7 shadow-sm'
+              )}
               aria-label={labels('add')}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className={isTight ? 'h-3 w-3' : 'h-4 w-4'} />
             </button>
           )}
         </div>
@@ -429,7 +545,7 @@ export default function CvSectionRenderer({
           <SortableContext items={cvData.languages.map((l) => l.id)} strategy={verticalListSortingStrategy}>
         <ul
           className={cn(
-            isEditorial && !isFooter ? 'flex flex-wrap gap-1.5' : 'space-y-2',
+            isEditorial ? 'space-y-0.5' : 'space-y-2',
             isSidebar && 'm-0 list-none p-0'
           )}
         >
@@ -438,7 +554,7 @@ export default function CvSectionRenderer({
                   key={item.id}
                   item={item}
                   isSidebar={isSidebar}
-                  chips={isEditorial && !isFooter}
+                  presentation={languagePresentation}
                   readOnly={readOnly}
                   onUpdate={(patch) => updateLanguage(item.id, patch)}
                   onRemove={() => removeLanguage(item.id)}
@@ -453,6 +569,8 @@ export default function CvSectionRenderer({
   }
 
   if (section.type === 'interests') {
+    if (isInline && readOnly && !cvData.interests.some((s) => s.text?.trim())) return null;
+    const listDisplay = isInline ? 'row' : isEditorial ? 'inline' : 'list';
     return (
       <InlineEditableList
         title={title}
@@ -463,12 +581,19 @@ export default function CvSectionRenderer({
         onRemove={removeInterest}
         onReorder={reorderInterests}
         sortable={!readOnly}
-        showBullets={!isSidebar}
+        showBullets={!isSidebar && listDisplay === 'list'}
         variant={isSidebar ? 'sidebar' : 'default'}
-        display={isEditorial && !isFooter ? 'chips' : 'list'}
-        titleClassName={isEditorial || isFooter ? titleClass : undefined}
+        display={listDisplay}
+        titleClassName={isEditorial || isInline ? titleClass : undefined}
+        titleStyle={isInline ? { color: accent } : undefined}
         itemTextClassName={
-          isFooter ? 'text-xs text-gray-800' : isSidebar ? 'text-sm text-white' : 'text-sm text-gray-800'
+          isInline || isEditorial
+            ? 'text-[13px] leading-snug text-gray-800'
+            : isFooter
+              ? 'text-xs text-gray-800'
+              : isSidebar
+                ? 'text-sm text-white'
+                : 'text-sm text-gray-800'
         }
         readOnly={readOnly}
         selectionItemType="interest"
@@ -485,8 +610,8 @@ export default function CvSectionRenderer({
           ? []
           : cvData.experience;
 
-    const header = showHeader ? (
-      <div className="mb-2 flex items-center justify-between">
+    const headerRow = (
+      <div className={cn('flex items-center justify-between gap-2', isTight ? '' : 'mb-2')}>
         {title ? (
           <EditableSectionTitle
             {...sectionTitleProps}
@@ -498,13 +623,31 @@ export default function CvSectionRenderer({
           <button
             type="button"
             onClick={addExperience}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50',
+              isTight ? 'h-5 w-5' : 'h-7 w-7'
+            )}
             aria-label={labels('add')}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className={isTight ? 'h-3 w-3' : 'h-4 w-4'} />
           </button>
         )}
       </div>
+    );
+
+    const header = showHeader ? (
+      isTimeline ? (
+        <TimelineSpine
+          accent={accent}
+          gapPx={theme.atomGapPx}
+          continueAbove={false}
+          continueBelow={cvData.experience.length > 0 || cvData.education.length > 0}
+        >
+          {headerRow}
+        </TimelineSpine>
+      ) : (
+        headerRow
+      )
     ) : null;
 
     if (fragment === 'header') {
@@ -528,7 +671,7 @@ export default function CvSectionRenderer({
         >
           <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className={cn(isTimeline ? 'space-y-3' : 'space-y-2')}>
-              {items.map((e, index) => {
+              {items.map((e) => {
                 const removeBtn = !readOnly ? (
                   <button
                     type="button"
@@ -586,7 +729,7 @@ export default function CvSectionRenderer({
                     value={e.description ?? ''}
                     onChange={(v) => updateExperience(e.id, { description: v })}
                     multiline
-                    className={cn('mt-1 block w-full text-sm', bodyTextClass)}
+                    className={cn(isTight ? 'mt-0.5' : 'mt-1', 'block w-full text-sm leading-snug', bodyTextClass)}
                     style={
                       e.styles?.description?.color
                         ? { color: e.styles.description.color }
@@ -600,30 +743,24 @@ export default function CvSectionRenderer({
                 );
 
                 if (isTimeline) {
+                  const fullIndex = cvData.experience.findIndex((x) => x.id === e.id);
                   return (
                     <SortableExperienceItem key={e.id} id={e.id} ruled={false}>
                       {removeBtn}
-                      <div className="grid grid-cols-[4.75rem_0.75rem_minmax(0,1fr)] gap-x-2">
-                        <div className="pt-0.5 text-right leading-tight">{periodField}</div>
-                        <div className="relative">
-                          <div
-                            className={cn(
-                              'absolute left-1/2 w-px -translate-x-1/2',
-                              index < items.length - 1 ? 'top-1 -bottom-3' : 'top-1 bottom-1'
-                            )}
-                            style={{ backgroundColor: accent }}
-                          />
-                          <div
-                            className="relative z-[1] mx-auto mt-1 h-2 w-2 rounded-full border-2 bg-white"
-                            style={{ borderColor: accent }}
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          {roleField}
-                          <div className={cn('text-xs', metaTextClass)}>{organizationField}</div>
-                          {descriptionField}
-                        </div>
-                      </div>
+                      <TimelineSpine
+                        accent={accent}
+                        gapPx={theme.atomGapPx}
+                        showDot
+                        continueAbove
+                        continueBelow={
+                          fullIndex < cvData.experience.length - 1 || cvData.education.length > 0
+                        }
+                        period={periodField}
+                      >
+                        {roleField}
+                        <div className={cn('text-xs leading-snug', metaTextClass)}>{organizationField}</div>
+                        {descriptionField}
+                      </TimelineSpine>
                     </SortableExperienceItem>
                   );
                 }
@@ -670,8 +807,8 @@ export default function CvSectionRenderer({
           ? []
           : cvData.education;
 
-    const header = showHeader ? (
-      <div className="mb-2 flex items-center justify-between">
+    const headerRow = (
+      <div className={cn('flex items-center justify-between gap-2', isTight ? '' : 'mb-2')}>
         {title ? (
           <EditableSectionTitle
             {...sectionTitleProps}
@@ -683,13 +820,31 @@ export default function CvSectionRenderer({
           <button
             type="button"
             onClick={addEducation}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50"
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-full border border-gray-200 print:hidden hover:bg-gray-50',
+              isTight ? 'h-5 w-5' : 'h-7 w-7'
+            )}
             aria-label={labels('add')}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className={isTight ? 'h-3 w-3' : 'h-4 w-4'} />
           </button>
         )}
       </div>
+    );
+
+    const header = showHeader ? (
+      isTimeline ? (
+        <TimelineSpine
+          accent={accent}
+          gapPx={theme.atomGapPx}
+          continueAbove={cvData.experience.length > 0}
+          continueBelow={cvData.education.length > 0}
+        >
+          {headerRow}
+        </TimelineSpine>
+      ) : (
+        headerRow
+      )
     ) : null;
 
     if (fragment === 'header') {
@@ -713,7 +868,7 @@ export default function CvSectionRenderer({
         >
           <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
             <div className={cn(isTimeline ? 'space-y-3' : 'space-y-2')}>
-              {items.map((ed, index) => {
+              {items.map((ed) => {
                 const removeBtn = !readOnly ? (
                   <button
                     type="button"
@@ -768,7 +923,7 @@ export default function CvSectionRenderer({
                     value={ed.description ?? ''}
                     onChange={(v) => updateEducation(ed.id, { description: v })}
                     multiline
-                    className={cn('mt-1 block w-full text-sm', bodyTextClass)}
+                    className={cn(isTight ? 'mt-0.5' : 'mt-1', 'block w-full text-sm leading-snug', bodyTextClass)}
                     style={
                       ed.styles?.description?.color
                         ? { color: ed.styles.description.color }
@@ -782,30 +937,22 @@ export default function CvSectionRenderer({
                 );
 
                 if (isTimeline) {
+                  const fullIndex = cvData.education.findIndex((x) => x.id === ed.id);
                   return (
                     <SortableEducationItem key={ed.id} id={ed.id} readOnly={readOnly} className="">
                       {removeBtn}
-                      <div className="grid grid-cols-[4.75rem_0.75rem_minmax(0,1fr)] gap-x-2">
-                        <div className="pt-0.5 text-right leading-tight">{periodField}</div>
-                        <div className="relative">
-                          <div
-                            className={cn(
-                              'absolute left-1/2 w-px -translate-x-1/2',
-                              index < items.length - 1 ? 'top-1 -bottom-3' : 'top-1 bottom-1'
-                            )}
-                            style={{ backgroundColor: accent }}
-                          />
-                          <div
-                            className="relative z-[1] mx-auto mt-1 h-2 w-2 rounded-full border-2 bg-white"
-                            style={{ borderColor: accent }}
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          {institutionField}
-                          {diplomaField}
-                          {descriptionField}
-                        </div>
-                      </div>
+                      <TimelineSpine
+                        accent={accent}
+                        gapPx={theme.atomGapPx}
+                        showDot
+                        continueAbove
+                        continueBelow={fullIndex < cvData.education.length - 1}
+                        period={periodField}
+                      >
+                        {institutionField}
+                        {diplomaField}
+                        {descriptionField}
+                      </TimelineSpine>
                     </SortableEducationItem>
                   );
                 }
@@ -841,6 +988,26 @@ export default function CvSectionRenderer({
   }
 
   if (section.type === 'extra') {
+    if (isInline && readOnly && !cvData.extra?.trim()) return null;
+    if (isInline) {
+      return (
+        <div className="flex items-baseline gap-x-2 text-[12.5px] leading-snug text-gray-800">
+          {title ? (
+            <span className={cn(titleClass, 'shrink-0')} style={{ color: accent }}>
+              {title}
+            </span>
+          ) : null}
+          <InlineEditableText
+            value={cvData.extra}
+            onChange={setExtra}
+            multiline
+            className="min-w-0 flex-1 text-[12.5px] leading-snug text-gray-800"
+            placeholder={labels('extraPlaceholder')}
+            readOnly={readOnly}
+          />
+        </div>
+      );
+    }
     return (
       <section>
         {title ? (
@@ -905,7 +1072,8 @@ function SortableEducationItem({
 function LanguageRow({
   item,
   isSidebar,
-  chips = false,
+  presentation = 'list',
+  showMark = false,
   readOnly,
   onUpdate,
   onRemove,
@@ -918,7 +1086,8 @@ function LanguageRow({
     styles?: Partial<Record<'language' | 'level', { color?: string }>>;
   };
   isSidebar: boolean;
-  chips?: boolean;
+  presentation?: 'list' | 'line' | 'row';
+  showMark?: boolean;
   readOnly: boolean;
   onUpdate: (patch: { language?: string; level?: string }) => void;
   onRemove: () => void;
@@ -926,28 +1095,30 @@ function LanguageRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: item.id,
-    disabled: readOnly,
+    disabled: readOnly || presentation === 'row',
   });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  const textClass = isSidebar
-    ? 'text-sm text-white'
-    : chips
-      ? 'text-[11px] text-gray-800'
-      : 'text-sm text-gray-800';
+  const quiet = presentation === 'line' || presentation === 'row';
+  const Tag = presentation === 'row' ? 'span' : 'li';
+  const textClass = isSidebar ? 'text-sm text-white' : quiet ? 'text-[13px] leading-snug text-gray-800' : 'text-sm text-gray-800';
+  const showDash = quiet && (Boolean(item.level?.trim()) || !readOnly);
   return (
-    <li
+    <Tag
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-start gap-2',
-        isSidebar && 'relative',
-        chips && 'w-fit items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5'
+        'group',
+        presentation === 'row' && 'inline-flex items-baseline',
+        presentation === 'line' && 'flex flex-wrap items-baseline gap-x-1.5',
+        presentation === 'list' && 'flex items-start gap-2',
+        isSidebar && 'relative'
       )}
     >
-      {!readOnly && (
+      {showMark ? <span className="px-1 text-gray-300">·</span> : null}
+      {!readOnly && presentation === 'list' && (
         <button
           type="button"
           className={cn(
@@ -960,41 +1131,41 @@ function LanguageRow({
           <GripVertical className="h-3.5 w-3.5" />
         </button>
       )}
-      {!isSidebar && !chips && (
+      {presentation === 'list' && !isSidebar && (
         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
       )}
-      <div className={cn('min-w-0', chips ? 'flex items-baseline gap-1 text-[11px]' : 'flex-1 space-y-0.5')}>
+      <span className={cn(quiet ? 'inline-flex flex-wrap items-baseline gap-x-1.5' : 'min-w-0 flex-1 space-y-0.5')}>
         <InlineEditableText
           value={item.language}
           onChange={(v) => onUpdate({ language: v })}
-          className={cn(chips ? 'font-medium' : 'block w-full font-medium', textClass)}
+          className={cn(quiet ? 'font-medium text-gray-900' : 'block w-full font-medium', textClass)}
           style={item.styles?.language?.color ? { color: item.styles.language.color } : undefined}
           placeholder={labels('language')}
           readOnly={readOnly}
           selection={{ itemType: 'language', itemId: item.id, field: 'language' }}
         />
-        {chips ? <span className="text-gray-300">·</span> : null}
+        {showDash ? <span className="text-gray-400">—</span> : null}
         <InlineEditableText
           value={item.level ?? ''}
           onChange={(v) => onUpdate({ level: v })}
-          className={cn(chips ? 'opacity-80' : 'block w-full text-xs opacity-90', textClass)}
+          className={cn(quiet ? 'text-gray-600' : 'block w-full text-xs opacity-90', textClass)}
           style={item.styles?.level?.color ? { color: item.styles.level.color } : undefined}
           placeholder={labels('level')}
           readOnly={readOnly}
           hideWhenEmpty
           selection={{ itemType: 'language', itemId: item.id, field: 'level' }}
         />
-      </div>
+      </span>
       {!readOnly && (
         <button
           type="button"
           onClick={onRemove}
-          className="shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity print:hidden group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
+          className="shrink-0 rounded p-0.5 text-gray-400 opacity-0 transition-opacity print:hidden group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
           aria-label={labels('remove')}
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
-    </li>
+    </Tag>
   );
 }
