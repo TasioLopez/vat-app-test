@@ -11,6 +11,7 @@ import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
+import { shrinkTrajectplanPdf } from "@/lib/pdf/compress-tp-pdf";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
 import { verifyEmployeeAccess } from "@/lib/auth/api-auth";
@@ -57,6 +58,26 @@ function resolveLocalChrome(): string | null {
 
   for (const p of candidates) if (p && fs.existsSync(p)) return p;
   return null;
+}
+
+/** JPEG of each printed A4 sheet, in order. Layout is whatever Chrome already painted. */
+async function captureTpPrintPages(page: {
+  $$: (selector: string) => Promise<Array<{ screenshot: (opts: object) => Promise<Uint8Array> }>>;
+}): Promise<Uint8Array[]> {
+  const handles = await page.$$(".print-page");
+  if (handles.length === 0) {
+    throw new Error("Trajectplan print page is missing .print-page");
+  }
+  const shots: Uint8Array[] = [];
+  for (const handle of handles) {
+    const shot = await handle.screenshot({
+      type: "jpeg",
+      quality: 85,
+      captureBeyondViewport: true,
+    });
+    shots.push(shot instanceof Uint8Array ? shot : new Uint8Array(shot));
+  }
+  return shots;
 }
 
 /** Launch a browser appropriate to the environment */
@@ -371,7 +392,7 @@ export async function GET(req: NextRequest) {
     browser = await launchBrowser();
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
     // forward request cookies (auth)
     const cookieHeader = req.headers.get("cookie") || "";
@@ -402,11 +423,18 @@ export async function GET(req: NextRequest) {
       `,
     });
 
-    const pdfBuffer = await page.pdf({
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    const rawPdf = new Uint8Array(
+      await page.pdf({
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      })
+    );
+    const shrunk = await shrinkTrajectplanPdf(rawPdf, {
+      capturePrintPages: () => captureTpPrintPages(page),
     });
+    console.log(`tp pdf compress: ${rawPdf.byteLength} -> ${shrunk.byteLength} bytes`);
+    const pdfBuffer = Buffer.from(shrunk);
 
     const pathKey = `documents/${employeeId}/tp-final-${Date.now()}.pdf`;
     let tpExportId: string | null = null;
