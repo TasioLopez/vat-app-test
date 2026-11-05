@@ -1,4 +1,5 @@
-import type { CvLayoutSection, CvModel } from '@/types/cv';
+import type { CvChrome } from '@/lib/cv/theme-config';
+import type { CvLayoutSection, CvModel, CvSectionType } from '@/types/cv';
 
 export type CvAtomDescriptor =
   | { id: string; kind: 'section'; sectionId: string }
@@ -6,9 +7,62 @@ export type CvAtomDescriptor =
   | { id: string; kind: 'experience_item'; sectionId: string; itemId: string }
   | { id: string; kind: 'education_item'; sectionId: string; itemId: string }
   | { id: string; kind: 'half_pair'; sectionIds: [string, string] }
-  | { id: string; kind: 'grid3'; sectionId: string };
+  | { id: string; kind: 'grid3'; sectionId: string }
+  | { id: string; kind: 'header_lockup'; sectionIds: string[] }
+  | { id: string; kind: 'footer_strip'; sectionIds: string[] };
+
+export type BuildColumnAtomsOptions = {
+  chrome?: CvChrome;
+};
 
 const SPLIT_SECTION_TYPES = new Set(['experience', 'education']);
+const LOCKUP_TYPES = new Set<CvSectionType>(['personal_header', 'contact', 'photo']);
+const FOOTER_TYPES = new Set<CvSectionType>([
+  'skills',
+  'languages',
+  'interests',
+  'digital_skills',
+  'extra',
+]);
+
+function splitTrailingFooter(sections: CvLayoutSection[]): {
+  body: CvLayoutSection[];
+  footer: CvLayoutSection[];
+} {
+  let end = sections.length;
+  while (end > 0 && FOOTER_TYPES.has(sections[end - 1].type)) end -= 1;
+  return {
+    body: sections.slice(0, end),
+    footer: sections.slice(end),
+  };
+}
+
+/**
+ * Group a leading name + contact + photo into one atom so the header cannot
+ * split and the photo cannot land in a hole between sections.
+ */
+function takeLeadingLockup(
+  sections: CvLayoutSection[],
+  start: number
+): { atom: CvAtomDescriptor; next: number } | null {
+  let i = start;
+  while (i < sections.length && !sections[i].visible) i += 1;
+  if (i !== start) return null;
+  const first = sections[i];
+  if (!first || first.type !== 'personal_header' || !first.visible) return null;
+
+  const ids = [first.id];
+  i += 1;
+  while (i < sections.length && LOCKUP_TYPES.has(sections[i].type) && sections[i].type !== 'personal_header') {
+    if (sections[i].visible) ids.push(sections[i].id);
+    i += 1;
+  }
+  if (ids.length < 2) return null;
+  return {
+    atom: { id: `lockup:${ids.join(':')}`, kind: 'header_lockup', sectionIds: ids },
+    next: i,
+  };
+}
 
 function sectionAtomId(sectionId: string): string {
   return `sec:${sectionId}`;
@@ -28,13 +82,28 @@ function itemAtomId(sectionId: string, itemId: string): string {
  */
 export function buildColumnAtoms(
   sections: CvLayoutSection[],
-  cvData: CvModel
+  cvData: CvModel,
+  options?: BuildColumnAtomsOptions
 ): CvAtomDescriptor[] {
+  const chrome = options?.chrome;
+  const useLockup = chrome === 'editorial' || chrome === 'timeline';
+  const split = chrome === 'timeline' ? splitTrailingFooter(sections) : null;
+  const working = split ? split.body : sections;
+  const footerIds = (split?.footer ?? []).filter((s) => s.visible).map((s) => s.id);
+
   const atoms: CvAtomDescriptor[] = [];
   let i = 0;
 
-  while (i < sections.length) {
-    const section = sections[i];
+  while (i < working.length) {
+    if (useLockup && i === 0) {
+      const lockup = takeLeadingLockup(working, i);
+      if (lockup) {
+        atoms.push(lockup.atom);
+        i = lockup.next;
+        continue;
+      }
+    }
+    const section = working[i];
     if (!section.visible) {
       i += 1;
       continue;
@@ -48,8 +117,8 @@ export function buildColumnAtoms(
 
     if (section.layout === 'half') {
       const pair: CvLayoutSection[] = [section];
-      if (i + 1 < sections.length && sections[i + 1].visible && sections[i + 1].layout === 'half') {
-        pair.push(sections[i + 1]);
+      if (i + 1 < working.length && working[i + 1].visible && working[i + 1].layout === 'half') {
+        pair.push(working[i + 1]);
         i += 2;
       } else {
         i += 1;
@@ -68,6 +137,10 @@ export function buildColumnAtoms(
 
     pushSectionAtoms(atoms, section, cvData);
     i += 1;
+  }
+
+  if (footerIds.length) {
+    atoms.push({ id: `footer:${footerIds.join(':')}`, kind: 'footer_strip', sectionIds: footerIds });
   }
 
   return atoms;

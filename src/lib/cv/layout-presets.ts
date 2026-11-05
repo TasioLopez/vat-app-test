@@ -91,23 +91,12 @@ const BALANCED_SPLIT: CvLayoutSection[] = [
   ),
 ];
 
-const CORPORATE_MINIMAL: CvLayoutSection[] = [
-  section('personal_header', 'full'),
-  section('contact', 'full'),
-  section('photo', 'full'),
-  section('profile', 'full'),
-  section('experience', 'full'),
-  section('education', 'full'),
-  grid3([
-    section('skills', 'half'),
-    section('languages', 'half'),
-    section('interests', 'half'),
-  ]),
-  section('digital_skills', 'full'),
-  section('extra', 'full'),
-];
-
-const CREATIVE_BOLD: CvLayoutSection[] = [
+/**
+ * Fingerprints of the presets these templates used before the rework.
+ * Saved CVs that still match one of these, and were not customized, are
+ * rewritten to the new default. Anything else is left alone.
+ */
+const LEGACY_CREATIVE_BOLD: CvLayoutSection[] = [
   section('personal_header', 'full'),
   section('photo', 'full'),
   twoColumn(
@@ -127,21 +116,52 @@ const CREATIVE_BOLD: CvLayoutSection[] = [
   ),
 ];
 
-const LINEAR_TIMELINE: CvLayoutSection[] = [
+const LEGACY_STACK: CvLayoutSection[] = [
   section('personal_header', 'full'),
   section('contact', 'full'),
   section('photo', 'full'),
   section('profile', 'full'),
   section('experience', 'full'),
   section('education', 'full'),
-  grid3([
-    section('skills', 'half'),
-    section('languages', 'half'),
-    section('interests', 'half'),
-  ]),
+  grid3([section('skills', 'half'), section('languages', 'half'), section('interests', 'half')]),
   section('digital_skills', 'full'),
   section('extra', 'full'),
 ];
+
+const CREATIVE_BOLD: CvLayoutSection[] = [
+  section('personal_header', 'full'),
+  section('contact', 'full'),
+  section('photo', 'full'),
+  twoColumn(
+    [section('profile', 'full'), section('experience', 'full')],
+    [
+      section('education', 'full'),
+      section('skills', 'full'),
+      section('languages', 'full'),
+      section('interests', 'full'),
+      section('digital_skills', 'full'),
+      section('extra', 'full'),
+    ]
+  ),
+];
+
+/** Single editorial stack shared by Formeel and Tijdlijn. Chrome makes them look different. */
+const EDITORIAL_STACK: CvLayoutSection[] = [
+  section('personal_header', 'full'),
+  section('contact', 'full'),
+  section('photo', 'full'),
+  section('profile', 'full'),
+  section('experience', 'full'),
+  section('education', 'full'),
+  section('skills', 'full'),
+  section('languages', 'full'),
+  section('interests', 'full'),
+  section('digital_skills', 'full'),
+  section('extra', 'full'),
+];
+
+const LINEAR_TIMELINE = EDITORIAL_STACK;
+const CORPORATE_MINIMAL = EDITORIAL_STACK;
 
 const PRESETS: Record<CvTemplateKey, CvLayoutSection[]> = {
   modern_professional: MODERN_PROFESSIONAL,
@@ -176,4 +196,28 @@ export function applyTemplateLayout(
 export function isLayoutCustomized(layout: CvLayoutSection[]): boolean {
   const fp = layoutFingerprint(layout);
   return !Object.values(PRESETS).some((preset) => layoutFingerprint(preset) === fp);
+}
+
+const LEGACY_FINGERPRINTS: Partial<Record<CvTemplateKey, string>> = {
+  creative_bold: layoutFingerprint(LEGACY_CREATIVE_BOLD),
+  corporate_minimal: layoutFingerprint(LEGACY_STACK),
+  linear_timeline: layoutFingerprint(LEGACY_STACK),
+};
+
+/**
+ * Replace a saved layout that still matches the pre-rework preset for this template.
+ * Custom layouts are returned unchanged.
+ */
+export function migrateLegacyLayout(
+  templateKey: CvTemplateKey,
+  layout: CvLayoutSection[]
+): CvLayoutSection[] {
+  const legacy = LEGACY_FINGERPRINTS[templateKey];
+  if (!legacy) return layout;
+  if (layoutFingerprint(layout) !== legacy) return layout;
+  return getDefaultLayout(templateKey);
+}
+
+export function layoutStructureFingerprint(layout: CvLayoutSection[]): string {
+  return layoutFingerprint(layout);
 }

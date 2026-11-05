@@ -1,5 +1,6 @@
 'use client';
 
+import { CvHeaderLockup } from '@/components/cv/CvChromeBlocks';
 import CvEditableSectionWrap from '@/components/cv/CvEditableSectionWrap';
 import CvSectionRenderer from '@/components/cv/sections/CvSectionRenderer';
 import type { CvAtomDescriptor } from '@/lib/cv/atoms';
@@ -48,7 +49,7 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
     const section = findSectionById(sections, atom.sectionId);
     if (!section?.children?.length) return null;
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-4">
         {section.children.map((child) =>
           child.visible ? (
             readOnly ? (
@@ -57,6 +58,7 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
                 section={child}
                 variant="default"
                 accent={accent}
+                forceReadOnly
               />
             ) : (
               <CvEditableSectionWrap
@@ -68,6 +70,54 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
             )
           ) : null
         )}
+      </div>
+    );
+  }
+
+  if (atom.kind === 'header_lockup') {
+    const lockupSections = atom.sectionIds
+      .map((id) => findSectionById(sections, id))
+      .filter((s): s is NonNullable<typeof s> => Boolean(s));
+    return <CvHeaderLockup readOnly={readOnly} accent={accent} sections={lockupSections} />;
+  }
+
+  if (atom.kind === 'footer_strip') {
+    const footerSections = atom.sectionIds
+      .map((id) => findSectionById(sections, id))
+      .filter((s): s is NonNullable<typeof s> => Boolean(s && s.visible));
+    const listTypes = new Set(['skills', 'languages', 'interests']);
+    const lists = footerSections.filter((s) => listTypes.has(s.type));
+    const rest = footerSections.filter((s) => !listTypes.has(s.type));
+    return (
+      <div className="border-t border-gray-200 pt-3">
+        {lists.length ? (
+          <div className="grid grid-cols-3 gap-4">
+            {lists.map((section) => (
+              <CvSectionRenderer
+                key={section.id}
+                section={section}
+                variant="default"
+                accent={accent}
+                density="footer"
+                forceReadOnly={readOnly}
+              />
+            ))}
+          </div>
+        ) : null}
+        {rest.length ? (
+          <div className="mt-3 flex flex-col gap-3">
+            {rest.map((section) => (
+              <CvSectionRenderer
+                key={section.id}
+                section={section}
+                variant="default"
+                accent={accent}
+                density="footer"
+                forceReadOnly={readOnly}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -84,6 +134,7 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
             variant={variant}
             accent={accent}
             fragment="header"
+            forceReadOnly={readOnly}
           />
         ) : (
           <div className="group/section relative">
@@ -107,13 +158,16 @@ export default function CvAtomRenderer({ atom, sections, accent, variant, readOn
         accent={accent}
         fragment="item"
         itemId={atom.itemId}
+        forceReadOnly={readOnly}
       />
     );
   }
 
   // kind === 'section'
   if (readOnly) {
-    return <CvSectionRenderer section={section} variant={variant} accent={accent} />;
+    return (
+      <CvSectionRenderer section={section} variant={variant} accent={accent} forceReadOnly />
+    );
   }
   return <CvEditableSectionWrap section={section} accent={accent} variant={variant} />;
 }

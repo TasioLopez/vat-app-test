@@ -35,6 +35,8 @@ type Props = {
   itemTextClassName?: string;
   variant?: 'default' | 'sidebar';
   showBullets?: boolean;
+  display?: 'list' | 'chips';
+  titleClassName?: string;
   selectionItemType?: Extract<CvFieldSelection, { field: 'text' }>['itemType'];
 };
 
@@ -48,6 +50,7 @@ function SortableListRow({
   itemTextClassName,
   variant,
   selectionItemType,
+  chips = false,
 }: {
   item: Item;
   sortable: boolean;
@@ -58,6 +61,7 @@ function SortableListRow({
   itemTextClassName: string;
   variant: 'default' | 'sidebar';
   selectionItemType?: Extract<CvFieldSelection, { field: 'text' }>['itemType'];
+  chips?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: item.id,
@@ -73,7 +77,11 @@ function SortableListRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={cn('group flex items-start gap-2', isSidebar && 'relative')}
+      className={cn(
+        'group flex items-start gap-2',
+        isSidebar && 'relative',
+        chips && 'w-fit items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5'
+      )}
     >
       {sortable && !readOnly && (
         <button
@@ -92,11 +100,11 @@ function SortableListRow({
       {showBullets && (
         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
       )}
-      <div className="min-w-0 flex-1">
+      <div className={cn('min-w-0', !chips && 'flex-1')}>
         <InlineEditableText
           value={item.text}
           onChange={(v) => onChange(item.id, v)}
-          className={cn('block w-full text-sm', itemTextClassName)}
+          className={cn(chips ? 'text-[11px]' : 'block w-full text-sm', itemTextClassName)}
           style={item.styles?.text?.color ? { color: item.styles.text.color } : undefined}
           readOnly={readOnly}
           selection={
@@ -134,12 +142,22 @@ export default function InlineEditableList({
   itemTextClassName = 'text-gray-800',
   variant = 'default',
   showBullets = true,
+  display = 'list',
+  titleClassName,
   selectionItemType,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
+  const chips = display === 'chips';
+  const titleChrome =
+    titleClassName ??
+    cn(
+      'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
+      variant === 'sidebar' ? 'border-white/30 text-white' : 'border-transparent text-[var(--cv-accent)]'
+    );
+
   const listContent = (
-    <ul className={cn('space-y-1', variant === 'sidebar' && 'm-0 list-none p-0')}>
+    <ul className={cn(chips ? 'flex flex-wrap gap-1.5' : 'space-y-1', variant === 'sidebar' && !chips && 'm-0 list-none p-0')}>
       {items.map((item) => (
         <SortableListRow
           key={item.id}
@@ -149,9 +167,10 @@ export default function InlineEditableList({
           onChange={onChange}
           onRemove={onRemove}
           itemTextClassName={itemTextClassName}
-          showBullets={showBullets}
+          showBullets={chips ? false : showBullets}
           variant={variant}
           selectionItemType={selectionItemType}
+          chips={chips}
         />
       ))}
     </ul>
@@ -166,22 +185,10 @@ export default function InlineEditableList({
             onChange={onTitleChange}
             as="h3"
             readOnly={readOnly}
-            className={cn(
-              'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
-              variant === 'sidebar'
-                ? 'border-white/30 text-white'
-                : 'border-transparent text-[var(--cv-accent)]'
-            )}
+            className={titleChrome}
           />
         ) : (
-          <h3
-            className={cn(
-              'border-b pb-1 text-xs font-semibold uppercase tracking-wide',
-              variant === 'sidebar'
-                ? 'border-white/30 text-white'
-                : 'border-transparent text-[var(--cv-accent)]'
-            )}
-          >
+          <h3 className={titleChrome}>
             {title}
           </h3>
         )}
