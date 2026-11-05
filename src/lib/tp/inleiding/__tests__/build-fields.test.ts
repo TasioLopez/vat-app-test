@@ -73,15 +73,17 @@ describe('buildInleidingFields', () => {
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
-  it('appends ex-werknemer disclaimer to uitval paragraph when flagged', () => {
+  it('names the person ex-werknemer in the opening sentences when flagged', () => {
     const ctx: InleidingBuildContext = {
       ...baseCtx,
       meta: { ...baseCtx.meta, is_ex_werknemer: true },
     };
     const { inleiding } = buildInleidingFields(ctx, baseContent);
-    const uitval = inleiding.split('\n\n')[1];
-    assert.match(uitval, /\*Werknemer is uit dienst bij Cordaan\./);
-    assert.match(uitval, /Omwille van leesbaarheid wordt de term "werknemer" gehanteerd/);
+    const parts = inleiding.split('\n\n');
+    assert.match(parts[0], /mevrouw Baaijens, hierna ex-werknemer te noemen/);
+    assert.match(parts[1], /^Ex-werknemer is een /);
+    assert.doesNotMatch(inleiding, /uit dienst bij/);
+    assert.doesNotMatch(inleiding, /Omwille van leesbaarheid/);
   });
 
   it('does not append ex-werknemer disclaimer when flag is false', () => {

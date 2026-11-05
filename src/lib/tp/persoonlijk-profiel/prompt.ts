@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 import {
   BANNED_PHRASES,
   MAX_SENTENCES_ALINEA_1,
@@ -97,6 +98,8 @@ Medisch, belastbaarheid, privé, gezin, sociaal netwerk, hobby's, spoor 2, motiv
 
 JSON OUTPUT
 Lever exact: alinea_1, alinea_2, alinea_3 (alinea_3 = null). Geen sectiekop. Geen toelichting.
+
+${EX_WERKNEMER_GENERATION_RULE}
 `.trim();
 
 export function buildPersoonlijkProfielContextMessage(context: Record<string, unknown>): string {

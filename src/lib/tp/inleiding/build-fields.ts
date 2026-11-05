@@ -10,8 +10,6 @@ import {
   AD_INTRO_SUFFIX,
   AD_INTRO_SUFFIX_LEGACY,
   AD_INTRO_SUFFIX_PREVIOUS,
-  buildInleidingExWerknemerDisclaimer,
-  hasInleidingExWerknemerDisclaimer,
   INLEIDING_GEEN_AD,
   MEDISCHE_BEGELEIDING_ZINNEN,
   MEDISCHE_SITUATIE_OPENING,
@@ -156,10 +154,15 @@ function applyGenderToMedischeText(text: string, gender?: string | null): string
   return text.replace(/zijn\/haar/g, poss);
 }
 
+function personNoun(ctx: InleidingBuildContext, capitalized: boolean): string {
+  if (ctx.meta.is_ex_werknemer === true) return capitalized ? 'Ex-werknemer' : 'ex-werknemer';
+  return capitalized ? 'Werknemer' : 'werknemer';
+}
+
 function buildGesprek(ctx: InleidingBuildContext): string {
   const lastName = coerceText(ctx.employee.last_name, '[achternaam]');
   const intakeDate = nlDate(ctx.meta.intake_date) || '[datum intake]';
-  return `Ik heb ${heerMevrouw(ctx.details.gender)} ${lastName}, hierna werknemer te noemen, gesproken op ${intakeDate}.`;
+  return `Ik heb ${heerMevrouw(ctx.details.gender)} ${lastName}, hierna ${personNoun(ctx, false)} te noemen, gesproken op ${intakeDate}.`;
 }
 
 function buildUitval(ctx: InleidingBuildContext): string {
@@ -170,14 +173,7 @@ function buildUitval(ctx: InleidingBuildContext): string {
   const employer = coerceText(ctx.client.name, '[werkgever]');
   const sickDay = nlDate(ctx.meta.first_sick_day) || '[eerste ziektedag]';
   const hours = coerceText(ctx.details.contract_hours, '[uren]');
-  let paragraph = `Werknemer is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
-  if (
-    ctx.meta.is_ex_werknemer === true &&
-    !hasInleidingExWerknemerDisclaimer(paragraph)
-  ) {
-    paragraph += ` ${buildInleidingExWerknemerDisclaimer(employer)}`;
-  }
-  return paragraph;
+  return `${personNoun(ctx, true)} is een ${agePart}${genderWord(ctx.details.gender)} die als gevolg van medische beperkingen is uitgevallen sinds ${sickDay} voor ${poss} functie als ${job} bij ${employer}. De functie heeft een urenomvang van ${hours} uur per week.`;
 }
 
 function buildFunctieomschrijving(ctx: InleidingBuildContext, body: string): string {

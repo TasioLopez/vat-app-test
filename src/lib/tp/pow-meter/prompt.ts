@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 import {
   DOCUMENT_SCOPE_HINT_V11,
   POW_FIELD_RULES_V11,
@@ -38,6 +39,8 @@ Lever exact:
 
 Genereer NIET de vaste zin voor huidige trede of verwachting — het systeem zet die.
 Geen inleiding, analyse, tabel of samenvatting buiten JSON.
+
+${EX_WERKNEMER_GENERATION_RULE}
 `.trim();
 
 export function buildPowMeterContextMessage(ctx: Record<string, unknown>): string {

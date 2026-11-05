@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 
 /**
  * Content instructions for inleiding generation (masterprompt substance, no ChatGPT UI guardrails).
@@ -18,7 +19,7 @@ ALGEMENE REGELS VOOR CONTENT
 - Geen medische diagnoses, behandelingen of specifieke beperkingen beschrijven.
 - Zakelijke rapportagestijl.
 - CONSISTENTIE NAAM: verwijs nooit naar werknemer met de volledige voornaam. Gebruik óf \"werknemer\" óf uitsluitend \"[voorletter]. [achternaam]\" (geen volledige voornaam).
-- Wanneer context.is_ex_werknemer true is: schrijf GEEN ex-werknemer disclaimer — die wordt server-side toegevoegd aan alinea 2 (uitval).
+- ${EX_WERKNEMER_GENERATION_RULE}
 
 VELDEN (JSON output)
 

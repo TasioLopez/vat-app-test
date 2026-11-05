@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 import {
   BELASTBAARHEID_RUBRICS,
   FORBIDDEN_TERMS,
@@ -220,6 +221,8 @@ Lever exact:
 - actualisaties: array van { type: "spreekuurrapportage"|"artsenverduidelijking", datum_voluit } chronologisch, of null
 
 Geen sectiekop. Geen toelichting. Geen opsommingen.
+
+${EX_WERKNEMER_GENERATION_RULE}
 `.trim();
 
 export function buildZoekprofielScenarioContext(

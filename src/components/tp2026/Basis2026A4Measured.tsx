@@ -42,6 +42,16 @@ import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
 import { VisieLoopbaanadviseurBlock } from '@/components/tp/VisieLoopbaanadviseurBlock';
 import { POW_METER_FOOTNOTE } from '@/lib/tp/pow-meter/constants';
+import {
+  applyExWerknemerWording,
+  applyExWerknemerWordingBeforeMarker,
+  displayInleidingText,
+} from '@/lib/tp/ex-werknemer-wording';
+import {
+  AD_INTRO_SUFFIX,
+  AD_INTRO_SUFFIX_LEGACY,
+  AD_INTRO_SUFFIX_PREVIOUS,
+} from '@/lib/tp/inleiding/constants';
 import { parsePowToelichting } from '@/lib/tp/pow-meter/build-fields';
 import { WETTELIJKE_KADERS } from '@/lib/tp/static';
 import {
@@ -338,7 +348,46 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   atoms.push(...buildSpoor2Atoms(data));
   atoms.push({ id: 'agree-sign', kind: 'agreementSignature' });
 
-  return atoms;
+  return applyBasisExWording(atoms, data.is_ex_werknemer === true);
+}
+
+const BASIS_EX_WORDING_KEYS = new Set([
+  'wk',
+  'soc',
+  'visw',
+  'prof',
+  'zp',
+  'vlb',
+  'pow-toelichting',
+  'pow-inschaling',
+]);
+
+function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {
+  return atoms.map((atom) => {
+    if (atom.kind === 'inleiding') {
+      return { ...atom, md: displayInleidingText(atom.md, isEx) };
+    }
+    if (!isEx) return atom;
+    if (atom.kind === 'groupBanner') {
+      return { ...atom, title: applyExWerknemerWording(atom.title, true) };
+    }
+    if (atom.kind === 'text') {
+      return {
+        ...atom,
+        title: applyExWerknemerWording(atom.title, true),
+        md: BASIS_EX_WORDING_KEYS.has(atom.key) ? applyExWerknemerWording(atom.md, true) : atom.md,
+      };
+    }
+    if (atom.kind === 'spoor2') {
+      return {
+        ...atom,
+        title: applyExWerknemerWording(atom.title, true),
+        body: applyExWerknemerWording(atom.body, true),
+        subText: atom.subText ? applyExWerknemerWording(atom.subText, true) : atom.subText,
+      };
+    }
+    return atom;
+  });
 }
 
 function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
@@ -451,7 +500,12 @@ function InleidingAtomPreview({
   data: Record<string, any>;
   atom: Extract<BasisAtom, { kind: 'inleiding' }>;
 }) {
-  const sub = String(data.inleiding_sub || '').trim();
+  const isEx = data.is_ex_werknemer === true;
+  const sub = applyExWerknemerWordingBeforeMarker(String(data.inleiding_sub || '').trim(), isEx, [
+    AD_INTRO_SUFFIX,
+    AD_INTRO_SUFFIX_PREVIOUS,
+    AD_INTRO_SUFFIX_LEGACY,
+  ]);
   const adReportConcept = isAdReportConcept(data);
   const avgDisclaimer = useDocumentText(NB_AVG_INLEIDING);
 
@@ -488,18 +542,20 @@ function TextBlockBody({
   markdown,
   fieldKey,
   adReportConcept = false,
+  isEx = false,
 }: {
   variant: BasisTextVariant;
   markdown: string;
   fieldKey: string;
   adReportConcept?: boolean;
+  isEx?: boolean;
 }) {
   const trimmed = String(markdown || '').trim();
   const docTrimmed = useDocumentText(trimmed);
   const forDocument = useTPDocumentRender();
 
   if (variant === 'powStatic') {
-    return <PerspectiefOpWerkBlock />;
+    return <PerspectiefOpWerkBlock isEx={isEx} />;
   }
 
   if (variant === 'powGraphic') {
@@ -508,7 +564,7 @@ function TextBlockBody({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/pow-meter-v2.png" alt="PoW-meter" className="mt-1 w-full h-auto" />
         <div className="tp-body-prose">
-          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(applyExWerknemerWording(POW_METER_FOOTNOTE, isEx))}</p>
         </div>
       </div>
     );
@@ -548,7 +604,7 @@ function TextBlockBody({
           <img src="/pow-meter-v2.png" alt="PoW-meter" className="mx-auto max-h-[200px] max-w-full" />
         </div>
         <div className="tp-body-prose">
-          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(POW_METER_FOOTNOTE)}</p>
+          <p className={`mt-4 ${TP_BASIS_DISCLAIMER_CLASS}`}>{formatBasisFootnoteDisplay(applyExWerknemerWording(POW_METER_FOOTNOTE, isEx))}</p>
         </div>
       </div>
     );
@@ -576,9 +632,11 @@ function TextBlockBody({
 function TextAtomPreview({
   atom,
   adReportConcept = false,
+  isEx = false,
 }: {
   atom: Extract<BasisAtom, { kind: 'text' }>;
   adReportConcept?: boolean;
+  isEx?: boolean;
 }) {
   const toelichtingLabel = getBasisToelichtingLabel(atom.key);
   const bodyClass =
@@ -594,6 +652,7 @@ function TextAtomPreview({
           markdown={atom.md}
           fieldKey={atom.key}
           adReportConcept={adReportConcept}
+          isEx={isEx}
         />
       </div>
     </div>
@@ -682,7 +741,13 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
     case 'inleiding':
       return <InleidingAtomPreview data={data} atom={atom} />;
     case 'text':
-      return <TextAtomPreview atom={atom} adReportConcept={adReportConcept} />;
+      return (
+        <TextAtomPreview
+          atom={atom}
+          adReportConcept={adReportConcept}
+          isEx={data.is_ex_werknemer === true}
+        />
+      );
     case 'spoor2':
       return <Spoor2AtomPreview atom={atom} />;
     case 'groupBanner':

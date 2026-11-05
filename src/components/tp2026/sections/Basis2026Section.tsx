@@ -19,6 +19,7 @@ import {
   type BasisSectionDisplayStatus,
 } from '@/lib/tp2026/basis-section-review';
 import { BASIS_SECTION_INFO } from '@/lib/tp2026/basis-section-info';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
@@ -230,7 +231,9 @@ function Basis2026SectionList({
                 onClick={() => onOpenSection(section.id)}
                 className={`flex w-full items-center justify-between gap-3 rounded-lg border-2 bg-white px-4 py-3 text-left shadow-sm transition hover:border-[#702A90]/40 hover:bg-[#702A90]/5 ${BASIS_SECTION_STATUS_BORDER[status]}`}
               >
-                <span className="text-sm font-medium text-foreground">{section.label}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {applyExWerknemerWording(section.label, data.is_ex_werknemer === true)}
+                </span>
                 <BasisSectionStatusBadge status={status} />
               </button>
             </li>
@@ -271,7 +274,9 @@ function Basis2026SectionDetail({
           <IconActionButton label="Terug naar secties" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" aria-hidden />
           </IconActionButton>
-          <h2 className="text-sm font-semibold text-foreground">{section.label}</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {applyExWerknemerWording(section.label, data.is_ex_werknemer === true)}
+          </h2>
           <BasisSectionStatusBadge status={status} />
           {BASIS_SECTION_INFO[sectionId] ? <BasisSectionInfoButton sectionId={sectionId} /> : null}
         </div>
