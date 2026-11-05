@@ -160,19 +160,32 @@ describe('fase activatie layout', () => {
     assert.match(head, /Activeringsinterventies/);
     assert.match(head, /text-\[#782A90\]/);
 
-    const rows = atoms.filter((a) => a.id.startsWith('ln-row-'));
-    assert.equal(rows.length, VGR_LEERNAVIGATOR_BASIS_DEFS.length);
-    assert.ok(rows.every((row) => row.frame === 'ln'));
-    const first = markup(rows[0]);
-    assert.match(first, /border-r/);
-    assert.match(first, /border-\[#C4B37B\]/);
-    assert.doesNotMatch(first, /border-b/);
-    assert.match(first, /De eigen talenten en valkuilen/);
-    assert.match(first, /Werknemer verricht minimaal 3x per week/);
-    const last = markup(rows[rows.length - 1]);
-    assert.match(last, /De WIA-aanvraag/);
-    assert.doesNotMatch(last, /fulltime functie/);
-    assert.equal(rows.length > VGR_LEERNAVIGATOR_ACTIVERING_DEFS.length, true);
+    const body = byId.get('ln-body');
+    assert.equal(body?.frame, 'ln');
+    const html = markup(body);
+    assert.match(html, /items-start/);
+    assert.match(html, /border-r/);
+    assert.match(html, /border-\[#C4B37B\]/);
+    assert.doesNotMatch(html, /border-b/);
+    const basisCol = html.split('data-ln-col="act"')[0] ?? '';
+    const actCol = html.split('data-ln-col="act"')[1] ?? '';
+    assert.match(basisCol, /data-ln-col="basis"/);
+    assert.match(basisCol, /De eigen talenten en valkuilen/);
+    assert.match(basisCol, /De WIA-aanvraag/);
+    assert.doesNotMatch(basisCol, /Werknemer verricht minimaal 3x per week/);
+    assert.match(actCol, /Werknemer verricht minimaal 3x per week/);
+    assert.match(actCol, /fulltime functie/);
+    assert.doesNotMatch(actCol, /De WIA-aanvraag/);
+    assert.equal(VGR_LEERNAVIGATOR_BASIS_DEFS.length > VGR_LEERNAVIGATOR_ACTIVERING_DEFS.length, true);
+
+    const parts = splitVgrBodyAtom(body!);
+    assert.ok(parts);
+    assert.equal(parts[0].frame, 'ln');
+    assert.equal(parts[1].frame, 'ln');
+    assert.equal(parts[1].pageBreakBefore, true);
+    assert.match(markup(parts[0]), /De eigen talenten en valkuilen/);
+    assert.doesNotMatch(markup(parts[0]), /De WIA-aanvraag/);
+    assert.match(markup(parts[1]), /De WIA-aanvraag/);
   });
 });
 

@@ -69,6 +69,7 @@ import {
   type VGRBody,
   type VGRData,
   type VGRInterventionSection,
+  type VGRLeernavigatorItem,
   type VGRQuoteBlock,
 } from '@/lib/vgr/schema';
 
@@ -85,6 +86,11 @@ export type VGRBodyAtom = {
   pageBreakBefore?: boolean;
   /** Long prose: can be split into paragraphs when it does not fit. */
   splitText?: { text: string; render: (part: string, partIndex: number) => React.ReactNode };
+  /**
+   * Two independent checkbox columns. A split continues each column on the next page
+   * without pairing a left item to the height of the item beside it.
+   */
+  splitColumns?: { basis: VGRLeernavigatorItem[]; activering: VGRLeernavigatorItem[] };
   /**
    * Shaded panel id. Consecutive atoms with the same id are wrapped in one box per page,
    * and a split continues the box on the next page.
@@ -270,14 +276,55 @@ function functieLines(bullets: string): string[] {
 const LN_FRAME = 'ln';
 const LN_RULE = 'border-[#C4B37B]';
 
-function leernavigatorTableRow(left: React.ReactNode, right: React.ReactNode, header = false) {
-  const cell = header ? `bg-[#F3EFE4] border-b ${LN_RULE} px-2 py-1` : 'px-2 py-0.5';
+function leernavigatorHeader() {
+  const cell = `bg-[#F3EFE4] border-b ${LN_RULE} px-2 py-1`;
   return (
     <div className="grid grid-cols-2">
-      <div className={`${cell} border-r ${LN_RULE}`}>{left}</div>
-      <div className={cell}>{right}</div>
+      <div className={`${cell} border-r ${LN_RULE}`}>
+        <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>
+      </div>
+      <div className={cell}>
+        <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>
+      </div>
     </div>
   );
+}
+
+/** Each column stacks its own checkboxes. A wrapped line only grows that column. */
+function leernavigatorColumns(basis: VGRLeernavigatorItem[], activering: VGRLeernavigatorItem[]) {
+  return (
+    <div className="grid grid-cols-2 items-start">
+      <div data-ln-col="basis" className={`flex flex-col border-r ${LN_RULE}`}>
+        {basis.map((item) => (
+          <div key={item.id} className="px-2 py-0.5">
+            <CheckLine checked={item.checked} label={item.label} />
+          </div>
+        ))}
+      </div>
+      <div data-ln-col="act" className="flex flex-col">
+        {activering.map((item) => (
+          <div key={item.id} className="px-2 py-0.5">
+            <CheckLine checked={item.checked} label={leernavigatorLabelWithUren(item)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function leernavigatorBodyAtom(
+  id: string,
+  basis: VGRLeernavigatorItem[],
+  activering: VGRLeernavigatorItem[],
+  pageBreakBefore?: boolean,
+): VGRBodyAtom {
+  return {
+    id,
+    frame: LN_FRAME,
+    pageBreakBefore,
+    node: leernavigatorColumns(basis, activering),
+    splitColumns: { basis, activering },
+  };
 }
 
 type InterventionPanels = {
@@ -910,24 +957,10 @@ function buildActivatie(ctx: Ctx) {
     id: 'ln-head',
     frame: LN_FRAME,
     keepWithNext: true,
-    node: leernavigatorTableRow(
-      <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_BASIS_TITLE}</div>,
-      <div className={VGR_PANEL_LABEL_CLASS}>{VGR_LEERNAVIGATOR_ACTIVERING_TITLE}</div>,
-      true,
-    ),
+    node: leernavigatorHeader(),
   });
-  const lnRows = Math.max(ln.basis.length, ln.activering.length);
-  for (let i = 0; i < lnRows; i++) {
-    const basis = ln.basis[i];
-    const act = ln.activering[i];
-    push(ctx, {
-      id: `ln-row-${i}`,
-      frame: LN_FRAME,
-      node: leernavigatorTableRow(
-        basis ? <CheckLine checked={basis.checked} label={basis.label} /> : null,
-        act ? <CheckLine checked={act.checked} label={leernavigatorLabelWithUren(act)} /> : null,
-      ),
-    });
+  if (ln.basis.length || ln.activering.length) {
+    push(ctx, leernavigatorBodyAtom('ln-body', ln.basis, ln.activering));
   }
 }
 
@@ -944,8 +977,24 @@ export function buildVgrBodyAtoms(data: VGRData): VGRBodyAtom[] {
   return ctx.atoms;
 }
 
+function splitLeernavigatorAtom(atom: VGRBodyAtom): VGRBodyAtom[] | null {
+  const cols = atom.splitColumns;
+  if (!cols) return null;
+  const basisMid = Math.ceil(cols.basis.length / 2);
+  const actMid = Math.ceil(cols.activering.length / 2);
+  const basisRest = cols.basis.slice(basisMid);
+  const actRest = cols.activering.slice(actMid);
+  if (basisRest.length + actRest.length === 0) return null;
+  return [
+    leernavigatorBodyAtom(`${atom.id}#0`, cols.basis.slice(0, basisMid), cols.activering.slice(0, actMid), atom.pageBreakBefore),
+    leernavigatorBodyAtom(`${atom.id}#1`, basisRest, actRest, true),
+  ];
+}
+
 /** Split prose atom into paragraph (or sentence) parts for pagination. */
 export function splitVgrBodyAtom(atom: VGRBodyAtom): VGRBodyAtom[] | null {
+  const columns = splitLeernavigatorAtom(atom);
+  if (columns) return columns;
   if (!atom.splitText) return null;
   const { text, render } = atom.splitText;
   let parts = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
