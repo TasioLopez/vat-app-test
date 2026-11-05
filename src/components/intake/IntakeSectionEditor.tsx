@@ -3,10 +3,13 @@
 import type { IntakeData, IntakeFmlBeperkingen, IntakeSectionKey } from '@/lib/intake/schema';
 import { INTAKE_SECTION_DEFS } from '@/lib/intake/schema';
 import {
+  COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_OPTIONS,
   TRANSPORT_TYPE_OPTIONS,
   DUTCH_LANGUAGE_OPTIONS,
   EDUCATION_LEVEL_OPTIONS,
+  getComputerSkillsDefaultDescription,
+  nextComputerSkillsDescriptionOnLevelChange,
 } from '@/lib/tp2026/gegevens-field-options';
 import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 import {
@@ -321,12 +324,35 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 value={data.s17.work_experience}
                 onChange={(v) => patch('s17', { work_experience: v }, { debounce: true })}
               />
-              <IntakeField
+              <IntakeSelectField
                 label="Computervaardigheden"
                 value={data.s17.computer_skills}
-                onChange={(v) => patch('s17', { computer_skills: v }, { debounce: true })}
+                onChange={(v) =>
+                  patch('s17', {
+                    computer_skills: v,
+                    computer_skills_extra: nextComputerSkillsDescriptionOnLevelChange(
+                      data.s17.computer_skills,
+                      v,
+                      data.s17.computer_skills_extra
+                    ),
+                  })
+                }
+                options={COMPUTER_SKILLS_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: `${option.value} - ${option.label}`,
+                }))}
               />
             </div>
+            {data.s17.computer_skills && data.s17.computer_skills !== '1' ? (
+              <IntakeField
+                label="Toelichting computervaardigheden"
+                value={
+                  data.s17.computer_skills_extra ||
+                  getComputerSkillsDefaultDescription(data.s17.computer_skills)
+                }
+                onChange={(v) => patch('s17', { computer_skills_extra: v }, { debounce: true })}
+              />
+            ) : null}
             <div>
               <p className="mb-2 text-sm font-medium text-gray-600">Apparatuur</p>
               <div className="flex flex-wrap gap-2">
@@ -383,7 +409,7 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 ))}
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <IntakeSelectField
                 label="Nederlands spreken"
                 value={data.s17.dutch_speaking}
@@ -394,6 +420,12 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 label="Nederlands schrijven"
                 value={data.s17.dutch_writing}
                 onChange={(v) => patch('s17', { dutch_writing: v })}
+                options={DUTCH_LANGUAGE_OPTIONS}
+              />
+              <IntakeSelectField
+                label="Nederlands lezen"
+                value={data.s17.dutch_reading}
+                onChange={(v) => patch('s17', { dutch_reading: v })}
                 options={DUTCH_LANGUAGE_OPTIONS}
               />
             </div>

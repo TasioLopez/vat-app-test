@@ -60,12 +60,14 @@ describe('validated intake TP source', () => {
     data.s13.wens_terugkeer = 'Wil terug in eigen werk.';
     data.s17.transport_types = ['fiets'];
     data.s17.dutch_speaking = 'G';
+    data.s17.dutch_reading = 'Goed';
 
     const text = intakeTextForSociale(data);
     assert.match(text, /Woont samen met partner/);
     assert.match(text, /Energetische beperking/);
     assert.match(text, /fiets/);
     assert.match(text, /Nederlands spreken: G/);
+    assert.match(text, /Nederlands lezen: Goed/);
     assert.doesNotMatch(text, /Wil terug in eigen werk/);
   });
 
@@ -89,6 +91,7 @@ describe('validated intake TP source', () => {
     data.s17.education_level = 'HBO';
     data.s17.opleidingen = [{ opleiding: 'Pabo', afgerond: 'ja' }];
     data.s17.has_pc = true;
+    data.s17.computer_skills = '3';
     data.s12.hobbies = 'Lezen';
 
     const text = intakeTextForPersoonlijkProfiel(data);
@@ -96,6 +99,7 @@ describe('validated intake TP source', () => {
     assert.match(text, /HBO/);
     assert.match(text, /Pabo — afgerond/);
     assert.match(text, /PC: ja/);
+    assert.match(text, /Computervaardigheden: 3 - Gemiddeld/);
     assert.doesNotMatch(text, /Lezen/);
   });
 

@@ -1,5 +1,6 @@
 import { isIntakeDocumentType } from '@/lib/document-analysis/storage';
 import type { IntakeData, IntakeEducationRow, IntakeWorkExperienceRow } from '@/lib/intake/schema';
+import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options';
 import type { IntakeSectie3Content } from '@/lib/tp/intake-sectie3/schema';
 import type { IntakeSectie5Content } from '@/lib/tp/intake-sectie5/schema';
 import type { IntakeSectie7Content } from '@/lib/tp/intake-sectie7/schema';
@@ -125,11 +126,12 @@ function profileSections(intake: IntakeData): string[] {
       field('PC', intake.s17.has_pc),
       field('Smartphone', intake.s17.has_smartphone),
       field('Tablet', intake.s17.has_tablet),
-      field('Computervaardigheden', intake.s17.computer_skills),
+      field('Computervaardigheden', formatComputerSkillsOption(intake.s17.computer_skills)),
       field('Computervaardigheden toelichting', intake.s17.computer_skills_extra),
       field('Typvaardigheid', intake.s17.typing_skills),
       field('Nederlands spreken', intake.s17.dutch_speaking),
       field('Nederlands schrijven', intake.s17.dutch_writing),
+      field('Nederlands lezen', intake.s17.dutch_reading),
       field('Andere talen', intake.s17.other_languages),
     ]),
   ];
@@ -172,6 +174,7 @@ export function intakeTextForSociale(intake: IntakeData): string {
       field('Rijbewijs', intake.s17.drivers_license_types),
       field('Nederlands spreken', intake.s17.dutch_speaking),
       field('Nederlands schrijven', intake.s17.dutch_writing),
+      field('Nederlands lezen', intake.s17.dutch_reading),
       field('Andere talen', intake.s17.other_languages),
     ]),
   ]);

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { ensureIntakeShape, INTAKE_SECTION_DEFS, type IntakeData } from '@/lib/intake/schema';
 import { formatIntakeDateNl } from '@/lib/intake/format-date';
+import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options';
 import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -172,11 +173,13 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
         <BoolRow label="PC/laptop" value={intake.s17.has_pc} />
         <BoolRow label="Smartphone" value={intake.s17.has_smartphone} />
         <BoolRow label="Tablet" value={intake.s17.has_tablet} />
-        <Row label="Computervaardigheden" value={intake.s17.computer_skills} />
+        <Row label="Computervaardigheden" value={formatComputerSkillsOption(intake.s17.computer_skills)} />
+        <Row label="Toelichting computervaardigheden" value={intake.s17.computer_skills_extra} />
         <Row label="Vervoer" value={intake.s17.transport_types.join(', ')} />
         <Row label="Rijbewijs" value={intake.s17.drivers_license_types.join(', ')} />
         <Row label="NL spreken" value={intake.s17.dutch_speaking} />
         <Row label="NL schrijven" value={intake.s17.dutch_writing} />
+        <Row label="NL lezen" value={intake.s17.dutch_reading} />
       </SectionBlock>
     </div>
   );

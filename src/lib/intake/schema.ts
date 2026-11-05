@@ -177,6 +177,7 @@ export type IntakeSection17 = {
   transport_types: string[];
   dutch_speaking: string;
   dutch_writing: string;
+  dutch_reading: string;
   other_languages: string;
 };
 
@@ -329,6 +330,7 @@ export function createEmptyIntakeData(): IntakeData {
       transport_types: [],
       dutch_speaking: '',
       dutch_writing: '',
+      dutch_reading: '',
       other_languages: '',
     },
   };

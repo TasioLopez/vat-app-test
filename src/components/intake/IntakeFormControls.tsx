@@ -44,6 +44,16 @@ export function IntakeField({
   );
 }
 
+type IntakeSelectOption = string | { value: string; label: string };
+
+function selectOptionValue(option: IntakeSelectOption): string {
+  return typeof option === 'string' ? option : option.value;
+}
+
+function selectOptionLabel(option: IntakeSelectOption): string {
+  return typeof option === 'string' ? option : option.label;
+}
+
 export function IntakeSelectField({
   label,
   value,
@@ -53,7 +63,7 @@ export function IntakeSelectField({
   label: string;
   value: string;
   onChange: (v: string) => void;
-  options: readonly string[];
+  options: readonly IntakeSelectOption[];
 }) {
   return (
     <label className="block space-y-1.5">
@@ -64,11 +74,14 @@ export function IntakeSelectField({
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">—</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
+        {options.map((option) => {
+          const optionValue = selectOptionValue(option);
+          return (
+            <option key={optionValue} value={optionValue}>
+              {selectOptionLabel(option)}
+            </option>
+          );
+        })}
       </select>
     </label>
   );
