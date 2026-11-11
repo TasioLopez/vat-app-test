@@ -9,15 +9,23 @@ function basename(pathOrFilename: string): string {
     : pathOrFilename;
 }
 
+/** OpenAI context stuffing matches extensions case-sensitively (.pdf, not .PDF). */
+function withLowercaseExtension(filename: string): string {
+  const dot = filename.lastIndexOf('.');
+  if (dot <= 0) return filename;
+  return filename.slice(0, dot) + filename.slice(dot).toLowerCase();
+}
+
 /**
  * Returns filename and MIME type safe for OpenAI files.create().
  * Normalizes .docm to .docx (OpenAI Files API rejects .docm extension; OOXML content is unchanged).
+ * Lowercases the extension so .PDF / .DOCX pass the Responses API allowlist.
  */
 export function getOpenAIFileParams(pathOrFilename: string): {
   filename: string;
   mimeType: string;
 } {
-  const filename = basename(pathOrFilename);
+  const filename = withLowercaseExtension(basename(pathOrFilename));
   const lower = filename.toLowerCase();
 
   if (lower.endsWith('.docm')) {

@@ -25,6 +25,42 @@ describe('getOpenAIFileParams', () => {
     const result = getOpenAIFileParams('employees/40187/intakeformulier.docm');
     assert.equal(result.filename, 'intakeformulier.docx');
   });
+
+  it('lowercases .PDF and keeps the stem', () => {
+    const result = getOpenAIFileParams('De_heer_E_Arthur_-_AD-rapport_DEF.PDF');
+    assert.equal(result.filename, 'De_heer_E_Arthur_-_AD-rapport_DEF.pdf');
+    assert.equal(result.mimeType, 'application/pdf');
+  });
+
+  it('lowercases .PDF on a storage path', () => {
+    const result = getOpenAIFileParams(
+      'employees/40187/ad_rapportage-De_heer_E_Arthur_-_AD-rapport_DEF.PDF'
+    );
+    assert.equal(result.filename, 'ad_rapportage-De_heer_E_Arthur_-_AD-rapport_DEF.pdf');
+    assert.equal(result.mimeType, 'application/pdf');
+  });
+
+  it('lowercases .DOCX and .DOC', () => {
+    const docx = getOpenAIFileParams('Report.DOCX');
+    assert.equal(docx.filename, 'Report.docx');
+    assert.equal(
+      docx.mimeType,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+
+    const doc = getOpenAIFileParams('Report.DOC');
+    assert.equal(doc.filename, 'Report.doc');
+    assert.equal(doc.mimeType, 'application/msword');
+  });
+
+  it('renames .DOCM to .docx', () => {
+    const result = getOpenAIFileParams('Intake.DOCM');
+    assert.equal(result.filename, 'Intake.docx');
+    assert.equal(
+      result.mimeType,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+  });
 });
 
 describe('buildOpenAIFile', () => {
