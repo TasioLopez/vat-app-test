@@ -360,6 +360,7 @@ const BASIS_EX_WORDING_KEYS = new Set([
   'vlb',
   'pow-toelichting',
   'pow-inschaling',
+  'prog',
 ]);
 
 function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {
@@ -646,7 +647,9 @@ function TextAtomPreview({
     <div>
       {atom.showSectionTitle ? <SectionBand title={atom.title} /> : null}
       <div className={bodyClass}>
-        {toelichtingLabel ? <BasisToelichtingHeading label={toelichtingLabel} /> : null}
+        {toelichtingLabel ? (
+          <BasisToelichtingHeading label={applyExWerknemerWording(toelichtingLabel, isEx)} />
+        ) : null}
         <TextBlockBody
           variant={atom.variant}
           markdown={atom.md}
@@ -755,6 +758,7 @@ function renderBodyAtom(data: Record<string, any>, atom: BasisAtom): React.React
     case 'agreementSignature':
       return (
         <BasisAgreementSignatureBlock
+          isEx={data.is_ex_werknemer === true}
           employeeName={`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim() || 'Naam werknemer'}
           advisorName={data.consultant_name || 'Loopbaanadviseur'}
           employerContact={data.client_referent_name || 'Naam opdrachtgever'}

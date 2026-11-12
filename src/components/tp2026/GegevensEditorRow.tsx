@@ -17,6 +17,7 @@ import {
   materializeSpoor2ForExWerknemer,
 } from '@/lib/tp/tp_activities';
 import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
   if (
@@ -79,6 +80,10 @@ export function GegevensEditorRow({
               ),
             };
           }
+          field = {
+            ...field,
+            label: applyExWerknemerWording(field.label, data.is_ex_werknemer === true),
+          };
           const props = resolveFieldProps(field);
 
           if (key === 'computer_skills') {

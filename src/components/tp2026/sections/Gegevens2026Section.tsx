@@ -494,7 +494,7 @@ function GegevensPage2({
               value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'}
             />
             <DataRow
-              label="Andere werkgever(s)"
+              label={applyExWerknemerWording('Andere werkgever(s)', data.is_ex_werknemer === true)}
               value={formatGegevensOtherEmployers(
                 data.other_employers,
                 getWerkgeverName(data)

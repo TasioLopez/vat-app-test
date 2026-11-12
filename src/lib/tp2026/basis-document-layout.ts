@@ -34,7 +34,10 @@ export function normalizeWkMarkdown(md: string): string {
 
   if (LEGACY_WK_INTRO.test(first)) {
     body = lines.slice(1).join('\n').trim();
-  } else if (first.startsWith('Werknemer heeft uitleg en informatie gekregen')) {
+  } else if (
+    first.startsWith('Werknemer heeft uitleg en informatie gekregen') ||
+    first.startsWith('Ex-werknemer heeft uitleg en informatie gekregen')
+  ) {
     body = lines.slice(1).join('\n').trim();
   }
 

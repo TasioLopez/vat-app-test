@@ -121,6 +121,37 @@ describe('applyExWerknemerWording', () => {
       'Het advies luidt: "de werknemer blijft in dienst".'
     );
   });
+
+  it('rewrites the remaining document sentences and gegevens labels', () => {
+    assert.equal(
+      applyExWerknemerWording(
+        'Werknemer heeft uitleg en informatie gekregen over onderstaande punten:',
+        true
+      ),
+      'Ex-werknemer heeft uitleg en informatie gekregen over onderstaande punten:'
+    );
+    assert.equal(
+      applyExWerknemerWording(
+        'Werknemer heeft, in overeenstemming met het Inzetbaarheidsprofiel (IZP) van 22 september 2026, beperkingen in de volgende rubrieken:',
+        true
+      ),
+      'Ex-werknemer heeft, in overeenstemming met het Inzetbaarheidsprofiel (IZP) van 22 september 2026, beperkingen in de volgende rubrieken:'
+    );
+    assert.equal(
+      applyExWerknemerWording(
+        'Uw cv kan worden gebruikt worden om u te introduceren bij andere werkgevers.',
+        true
+      ),
+      'Uw cv kan worden gebruikt worden om u te introduceren bij andere ex-werkgevers.'
+    );
+    assert.equal(
+      applyExWerknemerWording('bestemd voor uw werkgever en het UWV', true),
+      'bestemd voor uw ex-werkgever en het UWV'
+    );
+    assert.equal(applyExWerknemerWording('Telefoon werknemer', true), 'Telefoon ex-werknemer');
+    assert.equal(applyExWerknemerWording('E-mail werknemer', true), 'E-mail ex-werknemer');
+    assert.equal(applyExWerknemerWording('Andere werkgever(s)', true), 'Andere ex-werkgever(s)');
+  });
 });
 
 describe('displayInleidingText', () => {

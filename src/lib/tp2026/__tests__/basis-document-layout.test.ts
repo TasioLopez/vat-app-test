@@ -19,4 +19,12 @@ describe('basis-document-layout', () => {
     assert.match(body, /^• Eerste punt;/);
     assert.doesNotMatch(body, /Werknemer heeft uitleg en informatie/);
   });
+
+  it('strips a stored ex-werknemer WK intro line', () => {
+    const body = normalizeWkMarkdown(
+      'Ex-werknemer heeft uitleg en informatie gekregen over onderstaande punten:\n• Eerste punt;'
+    );
+    assert.match(body, /^• Eerste punt;/);
+    assert.doesNotMatch(body, /uitleg en informatie gekregen/);
+  });
 });
