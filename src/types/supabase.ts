@@ -1430,6 +1430,148 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      },
+      locations: {
+        Row: {
+          active: boolean
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      },
+      spaces: {
+        Row: {
+          active: boolean
+          capacity: number | null
+          created_at: string
+          id: string
+          kind: string
+          location_id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          active?: boolean
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          kind: string
+          location_id: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          active?: boolean
+          capacity?: number | null
+          created_at?: string
+          id?: string
+          kind?: string
+          location_id?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spaces_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      bookings: {
+        Row: {
+          booked_by: string | null
+          booker_name: string
+          created_at: string
+          ends_at: string
+          id: string
+          note: string | null
+          space_id: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          booked_by?: string | null
+          booker_name?: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          note?: string | null
+          space_id: string
+          starts_at: string
+          title: string
+        }
+        Update: {
+          booked_by?: string | null
+          booker_name?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          note?: string | null
+          space_id?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      booking_guests: {
+        Row: {
+          booking_id: string
+          email: string
+          id: string
+        }
+        Insert: {
+          booking_id: string
+          email: string
+          id?: string
+        }
+        Update: {
+          booking_id?: string
+          email?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_guests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

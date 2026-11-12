@@ -53,6 +53,16 @@ export function canDeleteUsers(role: string): boolean {
   return isAdmin(role);
 }
 
+/** Locations, rooms, and parking spaces — admin only. */
+export function canManageSpaces(role: string): boolean {
+  return isAdmin(role);
+}
+
+/** Cancel a room or parking booking — admin only. */
+export function canCancelBooking(role: string): boolean {
+  return isAdmin(role);
+}
+
 /**
  * Whether actor may set target's role from → to.
  * Same-role is always allowed (no-op on save).

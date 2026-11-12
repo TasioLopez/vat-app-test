@@ -17,6 +17,7 @@ import {
   FaLifeRing,
   FaTools,
   FaChevronLeft,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import { useUnsavedChangesGuard } from "@/context/UnsavedChangesGuardContext";
 import { useHelpNotifications } from "@/context/HelpNotificationsContext";
@@ -82,6 +83,7 @@ export default function Sidebar({
     { name: "Werkgevers", href: "/dashboard/clients", icon: <FaBriefcase /> },
     { name: "Werknemers", href: "/dashboard/employees", icon: <FaUserTie /> },
     { name: "TP Docs", href: "/dashboard/tpdocs", icon: <FaFileAlt /> },
+    { name: "Reserveren", href: "/dashboard/reserveren", icon: <FaCalendarAlt /> },
     { name: "Help", href: "/dashboard/help", icon: <FaLifeRing /> },
     ...(isAdmin(role)
       ? [{ name: "Helpbeheer", href: "/dashboard/help/admin", icon: <FaTools /> }]

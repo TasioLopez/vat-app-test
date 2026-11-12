@@ -5,9 +5,11 @@ import {
   canAccessUsersAdmin,
   canAssignEmployeeOwner,
   canChangeUserRole,
+  canCancelBooking,
   canDeleteUsers,
   canInviteUsers,
   canManageClients,
+  canManageSpaces,
   canViewOverallDashboardStats,
   canViewTotalUsersStat,
 } from '../roles';
@@ -52,6 +54,17 @@ describe('canInviteUsers / canDeleteUsers', () => {
     assert.equal(canInviteUsers('back_office'), false);
     assert.equal(canDeleteUsers('back_office'), false);
     assert.equal(canInviteUsers('user'), false);
+  });
+});
+
+describe('booking catalog helpers', () => {
+  it('are admin-only', () => {
+    assert.equal(canManageSpaces('admin'), true);
+    assert.equal(canCancelBooking('admin'), true);
+    assert.equal(canManageSpaces('back_office'), false);
+    assert.equal(canCancelBooking('back_office'), false);
+    assert.equal(canManageSpaces('user'), false);
+    assert.equal(canCancelBooking('user'), false);
   });
 });
 

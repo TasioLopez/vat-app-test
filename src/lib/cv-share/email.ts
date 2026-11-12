@@ -1,5 +1,13 @@
-import nodemailer from 'nodemailer';
-import { getConfiguredServerAuthOrigin, normalizeAuthOrigin } from '@/lib/auth/auth-origin';
+import {
+  APP_NAME,
+  EMAIL_ACCENT,
+  escapeHtml,
+  getEmailPublicOrigin,
+  getMailFrom,
+  getMailTransport,
+} from '@/lib/email/smtp';
+
+export { getEmailPublicOrigin };
 
 type ShareEmailParams = {
   to: string;
@@ -10,49 +18,10 @@ type ShareEmailParams = {
   expiresAt: Date;
 };
 
-const APP_NAME = 'VAT App';
-const ACCENT = '#00A3CC';
-
-function getTransport() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT ?? 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) {
-    throw new Error('SMTP is not configured (SMTP_HOST, SMTP_USER, SMTP_PASS)');
-  }
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-}
+const ACCENT = EMAIL_ACCENT;
 
 function formatDateNl(d: Date): string {
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-/** Public site origin for logo/assets in emails. */
-export function getEmailPublicOrigin(): string {
-  const fromEnv = process.env.APP_PUBLIC_URL?.trim();
-  if (fromEnv) return normalizeAuthOrigin(fromEnv);
-  const fromAuth = getConfiguredServerAuthOrigin();
-  if (fromAuth) return fromAuth;
-  return 'https://www.vat-app.nl';
-}
-
-/** Build RFC5322 From with display name, e.g. `"VAT App" <contact@vat-app.nl>`. */
-function getMailFrom(): string {
-  const address = (process.env.SMTP_FROM ?? process.env.SMTP_USER)?.trim();
-  if (!address) throw new Error('SMTP_FROM is not configured');
-
-  if (/^[^<]*<[^>]+>$/.test(address)) {
-    return address;
-  }
-
-  const name = (process.env.SMTP_FROM_NAME ?? APP_NAME).trim() || APP_NAME;
-  return `"${name.replace(/"/g, '\\"')}" <${address}>`;
 }
 
 function buildShareEmailHtml(params: {
@@ -220,7 +189,7 @@ export async function sendCvShareEmail(params: ShareEmailParams): Promise<void> 
     .filter((line) => line !== undefined)
     .join('\n');
 
-  const transport = getTransport();
+  const transport = getMailTransport();
   await transport.sendMail({
     from,
     to,
@@ -228,12 +197,4 @@ export async function sendCvShareEmail(params: ShareEmailParams): Promise<void> 
     text,
     html,
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
