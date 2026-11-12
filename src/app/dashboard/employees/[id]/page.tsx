@@ -90,6 +90,7 @@ import {
     splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
 import GesprekPanel from '@/components/employee/GesprekPanel';
+import { fetchOrgDirectory, formatOrgUserDisplayName, type OrgDirectoryUser } from '@/lib/users/org-directory';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
 import { WorkerProfileSummary } from '@/components/employee/WorkerProfileSummary';
@@ -319,6 +320,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
     const [profileMode, setProfileMode] = useState<'summary' | 'edit'>('summary');
+    const [orgUsers, setOrgUsers] = useState<OrgDirectoryUser[]>([]);
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
@@ -350,6 +352,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             ).length,
         [docTypes, documents]
     );
+
+    useEffect(() => {
+        let cancelled = false;
+        void fetchOrgDirectory(supabase).then((users) => {
+            if (!cancelled) setOrgUsers(users);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (!aiLoading) {
@@ -1285,8 +1297,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {employee && (
-                <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="flex-col bg-white p-4 rounded shadow flex-1 space-y-4 w-2/5">
+                <div className="flex flex-col items-start gap-4 lg:flex-row">
+                    <div className="min-w-0 w-full flex-1 space-y-4 rounded bg-white p-4 shadow">
                         {profileMode === 'summary' ? (
                             <WorkerProfileSummary
                                 reviewCount={pendingValidationFields.length}
@@ -1314,11 +1326,33 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     hasComputer: employeeDetails?.has_computer,
                                     computerSkills: employeeDetails?.computer_skills,
                                     computerSkillsDescription: employeeDetails?.computer_skills_description,
+                                    clientName,
+                                    referentName: (() => {
+                                        const referent = referents.find((item) => item.id === employee.referent_id);
+                                        return [referent?.first_name, referent?.last_name].filter(Boolean).join(' ').trim();
+                                    })(),
+                                    ownerName: (() => {
+                                        const owner = orgUsers.find((user) => user.id === employee.owner_id);
+                                        return owner ? formatOrgUserDisplayName(owner) : '';
+                                    })(),
                                 }}
                             />
                         ) : (
                         <>
-                        <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
+                        <div className="flex items-start justify-between gap-3">
+                            <h2 className="text-xl font-semibold text-gray-900">
+                                {[employee.first_name, employee.last_name].filter(Boolean).join(' ') || 'Werknemer'}
+                            </h2>
+                            <div className="flex shrink-0 gap-2">
+                                <Button type="button" variant="outline" size="sm" onClick={cancelProfileEdit} disabled={updating}>
+                                    Annuleren
+                                </Button>
+                                <Button type="button" size="sm" onClick={() => void confirmProfileEdit()} disabled={updating}>
+                                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                                    {updating ? 'Opslaan...' : 'Opslaan'}
+                                </Button>
+                            </div>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
                             <input
                                 className={INPUT_CLASS}
@@ -1387,6 +1421,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         </>
                         )}
 
+                        {profileMode === 'edit' ? (
                         <div className="space-y-3 border-t border-gray-100 pt-3">
                             <div
                                 className={cn(
@@ -1497,289 +1532,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 </Select>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg shadow border border-purple-100/80 w-full lg:w-[400px] space-y-4">
-                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-purple-600" />
-                            Documenten
-                        </h2>
-                        <div className="flex flex-col gap-3">
-                            <Dialog
-                                open={sourcesModalOpen}
-                                onOpenChange={(open) => {
-                                    if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
-                                        if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
-                                    }
-                                    setSourcesModalOpen(open);
-                                    if (!open) setSourcesView('list');
-                                }}
-                            >
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="h-auto justify-start gap-3 border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/80 to-white py-4 px-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50"
-                                    onClick={() => setSourcesModalOpen(true)}
-                                >
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                                        <FolderOpen className="h-5 w-5" />
-                                    </span>
-                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                        <span className="font-semibold text-gray-900">Bronnen beheren</span>
-                                        <span className="text-xs font-normal text-gray-600">
-                                            {stagingGesprek
-                                                ? 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
-                                                : 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
-                                        </span>
-                                        <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                            {uploadedSourcesCount}/{docTypes.length} geüpload
-                                        </span>
-                                    </span>
-                                </Button>
-                                <DialogContent
-                                    className={
-                                        sourcesView === 'gesprek'
-                                            ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
-                                            : 'max-w-md sm:max-w-lg'
-                                    }
-                                    onOpenAutoFocus={(e) => e.preventDefault()}
-                                >
-                                    {sourcesView === 'gesprek' ? (
-                                        <GesprekPanel
-                                            embedded
-                                            employeeId={employeeId}
-                                            open={sourcesModalOpen}
-                                            onOpenChange={setSourcesModalOpen}
-                                            onBack={() => setSourcesView('list')}
-                                            hasPublishedVerslag={documents.some(
-                                                (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
-                                            )}
-                                            onDirtyChange={onGesprekDirty}
-                                            onDocumentsChanged={() => {
-                                                void fetchDocuments();
-                                            }}
-                                        />
-                                    ) : (
-                                    <>
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                            <FolderOpen className="h-5 w-5 text-emerald-600" />
-                                            Bronnen & uploads
-                                        </DialogTitle>
-                                        <p className="text-sm text-gray-600">
-                                            Kies een documenttype om te uploaden of te vervangen.
-                                        </p>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-2 gap-2 pt-1">
-                                        {docTypes.map((type) => {
-                                            const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
-                                            return (
-                                                <div
-                                                    key={type}
-                                                    className={cn(
-                                                        'group relative rounded-xl p-4 text-left text-sm transition-colors',
-                                                        'border-2',
-                                                        doc
-                                                            ? 'border-emerald-500 bg-emerald-50/60'
-                                                            : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
-                                                    )}
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (type === 'gespreksverslag') {
-                                                                setSourcesView('gesprek');
-                                                                return;
-                                                            }
-                                                            setSourcesModalOpen(false);
-                                                            setActiveDocType(type);
-                                                        }}
-                                                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 rounded-lg"
-                                                    >
-                                                        <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
-                                                            {doc ? (
-                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                                                            ) : (
-                                                                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
-                                                            )}
-                                                            {DOC_LABELS[type]}
-                                                        </p>
-                                                        {type === 'gespreksverslag' ? (
-                                                            <p className="text-xs text-gray-500">
-                                                                {doc ? 'Notities bewaard' : 'Transcript en notities'}
-                                                            </p>
-                                                        ) : doc ? (
-                                                            <p className="text-xs text-emerald-700">Geüpload</p>
-                                                        ) : (
-                                                            <p className="text-xs text-gray-500">Niet geüpload</p>
-                                                        )}
-                                                    </button>
-                                                    {doc && type !== 'gespreksverslag' ? (
-                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                                            <button
-                                                                type="button"
-                                                                title="Bekijken"
-                                                                aria-label="Bekijken"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSourcesModalOpen(false);
-                                                                    setPreviewDoc({
-                                                                        title: doc.name || DOC_LABELS[type],
-                                                                        url: doc.url,
-                                                                    });
-                                                                }}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                title="Bewerken"
-                                                                aria-label="Bewerken"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSourcesModalOpen(false);
-                                                                    setActiveDocType(type);
-                                                                }}
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                title="Verwijderen"
-                                                                aria-label="Verwijderen"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    void deleteSourceDocument(doc);
-                                                                }}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    </>
-                                    )}
-                                </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="h-auto justify-start gap-3 border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white py-4 px-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50"
-                                    onClick={() => setDocsModalOpen(true)}
-                                >
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
-                                        <Files className="h-5 w-5" />
-                                    </span>
-                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                        <span className="font-semibold text-gray-900">Documenten maken</span>
-                                        <span className="text-xs font-normal text-gray-600">
-                                            Intake, Trajectplan, VGR of CV openen
-                                        </span>
-                                    </span>
-                                </Button>
-                                <DialogContent className="max-w-md sm:max-w-lg">
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                            <Files className="h-5 w-5 text-indigo-600" />
-                                            Welk document wil je maken?
-                                        </DialogTitle>
-                                        <p className="text-sm text-gray-600">
-                                            Ga naar de editor of placeholder-pagina voor dit dossier.
-                                        </p>
-                                    </DialogHeader>
-                                    <div className="flex flex-col gap-3 pt-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => void openIntakeBuilder()}
-                                            disabled={intakeOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-teal-200 bg-gradient-to-r from-teal-50/90 to-white p-4 text-left transition-colors hover:border-teal-400 hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800 group-hover:bg-teal-200">
-                                                <FileText className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">
-                                                    Intakeformulier
-                                                </span>
-                                                <span className="text-sm text-gray-600">
-                                                    {intakeOpening
-                                                        ? 'Openen…'
-                                                        : 'Eerste document — digitaal intakeformulier'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void openTpBuilder()}
-                                            disabled={tpOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
-                                                <Map className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">Trajectplan</span>
-                                                <span className="text-sm text-gray-600">
-                                                    {tpOpening ? 'Openen…' : 'TP-editor voor deze werknemer'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void openVgrBuilder()}
-                                            disabled={vgrOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
-                                                <Compass className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">VGR</span>
-                                                <span className="text-sm text-gray-600">
-                                                    {vgrOpening ? 'Openen…' : 'Voortgangsrapportage-editor'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setDocsModalOpen(false);
-                                                guardedRouter.push(`/dashboard/cv/${employeeId}`);
-                                            }}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 group-hover:bg-amber-200">
-                                                <IdCard className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">CV</span>
-                                                <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
-                                            </span>
-                                        </button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Worker Profile Section */}
-            {profileMode === 'edit' ? (
-            <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
+                        <div className="space-y-6 border-t border-gray-100 pt-4">
                 {aiLoading && autofillProgress ? (
                     <AutofillProgressOverlay
                         progress={autofillProgress}
@@ -1788,12 +1541,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         cancelling={aiCancelling}
                     />
                 ) : null}
-                <div className="flex justify-between items-center pb-4 border-b border-purple-200">
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-purple-600" />
-                        Werknemersprofiel
-                    </h2>
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
                             onClick={autofillWithAI}
                             disabled={aiLoading}
@@ -1813,7 +1561,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             <CheckCircle2 className="w-4 h-4 mr-2" />
                             Valideer alles
                         </Button>
-                    </div>
                 </div>
 
                 {suggestedReferent && (employee?.client_id) && (
@@ -1833,6 +1580,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                 )}
 
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Current Job */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1851,6 +1599,67 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             onChange={e => handleDetailChange('current_job', e.target.value)}
                         />
                     </ValidatableField>
+                </div>
+
+                {/* Contract Hours */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        Contracturen
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('contract_hours')}
+                        canValidate={canValidateField('contract_hours')}
+                        validateLabel="Valideer contracturen"
+                    >
+                        <Input
+                            className={cn(fieldClass('contract_hours'), 'pr-10')}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Bijv. 36.5"
+                            value={
+                                contractHoursText !== null
+                                    ? contractHoursText
+                                    : employeeDetails?.contract_hours != null
+                                      ? String(employeeDetails.contract_hours)
+                                      : ''
+                            }
+                            onFocus={() => {
+                                setContractHoursText(
+                                    employeeDetails?.contract_hours != null
+                                        ? String(employeeDetails.contract_hours)
+                                        : ''
+                                );
+                            }}
+                            onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
+                                setContractHoursText(raw);
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                if (isIncompleteContractHoursInput(raw)) return;
+                                const parsed = parseContractHours(raw);
+                                if (parsed != null) {
+                                    handleDetailChange('contract_hours', parsed);
+                                }
+                            }}
+                            onBlur={() => {
+                                const raw = contractHoursText;
+                                setContractHoursText(null);
+                                if (raw == null) return;
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                const parsed = parseContractHours(raw);
+                                handleDetailChange('contract_hours', parsed);
+                            }}
+                        />
+                    </ValidatableField>
+                </div>
+                
                 </div>
 
                 {/* Work Experience */}
@@ -2372,65 +2181,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </ValidatableField>
                 </div>
 
-                {/* Contract Hours */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        Contracturen
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('contract_hours')}
-                        canValidate={canValidateField('contract_hours')}
-                        validateLabel="Valideer contracturen"
-                    >
-                        <Input
-                            className={cn(fieldClass('contract_hours'), 'pr-10')}
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Bijv. 36.5"
-                            value={
-                                contractHoursText !== null
-                                    ? contractHoursText
-                                    : employeeDetails?.contract_hours != null
-                                      ? String(employeeDetails.contract_hours)
-                                      : ''
-                            }
-                            onFocus={() => {
-                                setContractHoursText(
-                                    employeeDetails?.contract_hours != null
-                                        ? String(employeeDetails.contract_hours)
-                                        : ''
-                                );
-                            }}
-                            onChange={(e) => {
-                                const raw = e.target.value;
-                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
-                                setContractHoursText(raw);
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                if (isIncompleteContractHoursInput(raw)) return;
-                                const parsed = parseContractHours(raw);
-                                if (parsed != null) {
-                                    handleDetailChange('contract_hours', parsed);
-                                }
-                            }}
-                            onBlur={() => {
-                                const raw = contractHoursText;
-                                setContractHoursText(null);
-                                if (raw == null) return;
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                const parsed = parseContractHours(raw);
-                                handleDetailChange('contract_hours', parsed);
-                            }}
-                        />
-                    </ValidatableField>
-                </div>
-                
                 {/* Other Employers */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -2456,20 +2206,287 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </p>
                 </div>
 
-            </div>
-            ) : null}
+                        </div>
+                        ) : null}
+                    </div>
 
-            {profileMode === 'edit' ? (
-                <div className="sticky bottom-4 z-40 flex justify-end gap-2 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-lg">
-                    <Button type="button" variant="outline" onClick={cancelProfileEdit} disabled={updating}>
-                        Annuleren
-                    </Button>
-                    <Button type="button" onClick={() => void confirmProfileEdit()} disabled={updating}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {updating ? 'Opslaan...' : 'Opslaan'}
-                    </Button>
+                    <div className="w-full shrink-0 space-y-4 rounded-lg border border-purple-100/80 bg-white p-4 shadow lg:w-[400px]">
+                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-purple-600" />
+                            Documenten
+                        </h2>
+                        <div className="flex flex-col gap-3">
+                            <Dialog
+                                open={sourcesModalOpen}
+                                onOpenChange={(open) => {
+                                    if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
+                                        if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
+                                    }
+                                    setSourcesModalOpen(open);
+                                    if (!open) setSourcesView('list');
+                                }}
+                            >
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/80 to-white py-4 px-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50"
+                                    onClick={() => setSourcesModalOpen(true)}
+                                >
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                        <FolderOpen className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Bronnen beheren</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            {stagingGesprek
+                                                ? 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
+                                                : 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
+                                        </span>
+                                        <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            {uploadedSourcesCount}/{docTypes.length} geüpload
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent
+                                    className={
+                                        sourcesView === 'gesprek'
+                                            ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
+                                            : 'max-w-md sm:max-w-lg'
+                                    }
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                >
+                                    {sourcesView === 'gesprek' ? (
+                                        <GesprekPanel
+                                            embedded
+                                            employeeId={employeeId}
+                                            open={sourcesModalOpen}
+                                            onOpenChange={setSourcesModalOpen}
+                                            onBack={() => setSourcesView('list')}
+                                            hasPublishedVerslag={documents.some(
+                                                (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
+                                            )}
+                                            onDirtyChange={onGesprekDirty}
+                                            onDocumentsChanged={() => {
+                                                void fetchDocuments();
+                                            }}
+                                        />
+                                    ) : (
+                                    <>
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <FolderOpen className="h-5 w-5 text-emerald-600" />
+                                            Bronnen & uploads
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Kies een documenttype om te uploaden of te vervangen.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        {docTypes.map((type) => {
+                                            const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
+                                            return (
+                                                <div
+                                                    key={type}
+                                                    className={cn(
+                                                        'group relative rounded-xl p-4 text-left text-sm transition-colors',
+                                                        'border-2',
+                                                        doc
+                                                            ? 'border-emerald-500 bg-emerald-50/60'
+                                                            : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
+                                                    )}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (type === 'gespreksverslag') {
+                                                                setSourcesView('gesprek');
+                                                                return;
+                                                            }
+                                                            setSourcesModalOpen(false);
+                                                            setActiveDocType(type);
+                                                        }}
+                                                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 rounded-lg"
+                                                    >
+                                                        <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
+                                                            {doc ? (
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                                            ) : (
+                                                                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                            )}
+                                                            {DOC_LABELS[type]}
+                                                        </p>
+                                                        {type === 'gespreksverslag' ? (
+                                                            <p className="text-xs text-gray-500">
+                                                                {doc ? 'Notities bewaard' : 'Transcript en notities'}
+                                                            </p>
+                                                        ) : doc ? (
+                                                            <p className="text-xs text-emerald-700">Geüpload</p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-500">Niet geüpload</p>
+                                                        )}
+                                                    </button>
+                                                    {doc && type !== 'gespreksverslag' ? (
+                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                                            <button
+                                                                type="button"
+                                                                title="Bekijken"
+                                                                aria-label="Bekijken"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setPreviewDoc({
+                                                                        title: doc.name || DOC_LABELS[type],
+                                                                        url: doc.url,
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Bewerken"
+                                                                aria-label="Bewerken"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setActiveDocType(type);
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Verwijderen"
+                                                                aria-label="Verwijderen"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    void deleteSourceDocument(doc);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    </>
+                                    )}
+                                </DialogContent>
+                            </Dialog>
+
+                            <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white py-4 px-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50"
+                                    onClick={() => setDocsModalOpen(true)}
+                                >
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                                        <Files className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Documenten maken</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            Intake, Trajectplan, VGR of CV openen
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent className="max-w-md sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <Files className="h-5 w-5 text-indigo-600" />
+                                            Welk document wil je maken?
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Ga naar de editor of placeholder-pagina voor dit dossier.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="flex flex-col gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => void openIntakeBuilder()}
+                                            disabled={intakeOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-teal-200 bg-gradient-to-r from-teal-50/90 to-white p-4 text-left transition-colors hover:border-teal-400 hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800 group-hover:bg-teal-200">
+                                                <FileText className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">
+                                                    Intakeformulier
+                                                </span>
+                                                <span className="text-sm text-gray-600">
+                                                    {intakeOpening
+                                                        ? 'Openen…'
+                                                        : 'Eerste document — digitaal intakeformulier'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void openTpBuilder()}
+                                            disabled={tpOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
+                                                <Map className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">Trajectplan</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {tpOpening ? 'Openen…' : 'TP-editor voor deze werknemer'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void openVgrBuilder()}
+                                            disabled={vgrOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
+                                                <Compass className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">VGR</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {vgrOpening ? 'Openen…' : 'Voortgangsrapportage-editor'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDocsModalOpen(false);
+                                                guardedRouter.push(`/dashboard/cv/${employeeId}`);
+                                            }}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 group-hover:bg-amber-200">
+                                                <IdCard className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">CV</span>
+                                                <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                        </div>
+                    </div>
                 </div>
-            ) : null}
+            )}
 
             {activeDocType && (
                 <DocumentModal

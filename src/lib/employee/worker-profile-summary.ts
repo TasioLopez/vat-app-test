@@ -4,11 +4,7 @@ import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options'
 export type WorkerProfileFact = {
   label: string;
   value: string;
-};
-
-export type WorkerProfileGroup = {
-  title: string;
-  facts: WorkerProfileFact[];
+  wide?: boolean;
 };
 
 export type WorkerProfileInput = {
@@ -34,23 +30,22 @@ export type WorkerProfileInput = {
   hasComputer?: boolean | null;
   computerSkills?: string | null;
   computerSkillsDescription?: string | null;
+  clientName?: string | null;
+  referentName?: string | null;
+  ownerName?: string | null;
 };
 
 export type WorkerProfileView = {
   name: string;
-  job: string | null;
-  groups: WorkerProfileGroup[];
+  subtitle: string | null;
+  meta: string | null;
+  facts: WorkerProfileFact[];
   isEmpty: boolean;
 };
 
-function textFact(label: string, key: string, value: unknown): WorkerProfileFact | null {
+function textFact(label: string, key: string, value: unknown, wide = false): WorkerProfileFact | null {
   if (isEmptyGegevensField(key, value)) return null;
-  return { label, value: String(value).trim() };
-}
-
-function booleanFact(label: string, value: boolean | null | undefined, yes = 'Ja', no = 'Nee'): WorkerProfileFact | null {
-  if (typeof value !== 'boolean') return null;
-  return { label, value: value ? yes : no };
+  return { label, value: String(value).trim(), wide };
 }
 
 function formatDate(value: string): string {
@@ -59,83 +54,81 @@ function formatDate(value: string): string {
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
-function joinNonEmpty(parts: Array<string | null>): string | null {
+function joinNonEmpty(parts: Array<string | null | undefined>): string | null {
   const filled = parts.filter((part): part is string => Boolean(part && part.trim()));
   return filled.length > 0 ? filled.join(' · ') : null;
 }
 
 export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfileView {
   const name = [input.firstName, input.lastName].filter((part) => part && part.trim()).join(' ').trim();
-  const jobFact = textFact('Huidig werk', 'current_job', input.currentJob);
+  const job = textFact('Huidig werk', 'current_job', input.currentJob)?.value ?? null;
+  const client = textFact('Werkgever', 'client_name', input.clientName)?.value ?? null;
+  const referent = textFact('Contactpersoon', 'referent_name', input.referentName)?.value ?? null;
+  const owner = textFact('Eigenaar', 'owner_name', input.ownerName)?.value ?? null;
 
-  const contact: WorkerProfileFact[] = [];
-  const email = textFact('E-mail', 'email', input.email);
-  const phone = textFact('Telefoon', 'phone', input.phone);
+  const facts: WorkerProfileFact[] = [];
+  const push = (fact: WorkerProfileFact | null) => {
+    if (fact) facts.push(fact);
+  };
+
+  push(textFact('E-mail', 'email', input.email));
+  push(textFact('Telefoon', 'phone', input.phone));
   const birth = textFact('Geboortedatum', 'date_of_birth', input.dateOfBirth);
-  const gender = textFact('Geslacht', 'gender', input.gender);
-  if (email) contact.push(email);
-  if (phone) contact.push(phone);
-  if (birth) contact.push({ ...birth, value: formatDate(birth.value) });
-  if (gender) contact.push(gender);
+  if (birth) push({ ...birth, value: formatDate(birth.value) });
+  push(textFact('Geslacht', 'gender', input.gender));
 
-  const work: WorkerProfileFact[] = [];
-  const experience = textFact('Werkervaring', 'work_experience', input.workExperience);
-  const hours = typeof input.contractHours === 'number' ? { label: 'Contracturen', value: String(input.contractHours) } : null;
-  const employers = textFact('Andere werkgevers', 'other_employers', input.otherEmployers);
-  const ex = booleanFact('Ex-werknemer', input.isExWerknemer);
-  if (experience) work.push(experience);
-  if (hours) work.push(hours);
-  if (employers) work.push(employers);
-  if (ex) work.push(ex);
-
-  const educationParts = joinNonEmpty([
-    textFact('Opleiding', 'education_level', input.educationLevel)?.value ?? null,
-    textFact('Opleiding', 'education_name', input.educationName)?.value ?? null,
+  const education = joinNonEmpty([
+    textFact('Opleiding', 'education_level', input.educationLevel)?.value,
+    textFact('Opleiding', 'education_name', input.educationName)?.value,
   ]);
+  if (education) facts.push({ label: 'Opleiding', value: education });
 
-  const transport: WorkerProfileFact[] = [];
-  const license = booleanFact('Rijbewijs', input.driversLicense, 'Ja', 'Geen');
-  if (license) {
-    const types = Array.isArray(input.driversLicenseType)
-      ? input.driversLicenseType.map((type) => type.trim()).filter(Boolean)
-      : [];
-    transport.push(license.value === 'Ja' && types.length > 0 ? { label: 'Rijbewijs', value: types.join(', ') } : license);
-  }
-  const transportTypes = Array.isArray(input.transportType)
-    ? input.transportType.map((type) => type.trim()).filter(Boolean)
+  const licenseTypes = Array.isArray(input.driversLicenseType)
+    ? input.driversLicenseType.map((type) => type.trim()).filter(Boolean)
     : [];
-  if (transportTypes.length > 0) transport.push({ label: 'Vervoer', value: transportTypes.join(', ') });
-
-  const language: WorkerProfileFact[] = [];
-  const speaking = textFact('Spreken', 'dutch_speaking', input.dutchSpeaking);
-  const writing = textFact('Schrijven', 'dutch_writing', input.dutchWriting);
-  const reading = textFact('Lezen', 'dutch_reading', input.dutchReading);
-  if (speaking) language.push(speaking);
-  if (writing) language.push(writing);
-  if (reading) language.push(reading);
-  const computer = booleanFact('PC', input.hasComputer);
-  if (computer) language.push(computer);
-  const skillsLabel = formatComputerSkillsOption(input.computerSkills);
-  if (skillsLabel) {
-    const description = textFact('Toelichting', 'computer_skills_description', input.computerSkillsDescription);
-    language.push({
-      label: 'Computer',
-      value: description ? `${skillsLabel} (${description.value})` : skillsLabel,
+  if (input.driversLicense === true || licenseTypes.length > 0) {
+    facts.push({
+      label: 'Rijbewijs',
+      value: licenseTypes.length > 0 ? licenseTypes.join(', ') : 'Ja',
     });
   }
 
-  const groups = [
-    { title: 'Contact', facts: contact },
-    { title: 'Werk', facts: work },
-    educationParts ? { title: 'Opleiding', facts: [{ label: 'Opleiding', value: educationParts }] } : null,
-    { title: 'Vervoer', facts: transport },
-    { title: 'Taal en computer', facts: language },
-  ].filter((group): group is WorkerProfileGroup => Boolean(group && group.facts.length > 0));
+  const transportTypes = Array.isArray(input.transportType)
+    ? input.transportType.map((type) => type.trim()).filter(Boolean)
+    : [];
+  if (transportTypes.length > 0) facts.push({ label: 'Vervoer', value: transportTypes.join(', ') });
+
+  push(textFact('Spreken', 'dutch_speaking', input.dutchSpeaking));
+  push(textFact('Schrijven', 'dutch_writing', input.dutchWriting));
+  push(textFact('Lezen', 'dutch_reading', input.dutchReading));
+
+  const skillsLabel = formatComputerSkillsOption(input.computerSkills);
+  if (skillsLabel) {
+    const description = textFact('Toelichting', 'computer_skills_description', input.computerSkillsDescription);
+    facts.push({
+      label: 'Computer',
+      value: description ? `${skillsLabel} (${description.value})` : skillsLabel,
+    });
+  } else if (input.hasComputer === true) {
+    facts.push({ label: 'PC', value: 'Ja' });
+  }
+
+  if (typeof input.contractHours === 'number') {
+    facts.push({ label: 'Contracturen', value: String(input.contractHours) });
+  }
+  if (input.isExWerknemer === true) facts.push({ label: 'Ex-werknemer', value: 'Ja' });
+
+  push(textFact('Werkervaring', 'work_experience', input.workExperience, true));
+  push(textFact('Andere werkgevers', 'other_employers', input.otherEmployers, true));
 
   return {
     name: name || 'Werknemer',
-    job: jobFact?.value ?? null,
-    groups,
-    isEmpty: groups.length === 0,
+    subtitle: joinNonEmpty([job, client]),
+    meta: joinNonEmpty([
+      referent ? `Contactpersoon ${referent}` : null,
+      owner ? `Eigenaar ${owner}` : null,
+    ]),
+    facts,
+    isEmpty: facts.length === 0 && !job,
   };
 }

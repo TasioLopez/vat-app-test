@@ -12,43 +12,36 @@ export function WorkerProfileSummary({ input, reviewCount, onEdit }: Props) {
   const profile = buildWorkerProfileView(input);
 
   return (
-    <div className="space-y-4">
+    <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-semibold text-gray-900">{profile.name}</h2>
-          {profile.job ? <p className="mt-0.5 text-sm text-gray-600">{profile.job}</p> : null}
+          {profile.subtitle ? <p className="mt-0.5 text-sm text-gray-700">{profile.subtitle}</p> : null}
+          {profile.meta ? <p className="mt-0.5 text-sm text-gray-500">{profile.meta}</p> : null}
         </div>
         <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onEdit}>
           <Pencil className="mr-1.5 h-3.5 w-3.5" />
           Bewerken
+          {reviewCount > 0 ? (
+            <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
+              {reviewCount}
+            </span>
+          ) : null}
         </Button>
       </div>
 
-      {reviewCount > 0 ? (
-        <p className="text-sm font-medium text-amber-700">
-          {reviewCount} te controleren
-        </p>
-      ) : null}
-
       {profile.isEmpty ? (
-        <p className="text-sm text-gray-600">Gegevens komen uit de intake.</p>
-      ) : (
-        <div className="space-y-4">
-          {profile.groups.map((group) => (
-            <section key={group.title} className="space-y-1">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{group.title}</h3>
-              <dl className="space-y-1">
-                {group.facts.map((fact) => (
-                  <div key={`${group.title}-${fact.label}`} className="grid grid-cols-[8.5rem_1fr] gap-x-3 text-sm">
-                    <dt className="text-gray-500">{fact.label}</dt>
-                    <dd className="min-w-0 whitespace-pre-wrap text-gray-900">{fact.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+        <p className="mt-4 text-sm text-gray-600">Gegevens komen uit de intake.</p>
+      ) : profile.facts.length > 0 ? (
+        <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+          {profile.facts.map((fact) => (
+            <div key={fact.label} className={fact.wide ? 'sm:col-span-2' : undefined}>
+              <dt className="text-xs text-gray-500">{fact.label}</dt>
+              <dd className="whitespace-pre-wrap text-sm text-gray-900">{fact.value}</dd>
+            </div>
           ))}
-        </div>
-      )}
+        </dl>
+      ) : null}
     </div>
   );
 }
