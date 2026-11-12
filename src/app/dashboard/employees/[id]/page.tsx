@@ -5,6 +5,9 @@ import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import EmployeeUnsavedGuard from '@/components/employee/EmployeeUnsavedGuard';
 import { supabase } from '@/lib/supabase/client';
 import {
+    Map,
+    Compass,
+    Sparkles,
     Save,
     ArrowLeft,
     Briefcase,
@@ -14,12 +17,16 @@ import {
     Computer,
     Clock,
     Building2,
+    FileText,
+    FolderOpen,
+    Files,
+    IdCard,
+    CheckCircle2,
+    CircleDashed,
+    UserRoundX,
     Eye,
     Pencil,
     Trash2,
-    FolderOpen,
-    CheckCircle2,
-    CircleDashed,
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { DocumentPreviewDialog } from '@/components/DocumentPreviewDialog';
@@ -83,11 +90,8 @@ import {
     splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
 import GesprekPanel from '@/components/employee/GesprekPanel';
-import { fetchOrgDirectory, formatOrgUserDisplayName, type OrgDirectoryUser } from '@/lib/users/org-directory';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
-import { WorkerProfileSummary } from '@/components/employee/WorkerProfileSummary';
-import { buildWorkerProfileView } from '@/lib/employee/worker-profile-summary';
 import {
     EMPLOYEE_DOC_LABELS,
     visibleEmployeeDocTypes,
@@ -313,8 +317,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
-    const [profileMode, setProfileMode] = useState<'summary' | 'edit'>('summary');
-    const [orgUsers, setOrgUsers] = useState<OrgDirectoryUser[]>([]);
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
@@ -322,6 +324,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const onGesprekDirty = useCallback((dirty: boolean) => {
         gesprekDirtyRef.current = dirty;
     }, []);
+    const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [referentDialogOpen, setReferentDialogOpen] = useState(false);
     const [referentDialogMode, setReferentDialogMode] = useState<'edit' | 'create'>('edit');
     const [tpOpening, setTpOpening] = useState(false);
@@ -336,6 +339,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     } | null>(null);
 
     const docTypes = useMemo(() => visibleEmployeeDocTypes(), []);
+    const stagingGesprek = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -344,16 +348,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             ).length,
         [docTypes, documents]
     );
-
-    useEffect(() => {
-        let cancelled = false;
-        void fetchOrgDirectory(supabase).then((users) => {
-            if (!cancelled) setOrgUsers(users);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
 
     useEffect(() => {
         if (!aiLoading) {
@@ -1103,7 +1097,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     };
 
     const getFieldStatusClass = (status: 'empty' | 'review' | 'validated') => {
-        if (status === 'review') return 'border-amber-300';
+        if (status === 'validated') return 'border-green-500 bg-green-50/30';
+        if (status === 'review') return 'border-yellow-400 bg-yellow-50/30';
         return '';
     };
 
@@ -1167,6 +1162,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 tpInstanceId = inserted.id;
             }
 
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
@@ -1179,6 +1175,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openVgrBuilder = async () => {
         setVgrOpening(true);
         try {
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1191,6 +1188,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openIntakeBuilder = async () => {
         setIntakeOpening(true);
         try {
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/intake/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1231,67 +1229,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         showSuccess('Gevalideerde velden bijgewerkt.');
     };
 
-    const cancelProfileEdit = () => {
-        if (savedEmployeeSnapshot) {
-            setEmployee((prev) => (prev ? { ...prev, ...savedEmployeeSnapshot } : prev));
-            if (savedEmployeeSnapshot.client_id) {
-                void fetchClient(savedEmployeeSnapshot.client_id);
-                void fetchReferents(savedEmployeeSnapshot.client_id);
-            } else {
-                setClientName('');
-                setReferents([]);
-            }
-        }
-        setEmployeeDetails(savedDetailsSnapshot);
-        setContractHoursText(null);
-        setCustomTransportDraft('');
-        setCustomEducationDraft('');
-        setEducationAndereOpen(false);
-        setProfileMode('summary');
-    };
-
-    const confirmProfileEdit = async () => {
-        try {
-            await saveUnified({ silent: !hasUnsavedChanges });
-            setProfileMode('summary');
-        } catch {
-            // saveUnified already reports the error and keeps the form open.
-        }
-    };
-
-    const profileView = useMemo(() => {
-        if (!employee) return buildWorkerProfileView({});
-        const referent = referents.find((item) => item.id === employee.referent_id);
-        const owner = orgUsers.find((user) => user.id === employee.owner_id);
-        return buildWorkerProfileView({
-            firstName: employee.first_name,
-            lastName: employee.last_name,
-            email: employee.email,
-            phone: employeeDetails?.phone,
-            gender: employeeDetails?.gender,
-            dateOfBirth: employeeDetails?.date_of_birth,
-            currentJob: employeeDetails?.current_job,
-            workExperience: employeeDetails?.work_experience,
-            contractHours: employeeDetails?.contract_hours,
-            otherEmployers: employeeDetails?.other_employers,
-            isExWerknemer: employeeDetails?.is_ex_werknemer,
-            educationLevel: employeeDetails?.education_level,
-            educationName: employeeDetails?.education_name,
-            driversLicense: employeeDetails?.drivers_license,
-            driversLicenseType: employeeDetails?.drivers_license_type,
-            transportType: employeeDetails?.transport_type,
-            dutchSpeaking: employeeDetails?.dutch_speaking,
-            dutchWriting: employeeDetails?.dutch_writing,
-            dutchReading: employeeDetails?.dutch_reading,
-            hasComputer: employeeDetails?.has_computer,
-            computerSkills: employeeDetails?.computer_skills,
-            computerSkillsDescription: employeeDetails?.computer_skills_description,
-            clientName,
-            referentName: [referent?.first_name, referent?.last_name].filter(Boolean).join(' ').trim(),
-            ownerName: owner ? formatOrgUserDisplayName(owner) : '',
-        });
-    }, [employee, employeeDetails, clientName, referents, orgUsers]);
-
     return (
         <div className="p-4 space-y-6">
             <EmployeeUnsavedGuard
@@ -1303,101 +1240,95 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 onDismiss={() => setPendingFacts(null)}
                 onAccept={() => void acceptValidatedFacts()}
             />
-            <div className="flex items-start gap-2">
+            <div className="flex items-center gap-1">
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="mt-0.5 h-8 w-8 shrink-0 text-gray-600"
+                    className="h-8 w-8 shrink-0 text-gray-600"
                     aria-label="Terug naar werknemers"
                     onClick={() => guardedRouter.push('/dashboard/employees')}
                 >
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
-                    <div className="min-w-0">
-                        <h1 className="truncate text-xl font-semibold text-gray-900">{profileView.name}</h1>
-                        {profileView.subtitle ? (
-                            <p className="mt-0.5 text-sm text-gray-700">{profileView.subtitle}</p>
-                        ) : null}
-                    </div>
-                    {employee ? (
-                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => void openIntakeBuilder()} disabled={intakeOpening}>
-                                {intakeOpening ? 'Intake…' : 'Intake'}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => void openTpBuilder()} disabled={tpOpening}>
-                                {tpOpening ? 'Trajectplan…' : 'Trajectplan'}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => void openVgrBuilder()} disabled={vgrOpening}>
-                                {vgrOpening ? 'VGR…' : 'VGR'}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => guardedRouter.push(`/dashboard/cv/${employeeId}`)}>
-                                CV
-                            </Button>
-                            {profileMode === 'summary' ? (
-                                <>
-                                    {pendingValidationFields.length > 0 ? (
-                                        <span className="text-sm text-gray-500">
-                                            {pendingValidationFields.length} te controleren
-                                        </span>
-                                    ) : null}
-                                    <Button type="button" variant="outline" size="sm" onClick={() => setProfileMode('edit')}>
-                                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                                        Bewerken
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    <Button type="button" variant="outline" size="sm" onClick={cancelProfileEdit} disabled={updating}>
-                                        Annuleren
-                                    </Button>
-                                    <Button type="button" size="sm" onClick={() => void confirmProfileEdit()} disabled={updating}>
-                                        <Save className="mr-1.5 h-3.5 w-3.5" />
-                                        {updating ? 'Opslaan...' : 'Opslaan'}
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    ) : null}
-                </div>
+                <h1 className="text-xl font-bold">Werknemer Details</h1>
             </div>
 
             {employee && (
-                <div className="flex w-full flex-col gap-4">
-                    {(profileMode === 'edit' || profileView.groups.length > 0 || profileView.isEmpty) && (
-                    <div className="w-full rounded-lg border border-gray-200 bg-white p-4">
-                        {profileMode === 'summary' ? (
-                            <WorkerProfileSummary profile={profileView} />
-                        ) : null}
+                <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-col bg-white p-4 rounded shadow flex-1 space-y-4 w-2/5">
+                        <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="Voornaam"
+                                value={employee.first_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('gender')}
+                                canValidate={canValidateField('gender')}
+                                validateLabel="Valideer geslacht"
+                            >
+                                <Select
+                                    value={employeeDetails?.gender || undefined}
+                                    onValueChange={(v) => handleDetailChange('gender', v)}
+                                >
+                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
+                                        <SelectValue placeholder="Geslacht selecteren" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Man">Man</SelectItem>
+                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                        <SelectItem value="Anders">Anders</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
 
-                        {profileMode === 'edit' ? (
-                        <>
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Toewijzing</p>
-                                <div className="flex flex-wrap items-center justify-end gap-2">
-                                    <Button
-                                        type="button"
-                                        onClick={autofillWithAI}
-                                        disabled={aiLoading}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        onClick={validateAllPendingFields}
-                                        disabled={aiLoading || pendingValidationFields.length === 0 || updating}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        Valideer alles
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="Achternaam"
+                                value={employee.last_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('phone')}
+                                canValidate={canValidateField('phone')}
+                                validateLabel="Valideer telefoon"
+                            >
+                                <input
+                                    className={cn(fieldClass('phone'), 'pr-10')}
+                                    placeholder="Telefoon"
+                                    value={employeeDetails?.phone || ''}
+                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
+                                />
+                            </ValidatableField>
+
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="E-mail"
+                                value={employee.email || ''}
+                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('date_of_birth')}
+                                canValidate={canValidateField('date_of_birth')}
+                                validateLabel="Valideer geboortedatum"
+                            >
+                                <input
+                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
+                                    type="date"
+                                    value={employeeDetails?.date_of_birth || ''}
+                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
+                                />
+                            </ValidatableField>
+
+                            <div
+                                className={cn(
+                                    'grid gap-2 min-w-0',
+                                    employee.client_id ? 'grid-cols-2' : 'grid-cols-1'
+                                )}
+                            >
                                 <div className="space-y-1 min-w-0">
                                     <label className="text-sm text-gray-600">Dossier-eigenaar</label>
                                     <OrgUserSelect
@@ -1501,72 +1432,288 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 </Select>
                             </div>
                         </div>
-                        <div className="mt-4 grid grid-cols-2 items-start gap-x-3 gap-y-2 lg:grid-cols-4">
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Voornaam"
-                                value={employee.first_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('gender')}
-                                canValidate={canValidateField('gender')}
-                                validateLabel="Valideer geslacht"
+                    </div>
+
+                    <div className="bg-white p-4 rounded-lg shadow border border-purple-100/80 w-full lg:w-[400px] space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-purple-600" />
+                            Documenten
+                        </h2>
+                        <div className="flex flex-col gap-3">
+                            <Dialog
+                                open={sourcesModalOpen}
+                                onOpenChange={(open) => {
+                                    if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
+                                        if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
+                                    }
+                                    setSourcesModalOpen(open);
+                                    if (!open) setSourcesView('list');
+                                }}
                             >
-                                <Select
-                                    value={employeeDetails?.gender || undefined}
-                                    onValueChange={(v) => handleDetailChange('gender', v)}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/80 to-white py-4 px-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50"
+                                    onClick={() => setSourcesModalOpen(true)}
                                 >
-                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
-                                        <SelectValue placeholder="Geslacht selecteren" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Man">Man</SelectItem>
-                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
-                                        <SelectItem value="Anders">Anders</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                                        <FolderOpen className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Bronnen beheren</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            {stagingGesprek
+                                                ? 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
+                                                : 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
+                                        </span>
+                                        <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            {uploadedSourcesCount}/{docTypes.length} geüpload
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent
+                                    className={
+                                        sourcesView === 'gesprek'
+                                            ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
+                                            : 'max-w-md sm:max-w-lg'
+                                    }
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                >
+                                    {sourcesView === 'gesprek' ? (
+                                        <GesprekPanel
+                                            embedded
+                                            employeeId={employeeId}
+                                            open={sourcesModalOpen}
+                                            onOpenChange={setSourcesModalOpen}
+                                            onBack={() => setSourcesView('list')}
+                                            hasPublishedVerslag={documents.some(
+                                                (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
+                                            )}
+                                            onDirtyChange={onGesprekDirty}
+                                            onDocumentsChanged={() => {
+                                                void fetchDocuments();
+                                            }}
+                                        />
+                                    ) : (
+                                    <>
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <FolderOpen className="h-5 w-5 text-emerald-600" />
+                                            Bronnen & uploads
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Kies een documenttype om te uploaden of te vervangen.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        {docTypes.map((type) => {
+                                            const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
+                                            return (
+                                                <div
+                                                    key={type}
+                                                    className={cn(
+                                                        'group relative rounded-xl p-4 text-left text-sm transition-colors',
+                                                        'border-2',
+                                                        doc
+                                                            ? 'border-emerald-500 bg-emerald-50/60'
+                                                            : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
+                                                    )}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (type === 'gespreksverslag') {
+                                                                setSourcesView('gesprek');
+                                                                return;
+                                                            }
+                                                            setSourcesModalOpen(false);
+                                                            setActiveDocType(type);
+                                                        }}
+                                                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 rounded-lg"
+                                                    >
+                                                        <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
+                                                            {doc ? (
+                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                                            ) : (
+                                                                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                            )}
+                                                            {DOC_LABELS[type]}
+                                                        </p>
+                                                        {type === 'gespreksverslag' ? (
+                                                            <p className="text-xs text-gray-500">
+                                                                {doc ? 'Notities bewaard' : 'Transcript en notities'}
+                                                            </p>
+                                                        ) : doc ? (
+                                                            <p className="text-xs text-emerald-700">Geüpload</p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-500">Niet geüpload</p>
+                                                        )}
+                                                    </button>
+                                                    {doc && type !== 'gespreksverslag' ? (
+                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                                            <button
+                                                                type="button"
+                                                                title="Bekijken"
+                                                                aria-label="Bekijken"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setPreviewDoc({
+                                                                        title: doc.name || DOC_LABELS[type],
+                                                                        url: doc.url,
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Bewerken"
+                                                                aria-label="Bewerken"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSourcesModalOpen(false);
+                                                                    setActiveDocType(type);
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                title="Verwijderen"
+                                                                aria-label="Verwijderen"
+                                                                tabIndex={-1}
+                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    void deleteSourceDocument(doc);
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    </>
+                                    )}
+                                </DialogContent>
+                            </Dialog>
 
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Achternaam"
-                                value={employee.last_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('phone')}
-                                canValidate={canValidateField('phone')}
-                                validateLabel="Valideer telefoon"
-                            >
-                                <input
-                                    className={cn(fieldClass('phone'), 'pr-10')}
-                                    placeholder="Telefoon"
-                                    value={employeeDetails?.phone || ''}
-                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
-                                />
-                            </ValidatableField>
+                            <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-auto justify-start gap-3 border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white py-4 px-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50"
+                                    onClick={() => setDocsModalOpen(true)}
+                                >
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                                        <Files className="h-5 w-5" />
+                                    </span>
+                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900">Documenten maken</span>
+                                        <span className="text-xs font-normal text-gray-600">
+                                            Intake, Trajectplan, VGR of CV openen
+                                        </span>
+                                    </span>
+                                </Button>
+                                <DialogContent className="max-w-md sm:max-w-lg">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                            <Files className="h-5 w-5 text-indigo-600" />
+                                            Welk document wil je maken?
+                                        </DialogTitle>
+                                        <p className="text-sm text-gray-600">
+                                            Ga naar de editor of placeholder-pagina voor dit dossier.
+                                        </p>
+                                    </DialogHeader>
+                                    <div className="flex flex-col gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => void openIntakeBuilder()}
+                                            disabled={intakeOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-teal-200 bg-gradient-to-r from-teal-50/90 to-white p-4 text-left transition-colors hover:border-teal-400 hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800 group-hover:bg-teal-200">
+                                                <FileText className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">
+                                                    Intakeformulier
+                                                </span>
+                                                <span className="text-sm text-gray-600">
+                                                    {intakeOpening
+                                                        ? 'Openen…'
+                                                        : 'Eerste document — digitaal intakeformulier'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void openTpBuilder()}
+                                            disabled={tpOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
+                                                <Map className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">Trajectplan</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {tpOpening ? 'Openen…' : 'TP-editor voor deze werknemer'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void openVgrBuilder()}
+                                            disabled={vgrOpening}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:opacity-60"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
+                                                <Compass className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">VGR</span>
+                                                <span className="text-sm text-gray-600">
+                                                    {vgrOpening ? 'Openen…' : 'Voortgangsrapportage-editor'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setDocsModalOpen(false);
+                                                guardedRouter.push(`/dashboard/cv/${employeeId}`);
+                                            }}
+                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                                        >
+                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 group-hover:bg-amber-200">
+                                                <IdCard className="h-6 w-6" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block font-semibold text-gray-900">CV</span>
+                                                <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
 
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="E-mail"
-                                value={employee.email || ''}
-                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('date_of_birth')}
-                                canValidate={canValidateField('date_of_birth')}
-                                validateLabel="Valideer geboortedatum"
-                            >
-                                <input
-                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
-                                    type="date"
-                                    value={employeeDetails?.date_of_birth || ''}
-                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
-                                />
-                            </ValidatableField>
                         </div>
-                        <div className="space-y-6 border-t border-gray-100 pt-4">
+                    </div>
+                </div>
+            )}
+
+            {/* Worker Profile Section */}
+            <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
                 {aiLoading && autofillProgress ? (
                     <AutofillProgressOverlay
                         progress={autofillProgress}
@@ -1575,7 +1722,35 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         cancelling={aiCancelling}
                     />
                 ) : null}
-                {suggestedReferent && employee?.client_id ? (
+                <div className="flex justify-between items-center pb-4 border-b border-purple-200">
+                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        Werknemersprofiel
+                    </h2>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            onClick={autofillWithAI}
+                            disabled={aiLoading}
+                            variant="secondary"
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                            <Sparkles className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
+                            {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={validateAllPendingFields}
+                            disabled={aiLoading || pendingValidationFields.length === 0 || updating}
+                            variant="outline"
+                            className="h-10 border-green-200 text-green-700 hover:border-green-300 bg-white"
+                        >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Valideer alles
+                        </Button>
+                    </div>
+                </div>
+
+                {suggestedReferent && (employee?.client_id) && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 flex flex-wrap items-center gap-2">
                         <span className="text-sm text-gray-700">
                             Contactpersoon uit document: <strong>{[suggestedReferent.first_name, suggestedReferent.last_name].filter(Boolean).join(' ').trim() || '—'}</strong>
@@ -1590,10 +1765,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             )}
                         </span>
                     </div>
-                ) : null}
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Werk</p>
+                )}
 
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {/* Current Job */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1612,67 +1785,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             onChange={e => handleDetailChange('current_job', e.target.value)}
                         />
                     </ValidatableField>
-                </div>
-
-                {/* Contract Hours */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        Contracturen
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('contract_hours')}
-                        canValidate={canValidateField('contract_hours')}
-                        validateLabel="Valideer contracturen"
-                    >
-                        <Input
-                            className={cn(fieldClass('contract_hours'), 'pr-10')}
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Bijv. 36.5"
-                            value={
-                                contractHoursText !== null
-                                    ? contractHoursText
-                                    : employeeDetails?.contract_hours != null
-                                      ? String(employeeDetails.contract_hours)
-                                      : ''
-                            }
-                            onFocus={() => {
-                                setContractHoursText(
-                                    employeeDetails?.contract_hours != null
-                                        ? String(employeeDetails.contract_hours)
-                                        : ''
-                                );
-                            }}
-                            onChange={(e) => {
-                                const raw = e.target.value;
-                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
-                                setContractHoursText(raw);
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                if (isIncompleteContractHoursInput(raw)) return;
-                                const parsed = parseContractHours(raw);
-                                if (parsed != null) {
-                                    handleDetailChange('contract_hours', parsed);
-                                }
-                            }}
-                            onBlur={() => {
-                                const raw = contractHoursText;
-                                setContractHoursText(null);
-                                if (raw == null) return;
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                const parsed = parseContractHours(raw);
-                                handleDetailChange('contract_hours', parsed);
-                            }}
-                        />
-                    </ValidatableField>
-                </div>
-                
                 </div>
 
                 {/* Work Experience */}
@@ -1697,7 +1809,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </div>
                 
                 {/* Education */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2 group">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                             <GraduationCap className="w-4 h-4 text-purple-600" />
@@ -1816,23 +1928,44 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </div>
 
                 {/* Checkboxes for drivers_license, has_computer, is_ex_werknemer */}
-                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <div className='flex flex-wrap gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
                     {([
-                        { key: 'drivers_license', label: 'Rijbewijs' },
-                        { key: 'has_computer', label: 'Heeft PC' },
-                        { key: 'is_ex_werknemer', label: 'Ex-werknemer' },
-                    ] as const).map(({ key, label }) => (
+                        { key: 'drivers_license', label: 'Rijbewijs', Icon: Car },
+                        { key: 'has_computer', label: 'Heeft PC', Icon: Computer },
+                        { key: 'is_ex_werknemer', label: 'Ex-werknemer', Icon: UserRoundX },
+                    ] as const).map(({ key, label, Icon }) => (
                         <label 
                             key={key} 
-                            className="flex items-center gap-2 cursor-pointer"
+                            className="flex items-center space-x-3 cursor-pointer group/checkbox p-3 rounded-lg hover:bg-white transition-colors duration-200 flex-1"
                         >
                             <input 
                                 type="checkbox" 
                                 checked={Boolean(employeeDetails?.[key as keyof EmployeeDetails])} 
                                 onChange={e => handleDetailChange(key as keyof EmployeeDetails, e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-gray-900"
+                                className="w-5 h-5 rounded border-2 border-purple-300 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 cursor-pointer transition-all checked:bg-purple-600 checked:border-purple-600"
                             />
-                            <span className="text-sm text-gray-700">{label}</span>
+                            <div className="flex items-center gap-2">
+                                <Icon
+                                    className={`w-4 h-4 ${
+                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
+                                            ? 'text-green-600'
+                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
+                                              ? 'text-yellow-600'
+                                              : 'text-purple-600'
+                                    }`}
+                                />
+                                <span
+                                    className={`font-medium ${
+                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
+                                            ? 'text-green-700'
+                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
+                                              ? 'text-yellow-600'
+                                              : 'text-gray-700'
+                                    }`}
+                                >
+                                    {label}
+                                </span>
+                            </div>
                             <FieldValidateButton
                                 onClick={(e) => {
                                     e.preventDefault();
@@ -1841,7 +1974,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 }}
                                 disabled={!canValidateField(key as EmployeeDetailFieldKey)}
                                 label={`Valideer ${label}`}
-                                className="ml-1"
+                                className="ml-auto"
                             />
                         </label>
                     ))}
@@ -2173,6 +2306,65 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </ValidatableField>
                 </div>
 
+                {/* Contract Hours */}
+                <div className="space-y-2 group">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-purple-600" />
+                        Contracturen
+                    </label>
+                    <ValidatableField
+                        onValidate={() => validateField('contract_hours')}
+                        canValidate={canValidateField('contract_hours')}
+                        validateLabel="Valideer contracturen"
+                    >
+                        <Input
+                            className={cn(fieldClass('contract_hours'), 'pr-10')}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Bijv. 36.5"
+                            value={
+                                contractHoursText !== null
+                                    ? contractHoursText
+                                    : employeeDetails?.contract_hours != null
+                                      ? String(employeeDetails.contract_hours)
+                                      : ''
+                            }
+                            onFocus={() => {
+                                setContractHoursText(
+                                    employeeDetails?.contract_hours != null
+                                        ? String(employeeDetails.contract_hours)
+                                        : ''
+                                );
+                            }}
+                            onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
+                                setContractHoursText(raw);
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                if (isIncompleteContractHoursInput(raw)) return;
+                                const parsed = parseContractHours(raw);
+                                if (parsed != null) {
+                                    handleDetailChange('contract_hours', parsed);
+                                }
+                            }}
+                            onBlur={() => {
+                                const raw = contractHoursText;
+                                setContractHoursText(null);
+                                if (raw == null) return;
+                                if (raw.trim() === '') {
+                                    handleDetailChange('contract_hours', null);
+                                    return;
+                                }
+                                const parsed = parseContractHours(raw);
+                                handleDetailChange('contract_hours', parsed);
+                            }}
+                        />
+                    </ValidatableField>
+                </div>
+                
                 {/* Other Employers */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -2198,162 +2390,30 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </p>
                 </div>
 
-                        </div>
-                        </>
-                        ) : null}
-                    </div>
-                    )}
+            </div>
 
-                    <div className="w-full rounded-lg border border-gray-200 bg-white p-4">
-                        <div className="flex flex-wrap items-stretch gap-2">
-                            {docTypes.map((type) => {
-                                const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
-                                return (
-                                    <button
-                                        key={type}
-                                        type="button"
-                                        className="min-w-[9rem] flex-1 rounded-md border border-gray-200 px-3 py-2 text-left hover:bg-gray-50"
-                                        onClick={() => {
-                                            if (type === 'gespreksverslag') {
-                                                setSourcesView('gesprek');
-                                                setSourcesModalOpen(true);
-                                                return;
-                                            }
-                                            setActiveDocType(type);
-                                        }}
-                                    >
-                                        <span className="block text-sm text-gray-900">{DOC_LABELS[type]}</span>
-                                        <span className="text-xs text-gray-500">{doc ? 'geüpload' : 'ontbreekt'}</span>
-                                    </button>
-                                );
-                            })}
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="h-auto shrink-0 px-3"
-                                onClick={() => {
-                                    setSourcesView('list');
-                                    setSourcesModalOpen(true);
-                                }}
-                            >
-                                <FolderOpen className="mr-2 h-4 w-4" />
-                                Bronnen beheren
-                            </Button>
-                        </div>
-                        <Dialog
-                            open={sourcesModalOpen}
-                            onOpenChange={(open) => {
-                                if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
-                                    if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
-                                }
-                                setSourcesModalOpen(open);
-                                if (!open) setSourcesView('list');
-                            }}
-                        >
-                            <DialogContent
-                                className={
-                                    sourcesView === 'gesprek'
-                                        ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
-                                        : 'max-w-md sm:max-w-lg'
-                                }
-                                onOpenAutoFocus={(e) => e.preventDefault()}
-                            >
-                                {sourcesView === 'gesprek' ? (
-                                    <GesprekPanel
-                                        embedded
-                                        employeeId={employeeId}
-                                        open={sourcesModalOpen}
-                                        onOpenChange={setSourcesModalOpen}
-                                        onBack={() => setSourcesView('list')}
-                                        hasPublishedVerslag={documents.some(
-                                            (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
-                                        )}
-                                        onDirtyChange={onGesprekDirty}
-                                        onDocumentsChanged={() => {
-                                            void fetchDocuments();
-                                        }}
-                                    />
-                                ) : (
-                                    <>
-                                        <DialogHeader>
-                                            <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                                <FolderOpen className="h-5 w-5 text-gray-500" />
-                                                Bronnen
-                                            </DialogTitle>
-                                            <p className="text-sm text-gray-600">
-                                                {uploadedSourcesCount} van {docTypes.length} binnen
-                                            </p>
-                                        </DialogHeader>
-                                        <div className="grid grid-cols-2 gap-2 pt-1">
-                                            {docTypes.map((type) => {
-                                                const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
-                                                return (
-                                                    <div key={type} className="rounded-lg border border-gray-200 p-3">
-                                                        <button
-                                                            type="button"
-                                                            className="w-full text-left"
-                                                            onClick={() => {
-                                                                if (type === 'gespreksverslag') {
-                                                                    setSourcesView('gesprek');
-                                                                    return;
-                                                                }
-                                                                setSourcesModalOpen(false);
-                                                                setActiveDocType(type);
-                                                            }}
-                                                        >
-                                                            <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
-                                                                {doc ? (
-                                                                    <CheckCircle2 className="h-4 w-4 shrink-0 text-gray-500" />
-                                                                ) : (
-                                                                    <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
-                                                                )}
-                                                                {DOC_LABELS[type]}
-                                                            </span>
-                                                            <span className="mt-1 block text-xs text-gray-500">
-                                                                {type === 'gespreksverslag'
-                                                                    ? doc ? 'Notities bewaard' : 'Transcript en notities'
-                                                                    : doc ? 'geüpload' : 'ontbreekt'}
-                                                            </span>
-                                                        </button>
-                                                        {doc && type !== 'gespreksverslag' ? (
-                                                            <div className="mt-2 flex gap-1">
-                                                                <button
-                                                                    type="button"
-                                                                    title="Bekijken"
-                                                                    aria-label="Bekijken"
-                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                                                                    onClick={() => {
-                                                                        setSourcesModalOpen(false);
-                                                                        setPreviewDoc({
-                                                                            title: doc.name || DOC_LABELS[type],
-                                                                            url: doc.url,
-                                                                        });
-                                                                    }}
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    title="Verwijderen"
-                                                                    aria-label="Verwijderen"
-                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600"
-                                                                    onClick={() => void deleteSourceDocument(doc)}
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        ) : null}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                </div>
-            )}
+            <Button
+                onClick={() => void saveUnified()}
+                disabled={updating}
+                variant="default"
+                aria-label="Opslaan werknemer en profiel"
+                aria-busy={updating}
+                className={cn(
+                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl',
+                    'cursor-pointer disabled:cursor-not-allowed',
+                    'text-white border border-white/15',
+                    'transition-all duration-200 ease-out',
+                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
+                    'active:scale-[0.97] active:duration-100',
+                    'disabled:active:scale-100',
+                    updating && 'animate-pulse',
+                    hasUnsavedChanges &&
+                        'opacity-75 ring-2 ring-purple-300/35 ring-offset-2 ring-offset-transparent hover:opacity-100'
+                )}
+            >
+                <Save className="w-4 h-4 mr-2" />
+                {updating ? 'Opslaan...' : hasUnsavedChanges ? 'Alles opslaan' : 'Alles opgeslagen'}
+            </Button>
 
             {activeDocType && (
                 <DocumentModal
