@@ -1164,7 +1164,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 tpInstanceId = inserted.id;
             }
 
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
@@ -1177,7 +1176,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openVgrBuilder = async () => {
         setVgrOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1190,7 +1188,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openIntakeBuilder = async () => {
         setIntakeOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/intake/${employeeId}`);
         } catch (error) {
             console.error(error);
