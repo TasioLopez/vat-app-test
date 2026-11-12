@@ -11,6 +11,12 @@ export type MeetingCaptureStatus = (typeof MEETING_CAPTURE_STATUSES)[number];
 
 export type MeetingAudioExt = 'webm' | 'm4a' | 'mp4';
 
+export const TRANSCRIPT_SOURCES = ['upload', 'paste', 'recording'] as const;
+export type TranscriptSource = (typeof TRANSCRIPT_SOURCES)[number];
+
+export const NOTES_ORIGINS = ['generated', 'pasted', 'uploaded'] as const;
+export type NotesOrigin = (typeof NOTES_ORIGINS)[number];
+
 export type MeetingCapture = {
   id: string;
   employee_id: string;
@@ -18,12 +24,23 @@ export type MeetingCapture = {
   status: MeetingCaptureStatus;
   audio_path: string | null;
   transcript_text: string | null;
+  transcript_original_text: string | null;
+  transcript_source: TranscriptSource | null;
   notes_text: string | null;
+  notes_origin: NotesOrigin | null;
   notes_document_id: string | null;
   consent_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export function isTranscriptSource(value: unknown): value is TranscriptSource {
+  return typeof value === 'string' && (TRANSCRIPT_SOURCES as readonly string[]).includes(value);
+}
+
+export function isNotesOrigin(value: unknown): value is NotesOrigin {
+  return typeof value === 'string' && (NOTES_ORIGINS as readonly string[]).includes(value);
+}
 
 export function isMeetingAudioExt(value: string): value is MeetingAudioExt {
   return value === 'webm' || value === 'm4a' || value === 'mp4';
@@ -56,4 +73,54 @@ export function acceptNotesDecision(
 ): 'ok' | 'needs-replace' {
   if (hasExistingDocument && !replace) return 'needs-replace';
   return 'ok';
+}
+
+/** A non-empty hand-written verslag is kept until the adviser replaces it. */
+export function generateNotesDecision(
+  notesOrigin: string | null | undefined,
+  notesText: string | null | undefined,
+  replace: boolean
+): 'ok' | 'needs-replace' {
+  const handWritten = notesOrigin === 'pasted' || notesOrigin === 'uploaded';
+  if (handWritten && (notesText ?? '').trim() && !replace) return 'needs-replace';
+  return 'ok';
+}
+
+/** Re-transcription must not wipe a transcript that is already stored. */
+export function transcribeReplaceDecision(
+  existingTranscript: string | null | undefined,
+  replace: boolean
+): 'ok' | 'needs-replace' {
+  if ((existingTranscript ?? '').trim() && !replace) return 'needs-replace';
+  return 'ok';
+}
+
+export function applyTranscriptWrite(params: {
+  existingOriginal: string | null;
+  nextText: string;
+  source?: TranscriptSource | null;
+}): {
+  transcript_text: string;
+  transcript_original_text?: string;
+  transcript_source?: TranscriptSource;
+} {
+  const text = params.nextText.trim();
+  const patch: {
+    transcript_text: string;
+    transcript_original_text?: string;
+    transcript_source?: TranscriptSource;
+  } = { transcript_text: text };
+  if (!(params.existingOriginal ?? '').trim() && text) {
+    patch.transcript_original_text = text;
+  }
+  if (params.source) patch.transcript_source = params.source;
+  return patch;
+}
+
+export function restoreTranscriptText(
+  original: string | null
+): { ok: true; transcript_text: string } | { ok: false } {
+  const text = (original ?? '').trim();
+  if (!text) return { ok: false };
+  return { ok: true, transcript_text: text };
 }

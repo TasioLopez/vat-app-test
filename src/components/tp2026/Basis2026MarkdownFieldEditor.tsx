@@ -26,6 +26,10 @@ type Props = {
   onChange: (markdown: string) => void;
   placeholder?: string;
   minHeightClassName?: string;
+  /** Gold matches the trajectplan fields. Neutral is for surfaces outside that document. */
+  appearance?: 'gold' | 'neutral';
+  /** Debounce before onChange. 0 syncs on the next layout so callers see edits immediately. */
+  delay?: number;
 };
 
 /**
@@ -37,12 +41,15 @@ export function Basis2026MarkdownFieldEditor({
   onChange,
   placeholder,
   minHeightClassName = 'min-h-[220px]',
+  appearance = 'gold',
+  delay = 200,
 }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null);
   const lastEmitted = useRef(markdown);
   const { value: draft, setDraft } = useDebouncedSync({
     external: markdown,
     onSync: onChange,
+    delay,
   });
 
   useEffect(() => {
@@ -77,14 +84,22 @@ export function Basis2026MarkdownFieldEditor({
             <BlockTypeSelect />
           </>
         ),
-        toolbarClassName: 'rounded-t-md border border-b-0 border-[#b8985c]/60 bg-[#f5efe6]',
+        toolbarClassName:
+          appearance === 'neutral'
+            ? 'rounded-t-md border border-b-0 border-gray-200 bg-gray-50'
+            : 'rounded-t-md border border-b-0 border-[#b8985c]/60 bg-[#f5efe6]',
       }),
     ],
-    []
+    [appearance]
   );
 
+  const frameClass =
+    appearance === 'neutral'
+      ? 'overflow-hidden rounded-md border border-gray-200 bg-white'
+      : 'overflow-hidden rounded-md border border-[#b8985c] bg-white';
+
   return (
-    <div className="overflow-hidden rounded-md border border-[#b8985c] bg-white">
+    <div className={frameClass}>
       <MDXEditor
         ref={editorRef}
         markdown={draft}

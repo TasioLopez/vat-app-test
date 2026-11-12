@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { MeetingCapture } from '@/lib/meetings/audio';
+import type { MeetingCapture, NotesOrigin, TranscriptSource } from '@/lib/meetings/audio';
+
+const CAPTURE_COLUMNS =
+  'id, employee_id, created_by, status, audio_path, transcript_text, transcript_original_text, transcript_source, notes_text, notes_origin, notes_document_id, consent_at, created_at, updated_at';
 
 type CaptureListResult = {
   data: MeetingCapture[] | null;
@@ -12,6 +15,7 @@ type CaptureBuilder = PromiseLike<CaptureListResult> & {
   update: (row: Record<string, unknown>) => CaptureBuilder;
   delete: () => CaptureBuilder;
   eq: (column: string, value: string) => CaptureBuilder;
+  neq: (column: string, value: string) => CaptureBuilder;
   order: (column: string, options: { ascending: boolean }) => CaptureBuilder;
   maybeSingle: () => Promise<{
     data: MeetingCapture | null;
@@ -32,9 +36,7 @@ export async function listMeetingCaptures(
   employeeId: string
 ): Promise<{ data: MeetingCapture[]; error: string | null }> {
   const { data, error } = await table(supabase)
-    .select(
-      'id, employee_id, created_by, status, audio_path, transcript_text, notes_text, notes_document_id, consent_at, created_at, updated_at'
-    )
+    .select(CAPTURE_COLUMNS)
     .eq('employee_id', employeeId)
     .order('created_at', { ascending: false });
 
@@ -48,9 +50,7 @@ export async function getMeetingCapture(
   captureId: string
 ): Promise<{ data: MeetingCapture | null; error: string | null }> {
   const { data, error } = await table(supabase)
-    .select(
-      'id, employee_id, created_by, status, audio_path, transcript_text, notes_text, notes_document_id, consent_at, created_at, updated_at'
-    )
+    .select(CAPTURE_COLUMNS)
     .eq('id', captureId)
     .eq('employee_id', employeeId)
     .maybeSingle();
@@ -66,14 +66,16 @@ export async function insertMeetingCapture(
     created_by: string;
     status: MeetingCapture['status'];
     transcript_text?: string | null;
+    transcript_original_text?: string | null;
+    transcript_source?: TranscriptSource | null;
+    notes_text?: string | null;
+    notes_origin?: NotesOrigin | null;
     consent_at?: string | null;
   }
 ): Promise<{ data: MeetingCapture | null; error: string | null }> {
   const { data, error } = await table(supabase)
     .insert(row)
-    .select(
-      'id, employee_id, created_by, status, audio_path, transcript_text, notes_text, notes_document_id, consent_at, created_at, updated_at'
-    )
+    .select(CAPTURE_COLUMNS)
     .single();
 
   if (error) return { data: null, error: error.message };
@@ -90,13 +92,25 @@ export async function updateMeetingCapture(
     .update(patch)
     .eq('id', captureId)
     .eq('employee_id', employeeId)
-    .select(
-      'id, employee_id, created_by, status, audio_path, transcript_text, notes_text, notes_document_id, consent_at, created_at, updated_at'
-    )
+    .select(CAPTURE_COLUMNS)
     .maybeSingle();
 
   if (error) return { data: null, error: error.message };
   return { data, error: null };
+}
+
+/** One published verslag per employee. Other accepted captures become drafts again. */
+export async function clearOtherPublishedCaptures(
+  supabase: SupabaseClient,
+  employeeId: string,
+  captureId: string
+): Promise<{ error: string | null }> {
+  const { error } = await table(supabase)
+    .update({ status: 'notes_draft', notes_document_id: null })
+    .eq('employee_id', employeeId)
+    .eq('status', 'accepted')
+    .neq('id', captureId);
+  return { error: error?.message ?? null };
 }
 
 export async function deleteMeetingCapture(

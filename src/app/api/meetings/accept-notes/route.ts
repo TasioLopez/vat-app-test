@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
+import { isNotesOrigin } from '@/lib/meetings/audio';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
-import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
+import { clearOtherPublishedCaptures, getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import { saveGespreksverslagDocument } from '@/lib/meetings/save-document';
 
 export const runtime = 'nodejs';
@@ -42,13 +43,23 @@ export async function POST(req: NextRequest) {
   }
   if (!saved.ok) return NextResponse.json({ error: saved.error }, { status: 500 });
 
+  const notesOrigin = isNotesOrigin(body?.notesOrigin)
+    ? body.notesOrigin
+    : existing.data.notes_origin ?? 'pasted';
+
   const updated = await updateMeetingCapture(access.supabase, employeeId, captureId, {
     notes_text: notesText.trim(),
+    notes_origin: notesOrigin,
     notes_document_id: saved.documentId,
     status: 'accepted',
   });
   if (updated.error || !updated.data) {
     return NextResponse.json({ error: updated.error || 'Verslag koppelen mislukt' }, { status: 500 });
+  }
+
+  const cleared = await clearOtherPublishedCaptures(access.supabase, employeeId, captureId);
+  if (cleared.error) {
+    return NextResponse.json({ error: cleared.error }, { status: 500 });
   }
   return NextResponse.json({ capture: updated.data, documentId: saved.documentId });
 }

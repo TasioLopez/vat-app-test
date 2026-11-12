@@ -30,6 +30,7 @@ describe('meeting routes staging gate', () => {
     const transcribe = await import('@/app/api/meetings/transcribe/route');
     const generateNotes = await import('@/app/api/meetings/generate-notes/route');
     const acceptNotes = await import('@/app/api/meetings/accept-notes/route');
+    const importText = await import('@/app/api/meetings/import-text/route');
 
     const post = (path: string) =>
       new NextRequest(`http://localhost${path}`, {
@@ -51,6 +52,7 @@ describe('meeting routes staging gate', () => {
       transcribe.POST(post('/api/meetings/transcribe')),
       generateNotes.POST(post('/api/meetings/generate-notes')),
       acceptNotes.POST(post('/api/meetings/accept-notes')),
+      importText.POST(post('/api/meetings/import-text')),
     ]);
 
     for (const res of responses) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 export type UseDebouncedSyncOptions<T> = {
   /** External source of truth (e.g. tpData field). */
@@ -26,6 +26,7 @@ export function useDebouncedSync<T>({
   const [value, setValue] = useState(external);
   const lastSyncedRef = useRef(external);
   const pendingRef = useRef<T | null>(null);
+  const immediateRef = useRef<{ value: T } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSyncRef = useRef(onSync);
   onSyncRef.current = onSync;
@@ -51,6 +52,10 @@ export function useDebouncedSync<T>({
     (next: T | ((prev: T) => T)) => {
       setValue((prev) => {
         const resolved = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
+        if (delay <= 0) {
+          immediateRef.current = { value: resolved };
+          return resolved;
+        }
         pendingRef.current = resolved;
         clearTimer();
         timerRef.current = setTimeout(() => {
@@ -68,11 +73,21 @@ export function useDebouncedSync<T>({
     [clearTimer, delay, isEqual]
   );
 
+  useLayoutEffect(() => {
+    const pending = immediateRef.current;
+    if (!pending) return;
+    immediateRef.current = null;
+    if (isEqual(pending.value, lastSyncedRef.current)) return;
+    lastSyncedRef.current = pending.value;
+    onSyncRef.current(pending.value);
+  }, [value, isEqual]);
+
   // External change (autofill / load): reset local draft when not from our sync.
   useEffect(() => {
     if (isEqual(external, lastSyncedRef.current)) return;
     clearTimer();
     pendingRef.current = null;
+    immediateRef.current = null;
     lastSyncedRef.current = external;
     setValue(external);
   }, [external, clearTimer, isEqual]);

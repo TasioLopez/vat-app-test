@@ -6,6 +6,7 @@ import {
   getDocumentExtractionReasoningEffort,
 } from '@/lib/document-analysis/constants';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import { generateNotesDecision } from '@/lib/meetings/audio';
 import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import { GESPREKSVERSLAG_SYSTEM_PROMPT, GESPREKSVERSLAG_USER_MESSAGE } from '@/lib/meetings/prompts';
 
@@ -26,6 +27,18 @@ export async function POST(req: NextRequest) {
   const transcript = existing.data?.transcript_text?.trim() ?? '';
   if (!existing.data || !transcript) {
     return NextResponse.json({ error: 'Geen transcript om een verslag van te maken.' }, { status: 400 });
+  }
+  if (
+    generateNotesDecision(existing.data.notes_origin, existing.data.notes_text, body?.replace === true) ===
+    'needs-replace'
+  ) {
+    return NextResponse.json(
+      {
+        error: 'Dit verslag is zelf aangeleverd. Vervang het expliciet.',
+        needsReplace: true,
+      },
+      { status: 409 }
+    );
   }
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -52,6 +65,8 @@ export async function POST(req: NextRequest) {
 
   const updated = await updateMeetingCapture(access.supabase, employeeId, captureId, {
     notes_text: notes,
+    notes_origin: 'generated',
+    notes_document_id: null,
     status: 'notes_draft',
   });
   if (updated.error || !updated.data) {

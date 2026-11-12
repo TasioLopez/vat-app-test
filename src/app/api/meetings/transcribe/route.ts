@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
-import { MEETING_AUDIO_MAX_BYTES, meetingAudioContentType, type MeetingAudioExt } from '@/lib/meetings/audio';
+import {
+  MEETING_AUDIO_MAX_BYTES,
+  applyTranscriptWrite,
+  meetingAudioContentType,
+  transcribeReplaceDecision,
+  type MeetingAudioExt,
+} from '@/lib/meetings/audio';
 import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 
@@ -28,6 +34,12 @@ export async function POST(req: NextRequest) {
   if (existing.error) return NextResponse.json({ error: existing.error }, { status: 500 });
   if (!existing.data?.audio_path) {
     return NextResponse.json({ error: 'Geen opname gevonden.' }, { status: 400 });
+  }
+  if (transcribeReplaceDecision(existing.data.transcript_text, body?.replace === true) === 'needs-replace') {
+    return NextResponse.json(
+      { error: 'Er staat al een transcript. Vervang het expliciet.', needsReplace: true },
+      { status: 409 }
+    );
   }
 
   const { data: file, error: downloadError } = await supabaseAdmin.storage
@@ -59,10 +71,14 @@ export async function POST(req: NextRequest) {
   const text = transcriptText.trim();
   if (!text) return NextResponse.json({ error: 'Leeg transcript' }, { status: 502 });
 
-  const updated = await updateMeetingCapture(access.supabase, employeeId, captureId, {
-    transcript_text: text,
-    status: 'transcribed',
+  const patch: Record<string, unknown> = applyTranscriptWrite({
+    existingOriginal: existing.data.transcript_original_text,
+    nextText: text,
+    source: 'recording',
   });
+  if (existing.data.status === 'recorded') patch.status = 'transcribed';
+
+  const updated = await updateMeetingCapture(access.supabase, employeeId, captureId, patch);
   if (updated.error || !updated.data) {
     return NextResponse.json({ error: updated.error || 'Transcript opslaan mislukt' }, { status: 500 });
   }

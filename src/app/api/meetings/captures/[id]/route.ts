@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import {
+  applyTranscriptWrite,
+  isNotesOrigin,
+  isTranscriptSource,
+  restoreTranscriptText,
+} from '@/lib/meetings/audio';
+import {
   deleteMeetingCapture,
   getMeetingCapture,
   updateMeetingCapture,
@@ -26,13 +32,34 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   if (!existing.data) return NextResponse.json({ error: 'Gesprek niet gevonden' }, { status: 404 });
 
   const patch: Record<string, unknown> = {};
-  if (typeof body?.transcriptText === 'string') {
-    patch.transcript_text = body.transcriptText.trim();
+  if (body?.restoreTranscript === true) {
+    const restored = restoreTranscriptText(existing.data.transcript_original_text);
+    if (!restored.ok) {
+      return NextResponse.json({ error: 'Geen origineel transcript.' }, { status: 400 });
+    }
+    patch.transcript_text = restored.transcript_text;
     if (existing.data.status === 'recorded') patch.status = 'transcribed';
+  } else if (typeof body?.transcriptText === 'string') {
+    const source = isTranscriptSource(body?.transcriptSource) ? body.transcriptSource : null;
+    Object.assign(
+      patch,
+      applyTranscriptWrite({
+        existingOriginal: existing.data.transcript_original_text,
+        nextText: body.transcriptText,
+        source,
+      })
+    );
+    if (existing.data.status === 'recorded' && String(patch.transcript_text ?? '').trim()) {
+      patch.status = 'transcribed';
+    }
   }
   if (typeof body?.notesText === 'string') {
-    patch.notes_text = body.notesText.trim();
-    if (existing.data.status !== 'accepted') patch.status = 'notes_draft';
+    const notesText = body.notesText.trim();
+    patch.notes_text = notesText;
+    if (isNotesOrigin(body?.notesOrigin)) patch.notes_origin = body.notesOrigin;
+    else if (!existing.data.notes_origin && notesText) patch.notes_origin = 'pasted';
+    patch.status = 'notes_draft';
+    if (existing.data.status === 'accepted') patch.notes_document_id = null;
   }
   if (body?.consent === true && !existing.data.consent_at) {
     patch.consent_at = new Date().toISOString();

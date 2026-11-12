@@ -320,6 +320,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
+    const gesprekDirtyRef = useRef(false);
+    const onGesprekDirty = useCallback((dirty: boolean) => {
+        gesprekDirtyRef.current = dirty;
+    }, []);
     const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [referentDialogOpen, setReferentDialogOpen] = useState(false);
     const [referentDialogMode, setReferentDialogMode] = useState<'edit' | 'create'>('edit');
@@ -1439,6 +1443,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             <Dialog
                                 open={sourcesModalOpen}
                                 onOpenChange={(open) => {
+                                    if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
+                                        if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
+                                    }
                                     setSourcesModalOpen(open);
                                     if (!open) setSourcesView('list');
                                 }}
@@ -1466,7 +1473,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     </span>
                                 </Button>
                                 <DialogContent
-                                    className={sourcesView === 'gesprek' ? 'max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-xl' : 'max-w-md sm:max-w-lg'}
+                                    className={
+                                        sourcesView === 'gesprek'
+                                            ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
+                                            : 'max-w-md sm:max-w-lg'
+                                    }
                                     onOpenAutoFocus={(e) => e.preventDefault()}
                                 >
                                     {sourcesView === 'gesprek' ? (
@@ -1476,6 +1487,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             open={sourcesModalOpen}
                                             onOpenChange={setSourcesModalOpen}
                                             onBack={() => setSourcesView('list')}
+                                            hasPublishedVerslag={documents.some(
+                                                (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
+                                            )}
+                                            onDirtyChange={onGesprekDirty}
                                             onDocumentsChanged={() => {
                                                 void fetchDocuments();
                                             }}
