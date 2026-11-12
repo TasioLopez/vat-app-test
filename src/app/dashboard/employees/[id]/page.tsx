@@ -17,6 +17,14 @@ import {
     Eye,
     Pencil,
     Trash2,
+    FolderOpen,
+    Files,
+    FileText,
+    Map,
+    Compass,
+    IdCard,
+    CheckCircle2,
+    CircleDashed,
 } from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { DocumentPreviewDialog } from '@/components/DocumentPreviewDialog';
@@ -35,7 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import { ReferentEditDialog } from '@/components/employee/ReferentEditDialog';
 import {
@@ -315,6 +323,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
+    const [docsModalOpen, setDocsModalOpen] = useState(false);
     const gesprekDirtyRef = useRef(false);
     const onGesprekDirty = useCallback((dirty: boolean) => {
         gesprekDirtyRef.current = dirty;
@@ -1164,6 +1173,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 tpInstanceId = inserted.id;
             }
 
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
@@ -1176,6 +1186,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openVgrBuilder = async () => {
         setVgrOpening(true);
         try {
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1188,6 +1199,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openIntakeBuilder = async () => {
         setIntakeOpening(true);
         try {
+            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/intake/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1317,9 +1329,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         {profileView.subtitle ? (
                             <p className="mt-0.5 text-sm text-gray-700">{profileView.subtitle}</p>
                         ) : null}
-                        {profileView.meta ? (
-                            <p className="mt-0.5 text-sm text-gray-500">{profileView.meta}</p>
-                        ) : null}
                     </div>
                     {employee ? (
                         <div className="flex shrink-0 items-center gap-3">
@@ -1354,7 +1363,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             {employee && (
                 <div className="flex flex-col items-start gap-4 lg:flex-row">
                     {(profileMode === 'edit' || profileView.groups.length > 0 || profileView.isEmpty) && (
-                    <div className="min-w-0 w-full flex-1 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className={profileMode === 'summary'
+                        ? 'w-full shrink-0 rounded-lg border border-gray-200 bg-white p-4 lg:w-[360px]'
+                        : 'min-w-0 w-full flex-1 rounded-lg border border-gray-200 bg-white p-4'
+                    }>
                         {profileMode === 'summary' ? (
                             <WorkerProfileSummary profile={profileView} />
                         ) : (
@@ -2199,21 +2211,42 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                     )}
 
-                    <div className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-[340px]">
-                        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                            <h2 className="text-sm font-medium text-gray-900">Bronnen</h2>
-                            <span className="text-xs text-gray-500">
-                                {uploadedSourcesCount} van {docTypes.length} binnen
-                            </span>
+                    <div className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-[360px]">
+                        <div className="flex flex-col gap-2 border-b border-gray-100 p-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 justify-start"
+                                onClick={() => {
+                                    setSourcesView('list');
+                                    setSourcesModalOpen(true);
+                                }}
+                            >
+                                <FolderOpen className="mr-2 h-4 w-4" />
+                                Bronnen beheren
+                                <span className="ml-auto text-xs font-normal text-gray-500">
+                                    {uploadedSourcesCount} van {docTypes.length}
+                                </span>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 justify-start"
+                                onClick={() => setDocsModalOpen(true)}
+                            >
+                                <Files className="mr-2 h-4 w-4" />
+                                Documenten maken
+                            </Button>
                         </div>
                         <ul>
                             {docTypes.map((type) => {
                                 const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
                                 return (
-                                    <li key={type} className="flex items-center gap-1 border-b border-gray-100 px-4 py-2.5">
+                                    <li key={type} className="flex h-9 items-center gap-2 border-b border-gray-100 px-3 last:border-b-0">
+                                        <FileText className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                                         <button
                                             type="button"
-                                            className="min-w-0 flex-1 text-left"
+                                            className="min-w-0 flex-1 truncate text-left text-sm text-gray-900"
                                             onClick={() => {
                                                 if (type === 'gespreksverslag') {
                                                     setSourcesView('gesprek');
@@ -2223,76 +2256,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                                 setActiveDocType(type);
                                             }}
                                         >
-                                            <span className="block text-sm text-gray-900">{DOC_LABELS[type]}</span>
-                                            <span className="text-xs text-gray-500">{doc ? 'geüpload' : 'ontbreekt'}</span>
+                                            {DOC_LABELS[type]}
                                         </button>
-                                        {doc && type !== 'gespreksverslag' ? (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    title="Bekijken"
-                                                    aria-label="Bekijken"
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                                                    onClick={() => setPreviewDoc({
-                                                        title: doc.name || DOC_LABELS[type],
-                                                        url: doc.url,
-                                                    })}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    title="Verwijderen"
-                                                    aria-label="Verwijderen"
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600"
-                                                    onClick={() => void deleteSourceDocument(doc)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </>
-                                        ) : null}
+                                        <span className="shrink-0 text-xs text-gray-500">
+                                            {doc ? 'geüpload' : 'ontbreekt'}
+                                        </span>
                                     </li>
                                 );
                             })}
                         </ul>
-                        <div className="space-y-0.5 px-4 py-3">
-                            <p className="pb-1 text-xs font-medium uppercase tracking-wide text-gray-400">Openen</p>
-                            <button
-                                type="button"
-                                className="block w-full py-1.5 text-left text-sm text-gray-900 hover:text-gray-600 disabled:opacity-60"
-                                onClick={() => void openIntakeBuilder()}
-                                disabled={intakeOpening}
-                            >
-                                {intakeOpening ? 'Intake openen…' : 'Intake'}
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full py-1.5 text-left text-sm text-gray-900 hover:text-gray-600 disabled:opacity-60"
-                                onClick={() => void openTpBuilder()}
-                                disabled={tpOpening}
-                            >
-                                {tpOpening ? 'Trajectplan openen…' : 'Trajectplan'}
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full py-1.5 text-left text-sm text-gray-900 hover:text-gray-600 disabled:opacity-60"
-                                onClick={() => void openVgrBuilder()}
-                                disabled={vgrOpening}
-                            >
-                                {vgrOpening ? 'VGR openen…' : 'VGR'}
-                            </button>
-                            <button
-                                type="button"
-                                className="block w-full py-1.5 text-left text-sm text-gray-900 hover:text-gray-600"
-                                onClick={() => guardedRouter.push(`/dashboard/cv/${employeeId}`)}
-                            >
-                                CV
-                            </button>
-                        </div>
                         <Dialog
-                            open={sourcesModalOpen && sourcesView === 'gesprek'}
+                            open={sourcesModalOpen}
                             onOpenChange={(open) => {
-                                if (!open && gesprekDirtyRef.current) {
+                                if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
                                     if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
                                 }
                                 setSourcesModalOpen(open);
@@ -2300,26 +2276,140 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             }}
                         >
                             <DialogContent
-                                className="flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]"
+                                className={
+                                    sourcesView === 'gesprek'
+                                        ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
+                                        : 'max-w-md sm:max-w-lg'
+                                }
                                 onOpenAutoFocus={(e) => e.preventDefault()}
                             >
-                                <GesprekPanel
-                                    embedded
-                                    employeeId={employeeId}
-                                    open={sourcesModalOpen}
-                                    onOpenChange={setSourcesModalOpen}
-                                    onBack={() => {
-                                        setSourcesView('list');
-                                        setSourcesModalOpen(false);
-                                    }}
-                                    hasPublishedVerslag={documents.some(
-                                        (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
-                                    )}
-                                    onDirtyChange={onGesprekDirty}
-                                    onDocumentsChanged={() => {
-                                        void fetchDocuments();
-                                    }}
-                                />
+                                {sourcesView === 'gesprek' ? (
+                                    <GesprekPanel
+                                        embedded
+                                        employeeId={employeeId}
+                                        open={sourcesModalOpen}
+                                        onOpenChange={setSourcesModalOpen}
+                                        onBack={() => setSourcesView('list')}
+                                        hasPublishedVerslag={documents.some(
+                                            (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
+                                        )}
+                                        onDirtyChange={onGesprekDirty}
+                                        onDocumentsChanged={() => {
+                                            void fetchDocuments();
+                                        }}
+                                    />
+                                ) : (
+                                    <>
+                                        <DialogHeader>
+                                            <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                                <FolderOpen className="h-5 w-5 text-gray-500" />
+                                                Bronnen
+                                            </DialogTitle>
+                                            <p className="text-sm text-gray-600">
+                                                {uploadedSourcesCount} van {docTypes.length} binnen
+                                            </p>
+                                        </DialogHeader>
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
+                                            {docTypes.map((type) => {
+                                                const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
+                                                return (
+                                                    <div key={type} className="rounded-lg border border-gray-200 p-3">
+                                                        <button
+                                                            type="button"
+                                                            className="w-full text-left"
+                                                            onClick={() => {
+                                                                if (type === 'gespreksverslag') {
+                                                                    setSourcesView('gesprek');
+                                                                    return;
+                                                                }
+                                                                setSourcesModalOpen(false);
+                                                                setActiveDocType(type);
+                                                            }}
+                                                        >
+                                                            <span className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                                                                {doc ? (
+                                                                    <CheckCircle2 className="h-4 w-4 shrink-0 text-gray-500" />
+                                                                ) : (
+                                                                    <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
+                                                                )}
+                                                                {DOC_LABELS[type]}
+                                                            </span>
+                                                            <span className="mt-1 block text-xs text-gray-500">
+                                                                {type === 'gespreksverslag'
+                                                                    ? doc ? 'Notities bewaard' : 'Transcript en notities'
+                                                                    : doc ? 'geüpload' : 'ontbreekt'}
+                                                            </span>
+                                                        </button>
+                                                        {doc && type !== 'gespreksverslag' ? (
+                                                            <div className="mt-2 flex gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    title="Bekijken"
+                                                                    aria-label="Bekijken"
+                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                                                    onClick={() => {
+                                                                        setSourcesModalOpen(false);
+                                                                        setPreviewDoc({
+                                                                            title: doc.name || DOC_LABELS[type],
+                                                                            url: doc.url,
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    title="Verwijderen"
+                                                                    aria-label="Verwijderen"
+                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-600"
+                                                                    onClick={() => void deleteSourceDocument(doc)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </>
+                                )}
+                            </DialogContent>
+                        </Dialog>
+                        <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
+                            <DialogContent className="max-w-md sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2 text-gray-900">
+                                        <Files className="h-5 w-5 text-gray-500" />
+                                        Documenten maken
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <div className="flex flex-col gap-2 pt-1">
+                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openIntakeBuilder()} disabled={intakeOpening}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        {intakeOpening ? 'Intake openen…' : 'Intake'}
+                                    </Button>
+                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openTpBuilder()} disabled={tpOpening}>
+                                        <Map className="mr-2 h-4 w-4" />
+                                        {tpOpening ? 'Trajectplan openen…' : 'Trajectplan'}
+                                    </Button>
+                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openVgrBuilder()} disabled={vgrOpening}>
+                                        <Compass className="mr-2 h-4 w-4" />
+                                        {vgrOpening ? 'VGR openen…' : 'VGR'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="justify-start"
+                                        onClick={() => {
+                                            setDocsModalOpen(false);
+                                            guardedRouter.push(`/dashboard/cv/${employeeId}`);
+                                        }}
+                                    >
+                                        <IdCard className="mr-2 h-4 w-4" />
+                                        CV
+                                    </Button>
+                                </div>
                             </DialogContent>
                         </Dialog>
                     </div>

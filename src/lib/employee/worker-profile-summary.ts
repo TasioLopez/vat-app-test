@@ -99,6 +99,11 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
     if (next) groups.push(next);
   };
 
+  push(group('mensen', [
+    referent ? { label: 'Contactpersoon', value: referent } : null,
+    owner ? { label: 'Dossier-eigenaar', value: owner } : null,
+  ]));
+
   push(group('contact', [
     textRow('E-mail', 'email', input.email),
     textRow('Telefoon', 'phone', input.phone),
@@ -161,10 +166,7 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
   return {
     name: name || 'Werknemer',
     subtitle,
-    meta: joinNonEmpty([
-      referent ? `${referent}, contactpersoon` : null,
-      owner ? `${owner}, dossier-eigenaar` : null,
-    ]),
+    meta: null,
     groups,
     isEmpty: groups.length === 0 && !subtitle,
   };

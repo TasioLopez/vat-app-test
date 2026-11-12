@@ -62,7 +62,9 @@ describe('buildWorkerProfileView', () => {
     });
 
     assert.equal(view.subtitle, 'Monteur bij Ihub · 32 uur');
-    assert.equal(view.meta, 'Valerie Bloem, contactpersoon · AJ Staging, dossier-eigenaar');
+    assert.equal(view.meta, null);
+    assert.equal(row(view, 'Contactpersoon')?.value, 'Valerie Bloem');
+    assert.equal(row(view, 'Dossier-eigenaar')?.value, 'AJ Staging');
     assert.equal(row(view, 'Opleiding')?.value, 'MBO 2 · Metaal');
     assert.equal(row(view, 'Computer')?.value, '3 - Gemiddeld, Word, Excel');
     assert.equal(row(view, 'Rijbewijs')?.value, 'B, BE');

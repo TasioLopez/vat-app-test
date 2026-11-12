@@ -1,28 +1,62 @@
+import {
+  Briefcase,
+  Building2,
+  Bus,
+  Calendar,
+  Car,
+  Computer,
+  GraduationCap,
+  Languages,
+  Mail,
+  Phone,
+  User,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react';
 import type { WorkerProfileView } from '@/lib/employee/worker-profile-summary';
+
+const ROW_ICONS: Record<string, LucideIcon> = {
+  'E-mail': Mail,
+  Telefoon: Phone,
+  Geboortedatum: Calendar,
+  Geslacht: User,
+  Opleiding: GraduationCap,
+  Rijbewijs: Car,
+  Vervoer: Bus,
+  Nederlands: Languages,
+  Computer,
+  Werkervaring: Briefcase,
+  'Andere werkgevers': Building2,
+  'Ex-werknemer': UserRound,
+  Contactpersoon: User,
+  'Dossier-eigenaar': UserRound,
+};
 
 type Props = {
   profile: WorkerProfileView;
 };
 
 export function WorkerProfileSummary({ profile }: Props) {
+  const rows = profile.groups.flatMap((group) => group.rows);
+
   if (profile.isEmpty) {
     return <p className="text-sm text-gray-600">Gegevens komen uit de intake.</p>;
   }
 
-  if (profile.groups.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
-    <div className="divide-y divide-gray-100">
-      {profile.groups.map((group) => (
-        <dl key={group.id} className="py-3 first:pt-0 last:pb-0">
-          {group.rows.map((row) => (
-            <div key={row.label} className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-4 border-b border-gray-100 py-2 last:border-b-0">
-              <dt className="pt-0.5 text-xs text-gray-500">{row.label}</dt>
-              <dd className="whitespace-pre-wrap text-sm text-gray-900">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      ))}
-    </div>
+    <dl>
+      {rows.map((row) => {
+        const Icon = ROW_ICONS[row.label] ?? User;
+        return (
+          <div key={row.label} className="flex min-h-9 items-start gap-2 py-1.5">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+            <dt className="w-28 shrink-0 pt-0.5 text-xs text-gray-500">{row.label}</dt>
+            <dd className="min-w-0 flex-1 whitespace-pre-wrap text-sm text-gray-900">{row.value}</dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
