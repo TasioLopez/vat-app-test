@@ -1422,6 +1422,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         )}
 
                         {profileMode === 'edit' ? (
+                        <>
                         <div className="space-y-3 border-t border-gray-100 pt-3">
                             <div
                                 className={cn(
@@ -2207,6 +2208,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </div>
 
                         </div>
+                        </>
                         ) : null}
                     </div>
 
