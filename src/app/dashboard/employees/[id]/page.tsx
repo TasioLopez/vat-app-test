@@ -92,6 +92,7 @@ import {
 import GesprekPanel from '@/components/employee/GesprekPanel';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
+import { WorkerProfileSummary } from '@/components/employee/WorkerProfileSummary';
 import {
     EMPLOYEE_DOC_LABELS,
     visibleEmployeeDocTypes,
@@ -317,6 +318,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
+    const [profileMode, setProfileMode] = useState<'summary' | 'edit'>('summary');
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
@@ -1229,6 +1231,34 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         showSuccess('Gevalideerde velden bijgewerkt.');
     };
 
+    const cancelProfileEdit = () => {
+        if (savedEmployeeSnapshot) {
+            setEmployee((prev) => (prev ? { ...prev, ...savedEmployeeSnapshot } : prev));
+            if (savedEmployeeSnapshot.client_id) {
+                void fetchClient(savedEmployeeSnapshot.client_id);
+                void fetchReferents(savedEmployeeSnapshot.client_id);
+            } else {
+                setClientName('');
+                setReferents([]);
+            }
+        }
+        setEmployeeDetails(savedDetailsSnapshot);
+        setContractHoursText(null);
+        setCustomTransportDraft('');
+        setCustomEducationDraft('');
+        setEducationAndereOpen(false);
+        setProfileMode('summary');
+    };
+
+    const confirmProfileEdit = async () => {
+        try {
+            await saveUnified({ silent: !hasUnsavedChanges });
+            setProfileMode('summary');
+        } catch {
+            // saveUnified already reports the error and keeps the form open.
+        }
+    };
+
     return (
         <div className="p-4 space-y-6">
             <EmployeeUnsavedGuard
@@ -1257,6 +1287,37 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             {employee && (
                 <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-col bg-white p-4 rounded shadow flex-1 space-y-4 w-2/5">
+                        {profileMode === 'summary' ? (
+                            <WorkerProfileSummary
+                                reviewCount={pendingValidationFields.length}
+                                onEdit={() => setProfileMode('edit')}
+                                input={{
+                                    firstName: employee.first_name,
+                                    lastName: employee.last_name,
+                                    email: employee.email,
+                                    phone: employeeDetails?.phone,
+                                    gender: employeeDetails?.gender,
+                                    dateOfBirth: employeeDetails?.date_of_birth,
+                                    currentJob: employeeDetails?.current_job,
+                                    workExperience: employeeDetails?.work_experience,
+                                    contractHours: employeeDetails?.contract_hours,
+                                    otherEmployers: employeeDetails?.other_employers,
+                                    isExWerknemer: employeeDetails?.is_ex_werknemer,
+                                    educationLevel: employeeDetails?.education_level,
+                                    educationName: employeeDetails?.education_name,
+                                    driversLicense: employeeDetails?.drivers_license,
+                                    driversLicenseType: employeeDetails?.drivers_license_type,
+                                    transportType: employeeDetails?.transport_type,
+                                    dutchSpeaking: employeeDetails?.dutch_speaking,
+                                    dutchWriting: employeeDetails?.dutch_writing,
+                                    dutchReading: employeeDetails?.dutch_reading,
+                                    hasComputer: employeeDetails?.has_computer,
+                                    computerSkills: employeeDetails?.computer_skills,
+                                    computerSkillsDescription: employeeDetails?.computer_skills_description,
+                                }}
+                            />
+                        ) : (
+                        <>
                         <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
                             <input
@@ -1322,7 +1383,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
                                 />
                             </ValidatableField>
+                        </div>
+                        </>
+                        )}
 
+                        <div className="space-y-3 border-t border-gray-100 pt-3">
                             <div
                                 className={cn(
                                     'grid gap-2 min-w-0',
@@ -1713,6 +1778,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             )}
 
             {/* Worker Profile Section */}
+            {profileMode === 'edit' ? (
             <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
                 {aiLoading && autofillProgress ? (
                     <AutofillProgressOverlay
@@ -2391,29 +2457,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </div>
 
             </div>
+            ) : null}
 
-            <Button
-                onClick={() => void saveUnified()}
-                disabled={updating}
-                variant="default"
-                aria-label="Opslaan werknemer en profiel"
-                aria-busy={updating}
-                className={cn(
-                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl',
-                    'cursor-pointer disabled:cursor-not-allowed',
-                    'text-white border border-white/15',
-                    'transition-all duration-200 ease-out',
-                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
-                    'active:scale-[0.97] active:duration-100',
-                    'disabled:active:scale-100',
-                    updating && 'animate-pulse',
-                    hasUnsavedChanges &&
-                        'opacity-75 ring-2 ring-purple-300/35 ring-offset-2 ring-offset-transparent hover:opacity-100'
-                )}
-            >
-                <Save className="w-4 h-4 mr-2" />
-                {updating ? 'Opslaan...' : hasUnsavedChanges ? 'Alles opslaan' : 'Alles opgeslagen'}
-            </Button>
+            {profileMode === 'edit' ? (
+                <div className="sticky bottom-4 z-40 flex justify-end gap-2 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-lg">
+                    <Button type="button" variant="outline" onClick={cancelProfileEdit} disabled={updating}>
+                        Annuleren
+                    </Button>
+                    <Button type="button" onClick={() => void confirmProfileEdit()} disabled={updating}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {updating ? 'Opslaan...' : 'Opslaan'}
+                    </Button>
+                </div>
+            ) : null}
 
             {activeDocType && (
                 <DocumentModal
