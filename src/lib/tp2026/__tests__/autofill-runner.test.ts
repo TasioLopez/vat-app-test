@@ -185,4 +185,36 @@ describe('runAutofillSteps cancel', () => {
     assert.deepEqual(result.employeePersist?.rawDetails, { gender: 'female' });
     assert.equal(result.employeePersist?.meta?.autofill_incomplete, true);
   });
+
+  it('keeps the worker proposal and skipped validated fields for the confirm dialog', async () => {
+    const initial = { education_level: 'HBO' };
+    const steps: AutofillRunStep[] = [
+      {
+        id: 'employee',
+        label: 'Employee',
+        run: async (_ctx, data) => ({
+          data: { ...data, education_level: 'HBO' },
+          factProposal: { education_level: 'MBO 4', phone: '0611111111' },
+          skippedValidated: [{ key: 'education_level', current: 'HBO', proposed: 'MBO 4' }],
+        }),
+      },
+      {
+        id: 'tp2',
+        label: 'TP2',
+        run: async (_ctx, data) => ({
+          data,
+          factProposal: { first_sick_day: '2026-02-02' },
+          skippedValidated: [{ key: 'intake_date', current: '2026-01-01', proposed: '2026-03-03' }],
+        }),
+      },
+    ];
+
+    const result = await runAutofillSteps(steps, ctx, initial, { onProgress: () => {} });
+
+    assert.equal(result.factProposal?.education_level, 'MBO 4');
+    assert.equal(result.factProposal?.phone, '0611111111');
+    assert.equal(result.factProposal?.first_sick_day, '2026-02-02');
+    assert.equal(result.skippedValidated?.length, 2);
+    assert.equal(result.data.education_level, 'HBO');
+  });
 });

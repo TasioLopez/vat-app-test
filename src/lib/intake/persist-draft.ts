@@ -1,15 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  buildEmployeeDetailsPayload,
-  normalizeEmployeeDetailsPayload,
-} from '@/lib/employee/autofill-persist';
-import {
-  GEGEVENS_EMPLOYEE_KEYS,
-  GEGEVENS_TP2_KEYS,
-} from '@/lib/tp2026/gegevens-autofill';
+import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
 import { persistReferentFromTpData } from '@/lib/referents';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 import { intakeToGegevensFields } from '@/lib/intake/project';
+import { blankIntakeSharedFacts, intakeSharedFacts } from '@/lib/intake/worker-overlay';
 
 export type PersistIntakeDraftParams = {
   intakeInstanceId: string;
@@ -23,64 +17,25 @@ export type PersistIntakeDraftParams = {
 export type PersistIntakeDraftResult = {
   error?: string;
   validated_at?: string | null;
+  skippedValidated?: SkippedValidatedField[];
+  values?: Record<string, unknown>;
 };
-
-function pickKeys(
-  source: Record<string, unknown>,
-  keys: readonly string[]
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-      out[key] = source[key];
-    }
-  }
-  return out;
-}
-
-const DETAILS_KEYS = GEGEVENS_EMPLOYEE_KEYS.filter((k) => k !== 'email');
 
 async function projectIntakeToEmployeeTables(
   supabase: SupabaseClient,
   employeeId: string,
-  intakeData: IntakeData
-): Promise<{ error?: string }> {
-  const flat = intakeToGegevensFields(intakeData);
+  intakeData: IntakeData,
+  mode: 'human' | 'autofill'
+): Promise<{ error?: string; skippedValidated?: SkippedValidatedField[]; values?: Record<string, unknown> }> {
+  const flat = intakeSharedFacts(intakeData);
+  const saved = await saveWorkerFacts(supabase, employeeId, flat, mode);
+  if (saved.error) return { error: saved.error };
 
-  const detailsPayload = normalizeEmployeeDetailsPayload(
-    pickKeys(flat, DETAILS_KEYS) as Parameters<typeof normalizeEmployeeDetailsPayload>[0],
-    employeeId
-  );
-
-  const { error: detailsError } = await supabase
-    .from('employee_details')
-    .upsert([buildEmployeeDetailsPayload(detailsPayload, employeeId)], {
-      onConflict: 'employee_id',
-    });
-  if (detailsError) return { error: `employee_details: ${detailsError.message}` };
-
-  const metaPayload = {
-    employee_id: employeeId,
-    ...pickKeys(flat, GEGEVENS_TP2_KEYS),
-  };
-  const { error: metaError } = await supabase
-    .from('tp_meta')
-    .upsert([metaPayload], { onConflict: 'employee_id' });
-  if (metaError) return { error: `tp_meta: ${metaError.message}` };
-
-  const email = typeof flat.email === 'string' ? flat.email.trim() : '';
-  if (email) {
-    const { error: employeeError } = await supabase
-      .from('employees')
-      .update({ email })
-      .eq('id', employeeId);
-    if (employeeError) return { error: `employees: ${employeeError.message}` };
-  }
-
-  const referentResult = await persistReferentFromTpData(supabase, employeeId, flat);
+  const referentSource = intakeToGegevensFields(intakeData);
+  const referentResult = await persistReferentFromTpData(supabase, employeeId, referentSource);
   if (referentResult.error) return { error: referentResult.error };
 
-  return {};
+  return { skippedValidated: saved.skippedValidated, values: saved.values };
 }
 
 export async function persistIntakeDraft(
@@ -90,8 +45,16 @@ export async function persistIntakeDraft(
   const { intakeInstanceId, employeeId, userId, validate } = params;
   const shaped = ensureIntakeShape(params.intakeData);
 
+  const projectResult = await projectIntakeToEmployeeTables(
+    supabase,
+    employeeId,
+    shaped,
+    validate ? 'autofill' : 'human'
+  );
+  if (projectResult.error) return { error: projectResult.error };
+
   const updatePayload: Record<string, unknown> = {
-    data_json: shaped,
+    data_json: blankIntakeSharedFacts(shaped),
     updated_by: userId ?? null,
   };
 
@@ -111,10 +74,5 @@ export async function persistIntakeDraft(
     return { error: `intake_instances: ${instanceError.message}` };
   }
 
-  if (validate) {
-    const projectResult = await projectIntakeToEmployeeTables(supabase, employeeId, shaped);
-    if (projectResult.error) return { error: projectResult.error };
-  }
-
-  return { validated_at: validatedAt };
+  return { validated_at: validatedAt, skippedValidated: projectResult.skippedValidated, values: projectResult.values };
 }

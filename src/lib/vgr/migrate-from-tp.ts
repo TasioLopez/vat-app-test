@@ -10,6 +10,7 @@
  */
 import { ensureVGRShape, vgrDraftIsEmpty } from '@/lib/vgr/mapping';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
+import { applyWorkerFacts, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
 import { parsePowInschaling, parsePowToelichting } from '@/lib/tp/pow-meter/build-fields';
 import { planningFromTpBijlage1 } from '@/lib/vgr/planning-defaults';
 import {
@@ -346,6 +347,9 @@ export function buildVgrInitialData(
 
   draft = hydrateVgrFromPriorReport(draft, sources.priorReport, sources.priorInstanceId, sources.priorExportId);
   draft = hydrateVgrFromTp2026(draft, sources.tpData, sources.tpInstanceId);
+
+  const facts = workerFactsFromRows(sources.employee, sources.details, sources.tpMeta).values;
+  draft = ensureVGRShape(applyWorkerFacts(draft as unknown as Record<string, unknown>, facts) as Record<string, any>);
 
   return ensureVGRShape(draft);
 }

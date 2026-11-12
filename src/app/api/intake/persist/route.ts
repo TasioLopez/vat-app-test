@@ -57,5 +57,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     validated_at: result.validated_at ?? null,
+    skipped_validated: result.skippedValidated ?? [],
+    worker_facts: result.values ?? {},
   });
 }

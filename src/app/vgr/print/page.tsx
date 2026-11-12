@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import VGRPrintableClient from '@/components/vgr/VGRPrintableClient';
 import { ensureVGRShape } from '@/lib/vgr/mapping';
 import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import { applyWorkerFacts, loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +31,12 @@ export default async function Page(props: { searchParams: Promise<SearchParams> 
   if (error || !instance) notFound();
 
   const profileContext = await resolveTPProfileContext(supabase, instance.employee_id);
-  const data = applyTPProfileContext(
-    ensureVGRShape((instance.data_json || {}) as Record<string, any>),
-    profileContext
-  ) as Record<string, any>;
+  const facts = await loadWorkerFacts(supabase, instance.employee_id);
+  const shaped = ensureVGRShape((instance.data_json || {}) as Record<string, any>);
+  const withFacts = facts.snapshot
+    ? applyWorkerFacts(shaped as unknown as Record<string, unknown>, facts.snapshot.values)
+    : shaped;
+  const data = applyTPProfileContext(withFacts, profileContext) as Record<string, any>;
 
   return <VGRPrintableClient data={data} />;
 }

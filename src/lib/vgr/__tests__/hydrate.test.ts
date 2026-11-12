@@ -80,4 +80,30 @@ describe('buildVgrInitialData', () => {
     assert.equal(out.first_sick_day, '2025-02-02');
     assert.deepEqual(out.applications, []);
   });
+
+  it('replaces a stale opleiding with the worker record', () => {
+    const out = buildVgrInitialData(
+      { education_level: 'VMBO' },
+      {
+        details: { education_level: 'HBO' },
+        tpData: { education_level: 'MBO 2' },
+      }
+    );
+    assert.equal(out.education_level, 'HBO');
+  });
+
+  it('keeps prior-report prose when the worker record replaces a shared fact', () => {
+    const prior = ensureVGRShape({
+      body: { persoonlijk_profiel: { tekst: 'Was al bekend.' } },
+    });
+    const out = buildVgrInitialData(
+      {},
+      {
+        details: { education_level: 'HBO' },
+        priorReport: prior,
+      }
+    );
+    assert.equal(out.education_level, 'HBO');
+    assert.equal(out.body.persoonlijk_profiel.tekst, 'Was al bekend.');
+  });
 });

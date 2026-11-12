@@ -14,6 +14,7 @@ import { persistVgrDraft } from '@/lib/vgr/persist-draft';
 import { VGRPageNumberProvider } from '@/context/VGRPageNumberContext';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import { applyWorkerFacts, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import type { VGRStatus } from '@/lib/vgr/schema';
 import type { VGRIssue } from '@/lib/vgr/validation';
@@ -134,7 +135,12 @@ function VGRBuilderInner({
     let cancelled = false;
 
     async function hydrate() {
-      const profileContext = await resolveTPProfileContext(supabase, employeeId);
+      const [profileContext, employeeRes, detailsRes, metaRes] = await Promise.all([
+        resolveTPProfileContext(supabase, employeeId),
+        supabase.from('employees').select('first_name,last_name,email').eq('id', employeeId).maybeSingle(),
+        supabase.from('employee_details').select('*').eq('employee_id', employeeId).maybeSingle(),
+        supabase.from('tp_meta').select('*').eq('employee_id', employeeId).maybeSingle(),
+      ]);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -152,7 +158,13 @@ function VGRBuilderInner({
       if (cancelled) return;
 
       setVGRData((prev) => {
-        const next = applyTPProfileContext(prev as Record<string, unknown>, profileContext) as Record<string, any>;
+        const facts = workerFactsFromRows(
+          (employeeRes.data || null) as Record<string, unknown> | null,
+          (detailsRes.data || null) as Record<string, unknown> | null,
+          (metaRes.data || null) as Record<string, unknown> | null
+        ).values;
+        const withFacts = applyWorkerFacts(prev as Record<string, unknown>, facts);
+        const next = applyTPProfileContext(withFacts, profileContext) as Record<string, any>;
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;
           if (user?.id) next.consultant_user_id = user.id;

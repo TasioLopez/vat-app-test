@@ -7,11 +7,8 @@ import {
   labelForTp3Field,
 } from '@/lib/autofill-progress';
 import {
-  GEGEVENS_EMPLOYEE_KEYS,
-  GEGEVENS_TP2_KEYS,
   applySuggestedReferentToTpData,
   getGegevensAutofillPlan,
-  mergeGegevensAutofill,
   type SuggestedReferent,
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
@@ -26,6 +23,12 @@ import {
   getValidatedIntakeForEmployee,
   gegevensFromValidatedIntake,
 } from '@/lib/intake/tp-hydrate';
+import {
+  applyWorkerFacts,
+  loadWorkerFacts,
+  planWorkerFactWrites,
+  type SkippedValidatedField,
+} from '@/lib/employee/save-worker-facts';
 
 export type AutofillScope = 'all' | 'current_step';
 
@@ -47,6 +50,8 @@ export type AutofillStepRunResult = {
   data: Record<string, unknown>;
   error?: string;
   employeePersist?: EmployeeAutofillPersistPayload;
+  factProposal?: Record<string, unknown>;
+  skippedValidated?: SkippedValidatedField[];
 };
 
 export type AutofillRunStep = {
@@ -127,6 +132,26 @@ export function buildSingleTp3AutofillStep(fieldKey: string): AutofillRunStep | 
   };
 }
 
+async function previewFactProposal(
+  ctx: AutofillRunContext,
+  currentData: Record<string, unknown>,
+  proposal: Record<string, unknown>
+): Promise<{ data: Record<string, unknown>; skippedValidated: SkippedValidatedField[]; error?: string }> {
+  const loaded = await loadWorkerFacts(ctx.supabase, ctx.employeeId);
+  if (!loaded.snapshot) {
+    return {
+      data: currentData,
+      skippedValidated: [],
+      error: loaded.error || 'Werknemersgegevens laden mislukt',
+    };
+  }
+  const planned = planWorkerFactWrites(loaded.snapshot, proposal, 'autofill');
+  return {
+    data: applyWorkerFacts(currentData, planned.values),
+    skippedValidated: planned.skippedValidated,
+  };
+}
+
 async function runEmployeeAutofillStep(
   ctx: AutofillRunContext,
   currentData: Record<string, unknown>
@@ -135,10 +160,9 @@ async function runEmployeeAutofillStep(
     const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
     if (validated) {
       const details = gegevensFromValidatedIntake(validated.data);
-      let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS, {
-        overwrite: true,
-      });
-      next = applySuggestedReferentToTpData(next, {
+      const preview = await previewFactProposal(ctx, currentData, details);
+      if (preview.error) return { data: currentData, error: preview.error };
+      let next = applySuggestedReferentToTpData(preview.data, {
         first_name: details.referent_first_name as string | undefined,
         last_name: details.referent_last_name as string | undefined,
         referent_function: details.referent_function as string | undefined,
@@ -148,6 +172,8 @@ async function runEmployeeAutofillStep(
       return {
         data: ensureTP2026Shape(next),
         employeePersist: { rawDetails: details },
+        factProposal: details,
+        skippedValidated: preview.skippedValidated,
       };
     }
 
@@ -167,11 +193,10 @@ async function runEmployeeAutofillStep(
       return { data: currentData, error: 'Geen werknemersgegevens gevonden in documenten' };
     }
 
-    let next = mergeGegevensAutofill(currentData, details, GEGEVENS_EMPLOYEE_KEYS, {
-      overwrite: true,
-    });
+    const preview = await previewFactProposal(ctx, currentData, details);
+    if (preview.error) return { data: currentData, error: preview.error };
     const suggested = data.suggested_referent as SuggestedReferent | undefined;
-    next = applySuggestedReferentToTpData(next, suggested);
+    const next = applySuggestedReferentToTpData(preview.data, suggested);
 
     return {
       data: ensureTP2026Shape(next),
@@ -182,6 +207,8 @@ async function runEmployeeAutofillStep(
           autofill_warnings: data.autofill_warnings as { message?: string }[] | undefined,
         },
       },
+      factProposal: details,
+      skippedValidated: preview.skippedValidated,
     };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
@@ -200,9 +227,9 @@ async function runTp2AutofillStep(
     const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
     if (validated) {
       const details = gegevensFromValidatedIntake(validated.data);
-      let next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
-        overwrite: true,
-      });
+      const preview = await previewFactProposal(ctx, currentData, details);
+      if (preview.error) return { data: currentData, error: preview.error };
+      let next = preview.data;
       if (next.is_ex_werknemer === true) {
         const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
         if (spoor2) next.tp3_activities = spoor2;
@@ -214,7 +241,7 @@ async function runTp2AutofillStep(
           true
         );
       }
-      return { data: shaped };
+      return { data: shaped, factProposal: details, skippedValidated: preview.skippedValidated };
     }
 
     const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
@@ -238,9 +265,9 @@ async function runTp2AutofillStep(
     if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
     }
-    let next = mergeGegevensAutofill(currentData, details, GEGEVENS_TP2_KEYS, {
-      overwrite: true,
-    });
+    const preview = await previewFactProposal(ctx, currentData, details);
+    if (preview.error) return { data: currentData, error: preview.error };
+    let next = preview.data;
     if (next.is_ex_werknemer === true) {
       const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
       if (spoor2) next.tp3_activities = spoor2;
@@ -252,7 +279,7 @@ async function runTp2AutofillStep(
         true
       );
     }
-    return { data: shaped };
+    return { data: shaped, factProposal: details, skippedValidated: preview.skippedValidated };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {
@@ -360,6 +387,8 @@ export type RunAutofillStepsResult = {
   failed: { id: string; label: string; error: string }[];
   cancelled: boolean;
   employeePersist?: EmployeeAutofillPersistPayload;
+  factProposal?: Record<string, unknown>;
+  skippedValidated?: SkippedValidatedField[];
 };
 
 function cancelledResult(initialData: Record<string, unknown>): RunAutofillStepsResult {
@@ -385,6 +414,8 @@ export async function runAutofillSteps(
   const failed: { id: string; label: string; error: string }[] = [];
   let completed = 0;
   let employeePersist: EmployeeAutofillPersistPayload | undefined;
+  let factProposal: Record<string, unknown> = {};
+  const skippedValidated: SkippedValidatedField[] = [];
   const total = steps.length;
 
   for (let i = 0; i < steps.length; i++) {
@@ -410,6 +441,12 @@ export async function runAutofillSteps(
       if (result.employeePersist) {
         employeePersist = result.employeePersist;
       }
+      if (result.factProposal) {
+        factProposal = { ...factProposal, ...result.factProposal };
+      }
+      if (result.skippedValidated?.length) {
+        skippedValidated.push(...result.skippedValidated);
+      }
       if (result.error) {
         failed.push({ id: step.id, label: step.label, error: result.error });
       } else {
@@ -429,5 +466,7 @@ export async function runAutofillSteps(
     failed,
     cancelled: false,
     employeePersist,
+    factProposal: Object.keys(factProposal).length > 0 ? factProposal : undefined,
+    skippedValidated,
   };
 }

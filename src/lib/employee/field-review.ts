@@ -6,6 +6,9 @@ export type EmployeeFieldReviewStatus = 'review' | 'validated';
 export type EmployeeFieldDisplayStatus = 'empty' | EmployeeFieldReviewStatus;
 
 export type EmployeeDetailFieldKey =
+  | 'email'
+  | 'first_name'
+  | 'last_name'
   | 'gender'
   | 'phone'
   | 'date_of_birth'
@@ -49,6 +52,9 @@ export const EMPLOYEE_DETAIL_FIELD_KEYS: EmployeeDetailFieldKey[] = [
 ];
 
 const FIELD_KEY_SET = new Set<string>([
+  'email',
+  'first_name',
+  'last_name',
   'gender',
   'phone',
   'date_of_birth',

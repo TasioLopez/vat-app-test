@@ -878,6 +878,8 @@ export type Database = {
           visie_werknemer: string | null
           wettelijke_kaders: string | null
           zoekprofiel: string | null
+          field_review_status: Json
+          field_content_hash: Json
         }
         Insert: {
           ad_report_concept?: boolean | null
@@ -922,6 +924,8 @@ export type Database = {
           visie_werknemer?: string | null
           wettelijke_kaders?: string | null
           zoekprofiel?: string | null
+          field_review_status?: Json
+          field_content_hash?: Json
         }
         Update: {
           ad_report_concept?: boolean | null
@@ -966,6 +970,8 @@ export type Database = {
           visie_werknemer?: string | null
           wettelijke_kaders?: string | null
           zoekprofiel?: string | null
+          field_review_status?: Json
+          field_content_hash?: Json
         }
         Relationships: [
           {

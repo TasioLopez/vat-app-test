@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { saveWorkerFacts, stripWorkerFacts } from '@/lib/employee/save-worker-facts';
 import { ensureVGRShape } from '@/lib/vgr/mapping';
 import type { VGRData, VGRStatus } from '@/lib/vgr/schema';
 
@@ -40,11 +41,14 @@ export async function persistVgrDraft(
 ): Promise<PersistVgrDraftResult> {
   const { vgrInstanceId, employeeId, vgrData, userId, status } = params;
   const shaped = ensureVGRShape(vgrData as Record<string, any>);
+  const saved = await saveWorkerFacts(supabase, employeeId, shaped as unknown as Record<string, unknown>, 'human');
+  if (saved.error) return { error: saved.error };
+  const stored = stripWorkerFacts(shaped as unknown as Record<string, unknown>);
 
   const { error: instanceError } = await (supabase as any)
     .from('vgr_instances')
     .update({
-      data_json: shaped,
+      data_json: stored,
       ...vgrMetaToColumns(shaped),
       ...(status ? { status } : {}),
       updated_by: userId ?? null,

@@ -5,6 +5,8 @@ import { createServerClient } from '@supabase/ssr';
 import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { autofillIntakeFromDocuments } from '@/lib/intake/autofill';
 import { ensureIntakeShape } from '@/lib/intake/schema';
+import { saveWorkerFacts } from '@/lib/employee/save-worker-facts';
+import { blankIntakeSharedFacts, intakeSharedFacts, overlayIntakeWithWorkerFacts } from '@/lib/intake/worker-overlay';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,7 +51,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 404 });
     }
 
-    const data = ensureIntakeShape(result.data);
+    const generated = ensureIntakeShape(result.data);
+    const shared = intakeSharedFacts(generated);
+    const saved = await saveWorkerFacts(supabase, employeeId, shared, 'autofill');
+    if (saved.error) {
+      return NextResponse.json({ error: saved.error }, { status: 500 });
+    }
+    const data = saved.values
+      ? overlayIntakeWithWorkerFacts(generated, saved.values)
+      : generated;
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -57,7 +67,7 @@ export async function POST(req: NextRequest) {
     const { error } = await (supabase as any)
       .from('intake_instances')
       .update({
-        data_json: data,
+        data_json: blankIntakeSharedFacts(data),
         source_document_id: result.sourceDocumentId,
         validated_at: null,
         validated_by: null,
@@ -78,6 +88,8 @@ export async function POST(req: NextRequest) {
       generated_from_dossier: result.generatedFromDossier === true,
       warning: result.warning || null,
       conflicts: data.meta.conflicts,
+      skipped_validated: saved.skippedValidated,
+      proposed_facts: shared,
     });
   } catch (e) {
     console.error('intake autofill failed', e);

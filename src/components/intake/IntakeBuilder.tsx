@@ -46,6 +46,10 @@ import {
   type IntakeSectionKey,
 } from '@/lib/intake/schema';
 import { AutofillProgressOverlay } from '@/components/ui/AutofillProgressOverlay';
+import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
+import { supabase } from '@/lib/supabase/client';
+import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { overlayIntakeWithWorkerFacts, intakeSharedFacts } from '@/lib/intake/worker-overlay';
 
 type Props = {
   employeeId: string;
@@ -115,6 +119,10 @@ function IntakeBuilderInner({
   const [noIntakeMessage, setNoIntakeMessage] = useState<string | undefined>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [activeSection, setActiveSection] = useState<NavKey>('dossier');
+  const [pendingFacts, setPendingFacts] = useState<{
+    conflicts: SkippedValidatedField[];
+    proposal: Record<string, unknown>;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -176,10 +184,21 @@ function IntakeBuilderInner({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Opslaan mislukt');
       if (json.validated_at) setValidatedAt(json.validated_at);
+      if (Array.isArray(json.skipped_validated) && json.skipped_validated.length > 0) {
+        const kept =
+          json.worker_facts && typeof json.worker_facts === 'object'
+            ? (json.worker_facts as Record<string, unknown>)
+            : {};
+        replaceIntakeData(overlayIntakeWithWorkerFacts(intakeData, kept), { markDirty: false });
+        setPendingFacts({
+          conflicts: json.skipped_validated as SkippedValidatedField[],
+          proposal: intakeSharedFacts(intakeData),
+        });
+      }
       markSaved();
       return json;
     },
-    [employeeId, intakeData, intakeInstanceId, markSaved, setValidatedAt]
+    [employeeId, intakeData, intakeInstanceId, markSaved, replaceIntakeData, setValidatedAt]
   );
 
   const persistForGuard = useCallback(async () => {
@@ -232,6 +251,15 @@ function IntakeBuilderInner({
       replaceIntakeData(json.data_json, { markDirty: false });
       setValidatedAt(null);
       markSaved();
+      if (Array.isArray(json.skipped_validated) && json.skipped_validated.length > 0) {
+        setPendingFacts({
+          conflicts: json.skipped_validated as SkippedValidatedField[],
+          proposal:
+            json.proposed_facts && typeof json.proposed_facts === 'object'
+              ? (json.proposed_facts as Record<string, unknown>)
+              : {},
+        });
+      }
       const conflicts = Array.isArray(json.conflicts) ? json.conflicts : [];
       if (conflicts.length) {
         showError(
@@ -288,6 +316,20 @@ function IntakeBuilderInner({
     }
   };
 
+  const acceptValidatedFacts = async () => {
+    if (!pendingFacts) return;
+    const saved = await saveWorkerFacts(supabase, employeeId, pendingFacts.proposal, 'confirm', {
+      confirmKeys: pendingFacts.conflicts.map((conflict) => conflict.key),
+    });
+    if (saved.error) {
+      showError('Opslaan mislukt', saved.error);
+      return;
+    }
+    replaceIntakeData(overlayIntakeWithWorkerFacts(intakeData, saved.values), { markDirty: false });
+    setPendingFacts(null);
+    showSuccess('Bijgewerkt', 'De gevalideerde velden zijn vervangen.');
+  };
+
   const statusText = autosaveLabel(autosaveStatus, isDirty);
 
   return (
@@ -297,6 +339,11 @@ function IntakeBuilderInner({
         onSave={persistForGuard}
         autosave
         onAutosaveStatusChange={setAutosaveStatus}
+      />
+      <ValidatedFactsDialog
+        conflicts={pendingFacts?.conflicts ?? null}
+        onDismiss={() => setPendingFacts(null)}
+        onAccept={() => void acceptValidatedFacts()}
       />
       {busyLabel ? (
         <AutofillProgressOverlay

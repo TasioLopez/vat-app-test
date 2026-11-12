@@ -61,6 +61,8 @@ import {
     normalizeEmployeeDetailsPayload,
     processEmployeeAutofillRawDetails,
 } from '@/lib/employee/autofill-persist';
+import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
 import {
     isIncompleteContractHoursInput,
     parseContractHours,
@@ -298,6 +300,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
+    const [pendingFacts, setPendingFacts] = useState<{
+        conflicts: SkippedValidatedField[];
+        proposal: Record<string, unknown>;
+    } | null>(null);
     const [aiCancelling, setAiCancelling] = useState(false);
     const aiCancelRef = useRef(false);
     const aiAbortRef = useRef<AbortController | null>(null);
@@ -737,44 +743,47 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         try {
             const operations: Promise<{ type: 'employee' | 'details'; error: any }>[] = [];
 
-            if (shouldSaveEmployee) {
+            if (shouldSaveEmployee && currentEmployeePayload) {
                 operations.push(
                     (async () => {
                         const { error } = await supabase
                             .from('employees')
-                            .update(currentEmployeePayload)
+                            .update({
+                                first_name: currentEmployeePayload.first_name,
+                                last_name: currentEmployeePayload.last_name,
+                                email: currentEmployeePayload.email,
+                                client_id: currentEmployeePayload.client_id,
+                                referent_id: currentEmployeePayload.referent_id,
+                            })
                             .eq('id', employeeId);
                         return { type: 'employee' as const, error };
                     })()
                 );
             }
 
-            if (shouldSaveDetails) {
+            if ((shouldSaveEmployee || shouldSaveDetails) && currentEmployeePayload && currentDetailsPayload) {
                 operations.push(
                     (async () => {
-                        const { error } = await supabase
-                            .from('employee_details')
-                            .upsert([currentDetailsPayload], { onConflict: 'employee_id' });
-                        return { type: 'details' as const, error };
+                        const saved = await saveWorkerFacts(
+                            supabase,
+                            employeeId,
+                            {
+                                ...currentDetailsPayload,
+                                first_name: currentEmployeePayload.first_name,
+                                last_name: currentEmployeePayload.last_name,
+                                email: currentEmployeePayload.email,
+                            },
+                            'human',
+                            {
+                                preserveProfileReview: {
+                                    status: currentDetailsPayload.field_review_status,
+                                    hash: currentDetailsPayload.field_content_hash,
+                                },
+                            }
+                        );
+                        return { type: 'details' as const, error: saved.error ? { message: saved.error } : null };
                     })()
                 );
-                // Dual-write ex-werknemer to tp_meta so TP / inleiding stay aligned.
-                if (typeof currentDetailsPayload.is_ex_werknemer === 'boolean') {
-                    operations.push(
-                        (async () => {
-                            const { error } = await supabase.from('tp_meta').upsert(
-                                [
-                                    {
-                                        employee_id: employeeId,
-                                        is_ex_werknemer: currentDetailsPayload.is_ex_werknemer,
-                                    },
-                                ],
-                                { onConflict: 'employee_id' }
-                            );
-                            return { type: 'details' as const, error };
-                        })()
-                    );
-                }
             }
 
             const results = await Promise.all(operations);
@@ -965,6 +974,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 setSavedDetailsSnapshot(
                     normalizeEmployeeDetailsPayload(persistResult.updatedDetails, employeeId)
                 );
+                if (persistResult.skippedValidated && persistResult.skippedValidated.length > 0) {
+                    setPendingFacts({
+                        conflicts: persistResult.skippedValidated,
+                        proposal: processedDetails,
+                    });
+                }
 
                 if (
                     persistResult.autofillIncomplete &&
@@ -1179,11 +1194,47 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
+    const acceptValidatedFacts = async () => {
+        if (!pendingFacts) return;
+        const saved = await saveWorkerFacts(supabase, employeeId, pendingFacts.proposal, 'confirm', {
+            confirmKeys: pendingFacts.conflicts.map((conflict) => conflict.key),
+        });
+        if (saved.error) {
+            showError('Opslaan mislukt', saved.error);
+            return;
+        }
+        setEmployeeDetails((prev) => {
+            if (!prev) return prev;
+            const next = { ...prev, field_review_status: saved.profileReview, field_content_hash: saved.profileHash };
+            for (const key of saved.written) {
+                if (key === 'email' || key === 'first_name' || key === 'last_name') continue;
+                (next as Record<string, unknown>)[key] = saved.values[key];
+            }
+            return next;
+        });
+        setEmployee((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                first_name: typeof saved.values.first_name === 'string' ? saved.values.first_name : prev.first_name,
+                last_name: typeof saved.values.last_name === 'string' ? saved.values.last_name : prev.last_name,
+                email: typeof saved.values.email === 'string' ? saved.values.email : prev.email,
+            };
+        });
+        setPendingFacts(null);
+        showSuccess('Gevalideerde velden bijgewerkt.');
+    };
+
     return (
         <div className="p-4 space-y-6">
             <EmployeeUnsavedGuard
                 isDirty={hasUnsavedChanges}
                 onSave={() => saveUnified({ silent: true })}
+            />
+            <ValidatedFactsDialog
+                conflicts={pendingFacts?.conflicts ?? null}
+                onDismiss={() => setPendingFacts(null)}
+                onAccept={() => void acceptValidatedFacts()}
             />
             <div className="flex items-center gap-1">
                 <Button

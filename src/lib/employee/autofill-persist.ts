@@ -4,10 +4,10 @@ import { isAbsentText } from '@/lib/utils';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { parseContractHours } from '@/lib/employee/contract-hours';
 import {
-  applyEmployeeAutofillReviewMarks,
   type EmployeeDetailFieldKey,
   type EmployeeFieldReviewStatus,
 } from '@/lib/employee/field-review';
+import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
 
 export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'gender',
@@ -163,6 +163,7 @@ export function listAutofilledEmployeeDetailKeys(
 export type ApplyEmployeeAutofillResult = {
   updatedDetails: EmployeeDetailsPersist;
   autofilledFields: string[];
+  skippedValidated?: SkippedValidatedField[];
   autofillIncomplete?: boolean;
   autofillWarnings?: { message?: string }[];
   error?: string;
@@ -179,53 +180,35 @@ export async function applyEmployeeAutofillDetails(
   }
 ): Promise<ApplyEmployeeAutofillResult> {
   const processed = processEmployeeAutofillRawDetails(rawDetails);
-  const autofilledFields = listAutofilledEmployeeDetailKeys(processed);
+  const saved = await saveWorkerFacts(supabase, employeeId, processed, 'autofill');
+  const autofilledFields = saved.written.filter((key) => key !== 'email' && key !== 'first_name' && key !== 'last_name');
 
-  const { nextReviewStatusMap, nextContentHashMap } = applyEmployeeAutofillReviewMarks(
-    autofilledFields as EmployeeDetailFieldKey[],
-    existingDetails?.field_review_status,
-    existingDetails?.field_content_hash
-  );
-
-  const updatedDetails: EmployeeDetailsPersist = {
-    ...(existingDetails || { employee_id: employeeId }),
-    ...buildEmployeeDetailsPayload(processed as Partial<EmployeeDetailsPersist>, employeeId),
-    employee_id: employeeId,
-    autofilled_fields: autofilledFields,
-    field_review_status: nextReviewStatusMap,
-    field_content_hash: nextContentHashMap,
-  };
-
-  const toPersist = normalizeEmployeeDetailsPayload(updatedDetails, employeeId);
-
-  const { error: persistError } = await supabase
-    .from('employee_details')
-    .upsert([buildEmployeeDetailsPayload(toPersist, employeeId)], {
-      onConflict: 'employee_id',
-    });
-
-  if (persistError) {
-    return {
-      updatedDetails: toPersist,
-      autofilledFields,
-      error: persistError.message,
-    };
-  }
-
-  if (typeof toPersist.is_ex_werknemer === 'boolean') {
-    const { error: metaError } = await supabase.from('tp_meta').upsert(
-      [{ employee_id: employeeId, is_ex_werknemer: toPersist.is_ex_werknemer }],
+  if (!saved.error && autofilledFields.length > 0) {
+    await supabase.from('employee_details').upsert(
+      [{ employee_id: employeeId, autofilled_fields: autofilledFields }],
       { onConflict: 'employee_id' }
     );
-    if (metaError) {
-      console.warn('⚠️ Failed to sync is_ex_werknemer to tp_meta', metaError.message);
-    }
   }
+
+  const mergedValues: Partial<EmployeeDetailsPersist> = {
+    ...(existingDetails || { employee_id: employeeId }),
+    employee_id: employeeId,
+  };
+  for (const key of autofilledFields) {
+    (mergedValues as Record<string, unknown>)[key] = saved.values[key];
+  }
+  mergedValues.field_review_status = saved.profileReview;
+  mergedValues.field_content_hash = saved.profileHash;
+  mergedValues.autofilled_fields = autofilledFields;
+
+  const toPersist = normalizeEmployeeDetailsPayload(mergedValues, employeeId);
 
   return {
     updatedDetails: toPersist,
     autofilledFields,
+    skippedValidated: saved.skippedValidated,
     autofillIncomplete: meta?.autofill_incomplete,
     autofillWarnings: meta?.autofill_warnings,
+    error: saved.error,
   };
 }

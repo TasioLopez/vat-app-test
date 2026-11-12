@@ -11,6 +11,7 @@ import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
+import { applyWorkerFacts, loadWorkerFacts } from "@/lib/employee/save-worker-facts";
 import { shrinkTrajectplanPdf } from "@/lib/pdf/compress-tp-pdf";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
@@ -198,10 +199,12 @@ export async function GET(req: NextRequest) {
 
     const resolvedVgrLayout = vgrInstance.layout_key as VGRLayoutKey;
     const vgrProfileContext = await resolveTPProfileContext(ssr, employeeId);
-    const snapshotData = applyTPProfileContext(
-      ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>),
-      vgrProfileContext
-    ) as ReturnType<typeof ensureVGRShape>;
+    const vgrFacts = await loadWorkerFacts(ssr, employeeId);
+    const vgrShaped = ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>);
+    const vgrWithFacts = vgrFacts.snapshot
+      ? applyWorkerFacts(vgrShaped as unknown as Record<string, unknown>, vgrFacts.snapshot.values)
+      : vgrShaped;
+    const snapshotData = applyTPProfileContext(vgrWithFacts, vgrProfileContext) as ReturnType<typeof ensureVGRShape>;
     const vgrNameParts = resolveExportNameParts(employeeProfile, snapshotData);
     const filename = sanitizeDownloadFilename(
       buildVgrDownloadFilename(vgrNameParts.first_name, vgrNameParts.last_name, vgrNameParts.gender)
@@ -357,6 +360,10 @@ export async function GET(req: NextRequest) {
     if (resolvedLayout === "tp_2026") {
       snapshotData = ensureTP2026Shape(snapshotData);
       const profileContext = await resolveTPProfileContext(ssr, employeeId);
+      const facts = await loadWorkerFacts(ssr, employeeId);
+      if (facts.snapshot) {
+        snapshotData = applyWorkerFacts(snapshotData as unknown as Record<string, unknown>, facts.snapshot.values);
+      }
       snapshotData = applyTPProfileContext(snapshotData, profileContext) as Record<string, any>;
     }
   }

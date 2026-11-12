@@ -23,6 +23,8 @@ import {
   type RunAutofillStepsResult,
 } from '@/lib/tp2026/autofill-runner';
 import { applyEmployeeAutofillDetails } from '@/lib/employee/autofill-persist';
+import { applyWorkerFacts, saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
 import { AutofillScopeDropdown } from '@/components/ui/dropdown-menu';
 import {
   AutofillProgressOverlay,
@@ -45,6 +47,7 @@ import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import { getTrajectoryDateUpdates, isLowTpLeadTime, parseTpLeadTimeWeeks } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
+import { applyWorkerFactsToDocument, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
 import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { isBasisEditorSectionField } from '@/lib/tp2026/basis-editor-sections';
 import {
@@ -72,6 +75,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [autofilling, setAutofilling] = useState(false);
   const [autofillCancelling, setAutofillCancelling] = useState(false);
   const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
+  const [pendingFacts, setPendingFacts] = useState<{
+    conflicts: SkippedValidatedField[];
+    proposal: Record<string, unknown>;
+  } | null>(null);
+  const [confirmingFacts, setConfirmingFacts] = useState(false);
 
   const persistDraftFromData = useCallback(
     async (data: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> => {
@@ -119,13 +127,14 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       }
       setTPData(nextData);
 
-      if (result.employeePersist) {
+      const proposal = result.factProposal || result.employeePersist?.rawDetails;
+      if (proposal && Object.keys(proposal).length > 0) {
         const persistResult = await applyEmployeeAutofillDetails(
           supabase,
           employeeId,
           employeeSnapshot,
-          result.employeePersist.rawDetails,
-          result.employeePersist.meta
+          proposal,
+          result.employeePersist?.meta
         );
         if (persistResult.error) {
           markDirty();
@@ -133,6 +142,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
             'Autofill deels mislukt',
             `Werknemersprofiel niet opgeslagen: ${persistResult.error}`
           );
+        } else if (persistResult.skippedValidated && persistResult.skippedValidated.length > 0) {
+          setPendingFacts({ conflicts: persistResult.skippedValidated, proposal });
         }
       }
 
@@ -174,6 +185,32 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     },
     [employeeId, markDirty, persistDraftFromData, setTPData, showError, showInfo, showSuccess, supabase]
   );
+
+  const acceptValidatedFacts = useCallback(async () => {
+    if (!pendingFacts) return;
+    setConfirmingFacts(true);
+    try {
+      const saved = await saveWorkerFacts(supabase, employeeId, pendingFacts.proposal, 'confirm', {
+        confirmKeys: pendingFacts.conflicts.map((conflict) => conflict.key),
+      });
+      if (saved.error) {
+        showError('Opslaan mislukt', saved.error);
+        return;
+      }
+      const next = applyWorkerFacts(tpData as Record<string, unknown>, saved.values);
+      setTPData(next as Record<string, any>);
+      const persisted = await persistDraftFromData(next);
+      if (!persisted.ok) {
+        markDirty();
+        showError('Opslaan mislukt', persisted.error || 'Het trajectplan is niet opgeslagen.');
+        return;
+      }
+      setPendingFacts(null);
+      showSuccess('Gevalideerde velden bijgewerkt.');
+    } finally {
+      setConfirmingFacts(false);
+    }
+  }, [employeeId, markDirty, pendingFacts, persistDraftFromData, setTPData, showError, showSuccess, supabase, tpData]);
 
   const runAutofillSession = useCallback(
     async (steps: { id: string; label: string; run: AutofillRunStep['run'] }[]) => {
@@ -346,11 +383,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
       if (cancelled) return;
 
+      let hashToStore: Record<string, unknown> | null = null;
       setTPData((prev) => {
         const meta = { ...(metaRes.data || {}) };
         delete (meta as { tp_creation_date?: unknown }).tp_creation_date;
 
-        // data_json (prev) wins; only fill empty fields from employee profile / tp_meta
+        // Worker record wins for shared facts. Other document fields stay as saved.
         let merged = mergeRecordFillBlanks(
           { ...prev } as Record<string, unknown>,
           employee as Record<string, unknown>
@@ -358,7 +396,15 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         merged = mergeRecordFillBlanks(merged, (detailsRes.data || {}) as Record<string, unknown>);
         merged = mergeRecordFillBlanks(merged, meta as Record<string, unknown>);
 
-        const shaped = ensureTP2026Shape(merged as Record<string, any>);
+        const facts = workerFactsFromRows(
+          employee as Record<string, unknown>,
+          (detailsRes.data || null) as Record<string, unknown> | null,
+          (metaRes.data || null) as Record<string, unknown> | null
+        ).values;
+        const shaped = applyWorkerFactsToDocument(
+          ensureTP2026Shape(merged as Record<string, any>) as unknown as Record<string, unknown>,
+          facts
+        );
         const next = applyTPProfileContext(shaped, profileContext) as Record<string, any>;
 
         if (next.is_ex_werknemer === true) {
@@ -383,8 +429,21 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           next.consultant_email = appUserEmail;
         }
 
+        const previousHash =
+          typeof prev.worker_facts_hash === 'string' ? prev.worker_facts_hash : '';
+        if (previousHash !== next.worker_facts_hash) hashToStore = next;
+
         return next;
       });
+
+      if (!cancelled && hashToStore) {
+        void persistTp2026Draft(supabase, {
+          tpInstanceId,
+          employeeId,
+          tpData: hashToStore,
+          userId: user?.id ?? null,
+        });
+      }
 
       if (!cancelled) {
         employeeHydrateKeyRef.current = hydrateKey;
@@ -524,6 +583,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
       <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
+      <ValidatedFactsDialog
+        conflicts={pendingFacts?.conflicts ?? null}
+        busy={confirmingFacts}
+        onDismiss={() => setPendingFacts(null)}
+        onAccept={() => void acceptValidatedFacts()}
+      />
       <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
