@@ -16,6 +16,8 @@ export function isDossierSourceType(type: string | null | undefined): boolean {
     isFmlDocumentType(type) ||
     isSpreekReportageDocType(type) ||
     isGespreksverslagDocType(type) ||
+    t === 'aanmeldformulier' ||
+    t.includes('aanmeldformulier') ||
     t === 'extra' ||
     t.includes('extra')
   );

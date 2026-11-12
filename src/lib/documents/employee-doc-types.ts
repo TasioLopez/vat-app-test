@@ -1,5 +1,6 @@
 export const EMPLOYEE_DOC_TYPES = [
   'intakeformulier',
+  'aanmeldformulier',
   'ad_rapportage',
   'fml_izp',
   'cv',
@@ -12,6 +13,7 @@ export type EmployeeDocType = (typeof EMPLOYEE_DOC_TYPES)[number];
 
 export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   intakeformulier: 'Intakeformulier',
+  aanmeldformulier: 'Aanmeldformulier',
   ad_rapportage: 'AD Rapport',
   fml_izp: 'FML/IZP',
   cv: 'CV',

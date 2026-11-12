@@ -38,6 +38,16 @@ Alleen als duidelijk blijkt dat werknemer dit zelf heeft gezegd.
 OPLEIDINGEN / WERKERVARING / VAARDIGHEDEN (s17)
 Vul opleidingen/werkervaring rijen en checkboxes (rijbewijs, vervoer, devices, computer, talen) alleen bij aantoonbare feiten.
 
+AANMELDFORMULIER (sectie 4 contactpersoon)
+Een bron met label aanmeldformulier is het aanmeldformulier van de opdrachtgever.
+Als die bron aanwezig is, vul s4 (referent_name, referent_function, referent_phone, referent_email) ALLEEN vanuit het blok contactpersoon op dat formulier:
+- Telefoonnr. contactpersoon → referent_phone
+- Mailadres contactpersoon → referent_email
+- referent_name en referent_function alleen als het formulier die expliciet noemt
+Verzin geen naam uit het e-mailadres. Geen naamveld = referent_name leeg.
+Gebruik NOOIT de leidinggevende, de budgethouder of het facturatiecontact als contactpersoon.
+Laat extra_referent_name en extra_referent_function leeg, tenzij het aanmeldformulier expliciet een tweede contactpersoon noemt.
+
 GESPREKSVERSLAG
 Een bron met label gespreksverslag is het verslag van wat de werknemer zelf heeft verteld.
 Gebruik die bron voor de functieomschrijving (s3), de eigen ervaring in s6, de narratieve delen s8–s16 en s17 (opleiding, werkervaring, vaardigheden en praktische belemmeringen die de werknemer noemde).

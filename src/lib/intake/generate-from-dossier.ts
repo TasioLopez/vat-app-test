@@ -416,7 +416,7 @@ export async function generateIntakeFromDossier(params: {
   if (sources.length === 0) {
     return {
       data: createEmptyIntakeData(),
-      error: 'Geen AD/FML/spreekuur/gespreksverslag/overige documenten gevonden om te genereren.',
+      error: 'Geen aanmeldformulier/AD/FML/spreekuur/gespreksverslag/overige documenten gevonden om te genereren.',
     };
   }
 

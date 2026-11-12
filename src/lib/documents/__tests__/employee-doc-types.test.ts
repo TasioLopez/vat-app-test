@@ -44,4 +44,13 @@ describe('visibleEmployeeDocTypes', () => {
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);
     process.env.NEXT_PUBLIC_APP_ENV = prev;
   });
+
+  it('shows aanmeldformulier on staging and production', () => {
+    const prev = process.env.NEXT_PUBLIC_APP_ENV;
+    process.env.NEXT_PUBLIC_APP_ENV = 'production';
+    assert.equal(visibleEmployeeDocTypes().includes('aanmeldformulier'), true);
+    process.env.NEXT_PUBLIC_APP_ENV = 'staging';
+    assert.equal(visibleEmployeeDocTypes().includes('aanmeldformulier'), true);
+    process.env.NEXT_PUBLIC_APP_ENV = prev;
+  });
 });

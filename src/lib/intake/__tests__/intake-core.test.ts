@@ -202,6 +202,8 @@ describe('intake sources helpers', () => {
     assert.equal(isDossierSourceType('intakeformulier'), false);
     assert.equal(isDossierSourceType('gespreksverslag'), true);
     assert.equal(isIntakeDocumentType('gespreksverslag'), false);
+    assert.equal(isDossierSourceType('aanmeldformulier'), true);
+    assert.equal(isIntakeDocumentType('aanmeldformulier'), false);
     assert.equal(isAdDocumentType('gespreksverslag'), false);
   });
 

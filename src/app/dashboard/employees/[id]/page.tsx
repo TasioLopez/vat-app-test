@@ -1405,8 +1405,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         <span className="font-semibold text-gray-900">Bronnen beheren</span>
                                         <span className="text-xs font-normal text-gray-600">
                                             {stagingGesprek
-                                                ? 'Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
-                                                : 'Uploads per type: intake, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
+                                                ? 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
+                                                : 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
                                         </span>
                                         <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
                                             <CheckCircle2 className="h-3.5 w-3.5" />
