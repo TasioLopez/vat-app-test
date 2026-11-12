@@ -63,6 +63,8 @@ describe('buildWorkerProfileView', () => {
 
     assert.equal(view.subtitle, 'Monteur bij Ihub · 32 uur');
     assert.equal(view.meta, null);
+    assert.deepEqual(view.groups.map((group) => group.id), ['people', 'facts', 'prose']);
+    assert.equal(row(view, 'Werkgever')?.value, 'Ihub');
     assert.equal(row(view, 'Contactpersoon')?.value, 'Valerie Bloem');
     assert.equal(row(view, 'Dossier-eigenaar')?.value, 'AJ Staging');
     assert.equal(row(view, 'Opleiding')?.value, 'MBO 2 · Metaal');
@@ -74,6 +76,7 @@ describe('buildWorkerProfileView', () => {
     assert.equal(row(view, 'Geboortedatum')?.value, '5 mei 1988');
     assert.equal(row(view, 'Contracturen'), undefined);
     assert.equal(row(view, 'PC'), undefined);
-    assert.equal(view.groups.some((group) => group.id === 'nederlands'), true);
+    assert.equal(view.groups.find((group) => group.id === 'facts')?.rows.some((item) => item.label === 'Nederlands'), true);
+    assert.equal(view.groups.find((group) => group.id === 'prose')?.rows.some((item) => item.label === 'Werkervaring'), true);
   });
 });

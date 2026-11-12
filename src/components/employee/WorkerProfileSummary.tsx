@@ -13,9 +13,9 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
-import type { WorkerProfileView } from '@/lib/employee/worker-profile-summary';
+import type { WorkerProfileRow, WorkerProfileView } from '@/lib/employee/worker-profile-summary';
 
-const ROW_ICONS: Record<string, LucideIcon> = {
+const FACT_ICONS: Record<string, LucideIcon> = {
   'E-mail': Mail,
   Telefoon: Phone,
   Geboortedatum: Calendar,
@@ -25,38 +25,70 @@ const ROW_ICONS: Record<string, LucideIcon> = {
   Vervoer: Bus,
   Nederlands: Languages,
   Computer,
+  'Ex-werknemer': UserRound,
   Werkervaring: Briefcase,
   'Andere werkgevers': Building2,
-  'Ex-werknemer': UserRound,
-  Contactpersoon: User,
-  'Dossier-eigenaar': UserRound,
 };
+
+function rowsFor(profile: WorkerProfileView, id: string): WorkerProfileRow[] {
+  return profile.groups.find((group) => group.id === id)?.rows ?? [];
+}
 
 type Props = {
   profile: WorkerProfileView;
 };
 
 export function WorkerProfileSummary({ profile }: Props) {
-  const rows = profile.groups.flatMap((group) => group.rows);
+  const people = rowsFor(profile, 'people');
+  const facts = rowsFor(profile, 'facts');
+  const prose = rowsFor(profile, 'prose');
 
   if (profile.isEmpty) {
     return <p className="text-sm text-gray-600">Gegevens komen uit de intake.</p>;
   }
 
-  if (rows.length === 0) return null;
+  if (people.length === 0 && facts.length === 0 && prose.length === 0) return null;
 
   return (
-    <dl>
-      {rows.map((row) => {
-        const Icon = ROW_ICONS[row.label] ?? User;
-        return (
-          <div key={row.label} className="flex min-h-9 items-start gap-2 py-1.5">
-            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-            <dt className="w-28 shrink-0 pt-0.5 text-xs text-gray-500">{row.label}</dt>
-            <dd className="min-w-0 flex-1 whitespace-pre-wrap text-sm text-gray-900">{row.value}</dd>
-          </div>
-        );
-      })}
-    </dl>
+    <div className="space-y-6">
+      {people.length > 0 ? (
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {people.map((row) => (
+            <div key={row.label}>
+              <dt className="text-xs text-gray-500">{row.label}</dt>
+              <dd className="mt-0.5 text-sm text-gray-900">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {facts.length > 0 ? (
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+          {facts.map((row) => {
+            const Icon = FACT_ICONS[row.label] ?? User;
+            return (
+              <div key={row.label} className="min-w-0">
+                <dt className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Icon className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                  {row.label}
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900">{row.value}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
+
+      {prose.length > 0 ? (
+        <dl className="space-y-4">
+          {prose.map((row) => (
+            <div key={row.label}>
+              <dt className="text-xs text-gray-500">{row.label}</dt>
+              <dd className="mt-1 whitespace-pre-wrap text-sm text-gray-900">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
   );
 }

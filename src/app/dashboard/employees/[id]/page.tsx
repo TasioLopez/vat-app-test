@@ -18,11 +18,6 @@ import {
     Pencil,
     Trash2,
     FolderOpen,
-    Files,
-    FileText,
-    Map,
-    Compass,
-    IdCard,
     CheckCircle2,
     CircleDashed,
 } from 'lucide-react';
@@ -323,7 +318,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [contractHoursText, setContractHoursText] = useState<string | null>(null);
     const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
     const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
-    const [docsModalOpen, setDocsModalOpen] = useState(false);
     const gesprekDirtyRef = useRef(false);
     const onGesprekDirty = useCallback((dirty: boolean) => {
         gesprekDirtyRef.current = dirty;
@@ -1173,7 +1167,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 tpInstanceId = inserted.id;
             }
 
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
@@ -1186,7 +1179,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openVgrBuilder = async () => {
         setVgrOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1199,7 +1191,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openIntakeBuilder = async () => {
         setIntakeOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/intake/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1331,7 +1322,19 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                         ) : null}
                     </div>
                     {employee ? (
-                        <div className="flex shrink-0 items-center gap-3">
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => void openIntakeBuilder()} disabled={intakeOpening}>
+                                {intakeOpening ? 'Intake…' : 'Intake'}
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => void openTpBuilder()} disabled={tpOpening}>
+                                {tpOpening ? 'Trajectplan…' : 'Trajectplan'}
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => void openVgrBuilder()} disabled={vgrOpening}>
+                                {vgrOpening ? 'VGR…' : 'VGR'}
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => guardedRouter.push(`/dashboard/cv/${employeeId}`)}>
+                                CV
+                            </Button>
                             {profileMode === 'summary' ? (
                                 <>
                                     {pendingValidationFields.length > 0 ? (
@@ -1361,115 +1364,40 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {employee && (
-                <div className="flex flex-col items-start gap-4 lg:flex-row">
+                <div className="flex w-full flex-col gap-4">
                     {(profileMode === 'edit' || profileView.groups.length > 0 || profileView.isEmpty) && (
-                    <div className={profileMode === 'summary'
-                        ? 'w-full shrink-0 rounded-lg border border-gray-200 bg-white p-4 lg:w-[360px]'
-                        : 'min-w-0 w-full flex-1 rounded-lg border border-gray-200 bg-white p-4'
-                    }>
+                    <div className="w-full rounded-lg border border-gray-200 bg-white p-4">
                         {profileMode === 'summary' ? (
                             <WorkerProfileSummary profile={profileView} />
-                        ) : (
-                        <>
-                        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-                            <Button
-                                type="button"
-                                onClick={autofillWithAI}
-                                disabled={aiLoading}
-                                variant="outline"
-                                size="sm"
-                            >
-                                {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={validateAllPendingFields}
-                                disabled={aiLoading || pendingValidationFields.length === 0 || updating}
-                                variant="outline"
-                                size="sm"
-                            >
-                                Valideer alles
-                            </Button>
-                        </div>
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Persoon</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Voornaam"
-                                value={employee.first_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('gender')}
-                                canValidate={canValidateField('gender')}
-                                validateLabel="Valideer geslacht"
-                            >
-                                <Select
-                                    value={employeeDetails?.gender || undefined}
-                                    onValueChange={(v) => handleDetailChange('gender', v)}
-                                >
-                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
-                                        <SelectValue placeholder="Geslacht selecteren" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Man">Man</SelectItem>
-                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
-                                        <SelectItem value="Anders">Anders</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
-
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Achternaam"
-                                value={employee.last_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('phone')}
-                                canValidate={canValidateField('phone')}
-                                validateLabel="Valideer telefoon"
-                            >
-                                <input
-                                    className={cn(fieldClass('phone'), 'pr-10')}
-                                    placeholder="Telefoon"
-                                    value={employeeDetails?.phone || ''}
-                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
-                                />
-                            </ValidatableField>
-
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="E-mail"
-                                value={employee.email || ''}
-                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('date_of_birth')}
-                                canValidate={canValidateField('date_of_birth')}
-                                validateLabel="Valideer geboortedatum"
-                            >
-                                <input
-                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
-                                    type="date"
-                                    value={employeeDetails?.date_of_birth || ''}
-                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
-                                />
-                            </ValidatableField>
-                        </div>
-                        </>
-                        )}
+                        ) : null}
 
                         {profileMode === 'edit' ? (
                         <>
-                        <div className="space-y-3 border-t border-gray-100 pt-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Toewijzing</p>
-                            <div
-                                className={cn(
-                                    'grid gap-2 min-w-0',
-                                    employee.client_id ? 'grid-cols-2' : 'grid-cols-1'
-                                )}
-                            >
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Toewijzing</p>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <Button
+                                        type="button"
+                                        onClick={autofillWithAI}
+                                        disabled={aiLoading}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={validateAllPendingFields}
+                                        disabled={aiLoading || pendingValidationFields.length === 0 || updating}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        Valideer alles
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-3">
                                 <div className="space-y-1 min-w-0">
                                     <label className="text-sm text-gray-600">Dossier-eigenaar</label>
                                     <OrgUserSelect
@@ -1573,6 +1501,71 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 </Select>
                             </div>
                         </div>
+                        <div className="mt-4 grid grid-cols-2 items-start gap-x-3 gap-y-2 lg:grid-cols-4">
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="Voornaam"
+                                value={employee.first_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('gender')}
+                                canValidate={canValidateField('gender')}
+                                validateLabel="Valideer geslacht"
+                            >
+                                <Select
+                                    value={employeeDetails?.gender || undefined}
+                                    onValueChange={(v) => handleDetailChange('gender', v)}
+                                >
+                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
+                                        <SelectValue placeholder="Geslacht selecteren" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Man">Man</SelectItem>
+                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
+                                        <SelectItem value="Anders">Anders</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ValidatableField>
+
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="Achternaam"
+                                value={employee.last_name || ''}
+                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('phone')}
+                                canValidate={canValidateField('phone')}
+                                validateLabel="Valideer telefoon"
+                            >
+                                <input
+                                    className={cn(fieldClass('phone'), 'pr-10')}
+                                    placeholder="Telefoon"
+                                    value={employeeDetails?.phone || ''}
+                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
+                                />
+                            </ValidatableField>
+
+                            <input
+                                className={INPUT_CLASS}
+                                placeholder="E-mail"
+                                value={employee.email || ''}
+                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
+                            />
+                            <ValidatableField
+                                onValidate={() => validateField('date_of_birth')}
+                                canValidate={canValidateField('date_of_birth')}
+                                validateLabel="Valideer geboortedatum"
+                            >
+                                <input
+                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
+                                    type="date"
+                                    value={employeeDetails?.date_of_birth || ''}
+                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
+                                />
+                            </ValidatableField>
+                        </div>
                         <div className="space-y-6 border-t border-gray-100 pt-4">
                 {aiLoading && autofillProgress ? (
                     <AutofillProgressOverlay
@@ -1600,7 +1593,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 ) : null}
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Werk</p>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {/* Current Job */}
                 <div className="space-y-2 group">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1704,7 +1697,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 </div>
                 
                 {/* Education */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <div className="space-y-2 group">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                             <GraduationCap className="w-4 h-4 text-purple-600" />
@@ -2211,12 +2204,33 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     </div>
                     )}
 
-                    <div className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-[360px]">
-                        <div className="flex flex-col gap-2 border-b border-gray-100 p-3">
+                    <div className="w-full rounded-lg border border-gray-200 bg-white p-4">
+                        <div className="flex flex-wrap items-stretch gap-2">
+                            {docTypes.map((type) => {
+                                const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
+                                return (
+                                    <button
+                                        key={type}
+                                        type="button"
+                                        className="min-w-[9rem] flex-1 rounded-md border border-gray-200 px-3 py-2 text-left hover:bg-gray-50"
+                                        onClick={() => {
+                                            if (type === 'gespreksverslag') {
+                                                setSourcesView('gesprek');
+                                                setSourcesModalOpen(true);
+                                                return;
+                                            }
+                                            setActiveDocType(type);
+                                        }}
+                                    >
+                                        <span className="block text-sm text-gray-900">{DOC_LABELS[type]}</span>
+                                        <span className="text-xs text-gray-500">{doc ? 'geüpload' : 'ontbreekt'}</span>
+                                    </button>
+                                );
+                            })}
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="h-9 justify-start"
+                                className="h-auto shrink-0 px-3"
                                 onClick={() => {
                                     setSourcesView('list');
                                     setSourcesModalOpen(true);
@@ -2224,47 +2238,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                             >
                                 <FolderOpen className="mr-2 h-4 w-4" />
                                 Bronnen beheren
-                                <span className="ml-auto text-xs font-normal text-gray-500">
-                                    {uploadedSourcesCount} van {docTypes.length}
-                                </span>
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="h-9 justify-start"
-                                onClick={() => setDocsModalOpen(true)}
-                            >
-                                <Files className="mr-2 h-4 w-4" />
-                                Documenten maken
                             </Button>
                         </div>
-                        <ul>
-                            {docTypes.map((type) => {
-                                const doc = documents.find((item) => item.type?.toLowerCase().trim() === type);
-                                return (
-                                    <li key={type} className="flex h-9 items-center gap-2 border-b border-gray-100 px-3 last:border-b-0">
-                                        <FileText className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                                        <button
-                                            type="button"
-                                            className="min-w-0 flex-1 truncate text-left text-sm text-gray-900"
-                                            onClick={() => {
-                                                if (type === 'gespreksverslag') {
-                                                    setSourcesView('gesprek');
-                                                    setSourcesModalOpen(true);
-                                                    return;
-                                                }
-                                                setActiveDocType(type);
-                                            }}
-                                        >
-                                            {DOC_LABELS[type]}
-                                        </button>
-                                        <span className="shrink-0 text-xs text-gray-500">
-                                            {doc ? 'geüpload' : 'ontbreekt'}
-                                        </span>
-                                    </li>
-                                );
-                            })}
-                        </ul>
                         <Dialog
                             open={sourcesModalOpen}
                             onOpenChange={(open) => {
@@ -2374,42 +2349,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         </div>
                                     </>
                                 )}
-                            </DialogContent>
-                        </Dialog>
-                        <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
-                            <DialogContent className="max-w-md sm:max-w-lg">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                        <Files className="h-5 w-5 text-gray-500" />
-                                        Documenten maken
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <div className="flex flex-col gap-2 pt-1">
-                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openIntakeBuilder()} disabled={intakeOpening}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        {intakeOpening ? 'Intake openen…' : 'Intake'}
-                                    </Button>
-                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openTpBuilder()} disabled={tpOpening}>
-                                        <Map className="mr-2 h-4 w-4" />
-                                        {tpOpening ? 'Trajectplan openen…' : 'Trajectplan'}
-                                    </Button>
-                                    <Button type="button" variant="outline" className="justify-start" onClick={() => void openVgrBuilder()} disabled={vgrOpening}>
-                                        <Compass className="mr-2 h-4 w-4" />
-                                        {vgrOpening ? 'VGR openen…' : 'VGR'}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="justify-start"
-                                        onClick={() => {
-                                            setDocsModalOpen(false);
-                                            guardedRouter.push(`/dashboard/cv/${employeeId}`);
-                                        }}
-                                    >
-                                        <IdCard className="mr-2 h-4 w-4" />
-                                        CV
-                                    </Button>
-                                </div>
                             </DialogContent>
                         </Dialog>
                     </div>

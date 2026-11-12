@@ -99,21 +99,19 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
     if (next) groups.push(next);
   };
 
-  push(group('mensen', [
+  push(group('people', [
+    client ? { label: 'Werkgever', value: client } : null,
     referent ? { label: 'Contactpersoon', value: referent } : null,
     owner ? { label: 'Dossier-eigenaar', value: owner } : null,
   ]));
 
-  push(group('contact', [
+  const birth = textRow('Geboortedatum', 'date_of_birth', input.dateOfBirth);
+  const factRows: Array<WorkerProfileRow | null> = [
     textRow('E-mail', 'email', input.email),
     textRow('Telefoon', 'phone', input.phone),
-  ]));
-
-  const birth = textRow('Geboortedatum', 'date_of_birth', input.dateOfBirth);
-  push(group('persoon', [
     birth ? { ...birth, value: formatDate(birth.value) } : null,
     textRow('Geslacht', 'gender', input.gender),
-  ]));
+  ];
 
   const education = joinNonEmpty([
     textRow('Opleiding', 'education_level', input.educationLevel)?.value,
@@ -128,12 +126,12 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
   const transportTypes = Array.isArray(input.transportType)
     ? input.transportType.map((type) => type.trim()).filter(Boolean)
     : [];
-  push(group('werk', [
+  factRows.push(
     education ? { label: 'Opleiding', value: education } : null,
     license,
     transportTypes.length > 0 ? { label: 'Vervoer', value: transportTypes.join(', ') } : null,
     input.isExWerknemer === true ? { label: 'Ex-werknemer', value: 'Ja' } : null,
-  ]));
+  );
 
   const speaking = textRow('Spreken', 'dutch_speaking', input.dutchSpeaking)?.value;
   const writing = textRow('Schrijven', 'dutch_writing', input.dutchWriting)?.value;
@@ -143,9 +141,7 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
     writing ? `Schrijven ${writing}` : null,
     reading ? `Lezen ${reading}` : null,
   ]);
-  push(group('nederlands', [
-    language ? { label: 'Nederlands', value: language } : null,
-  ]));
+  factRows.push(language ? { label: 'Nederlands', value: language } : null);
 
   const skillsLabel = formatComputerSkillsOption(input.computerSkills);
   const skillsDescription = textRow('Toelichting', 'computer_skills_description', input.computerSkillsDescription);
@@ -154,9 +150,10 @@ export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfile
     : input.hasComputer === true
       ? { label: 'Computer', value: 'Ja' }
       : null;
-  push(group('computer', [computer]));
+  factRows.push(computer);
+  push(group('facts', factRows));
 
-  push(group('ervaring', [
+  push(group('prose', [
     textRow('Werkervaring', 'work_experience', input.workExperience),
     textRow('Andere werkgevers', 'other_employers', input.otherEmployers),
   ]));
