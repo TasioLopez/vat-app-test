@@ -234,21 +234,12 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
   }, [now, selected, today]);
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-purple-50/50 p-4 md:p-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="mb-2 inline-flex items-center gap-2 text-sm font-medium text-purple-700">
-              <CalendarDays className="h-4 w-4" />
-              Reserveren
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-              Ruimtes en parkeerplaatsen
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Kies een dag en klik op een vrij moment. U ontvangt een bevestiging per e-mail.
-            </p>
-          </div>
+    <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-purple-50/50 p-4 pb-10 md:p-6 md:pb-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            Ruimtes en parkeerplaatsen
+          </h1>
           {canManage ? (
             <Button asChild variant="outline">
               <Link href="/dashboard/reserveren/beheer">Beheer</Link>
@@ -470,7 +461,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                                 >
                                   {nowRatio !== null ? (
                                     <div
-                                      className="pointer-events-none absolute bottom-1 top-1 z-10 w-px bg-rose-500"
+                                      className="pointer-events-none absolute inset-y-0 z-10 w-1 bg-rose-500"
                                       style={{ left: `${nowRatio}%` }}
                                     />
                                   ) : null}

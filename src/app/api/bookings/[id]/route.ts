@@ -68,23 +68,28 @@ export async function DELETE(
 
   const kind = space && isSpaceKind(space.kind) ? space.kind : 'room';
   let emailWarning: string | null = null;
+  const mailDetails = {
+    bookerName: booking.booker_name,
+    title: booking.title,
+    locationName: location?.name ?? 'Locatie',
+    locationAddress: location?.address ?? null,
+    spaceName: space?.name ?? 'Ruimte',
+    spaceKind: kind,
+    startsAt: new Date(booking.starts_at),
+    endsAt: new Date(booking.ends_at),
+    note: booking.note,
+  };
   try {
-    const failures = await sendBookingEmails(
-      'cancellation',
-      [bookerEmail ?? '', ...(guests ?? []).map((guest) => guest.email)],
-      {
-        bookerName: booking.booker_name,
-        title: booking.title,
-        locationName: location?.name ?? 'Locatie',
-        locationAddress: location?.address ?? null,
-        spaceName: space?.name ?? 'Ruimte',
-        spaceKind: kind,
-        startsAt: new Date(booking.starts_at),
-        endsAt: new Date(booking.ends_at),
-        note: booking.note,
-      }
-    );
-    if (failures.length > 0) emailWarning = EMAIL_WARNING;
+    const [bookerFailures, guestFailures] = await Promise.all([
+      sendBookingEmails('cancellation', 'booker', [bookerEmail ?? ''], mailDetails),
+      sendBookingEmails(
+        'cancellation',
+        'guest',
+        (guests ?? []).map((guest) => guest.email),
+        mailDetails
+      ),
+    ]);
+    if (bookerFailures.length > 0 || guestFailures.length > 0) emailWarning = EMAIL_WARNING;
   } catch (error) {
     console.error('Booking cancellation email failed', error);
     emailWarning = EMAIL_WARNING;

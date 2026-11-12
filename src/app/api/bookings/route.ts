@@ -126,23 +126,23 @@ export async function POST(req: NextRequest) {
   }
 
   let emailWarning: string | null = null;
+  const mailDetails = {
+    bookerName: booking.booker_name,
+    title: booking.title,
+    locationName: location.name,
+    locationAddress: location.address,
+    spaceName: space.name,
+    spaceKind: space.kind,
+    startsAt: new Date(booking.starts_at),
+    endsAt: new Date(booking.ends_at),
+    note: booking.note,
+  };
   try {
-    const failures = await sendBookingEmails(
-      'confirmation',
-      [bookerEmail, ...guestEmails],
-      {
-        bookerName: booking.booker_name,
-        title: booking.title,
-        locationName: location.name,
-        locationAddress: location.address,
-        spaceName: space.name,
-        spaceKind: space.kind,
-        startsAt: new Date(booking.starts_at),
-        endsAt: new Date(booking.ends_at),
-        note: booking.note,
-      }
-    );
-    if (failures.length > 0) emailWarning = EMAIL_WARNING;
+    const [bookerFailures, guestFailures] = await Promise.all([
+      sendBookingEmails('confirmation', 'booker', [bookerEmail], mailDetails),
+      sendBookingEmails('confirmation', 'guest', guestEmails, mailDetails),
+    ]);
+    if (bookerFailures.length > 0 || guestFailures.length > 0) emailWarning = EMAIL_WARNING;
   } catch (error) {
     console.error('Booking confirmation email failed', error);
     emailWarning = EMAIL_WARNING;

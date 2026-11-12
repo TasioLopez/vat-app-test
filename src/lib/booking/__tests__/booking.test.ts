@@ -109,22 +109,41 @@ describe('booking email', () => {
     logoUrl: 'https://example.com/logo.svg',
   };
 
-  it('confirms the booking with time, place, and escaped title', () => {
-    const message = buildBookingMessage('confirmation', details);
+  it('confirms the booking to the booker with time, place, and escaped title', () => {
+    const message = buildBookingMessage('confirmation', 'booker', details);
     assert.match(message.subject, /Reservering bevestigd/);
+    assert.match(message.text, /Beste Jan Jansen,/);
+    assert.match(message.text, /Uw reservering is bevestigd/);
     assert.match(message.text, /Kantoor Utrecht \(Straat 1\)/);
     assert.match(message.text, /Vergaderzaal 1/);
     assert.match(message.text, /09:00–10:00/);
-    assert.match(message.text, /Jan Jansen/);
     assert.match(message.text, /Neem de sleutel mee/);
     assert.match(message.html, /&lt;script&gt;/);
     assert.doesNotMatch(message.html, /<script>/);
   });
 
-  it('describes a cancellation', () => {
-    const message = buildBookingMessage('cancellation', { ...details, title: 'Overleg', note: null });
+  it('invites a guest without greeting them as the booker', () => {
+    const message = buildBookingMessage('confirmation', 'guest', details);
+    assert.match(message.subject, /Uitnodiging: /);
+    assert.match(message.text, /^Beste,/);
+    assert.match(message.text, /Jan Jansen nodigt u uit voor deze reservering/);
+    assert.doesNotMatch(message.text, /Beste Jan Jansen/);
+    assert.doesNotMatch(message.html, /Beste Jan Jansen/);
+    assert.match(message.html, /&lt;script&gt;/);
+  });
+
+  it('describes a cancellation to the booker', () => {
+    const message = buildBookingMessage('cancellation', 'booker', { ...details, title: 'Overleg', note: null });
     assert.match(message.subject, /Reservering geannuleerd: Overleg/);
-    assert.match(message.text, /geannuleerd/);
+    assert.match(message.text, /Uw reservering is geannuleerd/);
     assert.doesNotMatch(message.text, /Notitie:/);
+  });
+
+  it('tells a guest the invitation was cancelled', () => {
+    const message = buildBookingMessage('cancellation', 'guest', { ...details, title: 'Overleg', note: null });
+    assert.match(message.subject, /Uitnodiging geannuleerd: Overleg/);
+    assert.match(message.text, /De reservering waarvoor Jan Jansen u had uitgenodigd is geannuleerd/);
+    assert.doesNotMatch(message.text, /Beste Jan Jansen/);
+    assert.doesNotMatch(message.html, /Beste Jan Jansen/);
   });
 });

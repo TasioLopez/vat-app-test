@@ -10,6 +10,7 @@ import { formatBookingWhen } from '@/lib/booking/time';
 import { spaceKindLabel, type SpaceKind } from '@/lib/booking/types';
 
 export type BookingMailKind = 'confirmation' | 'cancellation';
+export type BookingMailAudience = 'booker' | 'guest';
 
 export type BookingMailDetails = {
   bookerName: string;
@@ -30,21 +31,58 @@ export type BookingMailContent = {
   html: string;
 };
 
-export function buildBookingMessage(kind: BookingMailKind, details: BookingMailDetails): BookingMailContent {
+function bookingCopy(
+  kind: BookingMailKind,
+  audience: BookingMailAudience,
+  details: BookingMailDetails
+): { subject: string; heading: string; greeting: string; intro: string } {
+  const { bookerName, title } = details;
+  if (audience === 'guest' && kind === 'confirmation') {
+    return {
+      subject: `Uitnodiging: ${title}`,
+      heading: 'Uitnodiging',
+      greeting: 'Beste,',
+      intro: `${bookerName} nodigt u uit voor deze reservering.`,
+    };
+  }
+  if (audience === 'guest') {
+    return {
+      subject: `Uitnodiging geannuleerd: ${title}`,
+      heading: 'Uitnodiging geannuleerd',
+      greeting: 'Beste,',
+      intro: `De reservering waarvoor ${bookerName} u had uitgenodigd is geannuleerd.`,
+    };
+  }
+  if (kind === 'confirmation') {
+    return {
+      subject: `Reservering bevestigd: ${title}`,
+      heading: 'Reservering bevestigd',
+      greeting: `Beste ${bookerName},`,
+      intro: 'Uw reservering is bevestigd.',
+    };
+  }
+  return {
+    subject: `Reservering geannuleerd: ${title}`,
+    heading: 'Reservering geannuleerd',
+    greeting: `Beste ${bookerName},`,
+    intro: 'Uw reservering is geannuleerd.',
+  };
+}
+
+export function buildBookingMessage(
+  kind: BookingMailKind,
+  audience: BookingMailAudience,
+  details: BookingMailDetails
+): BookingMailContent {
   const when = formatBookingWhen(details.startsAt, details.endsAt);
   const kindLabel = spaceKindLabel(details.spaceKind);
   const place = details.locationAddress?.trim()
     ? `${details.locationName} (${details.locationAddress.trim()})`
     : details.locationName;
-  const verb = kind === 'confirmation' ? 'bevestigd' : 'geannuleerd';
-  const subject = `Reservering ${verb}: ${details.title}`;
-  const intro =
-    kind === 'confirmation'
-      ? 'Uw reservering is bevestigd.'
-      : 'Deze reservering is geannuleerd.';
+  const { subject, heading, greeting, intro } = bookingCopy(kind, audience, details);
 
   const lines = [
-    `Beste ${details.bookerName},`,
+    greeting,
     '',
     intro,
     '',
@@ -84,8 +122,8 @@ export function buildBookingMessage(kind: BookingMailKind, details: BookingMailD
             </tr>
             <tr>
               <td style="padding:24px 24px 8px 24px;">
-                <h1 style="margin:0 0 16px 0;font-size:24px;line-height:1.3;color:#0f172a;font-weight:700;">Reservering ${escapeHtml(verb)}</h1>
-                <p style="margin:0 0 14px 0;font-size:16px;line-height:1.65;color:#334155;">Beste ${escapeHtml(details.bookerName)},</p>
+                <h1 style="margin:0 0 16px 0;font-size:24px;line-height:1.3;color:#0f172a;font-weight:700;">${escapeHtml(heading)}</h1>
+                <p style="margin:0 0 14px 0;font-size:16px;line-height:1.65;color:#334155;">${escapeHtml(greeting)}</p>
                 <p style="margin:0 0 14px 0;font-size:16px;line-height:1.65;color:#334155;">${escapeHtml(intro)}</p>
               </td>
             </tr>
@@ -126,6 +164,7 @@ export function buildBookingMessage(kind: BookingMailKind, details: BookingMailD
 
 export async function sendBookingEmails(
   kind: BookingMailKind,
+  audience: BookingMailAudience,
   recipients: string[],
   details: BookingMailDetails
 ): Promise<string[]> {
@@ -134,7 +173,7 @@ export async function sendBookingEmails(
 
   const from = getMailFrom();
   const transport = getMailTransport();
-  const content = buildBookingMessage(kind, {
+  const content = buildBookingMessage(kind, audience, {
     ...details,
     logoUrl: details.logoUrl ?? `${getEmailPublicOrigin()}/branding/vat-app-logo.svg`,
   });
