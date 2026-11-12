@@ -60,24 +60,20 @@ function resolveLocalChrome(): string | null {
   return null;
 }
 
-/** JPEG of each printed A4 sheet, in order. Layout is whatever Chrome already painted. */
-async function captureTpPrintPages(page: {
-  $$: (selector: string) => Promise<Array<{ screenshot: (opts: object) => Promise<Uint8Array> }>>;
-}): Promise<Uint8Array[]> {
-  const handles = await page.$$(".print-page");
-  if (handles.length === 0) {
+/** JPEG of the cover sheet only, at the size Chrome already painted. */
+async function captureTpCover(page: {
+  $: (selector: string) => Promise<{ screenshot: (opts: object) => Promise<Uint8Array> } | null>;
+}): Promise<Uint8Array> {
+  const handle = await page.$(".print-page");
+  if (!handle) {
     throw new Error("Trajectplan print page is missing .print-page");
   }
-  const shots: Uint8Array[] = [];
-  for (const handle of handles) {
-    const shot = await handle.screenshot({
-      type: "jpeg",
-      quality: 85,
-      captureBeyondViewport: true,
-    });
-    shots.push(shot instanceof Uint8Array ? shot : new Uint8Array(shot));
-  }
-  return shots;
+  const shot = await handle.screenshot({
+    type: "jpeg",
+    quality: 80,
+    captureBeyondViewport: true,
+  });
+  return shot instanceof Uint8Array ? shot : new Uint8Array(shot);
 }
 
 /** Launch a browser appropriate to the environment */
@@ -392,7 +388,7 @@ export async function GET(req: NextRequest) {
     browser = await launchBrowser();
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
 
     // forward request cookies (auth)
     const cookieHeader = req.headers.get("cookie") || "";
@@ -431,7 +427,7 @@ export async function GET(req: NextRequest) {
       })
     );
     const shrunk = await shrinkTrajectplanPdf(rawPdf, {
-      capturePrintPages: () => captureTpPrintPages(page),
+      captureCover: () => captureTpCover(page),
     });
     console.log(`tp pdf compress: ${rawPdf.byteLength} -> ${shrunk.byteLength} bytes`);
     const pdfBuffer = Buffer.from(shrunk);

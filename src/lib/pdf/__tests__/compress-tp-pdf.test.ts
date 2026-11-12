@@ -35,6 +35,19 @@ function imageSize(stream: PDFRawStream): { width: number; height: number } {
   return { width: width.asNumber(), height: height.asNumber() };
 }
 
+function pageContentBytes(doc: PDFDocument, pageIndex: number): Buffer {
+  const contents = doc.getPage(pageIndex).node.Contents();
+  const streams: PDFRawStream[] = [];
+  if (contents instanceof PDFRawStream) streams.push(contents);
+  else if (contents instanceof PDFArray) {
+    for (let i = 0; i < contents.size(); i++) {
+      const item = contents.lookup(i);
+      if (item instanceof PDFRawStream) streams.push(item);
+    }
+  }
+  return Buffer.concat(streams.map((stream) => Buffer.from(stream.contents)));
+}
+
 function assertSameMediaBox(before: PDFDocument, after: PDFDocument) {
   assert.equal(after.getPageCount(), before.getPageCount());
   for (let i = 0; i < before.getPageCount(); i++) {
@@ -154,10 +167,42 @@ describe('shrinkTrajectplanPdf', () => {
     assertSameMediaBox(await PDFDocument.load(bytes), await PDFDocument.load(out));
   });
 
-  it('snapshots pages when the oversized bytes are not images', async () => {
+  it('keeps a non-image PDF over the cap instead of turning it into a photo', async () => {
     const doc = await PDFDocument.create();
     const page = doc.addPage(A4);
     page.drawRectangle({ x: 10, y: 10, width: 20, height: 20, borderWidth: 1 });
+    const loaded = await PDFDocument.load(await doc.save());
+    const contents = loaded.getPage(0).node.Contents();
+    const stream =
+      contents instanceof PDFRawStream
+        ? contents
+        : contents instanceof PDFArray
+          ? contents.lookup(0)
+          : undefined;
+    assert.ok(stream instanceof PDFRawStream);
+    const payload = crypto.randomBytes(600 * 1024);
+    (stream as unknown as { contents: Uint8Array }).contents = payload;
+    stream.dict.set(PDFName.of('Filter'), PDFName.of('FlateDecode'));
+    stream.dict.set(PDFName.of('Length'), PDFNumber.of(stream.contents.byteLength));
+    const bloated = new Uint8Array(await loaded.save());
+    assert.ok(bloated.byteLength > TP_PDF_MAX_BYTES);
+
+    const out = await shrinkTrajectplanPdf(bloated);
+    assert.ok(out.byteLength > TP_PDF_MAX_BYTES);
+    const after = await PDFDocument.load(out);
+    const before = await PDFDocument.load(bloated);
+    assertSameMediaBox(before, after);
+    assert.deepEqual(pageContentBytes(after, 0), pageContentBytes(before, 0));
+    assert.equal(imageStreams(after).length, 0);
+  });
+
+  it('leaves the body page as text when the cover is snapshotted', async () => {
+    const doc = await PDFDocument.create();
+    const cover = doc.addPage(A4);
+    cover.drawRectangle({ x: 10, y: 10, width: 20, height: 20, borderWidth: 1 });
+    const body = doc.addPage(A4);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    body.drawText('Body line stays put.', { x: 48, y: 760, size: 12, font });
     const loaded = await PDFDocument.load(await doc.save());
     const contents = loaded.getPage(0).node.Contents();
     const stream =
@@ -172,22 +217,20 @@ describe('shrinkTrajectplanPdf', () => {
     stream.dict.set(PDFName.of('Length'), PDFNumber.of(stream.contents.byteLength));
     const bloated = new Uint8Array(await loaded.save());
     assert.ok(bloated.byteLength > TP_PDF_MAX_BYTES);
+    const bodyBefore = pageContentBytes(await PDFDocument.load(bloated), 1);
 
     const snapshot = await sharp({
-      create: { width: 40, height: 60, channels: 3, background: { r: 207, g: 191, b: 141 } },
+      create: { width: 400, height: 560, channels: 3, background: { r: 207, g: 191, b: 141 } },
     })
-      .jpeg({ quality: 60 })
+      .jpeg({ quality: 80 })
       .toBuffer();
 
     const out = await shrinkTrajectplanPdf(bloated, {
-      capturePrintPages: async () => [new Uint8Array(snapshot)],
+      captureCover: async () => new Uint8Array(snapshot),
     });
-    assert.ok(out.byteLength <= TP_PDF_MAX_BYTES);
     const after = await PDFDocument.load(out);
-    const before = await PDFDocument.load(bloated);
-    assertSameMediaBox(before, after);
-    const images = imageStreams(after);
-    assert.equal(images.length, 1);
-    assert.equal(images[0].dict.lookup(PDFName.of('Filter')), PDFName.of('DCTDecode'));
+    assert.equal(after.getPageCount(), 2);
+    assert.deepEqual(pageContentBytes(after, 1), bodyBefore);
+    assert.ok(imageStreams(after).length >= 1);
   });
 });

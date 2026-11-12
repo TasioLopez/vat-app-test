@@ -20,10 +20,9 @@ export const TP_PDF_MAX_BYTES = 500 * 1024;
 /** Longest edge of a placed image, in samples per inch of that placement. */
 const TARGET_DPI = 120;
 
-const JPEG_QUALITIES = [70, 60, 45] as const;
-const COVER_JPEG_QUALITIES = [70, 55, 40, 30] as const;
-const PAGE_SCALES = [1, 0.75, 0.55, 0.4] as const;
-const PAGE_JPEG_QUALITIES = [60, 40, 28, 18] as const;
+const JPEG_QUALITIES = [70, 60] as const;
+/** Cover photo only. Body pages stay real text, so this is not scaled down. */
+const COVER_JPEG_QUALITY = 80;
 
 const A4_LONG_PT = 841.89;
 
@@ -33,19 +32,19 @@ const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 
 export type TpPdfCapture = {
   /**
-   * JPEG of every `.print-page`, in order, at the size Chrome already painted.
+   * JPEG of the first `.print-page` at the size Chrome already painted.
    * Called only when shrinking images is not enough to get under the cap.
    */
-  capturePrintPages: () => Promise<Uint8Array[]>;
+  captureCover: () => Promise<Uint8Array>;
 };
 
 type PlacedSize = { w: number; h: number };
 
 /**
- * Shrink a trajectplan PDF to {@link TP_PDF_MAX_BYTES}.
- * Image samples are replaced inside the boxes Chrome already drew.
- * Page content streams, media boxes, and crop boxes stay as they are
- * until a page has to be snapshotted to get under the cap.
+ * Shrink pictures inside a trajectplan PDF.
+ * Body pages stay real text. If the file is still over {@link TP_PDF_MAX_BYTES}
+ * after that, the cover may become one full-resolution photo in the same page box.
+ * A file that is still over the cap is returned sharp rather than blurred.
  */
 export async function shrinkTrajectplanPdf(
   pdfBytes: Uint8Array,
@@ -60,39 +59,19 @@ export async function shrinkTrajectplanPdf(
     if (out.byteLength <= TP_PDF_MAX_BYTES) return out;
   }
 
-  if (!capture) {
-    throw new Error(
-      `Trajectplan PDF is ${best.byteLength} bytes, over the ${TP_PDF_MAX_BYTES} byte cap`
-    );
-  }
-
-  const masters = await capture.capturePrintPages();
-  if (masters.length === 0) {
-    throw new Error('Trajectplan print page did not produce a snapshot');
-  }
-
-  for (const quality of COVER_JPEG_QUALITIES) {
-    const cover = await recompressJpeg(masters[0], quality, 1);
+  if (capture) {
+    const cover = await recompressJpeg(await capture.captureCover(), COVER_JPEG_QUALITY);
     const replaced = await replacePageWithJpeg(pdfBytes, 0, cover);
-    const out = await compressTpPdfImages(replaced, { jpegQuality: quality });
-    if (out.byteLength < best.byteLength) best = out;
-    if (out.byteLength <= TP_PDF_MAX_BYTES) return out;
+    const out = await compressTpPdfImages(replaced, { jpegQuality: JPEG_QUALITIES[0] });
+    const candidate = out.byteLength < replaced.byteLength ? out : replaced;
+    if (candidate.byteLength < best.byteLength) best = candidate;
+    if (best.byteLength <= TP_PDF_MAX_BYTES) return best;
   }
 
-  for (const scale of PAGE_SCALES) {
-    for (const quality of PAGE_JPEG_QUALITIES) {
-      const jpegs = await Promise.all(
-        masters.map((master) => recompressJpeg(master, quality, scale))
-      );
-      const out = await rebuildPdfFromPageJpegs(pdfBytes, jpegs);
-      if (out.byteLength < best.byteLength) best = out;
-      if (out.byteLength <= TP_PDF_MAX_BYTES) return out;
-    }
-  }
-
-  throw new Error(
-    `Trajectplan PDF is ${best.byteLength} bytes after compression, over the ${TP_PDF_MAX_BYTES} byte cap`
+  console.log(
+    `tp pdf compress: ${pdfBytes.byteLength} -> ${best.byteLength} bytes (over ${TP_PDF_MAX_BYTES}; body text kept)`
   );
+  return best;
 }
 
 export async function compressTpPdfImages(
@@ -290,34 +269,8 @@ export async function replacePageWithJpeg(
   return new Uint8Array(await doc.save());
 }
 
-export async function rebuildPdfFromPageJpegs(
-  pdfBytes: Uint8Array,
-  jpegs: Uint8Array[]
-): Promise<Uint8Array> {
-  const src = await PDFDocument.load(pdfBytes);
-  if (src.getPageCount() !== jpegs.length) {
-    throw new Error(
-      `Expected ${src.getPageCount()} trajectplan page snapshots, received ${jpegs.length}`
-    );
-  }
-  const doc = await PDFDocument.create();
-  for (let i = 0; i < jpegs.length; i++) {
-    const box = src.getPage(i).getMediaBox();
-    const page = doc.addPage([box.width, box.height]);
-    const image = await doc.embedJpg(jpegs[i]);
-    page.drawImage(image, { x: 0, y: 0, width: box.width, height: box.height });
-  }
-  return new Uint8Array(await doc.save());
-}
-
-async function recompressJpeg(master: Uint8Array, quality: number, scale: number): Promise<Uint8Array> {
-  let pipeline = sharp(Buffer.from(master));
-  if (scale < 0.999) {
-    const meta = await sharp(Buffer.from(master)).metadata();
-    const width = Math.max(1, Math.round((meta.width ?? 1) * scale));
-    pipeline = sharp(Buffer.from(master)).resize({ width });
-  }
-  return new Uint8Array(await pipeline.jpeg({ quality }).toBuffer());
+async function recompressJpeg(master: Uint8Array, quality: number): Promise<Uint8Array> {
+  return new Uint8Array(await sharp(Buffer.from(master)).jpeg({ quality }).toBuffer());
 }
 
 function targetPixelSize(
