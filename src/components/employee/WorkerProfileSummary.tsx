@@ -1,47 +1,28 @@
-import { Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { buildWorkerProfileView, type WorkerProfileInput } from '@/lib/employee/worker-profile-summary';
+import type { WorkerProfileView } from '@/lib/employee/worker-profile-summary';
 
 type Props = {
-  input: WorkerProfileInput;
-  reviewCount: number;
-  onEdit: () => void;
+  profile: WorkerProfileView;
 };
 
-export function WorkerProfileSummary({ input, reviewCount, onEdit }: Props) {
-  const profile = buildWorkerProfileView(input);
+export function WorkerProfileSummary({ profile }: Props) {
+  if (profile.isEmpty) {
+    return <p className="text-sm text-gray-600">Gegevens komen uit de intake.</p>;
+  }
+
+  if (profile.groups.length === 0) return null;
 
   return (
-    <div>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-gray-900">{profile.name}</h2>
-          {profile.subtitle ? <p className="mt-0.5 text-sm text-gray-700">{profile.subtitle}</p> : null}
-          {profile.meta ? <p className="mt-0.5 text-sm text-gray-500">{profile.meta}</p> : null}
-        </div>
-        <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onEdit}>
-          <Pencil className="mr-1.5 h-3.5 w-3.5" />
-          Bewerken
-          {reviewCount > 0 ? (
-            <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
-              {reviewCount}
-            </span>
-          ) : null}
-        </Button>
-      </div>
-
-      {profile.isEmpty ? (
-        <p className="mt-4 text-sm text-gray-600">Gegevens komen uit de intake.</p>
-      ) : profile.facts.length > 0 ? (
-        <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-          {profile.facts.map((fact) => (
-            <div key={fact.label} className={fact.wide ? 'sm:col-span-2' : undefined}>
-              <dt className="text-xs text-gray-500">{fact.label}</dt>
-              <dd className="whitespace-pre-wrap text-sm text-gray-900">{fact.value}</dd>
+    <div className="divide-y divide-gray-100">
+      {profile.groups.map((group) => (
+        <dl key={group.id} className="py-3 first:pt-0 last:pb-0">
+          {group.rows.map((row) => (
+            <div key={row.label} className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-4 border-b border-gray-100 py-2 last:border-b-0">
+              <dt className="pt-0.5 text-xs text-gray-500">{row.label}</dt>
+              <dd className="whitespace-pre-wrap text-sm text-gray-900">{row.value}</dd>
             </div>
           ))}
         </dl>
-      ) : null}
+      ))}
     </div>
   );
 }

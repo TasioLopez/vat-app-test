@@ -1,10 +1,14 @@
 import { isEmptyGegevensField } from '@/lib/tp2026/gegevens-autofill';
 import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options';
 
-export type WorkerProfileFact = {
+export type WorkerProfileRow = {
   label: string;
   value: string;
-  wide?: boolean;
+};
+
+export type WorkerProfileGroup = {
+  id: string;
+  rows: WorkerProfileRow[];
 };
 
 export type WorkerProfileInput = {
@@ -39,96 +43,129 @@ export type WorkerProfileView = {
   name: string;
   subtitle: string | null;
   meta: string | null;
-  facts: WorkerProfileFact[];
+  groups: WorkerProfileGroup[];
   isEmpty: boolean;
 };
 
-function textFact(label: string, key: string, value: unknown, wide = false): WorkerProfileFact | null {
+const MONTHS = [
+  'januari',
+  'februari',
+  'maart',
+  'april',
+  'mei',
+  'juni',
+  'juli',
+  'augustus',
+  'september',
+  'oktober',
+  'november',
+  'december',
+];
+
+function textRow(label: string, key: string, value: unknown): WorkerProfileRow | null {
   if (isEmptyGegevensField(key, value)) return null;
-  return { label, value: String(value).trim(), wide };
+  return { label, value: String(value).trim() };
 }
 
 function formatDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) return value.trim();
-  return `${match[3]}-${match[2]}-${match[1]}`;
+  const month = MONTHS[Number(match[2]) - 1];
+  if (!month) return value.trim();
+  return `${Number(match[3])} ${month} ${match[1]}`;
 }
 
-function joinNonEmpty(parts: Array<string | null | undefined>): string | null {
+function joinNonEmpty(parts: Array<string | null | undefined>, separator = ' · '): string | null {
   const filled = parts.filter((part): part is string => Boolean(part && part.trim()));
-  return filled.length > 0 ? filled.join(' · ') : null;
+  return filled.length > 0 ? filled.join(separator) : null;
+}
+
+function group(id: string, rows: Array<WorkerProfileRow | null>): WorkerProfileGroup | null {
+  const filled = rows.filter((row): row is WorkerProfileRow => row !== null);
+  return filled.length > 0 ? { id, rows: filled } : null;
 }
 
 export function buildWorkerProfileView(input: WorkerProfileInput): WorkerProfileView {
   const name = [input.firstName, input.lastName].filter((part) => part && part.trim()).join(' ').trim();
-  const job = textFact('Huidig werk', 'current_job', input.currentJob)?.value ?? null;
-  const client = textFact('Werkgever', 'client_name', input.clientName)?.value ?? null;
-  const referent = textFact('Contactpersoon', 'referent_name', input.referentName)?.value ?? null;
-  const owner = textFact('Eigenaar', 'owner_name', input.ownerName)?.value ?? null;
+  const job = textRow('Huidig werk', 'current_job', input.currentJob)?.value ?? null;
+  const client = textRow('Werkgever', 'client_name', input.clientName)?.value ?? null;
+  const referent = textRow('Contactpersoon', 'referent_name', input.referentName)?.value ?? null;
+  const owner = textRow('Eigenaar', 'owner_name', input.ownerName)?.value ?? null;
+  const hours = typeof input.contractHours === 'number' ? `${input.contractHours} uur` : null;
+  const role = job && client ? `${job} bij ${client}` : job || client;
 
-  const facts: WorkerProfileFact[] = [];
-  const push = (fact: WorkerProfileFact | null) => {
-    if (fact) facts.push(fact);
+  const groups: WorkerProfileGroup[] = [];
+  const push = (next: WorkerProfileGroup | null) => {
+    if (next) groups.push(next);
   };
 
-  push(textFact('E-mail', 'email', input.email));
-  push(textFact('Telefoon', 'phone', input.phone));
-  const birth = textFact('Geboortedatum', 'date_of_birth', input.dateOfBirth);
-  if (birth) push({ ...birth, value: formatDate(birth.value) });
-  push(textFact('Geslacht', 'gender', input.gender));
+  push(group('contact', [
+    textRow('E-mail', 'email', input.email),
+    textRow('Telefoon', 'phone', input.phone),
+  ]));
+
+  const birth = textRow('Geboortedatum', 'date_of_birth', input.dateOfBirth);
+  push(group('persoon', [
+    birth ? { ...birth, value: formatDate(birth.value) } : null,
+    textRow('Geslacht', 'gender', input.gender),
+  ]));
 
   const education = joinNonEmpty([
-    textFact('Opleiding', 'education_level', input.educationLevel)?.value,
-    textFact('Opleiding', 'education_name', input.educationName)?.value,
+    textRow('Opleiding', 'education_level', input.educationLevel)?.value,
+    textRow('Opleiding', 'education_name', input.educationName)?.value,
   ]);
-  if (education) facts.push({ label: 'Opleiding', value: education });
-
   const licenseTypes = Array.isArray(input.driversLicenseType)
     ? input.driversLicenseType.map((type) => type.trim()).filter(Boolean)
     : [];
-  if (input.driversLicense === true || licenseTypes.length > 0) {
-    facts.push({
-      label: 'Rijbewijs',
-      value: licenseTypes.length > 0 ? licenseTypes.join(', ') : 'Ja',
-    });
-  }
-
+  const license = input.driversLicense === true || licenseTypes.length > 0
+    ? { label: 'Rijbewijs', value: licenseTypes.length > 0 ? licenseTypes.join(', ') : 'Ja' }
+    : null;
   const transportTypes = Array.isArray(input.transportType)
     ? input.transportType.map((type) => type.trim()).filter(Boolean)
     : [];
-  if (transportTypes.length > 0) facts.push({ label: 'Vervoer', value: transportTypes.join(', ') });
+  push(group('werk', [
+    education ? { label: 'Opleiding', value: education } : null,
+    license,
+    transportTypes.length > 0 ? { label: 'Vervoer', value: transportTypes.join(', ') } : null,
+    input.isExWerknemer === true ? { label: 'Ex-werknemer', value: 'Ja' } : null,
+  ]));
 
-  push(textFact('Spreken', 'dutch_speaking', input.dutchSpeaking));
-  push(textFact('Schrijven', 'dutch_writing', input.dutchWriting));
-  push(textFact('Lezen', 'dutch_reading', input.dutchReading));
+  const speaking = textRow('Spreken', 'dutch_speaking', input.dutchSpeaking)?.value;
+  const writing = textRow('Schrijven', 'dutch_writing', input.dutchWriting)?.value;
+  const reading = textRow('Lezen', 'dutch_reading', input.dutchReading)?.value;
+  const language = joinNonEmpty([
+    speaking ? `Spreken ${speaking}` : null,
+    writing ? `Schrijven ${writing}` : null,
+    reading ? `Lezen ${reading}` : null,
+  ]);
+  push(group('nederlands', [
+    language ? { label: 'Nederlands', value: language } : null,
+  ]));
 
   const skillsLabel = formatComputerSkillsOption(input.computerSkills);
-  if (skillsLabel) {
-    const description = textFact('Toelichting', 'computer_skills_description', input.computerSkillsDescription);
-    facts.push({
-      label: 'Computer',
-      value: description ? `${skillsLabel} (${description.value})` : skillsLabel,
-    });
-  } else if (input.hasComputer === true) {
-    facts.push({ label: 'PC', value: 'Ja' });
-  }
+  const skillsDescription = textRow('Toelichting', 'computer_skills_description', input.computerSkillsDescription);
+  const computer = skillsLabel
+    ? { label: 'Computer', value: skillsDescription ? `${skillsLabel}, ${skillsDescription.value}` : skillsLabel }
+    : input.hasComputer === true
+      ? { label: 'Computer', value: 'Ja' }
+      : null;
+  push(group('computer', [computer]));
 
-  if (typeof input.contractHours === 'number') {
-    facts.push({ label: 'Contracturen', value: String(input.contractHours) });
-  }
-  if (input.isExWerknemer === true) facts.push({ label: 'Ex-werknemer', value: 'Ja' });
+  push(group('ervaring', [
+    textRow('Werkervaring', 'work_experience', input.workExperience),
+    textRow('Andere werkgevers', 'other_employers', input.otherEmployers),
+  ]));
 
-  push(textFact('Werkervaring', 'work_experience', input.workExperience, true));
-  push(textFact('Andere werkgevers', 'other_employers', input.otherEmployers, true));
+  const subtitle = joinNonEmpty([role, hours]);
 
   return {
     name: name || 'Werknemer',
-    subtitle: joinNonEmpty([job, client]),
+    subtitle,
     meta: joinNonEmpty([
-      referent ? `Contactpersoon ${referent}` : null,
-      owner ? `Eigenaar ${owner}` : null,
+      referent ? `${referent}, contactpersoon` : null,
+      owner ? `${owner}, dossier-eigenaar` : null,
     ]),
-    facts,
-    isEmpty: facts.length === 0 && !job,
+    groups,
+    isEmpty: groups.length === 0 && !subtitle,
   };
 }
