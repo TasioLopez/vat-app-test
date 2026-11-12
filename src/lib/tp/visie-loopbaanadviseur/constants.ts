@@ -87,10 +87,10 @@ export const SELECTION_PROCESS_V12 = `
 Stap 1 — Profielbrug (EERST): kies functies die aantoonbaar aansluiten op opleiding, recente werkervaring en/of zoekprofiel. Elke suggestie moet een concreet anker uit het dossier hebben.
 Stap 2 — Arbeidsmarkttoets: prefer common, findable Nederlandse vacaturetitels (kort, standaard; maximaal circa 1–2 modifiers). Geen niche-samenstellingen, geen verzonnen of zeldzame titels, geen over-specifieke stacks.
 Stap 3 — Zoekprofiel: respecteer zoekrichting en niveau; wanneer zoekprofiel ontbreekt, leid af uit opleiding en werkervaring (niet alleen uit belastbaarheid).
-Stap 4 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren, fysieke omgeving, dynamische handelingen, statische houdingen, werktijden; plus staan, lopen, tillen/dragen, buigen, knielen/hurken, reiken, houdingsafwisseling, werktempo, omgevingseisen. Bij één wezenlijke overschrijding: afwijzen. Werk conservatief — maar verzin géén veilige niche-titels alleen om FML te omzeilen.
+Stap 4 — Controle belastbaarheid per functie: persoonlijk/sociaal functioneren, fysieke omgeving, dynamische handelingen, statische houdingen, werktijden; plus staan, lopen, tillen/dragen, buigen, knielen/hurken, reiken, houdingsafwisseling, werktempo, omgevingseisen. Bij één wezenlijke overschrijding: afwijzen. Werk conservatief — maar verzin géén veilige niche-titels alleen om FML te omzeilen. De toelichting noemt daarna één concrete beperking die deze functie respecteert (uren, zitten, tillen, persoonlijk of sociaal functioneren, werktijden, of de bijpassende FML-rubriek). Een zin met alleen het profielanker is niet genoeg.
 Stap 5 — AD-controle: functies of richtingen van arbeidsdeskundige nooit opnieuw noemen (geen synoniemen, vergelijkbare functies, vrijwel identieke werkzaamheden). Respecteer ook ad_uitsluiting_functies en behouden/afgewezen namen.
 Stap 6 — Praktijktoets: functies waarin regelmatig langdurig staan/lopen, productietempo, assemblage, productiewerk, kwaliteitscontrole, zwaar tillen, veel bukken/traplopen/reiken of structurele fysieke belasting: afwijzen. Bij twijfel afwijzen.
-Stap 7 — Onderlinge controle: exact vijf NIEUWE suggesties. Verschillende roltypen én verschillende ankers (niet vijf limitation-only admin-clones). Per toelichting een ander passendheidsargument gekoppeld aan het anker; herhaal niet dezelfde prikkelarm/lage druk-formulering.
+Stap 7 — Onderlinge controle: exact vijf NIEUWE suggesties. Verschillende roltypen én verschillende ankers (niet vijf limitation-only admin-clones). Elke toelichting noemt het anker én één concrete beperking; herhaal niet dezelfde prikkelarm/lage druk-formulering zonder profielbrug.
 Stap 8 — Eindcontrole: plaatsbaar en realistisch, geworteld in profiel, passend binnen belastbaarheid, niet door AD genoemd, regulier en kansrijk. Eindresultaat trajectplan: variabel aantal behouden functies (≥1), behalve scenario zonder AD én zonder belastbaarheidsprofiel (geen functies).
 `.trim();
 
@@ -130,11 +130,12 @@ export const EINDCONTROLE_CHECKLIST = `
 - Eindresultaat trajectplan: variabel aantal behouden functies (≥1), of geen functies bij intake_only
 - Maximaal één zin toelichting per functie
 - Elke functie: anker (opleiding|werkervaring|zoekprofiel) + anker_detail uit dossier
+- Elke toelichting noemt dat anker én één concrete beperking (uren, zitten, tillen, persoonlijk of sociaal functioneren, werktijden, of FML-rubriek). Alleen het profielanker is niet genoeg
 - Korte, gangbare NL-titels (geen niche-samenstellingen)
 - Geen AD-titels of synoniemen (inclusief ad_uitsluiting_functies)
 - Geen overlap met behouden of afgewezen functies
 - Vijf suggesties = verschillende roltypen én ankers
-- Toelichtingen niet copy-paste / niet alleen prikkelarm-belastbaarheid
+- Toelichtingen niet copy-paste / niet alleen prikkelarm-formulering zonder profielbrug
 - Passend binnen belastbaarheid en zoekprofiel; realistisch plaatsbaar
 `.trim();
 

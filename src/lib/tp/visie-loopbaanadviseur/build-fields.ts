@@ -30,6 +30,7 @@ export type VisieLoopbaanadviseurBuildContext = {
     advies_ad_passende_arbeid?: string | null;
     zoekprofiel?: string | null;
     persoonlijk_profiel?: string | null;
+    prognose_bedrijfsarts?: string | null;
     has_ad_report?: boolean | null;
     ad_report_concept?: boolean | null;
   };

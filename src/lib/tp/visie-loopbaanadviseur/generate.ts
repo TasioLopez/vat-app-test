@@ -223,8 +223,10 @@ function buildApiContext(ctx: VisieLoopbaanadviseurBuildContext): Record<string,
       advies_ad_passende_arbeid: ctx.meta.advies_ad_passende_arbeid,
       zoekprofiel: ctx.meta.zoekprofiel || null,
       persoonlijk_profiel: ctx.meta.persoonlijk_profiel || null,
+      prognose_bedrijfsarts: ctx.meta.prognose_bedrijfsarts || null,
     },
     profiel_hints: buildProfielHints(ctx.meta),
+    belastbaarheid_excerpt: excerptText(ctx.meta.prognose_bedrijfsarts, 1200),
     ad_uitsluiting_functies: adUitsluiting,
   };
 }

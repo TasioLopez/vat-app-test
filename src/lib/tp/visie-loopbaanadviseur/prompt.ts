@@ -48,15 +48,16 @@ REALISME / PLAATSBAARHEID (hard)
 - Verboden: titels die alleen “veilig binnen FML” zijn zonder profielbrug; verzonnen of zeldzame functies; near-clones van elkaar of van AD
 
 CONTEXT
-- profiel_hints en zoekprofiel/persoonlijk_profiel: gebruik voor ankers
+- profiel_hints en zoekprofiel/persoonlijk_profiel: gebruik voor ankers en functietitels
+- prognose_bedrijfsarts / belastbaarheid_excerpt: bron voor de concrete beperking in elke toelichting
 - advies_ad_passende_arbeid / ad_uitsluiting_functies: NOOIT opnieuw noemen (ook geen synoniemen)
-- belastbaarheid filtert; belastbaarheid is NIET de primaire bron van functietitels
+- Titels komen uit het profielanker. Belastbaarheid filtert én moet in de toelichting zichtbaar zijn
 
 OUTPUT
 Selecteer exact ${FUNCTIE_SUGGESTION_BATCH_SIZE} NIEUWE functies:
 - ${FUNCTIE_SUGGESTION_BATCH_SIZE} korte, gangbare functienamen op de Nederlandse arbeidsmarkt
 - Geen "En soortgelijk" of filler
-- Per functie: toelichting (max 1 zin) die het anker noemt; anker = opleiding|werkervaring|zoekprofiel; anker_detail = kort feit uit dossier
+- Per functie: toelichting (max 1 zin) die het anker én één concrete beperking noemt (uren, zitten, tillen, persoonlijk of sociaal functioneren, werktijden, of de bijpassende FML-rubriek). Alleen het profielanker is niet genoeg. anker = opleiding|werkervaring|zoekprofiel; anker_detail = kort feit uit dossier
 - Duidelijk verschillende roltypen én ankers
 - Geen AD-/behouden-/afgewezen-overlap
 - Conservatief binnen belastbaarheid; max. circa zes maanden scholing
@@ -70,7 +71,7 @@ Geen sectiekop "Visie loopbaanadviseur". Geen extra velden.
 `.trim();
 
 export function buildVisieLoopbaanadviseurContextMessage(ctx: Record<string, unknown>): string {
-  return `Context (profielbrug en zoekprofiel leiden; genereer geen andere data uit context):\n${JSON.stringify(ctx, null, 2)}`;
+  return `Context (titel uit profielanker; toelichting noemt anker én een concrete beperking uit het belastbaarheidsprofiel):\n${JSON.stringify(ctx, null, 2)}`;
 }
 
 export function buildRegenerateContextExtras(opts: {
@@ -81,7 +82,7 @@ export function buildRegenerateContextExtras(opts: {
 }): string {
   const batchSize = opts.batchSize ?? FUNCTIE_SUGGESTION_BATCH_SIZE;
   return [
-    `REGENERATIE — genereer exact ${batchSize} NIEUWE, gangbare functiesuggesties met anker.`,
+    `REGENERATIE — genereer exact ${batchSize} NIEUWE, gangbare functiesuggesties. Titel uit het anker; toelichting noemt het anker én één concrete beperking.`,
     opts.kept.length
       ? `Behouden door adviseur (NOOIT opnieuw voorstellen, ook geen synoniemen):\n${opts.kept
           .map((f) => `- ${f.naam}`)
@@ -95,7 +96,7 @@ export function buildRegenerateContextExtras(opts: {
     opts.userFeedback?.trim()
       ? `Feedback adviseur: ${opts.userFeedback.trim()}`
       : '',
-    `Eisen: common NL-titels; elk item met anker+anker_detail; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
+    `Eisen: common NL-titels; elk item met anker+anker_detail; elke toelichting noemt anker én één concrete beperking (uren, zitten, tillen, persoonlijk/sociaal functioneren, werktijden of FML-rubriek); verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
   ]
     .filter(Boolean)
     .join('\n\n');

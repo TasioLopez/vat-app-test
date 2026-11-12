@@ -31,7 +31,7 @@ const functieSchema = {
     toelichting: {
       type: 'string' as const,
       description:
-        'Max one sentence: why passend — must reference the anker (opleiding/ervaring/zoekprofiel), not only belastbaarheid',
+        'Max one sentence: name the anker (opleiding/ervaring/zoekprofiel) AND one concrete limitation this function respects (hours, sitting, lifting, personal/social functioning, working hours, or the matching FML rubric). A profile-only sentence is not enough.',
     },
     anker: {
       type: 'string' as const,

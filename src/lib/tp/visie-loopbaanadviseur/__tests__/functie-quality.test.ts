@@ -86,19 +86,19 @@ describe('assessFunctieQuality', () => {
       functies: [
         {
           naam: 'Reisadviseur',
-          toelichting: 'Sluit aan bij haar opleiding Toerisme en recreatie.',
+          toelichting: 'Sluit aan bij haar opleiding Toerisme en recreatie en past bij zittend werk.',
           anker: 'opleiding',
           anker_detail: 'Toerisme en recreatie',
         },
         {
           naam: 'Roostermaker',
-          toelichting: 'Past bij haar ervaring met organiseren als Supervisor.',
+          toelichting: 'Past bij haar ervaring met organiseren als Supervisor, binnen beperkte werktijden.',
           anker: 'werkervaring',
           anker_detail: 'Supervisor',
         },
         {
           naam: 'Documentcontroleur',
-          toelichting: 'Past bij zoekprofiel administratief en digitale vaardigheden.',
+          toelichting: 'Past bij zoekprofiel administratief en digitale vaardigheden, zonder tillen.',
           anker: 'zoekprofiel',
           anker_detail: 'administratief',
         },
@@ -153,6 +153,22 @@ describe('assessFunctieQuality', () => {
     const result = assessFunctieQuality(content, []);
     assert.equal(result.ok, false);
     assert.ok(result.issues.some((i) => /profielbrug/i.test(i)));
+  });
+
+  it('fails a profile-only toelichting without a concrete limitation', () => {
+    const content: VisieLoopbaanadviseurContentResult = {
+      functies: [
+        {
+          naam: 'Administratief medewerker',
+          toelichting: 'Sluit aan bij haar opleiding administratie.',
+          anker: 'opleiding',
+          anker_detail: 'administratie',
+        },
+      ],
+    };
+    const result = assessFunctieQuality(content, []);
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.some((i) => /concrete beperking/i.test(i)));
   });
 
   it('fails when proposed naam overlaps AD exclusion phrase', () => {

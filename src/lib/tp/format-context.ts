@@ -109,6 +109,56 @@ export function stripLeadingDoctorRolePrefix(value: string): string {
   return expanded.slice(prefix.length).trim();
 }
 
+/** Longest title first so Bedrijfsarts/Verzekeringsarts are not read as Arts. */
+const SIGNATURE_ROLE_PATTERN = 'Verzekeringsarts|Bedrijfsarts|Anios|Aios|Arts';
+
+function canonicalDoctorRole(role: string): string {
+  const found = DOCTOR_ROLE_PREFIXES.find(
+    (prefix) => prefix.toLowerCase() === role.toLowerCase()
+  );
+  return found ?? role;
+}
+
+function stripDoctorCourtesyTitles(value: string): string {
+  return value.replace(/\b(?:de heer|mevrouw)\s+/gi, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Dutch report signatures put the title after the name:
+ * "E. van Wijk, Arts. Werkend onder supervisie van …".
+ * Move that title to the front, or drop it when a leading title is already present.
+ * Supervisor text is left as written.
+ */
+function normalizeDoctorSignature(value: string): string {
+  const supervisie = value.match(
+    new RegExp(
+      `^(.+?)(?:,\\s*|\\s+)(${SIGNATURE_ROLE_PATTERN})\\.?\\s+werkend onder supervisie van\\s+(.+)$`,
+      'i'
+    )
+  );
+  if (supervisie) {
+    const name = supervisie[1].replace(/[\s,-]+$/, '').trim();
+    const supervisor = supervisie[3].trim();
+    if (!name || !supervisor) return value;
+    if (hasDoctorRolePrefix(name)) {
+      return `${name} werkend onder supervisie van ${supervisor}`;
+    }
+    return `${canonicalDoctorRole(supervisie[2])} ${name} werkend onder supervisie van ${supervisor}`;
+  }
+
+  // "Onder supervisie van …, bedrijfsarts" is a different footer; leave it for the trailing strip.
+  if (/supervisie/i.test(value)) return value;
+
+  const trailing = value.match(
+    new RegExp(`^(.+?),\\s*(${SIGNATURE_ROLE_PATTERN})\\.?$`, 'i')
+  );
+  if (!trailing) return value;
+  const name = trailing[1].replace(/[\s,-]+$/, '').trim();
+  if (!name) return value;
+  if (hasDoctorRolePrefix(name)) return name;
+  return `${canonicalDoctorRole(trailing[2])} ${name}`;
+}
+
 export function cleanDoctorOrgRaw(raw: string): string {
   let cleaned = expandDoctorRoleAbbreviations(raw.trim());
 
@@ -116,6 +166,9 @@ export function cleanDoctorOrgRaw(raw: string): string {
   cleaned = cleaned.replace(/\(\s*BIG\s*(nr\.?|nummer)?\s*[\d.\s]*\s*\)/gi, '');
   cleaned = cleaned.replace(/\bBIG\s*(nr\.?|nummer)?\s*[\d.\s]+/gi, '');
   cleaned = cleaned.replace(/\(\s*\)/g, '');
+
+  cleaned = stripDoctorCourtesyTitles(cleaned);
+  cleaned = normalizeDoctorSignature(cleaned);
 
   cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');

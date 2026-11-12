@@ -192,6 +192,35 @@ describe('buildBelastbaarheidsprofielFields', () => {
     );
   });
 
+  it('does not double Arts when the spreekuur signature already includes the title', () => {
+    const ctx = {
+      meta: {
+        fml_izp_lab_date: '2026-09-17',
+        occupational_doctor_org: 'Arts E. van Wijk',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: {
+        datum: '2026-09-17',
+        arts_org: 'de heer E. van Wijk, Arts. Werkend onder supervisie van H.F.P. Terpstra',
+      },
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(ctx, content);
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld door Arts E\. van Wijk werkend onder supervisie van H\.F\.P\. Terpstra, beperkingen/
+    );
+    assert.match(
+      prognose_bedrijfsarts,
+      /door Arts E\. van Wijk werkend onder supervisie van H\.F\.P\. Terpstra, staat onderstaande/
+    );
+    assert.doesNotMatch(prognose_bedrijfsarts, /Arts de heer/);
+    assert.doesNotMatch(prognose_bedrijfsarts, /,\s*Arts/);
+  });
+
   it('expands BA/VA abbreviations in occupational_doctor_org intros (Hippman leak)', () => {
     const hippmanCtx = {
       meta: {
