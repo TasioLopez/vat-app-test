@@ -91,7 +91,7 @@ describe('booking validation', () => {
     if (!('data' in parsed)) return;
     assert.equal(parsed.data.title, 'Overleg');
     assert.equal(parsed.data.note, null);
-    assert.deepEqual(parsed.data.guestEmails, ['gast@example.nl']);
+    assert.deepEqual(parsed.data.guestEmails, []);
   });
 });
 
@@ -130,6 +130,13 @@ describe('booking email', () => {
     assert.doesNotMatch(message.text, /Beste Jan Jansen/);
     assert.doesNotMatch(message.html, /Beste Jan Jansen/);
     assert.match(message.html, /&lt;script&gt;/);
+  });
+
+  it('tells the booker a reservation was changed', () => {
+    const message = buildBookingMessage('update', 'booker', { ...details, title: 'Overleg', note: null });
+    assert.match(message.subject, /Reservering gewijzigd: Overleg/);
+    assert.match(message.text, /Beste Jan Jansen,/);
+    assert.match(message.text, /Uw reservering is gewijzigd/);
   });
 
   it('describes a cancellation to the booker', () => {

@@ -58,9 +58,14 @@ export function canManageSpaces(role: string): boolean {
   return isAdmin(role);
 }
 
-/** Cancel a room or parking booking — admin only. */
-export function canCancelBooking(role: string): boolean {
-  return isAdmin(role);
+/** Change or cancel any booking. A normal user may only change their own. */
+export function canManageAnyBooking(role: string): boolean {
+  return isAdmin(role) || isBackOffice(role);
+}
+
+export function canChangeBooking(role: string, actorId: string, bookedBy: string | null): boolean {
+  if (canManageAnyBooking(role)) return true;
+  return bookedBy !== null && bookedBy === actorId;
 }
 
 /**
