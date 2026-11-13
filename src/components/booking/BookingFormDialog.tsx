@@ -11,11 +11,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { bookingRangeFromInputs, parseDateInput, parseGuestEmails } from '@/lib/booking/validate';
+import { bookingRangeFromInputs, parseDateInput } from '@/lib/booking/validate';
 import { formatBookingWhen } from '@/lib/booking/time';
 import { spaceKindLabel, type SpaceRow } from '@/lib/booking/types';
-import { X } from 'lucide-react';
 
 export type BookingDraft = {
   space: SpaceRow;
@@ -23,39 +23,42 @@ export type BookingDraft = {
   date: string;
   start: string;
   end: string;
+  bookingId?: string;
+  title?: string;
+  note?: string;
 };
 
 type BookingFormDialogProps = {
   draft: BookingDraft | null;
+  spaceOptions: SpaceRow[];
   onOpenChange: (open: boolean) => void;
-  onBooked: (emailWarning: string | null) => void;
+  onBooked: (emailWarning: string | null, updated: boolean) => void;
 };
 
-export default function BookingFormDialog({ draft, onOpenChange, onBooked }: BookingFormDialogProps) {
+export default function BookingFormDialog({ draft, spaceOptions, onOpenChange, onBooked }: BookingFormDialogProps) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [note, setNote] = useState('');
-  const [guests, setGuests] = useState<string[]>([]);
-  const [guestDraft, setGuestDraft] = useState('');
-  const [guestError, setGuestError] = useState<string | null>(null);
+  const [spaceId, setSpaceId] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const editing = Boolean(draft?.bookingId);
 
   useEffect(() => {
     if (!draft) return;
-    setTitle('');
+    setTitle(draft.title ?? '');
     setDate(draft.date);
     setStart(draft.start);
     setEnd(draft.end);
-    setNote('');
-    setGuests([]);
-    setGuestDraft('');
-    setGuestError(null);
+    setNote(draft.note ?? '');
+    setSpaceId(draft.space.id);
     setFormError(null);
     setSaving(false);
   }, [draft]);
+
+  const selectedSpace = spaceOptions.find((space) => space.id === spaceId) ?? draft?.space ?? null;
 
   const preview = useMemo(() => {
     const day = parseDateInput(date);
@@ -65,31 +68,12 @@ export default function BookingFormDialog({ draft, onOpenChange, onBooked }: Boo
     return formatBookingWhen(range.startsAt, range.endsAt);
   }, [date, start, end]);
 
-  function addGuests(raw: string) {
-    const parts = raw.split(/[,;\s]+/).map((part) => part.trim()).filter(Boolean);
-    if (parts.length === 0) return;
-    const parsed = parseGuestEmails([...guests, ...parts]);
-    if (parsed.error) {
-      setGuestError(parsed.error);
-      return;
-    }
-    setGuests(parsed.emails);
-    setGuestDraft('');
-    setGuestError(null);
-  }
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!draft) return;
+    if (!draft || !selectedSpace) return;
     const day = parseDateInput(date);
     if (!day) {
       setFormError('Ongeldige datum of tijd.');
-      return;
-    }
-    const pending = guestDraft.trim() ? [...guests, guestDraft.trim()] : guests;
-    const parsedGuests = parseGuestEmails(pending);
-    if (parsedGuests.error) {
-      setGuestError(parsedGuests.error);
       return;
     }
     const range = bookingRangeFromInputs(day, start, end);
@@ -104,17 +88,17 @@ export default function BookingFormDialog({ draft, onOpenChange, onBooked }: Boo
 
     setSaving(true);
     setFormError(null);
+    const updated = Boolean(draft.bookingId);
     try {
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
+      const response = await fetch(updated ? `/api/bookings/${draft.bookingId}` : '/api/bookings', {
+        method: updated ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          spaceId: draft.space.id,
+          spaceId: selectedSpace.id,
           title: title.trim(),
           startsAt: range.startsAt.toISOString(),
           endsAt: range.endsAt.toISOString(),
           note: note.trim(),
-          guestEmails: parsedGuests.emails,
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { error?: string; emailWarning?: string | null };
@@ -123,7 +107,7 @@ export default function BookingFormDialog({ draft, onOpenChange, onBooked }: Boo
         setSaving(false);
         return;
       }
-      onBooked(body.emailWarning ?? null);
+      onBooked(body.emailWarning ?? null, updated);
       onOpenChange(false);
     } catch {
       setFormError('De reservering kon niet worden opgeslagen.');
@@ -135,16 +119,36 @@ export default function BookingFormDialog({ draft, onOpenChange, onBooked }: Boo
     <Dialog open={draft !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Reserveren</DialogTitle>
+          <DialogTitle>{editing ? 'Reservering wijzigen' : 'Reserveren'}</DialogTitle>
         </DialogHeader>
-        {draft ? (
+        {draft && selectedSpace ? (
           <form onSubmit={submit} className="space-y-4">
-            <p className="text-sm text-slate-600">
-              {spaceKindLabel(draft.space.kind)}{' '}
-              <span className="font-medium text-slate-900">{draft.space.name}</span>
-              {' · '}
-              {draft.locationName}
-            </p>
+            {editing && spaceOptions.length > 1 ? (
+              <div className="space-y-2">
+                <Label htmlFor="booking-space">{spaceKindLabel(selectedSpace.kind)}</Label>
+                <Select value={spaceId} onValueChange={setSpaceId}>
+                  <SelectTrigger id="booking-space" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spaceOptions.map((space) => (
+                      <SelectItem key={space.id} value={space.id}>
+                        {space.name}
+                        {space.active ? '' : ' (inactief)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-slate-600">{draft.locationName}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">
+                {spaceKindLabel(selectedSpace.kind)}{' '}
+                <span className="font-medium text-slate-900">{selectedSpace.name}</span>
+                {' · '}
+                {draft.locationName}
+              </p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="booking-title">Titel</Label>
               <Input
@@ -186,58 +190,13 @@ export default function BookingFormDialog({ draft, onOpenChange, onBooked }: Boo
                 className="min-h-20 border-2 border-purple-200 focus-visible:border-purple-500 focus-visible:ring-purple-500/50"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="booking-guest">Extra genodigden</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="booking-guest"
-                  type="email"
-                  value={guestDraft}
-                  placeholder="naam@bedrijf.nl"
-                  onChange={(event) => setGuestDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ',') {
-                      event.preventDefault();
-                      addGuests(guestDraft);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (guestDraft.trim()) addGuests(guestDraft);
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={() => addGuests(guestDraft)}>
-                  Toevoegen
-                </Button>
-              </div>
-              <p className="text-xs text-slate-500">
-                Zij ontvangen dezelfde bevestiging. Scheid adressen met een komma of Enter.
-              </p>
-              {guests.length > 0 ? (
-                <ul className="flex flex-wrap gap-2">
-                  {guests.map((email) => (
-                    <li key={email} className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs text-purple-900">
-                      {email}
-                      <button
-                        type="button"
-                        className="cursor-pointer rounded-full p-0.5 hover:bg-purple-200"
-                        aria-label={`Verwijder ${email}`}
-                        onClick={() => setGuests((current) => current.filter((item) => item !== email))}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {guestError ? <p className="text-sm text-red-600">{guestError}</p> : null}
-            </div>
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                 Sluiten
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? 'Opslaan…' : 'Reserveren'}
+                {saving ? 'Opslaan…' : editing ? 'Opslaan' : 'Reserveren'}
               </Button>
             </DialogFooter>
           </form>

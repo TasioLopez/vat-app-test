@@ -4,11 +4,10 @@ import { sendBookingEmails } from '@/lib/booking/email';
 import { isSpaceKind } from '@/lib/booking/types';
 import { parseBookingRequest } from '@/lib/booking/validate';
 import { formatOrgUserDisplayName } from '@/lib/users/org-directory';
-import { getServiceRoleSupabase } from '@/lib/supabase/service-role';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 const EMAIL_WARNING =
-  'De reservering staat vast, maar de bevestigingsmail kon niet naar iedereen worden verstuurd.';
+  'De reservering staat vast, maar de bevestigingsmail kon niet worden verstuurd.';
 
 function isOverlapError(error: { code?: string; message?: string }): boolean {
   return error.code === '23P01' || (error.message ?? '').includes('bookings_no_overlap');
@@ -74,7 +73,6 @@ export async function POST(req: NextRequest) {
 
   const bookerName = formatOrgUserDisplayName(profile);
   const bookerEmail = profile.email.trim().toLowerCase();
-  const guestEmails = parsed.data.guestEmails.filter((email) => email !== bookerEmail);
 
   const { data: booking, error: insertError } = await supabase
     .from('bookings')
@@ -99,32 +97,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
 
-  if (guestEmails.length > 0) {
-    const { error: guestError } = await supabase.from('booking_guests').insert(
-      guestEmails.map((email) => ({ booking_id: booking.id, email }))
-    );
-    if (guestError) {
-      let removed = false;
-      try {
-        const { error: rollbackError } = await getServiceRoleSupabase()
-          .from('bookings')
-          .delete()
-          .eq('id', booking.id);
-        removed = !rollbackError;
-      } catch (rollbackError) {
-        console.error('Booking guest rollback failed', rollbackError);
-      }
-      return NextResponse.json(
-        {
-          error: removed
-            ? 'De genodigden konden niet worden opgeslagen. De reservering is niet bewaard.'
-            : 'De reservering is opgeslagen, maar de genodigden niet. Vraag een beheerder om de reservering te annuleren.',
-        },
-        { status: 500 }
-      );
-    }
-  }
-
   let emailWarning: string | null = null;
   const mailDetails = {
     bookerName: booking.booker_name,
@@ -138,11 +110,8 @@ export async function POST(req: NextRequest) {
     note: booking.note,
   };
   try {
-    const [bookerFailures, guestFailures] = await Promise.all([
-      sendBookingEmails('confirmation', 'booker', [bookerEmail], mailDetails),
-      sendBookingEmails('confirmation', 'guest', guestEmails, mailDetails),
-    ]);
-    if (bookerFailures.length > 0 || guestFailures.length > 0) emailWarning = EMAIL_WARNING;
+    const failures = await sendBookingEmails('confirmation', 'booker', [bookerEmail], mailDetails);
+    if (failures.length > 0) emailWarning = EMAIL_WARNING;
   } catch (error) {
     console.error('Booking confirmation email failed', error);
     emailWarning = EMAIL_WARNING;

@@ -18,8 +18,9 @@ type BookingDetailDialogProps = {
   space: SpaceRow | null;
   location: LocationRow | null;
   userId: string;
-  canCancel: boolean;
+  canChange: boolean;
   onClose: () => void;
+  onRequestEdit: (booking: BookingRow) => void;
   onRequestCancel: (booking: BookingRow) => void;
 };
 
@@ -28,30 +29,30 @@ export default function BookingDetailDialog({
   space,
   location,
   userId,
-  canCancel,
+  canChange,
   onClose,
+  onRequestEdit,
   onRequestCancel,
 }: BookingDetailDialogProps) {
-  const [guests, setGuests] = useState<string[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const isOwn = booking?.booked_by === userId;
-  const canSeePrivate = isOwn || canCancel;
+  const canSeePrivate = canChange;
 
   useEffect(() => {
     if (!booking || !canSeePrivate) {
-      setGuests([]);
       setNote(null);
       return;
     }
     let cancelled = false;
-    Promise.all([
-      supabase.from('booking_guests').select('email').eq('booking_id', booking.id),
-      supabase.from('bookings').select('note').eq('id', booking.id).maybeSingle(),
-    ]).then(([guestResult, noteResult]) => {
-      if (cancelled) return;
-      setGuests((guestResult.data ?? []).map((row) => row.email));
-      setNote(noteResult.data?.note ?? null);
-    });
+    supabase
+      .from('bookings')
+      .select('note')
+      .eq('id', booking.id)
+      .maybeSingle()
+      .then((noteResult) => {
+        if (cancelled) return;
+        setNote(noteResult.data?.note ?? null);
+      });
     return () => {
       cancelled = true;
     };
@@ -84,19 +85,18 @@ export default function BookingDetailDialog({
                 {note}
               </p>
             ) : null}
-            {canSeePrivate && guests.length > 0 ? (
-              <p>
-                <span className="text-slate-500">Genodigden: </span>
-                {guests.join(', ')}
-              </p>
-            ) : null}
           </div>
         ) : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Sluiten
           </Button>
-          {canCancel && booking ? (
+          {canChange && booking ? (
+            <Button type="button" variant="outline" onClick={() => onRequestEdit(booking)}>
+              Wijzigen
+            </Button>
+          ) : null}
+          {canChange && booking ? (
             <Button type="button" variant="destructive" onClick={() => onRequestCancel(booking)}>
               Annuleren
             </Button>

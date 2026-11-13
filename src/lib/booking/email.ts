@@ -9,7 +9,7 @@ import {
 import { formatBookingWhen } from '@/lib/booking/time';
 import { spaceKindLabel, type SpaceKind } from '@/lib/booking/types';
 
-export type BookingMailKind = 'confirmation' | 'cancellation';
+export type BookingMailKind = 'confirmation' | 'cancellation' | 'update';
 export type BookingMailAudience = 'booker' | 'guest';
 
 export type BookingMailDetails = {
@@ -37,6 +37,14 @@ function bookingCopy(
   details: BookingMailDetails
 ): { subject: string; heading: string; greeting: string; intro: string } {
   const { bookerName, title } = details;
+  if (kind === 'update') {
+    return {
+      subject: `Reservering gewijzigd: ${title}`,
+      heading: 'Reservering gewijzigd',
+      greeting: `Beste ${bookerName},`,
+      intro: 'Uw reservering is gewijzigd.',
+    };
+  }
   if (audience === 'guest' && kind === 'confirmation') {
     return {
       subject: `Uitnodiging: ${title}`,

@@ -10,7 +10,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { canCancelBooking, canManageSpaces } from '@/lib/auth/roles';
+import { canChangeBooking, canManageSpaces } from '@/lib/auth/roles';
 import {
   addCalendarDays,
   amsterdamWallTimeToUtc,
@@ -52,7 +52,6 @@ type BookingCalendarProps = {
 export default function BookingCalendar({ role, userId }: BookingCalendarProps) {
   const { showSuccess, showError, showWarning } = useToastHelpers();
   const canManage = canManageSpaces(role);
-  const canCancel = canCancelBooking(role);
 
   const [locations, setLocations] = useState<LocationRow[]>([]);
   const [spaces, setSpaces] = useState<SpaceRow[]>([]);
@@ -193,6 +192,31 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
     });
   }
 
+  async function openEdit(booking: BookingRow) {
+    const space = spaceById.get(booking.space_id);
+    if (!space) {
+      showError('Wijzigen mislukt', 'De ruimte van deze reservering is niet gevonden.');
+      return;
+    }
+    const { data, error } = await supabase.from('bookings').select('note').eq('id', booking.id).maybeSingle();
+    if (error) {
+      showError('Wijzigen mislukt', error.message);
+      return;
+    }
+    const bookingLocation = locationById.get(space.location_id);
+    setDetail(null);
+    setDraft({
+      bookingId: booking.id,
+      space,
+      locationName: bookingLocation?.name ?? 'Locatie',
+      date: formatDayInput(calendarDayFromDate(new Date(booking.starts_at))),
+      start: formatClock(new Date(booking.starts_at)),
+      end: formatClock(new Date(booking.ends_at)),
+      title: booking.title,
+      note: data?.note ?? '',
+    });
+  }
+
   function onTrackClick(event: React.MouseEvent<HTMLDivElement>, space: SpaceRow) {
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0) return;
@@ -213,7 +237,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       }
       setCancelTarget(null);
       if (body.emailWarning) showWarning('Geannuleerd', body.emailWarning);
-      else showSuccess('Reservering geannuleerd', 'De genodigden ontvangen een e-mail.');
+      else showSuccess('Reservering geannuleerd', 'De persoon die gereserveerd heeft ontvangt een e-mail.');
       await reload();
     } catch {
       showError('Annuleren mislukt', 'Probeer het opnieuw.');
@@ -568,7 +592,12 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                     const space = spaceById.get(booking.space_id);
                     const bookingLocation = space ? locationById.get(space.location_id) : undefined;
                     return (
-                      <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                      <li key={booking.id} className="py-1">
+                        <button
+                          type="button"
+                          className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-purple-50"
+                          onClick={() => setDetail(booking)}
+                        >
                         <div>
                           <div className="font-medium text-slate-900">{booking.title}</div>
                           <div className="text-sm text-slate-600">
@@ -579,6 +608,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                             {formatBookingWhen(new Date(booking.starts_at), new Date(booking.ends_at))}
                           </div>
                         </div>
+                        </button>
                       </li>
                     );
                   })}
@@ -591,12 +621,28 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
 
       <BookingFormDialog
         draft={draft}
+        spaceOptions={
+          draft
+            ? spaces.filter(
+                (space) =>
+                  space.location_id === draft.space.location_id &&
+                  space.kind === draft.space.kind &&
+                  (space.active || space.id === draft.space.id)
+              )
+            : []
+        }
         onOpenChange={(open) => {
           if (!open) setDraft(null);
         }}
-        onBooked={(emailWarning) => {
-          if (emailWarning) showWarning('Reservering opgeslagen', emailWarning);
-          else showSuccess('Reservering bevestigd', 'De bevestiging is per e-mail verstuurd.');
+        onBooked={(emailWarning, updated) => {
+          if (updated) {
+            if (emailWarning) showWarning('Reservering gewijzigd', emailWarning);
+            else showSuccess('Reservering gewijzigd', 'De persoon die gereserveerd heeft ontvangt een e-mail.');
+          } else if (emailWarning) {
+            showWarning('Reservering opgeslagen', emailWarning);
+          } else {
+            showSuccess('Reservering bevestigd', 'De bevestiging is per e-mail verstuurd.');
+          }
           void reload();
         }}
       />
@@ -609,8 +655,11 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
             : null
         }
         userId={userId}
-        canCancel={canCancel}
+        canChange={detail ? canChangeBooking(role, userId, detail.booked_by) : false}
         onClose={() => setDetail(null)}
+        onRequestEdit={(booking) => {
+          void openEdit(booking);
+        }}
         onRequestCancel={(booking) => {
           setDetail(null);
           setCancelTarget(booking);
@@ -622,7 +671,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
           if (!open && !cancelling) setCancelTarget(null);
         }}
         title="Reservering annuleren?"
-        description="De persoon die gereserveerd heeft en de extra genodigden ontvangen een e-mail."
+        description="De persoon die gereserveerd heeft ontvangt een e-mail."
         confirmLabel="Annuleer reservering"
         cancelLabel="Terug"
         variant="destructive"

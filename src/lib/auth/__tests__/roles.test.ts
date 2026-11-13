@@ -5,7 +5,8 @@ import {
   canAccessUsersAdmin,
   canAssignEmployeeOwner,
   canChangeUserRole,
-  canCancelBooking,
+  canChangeBooking,
+  canManageAnyBooking,
   canDeleteUsers,
   canInviteUsers,
   canManageClients,
@@ -57,14 +58,22 @@ describe('canInviteUsers / canDeleteUsers', () => {
   });
 });
 
-describe('booking catalog helpers', () => {
-  it('are admin-only', () => {
+describe('booking permissions', () => {
+  it('lets only admins manage locations and rooms', () => {
     assert.equal(canManageSpaces('admin'), true);
-    assert.equal(canCancelBooking('admin'), true);
     assert.equal(canManageSpaces('back_office'), false);
-    assert.equal(canCancelBooking('back_office'), false);
     assert.equal(canManageSpaces('user'), false);
-    assert.equal(canCancelBooking('user'), false);
+  });
+
+  it('lets admins and back office change any booking, and users only their own', () => {
+    assert.equal(canManageAnyBooking('admin'), true);
+    assert.equal(canManageAnyBooking('back_office'), true);
+    assert.equal(canManageAnyBooking('user'), false);
+    assert.equal(canChangeBooking('admin', 'admin-1', 'someone-else'), true);
+    assert.equal(canChangeBooking('back_office', 'office-1', 'someone-else'), true);
+    assert.equal(canChangeBooking('user', 'user-1', 'user-1'), true);
+    assert.equal(canChangeBooking('user', 'user-1', 'someone-else'), false);
+    assert.equal(canChangeBooking('user', 'user-1', null), false);
   });
 });
 

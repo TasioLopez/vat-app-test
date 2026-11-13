@@ -123,15 +123,6 @@ export function parseBookingRequest(body: unknown): { data: BookingRequest } | {
   const windowError = validateBookingWindow(startsAt, endsAt);
   if (windowError) return { error: windowError };
 
-  const guestInput = Array.isArray(record.guestEmails)
-    ? record.guestEmails.filter((value): value is string => typeof value === 'string')
-    : [];
-  if (guestInput.length > MAX_GUEST_EMAILS + 5) {
-    return { error: 'U kunt maximaal 20 extra genodigden toevoegen.' };
-  }
-  const guests = parseGuestEmails(guestInput);
-  if (guests.error) return { error: guests.error };
-
   return {
     data: {
       spaceId,
@@ -139,7 +130,7 @@ export function parseBookingRequest(body: unknown): { data: BookingRequest } | {
       startsAt,
       endsAt,
       note: noteRaw || null,
-      guestEmails: guests.emails,
+      guestEmails: [],
     },
   };
 }
