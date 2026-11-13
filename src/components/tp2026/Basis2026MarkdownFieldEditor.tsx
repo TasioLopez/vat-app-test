@@ -37,6 +37,8 @@ type Props = {
   appearance?: 'gold' | 'neutral';
   /** Debounce before onChange. 0 syncs on the next layout so callers see edits immediately. */
   delay?: number;
+  /** Label / controls before the built-in format toolbar. */
+  toolbarStart?: ReactNode;
   /** Extra controls after the built-in format toolbar (e.g. AI regenerate). */
   toolbarEnd?: ReactNode;
   /** Extra classes for the editable content area. */
@@ -45,7 +47,19 @@ type Props = {
   stickyToolbar?: boolean;
 };
 
+const ToolbarStartContext = createContext<ReactNode>(null);
 const ToolbarEndContext = createContext<ReactNode>(null);
+
+function ToolbarStartSlot() {
+  const start = useContext(ToolbarStartContext);
+  if (!start) return null;
+  return (
+    <>
+      {start}
+      <Separator />
+    </>
+  );
+}
 
 function ToolbarEndSlot() {
   const end = useContext(ToolbarEndContext);
@@ -69,6 +83,7 @@ export function Basis2026MarkdownFieldEditor({
   minHeightClassName = 'min-h-[220px]',
   appearance = 'gold',
   delay = 200,
+  toolbarStart,
   toolbarEnd,
   contentClassName,
   stickyToolbar = false,
@@ -104,6 +119,7 @@ export function Basis2026MarkdownFieldEditor({
       toolbarPlugin({
         toolbarContents: () => (
           <>
+            <ToolbarStartSlot />
             <UndoRedo />
             <Separator />
             <BoldItalicUnderlineToggles />
@@ -140,19 +156,21 @@ export function Basis2026MarkdownFieldEditor({
       : 'prose prose-sm max-w-none px-3 py-2 text-neutral-900';
 
   return (
-    <ToolbarEndContext.Provider value={toolbarEnd ?? null}>
-      <div className={frameClass}>
-        <MDXEditor
-          ref={editorRef}
-          markdown={draft}
-          onChange={handleChange}
-          plugins={plugins}
-          suppressHtmlProcessing
-          className="bg-white"
-          contentEditableClassName={`${proseClass} ${minHeightClassName}${contentClassName ? ` ${contentClassName}` : ''}`}
-          placeholder={placeholder}
-        />
-      </div>
-    </ToolbarEndContext.Provider>
+    <ToolbarStartContext.Provider value={toolbarStart ?? null}>
+      <ToolbarEndContext.Provider value={toolbarEnd ?? null}>
+        <div className={frameClass}>
+          <MDXEditor
+            ref={editorRef}
+            markdown={draft}
+            onChange={handleChange}
+            plugins={plugins}
+            suppressHtmlProcessing
+            className="bg-white"
+            contentEditableClassName={`${proseClass} ${minHeightClassName}${contentClassName ? ` ${contentClassName}` : ''}`}
+            placeholder={placeholder}
+          />
+        </div>
+      </ToolbarEndContext.Provider>
+    </ToolbarStartContext.Provider>
   );
 }

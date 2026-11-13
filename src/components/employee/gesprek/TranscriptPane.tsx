@@ -46,6 +46,8 @@ type Props = {
 const CHOICE_CLASS =
   'flex min-h-[5.5rem] flex-col items-start justify-center gap-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 disabled:opacity-50';
 
+const BUBBLE_MAX = 'w-fit max-w-[min(85%,36rem)]';
+
 function speakerOrder(turns: SpeakerTurn[]): string[] {
   const order: string[] = [];
   for (const turn of turns) {
@@ -84,9 +86,9 @@ export function TranscriptPane({
   const order = useMemo(() => (turns ? speakerOrder(turns) : []), [turns]);
 
   const actions = !empty && !recording ? (
-    <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-end gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
       {chip ? (
-        <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 backdrop-blur-sm">
+        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
           {chip}
         </span>
       ) : null}
@@ -155,9 +157,9 @@ export function TranscriptPane({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="flex min-h-8 flex-nowrap items-center justify-between gap-x-3">
         <h3
-          className="text-sm font-semibold text-gray-900"
+          className="shrink-0 text-sm font-semibold text-gray-900"
           title="Wat er letterlijk is gezegd. De intake leest dit niet."
         >
           Transcript
@@ -234,7 +236,7 @@ export function TranscriptPane({
           </button>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto pt-2">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {editing ? (
             turns ? (
               <div className="space-y-2">
@@ -245,12 +247,7 @@ export function TranscriptPane({
                       key={`${turn.speaker}-${index}`}
                       className={cn('flex', right ? 'justify-end' : 'justify-start')}
                     >
-                      <div
-                        className={cn(
-                          'w-[90%] rounded-lg bg-white px-2.5 py-2 ring-1 ring-gray-200',
-                          right && 'text-right'
-                        )}
-                      >
+                      <div className={cn(BUBBLE_MAX, 'rounded-lg bg-white px-2.5 py-2 ring-1 ring-gray-200')}>
                         <p className="mb-1 text-xs font-semibold text-emerald-800">{turn.speaker}</p>
                         <textarea
                           value={turn.text}
@@ -258,10 +255,7 @@ export function TranscriptPane({
                           disabled={recording}
                           aria-label={turn.speaker}
                           onChange={(event) => onTurnChange(index, event.target.value)}
-                          className={cn(
-                            'w-full resize-y rounded-md border border-gray-200 px-2 py-1.5 text-[15px] leading-6 text-gray-900',
-                            right && 'text-right'
-                          )}
+                          className="min-w-[12rem] w-full resize-y rounded-md border border-gray-200 px-2 py-1.5 text-[15px] leading-6 text-gray-900"
                         />
                       </div>
                     </div>
@@ -290,9 +284,10 @@ export function TranscriptPane({
                   >
                     <div
                       className={cn(
-                        'w-[90%] rounded-2xl px-3 py-2',
+                        BUBBLE_MAX,
+                        'rounded-2xl px-3 py-2',
                         right
-                          ? 'bg-emerald-50 text-right ring-1 ring-emerald-100'
+                          ? 'bg-emerald-50 ring-1 ring-emerald-100'
                           : 'bg-white ring-1 ring-gray-200'
                       )}
                     >

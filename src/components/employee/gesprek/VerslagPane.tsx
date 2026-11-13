@@ -61,40 +61,54 @@ export function VerslagPane({
   const empty = !notes.trim() && !writing;
   const chip = originLabel(notesOrigin);
 
-  const moreMenu = !empty ? (
-    <div className="flex shrink-0 items-center gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button type="button" size="sm" variant="ghost" disabled={busy || recording} aria-label="Meer acties">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {chip ? (
-            <DropdownMenuItem disabled className="text-xs text-gray-500">
-              Herkomst: {chip}
-            </DropdownMenuItem>
-          ) : null}
-          <DropdownMenuItem asChild>
-            <label className="cursor-pointer">
-              Vervangen door bestand
-              <input
-                type="file"
-                accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="sr-only"
-                disabled={busy || recording}
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  event.target.value = '';
-                  onUploadFile(file);
-                }}
-              />
-            </label>
+  const moreMenu = (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 px-0"
+          disabled={busy || recording}
+          aria-label="Meer acties"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {chip ? (
+          <DropdownMenuItem disabled className="text-xs text-gray-500">
+            Herkomst: {chip}
           </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  ) : null;
+        ) : null}
+        <DropdownMenuItem asChild>
+          <label className="cursor-pointer">
+            Vervangen door bestand
+            <input
+              type="file"
+              accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="sr-only"
+              disabled={busy || recording}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.target.value = '';
+                onUploadFile(file);
+              }}
+            />
+          </label>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const toolbarStart = (
+    <span
+      className="px-1 text-sm font-semibold text-gray-900"
+      title="Samenvatting van het gesprek. Dit leest de intake."
+    >
+      Verslag
+    </span>
+  );
 
   const toolbarEnd = (
     <div className="flex flex-wrap items-center gap-1">
@@ -121,95 +135,99 @@ export function VerslagPane({
           Vervang en maak verslag
         </Button>
       ) : null}
+      {moreMenu}
     </div>
   );
 
+  const warningChip =
+    looksLikeTranscript && notes.trim() ? (
+      <div className="inline-flex max-w-full items-center gap-2 self-start rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-900">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
+        <span className="truncate">Dit lijkt een transcript — maak eerst een verslag</span>
+        <button
+          type="button"
+          className="shrink-0 font-medium text-amber-900 underline-offset-2 hover:underline disabled:opacity-50"
+          onClick={() => onGenerate(false)}
+          disabled={busy || recording || !hasTranscript}
+        >
+          Maken
+        </button>
+      </div>
+    ) : null;
+
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h3
-          className="text-sm font-semibold text-gray-900"
-          title="Samenvatting van het gesprek. Dit leest de intake."
-        >
-          Verslag
-        </h3>
-        {moreMenu}
-      </div>
-
-      {looksLikeTranscript && notes.trim() ? (
-        <div className="inline-flex max-w-full items-center gap-2 self-start rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-900">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
-          <span className="truncate">Dit lijkt een transcript — maak eerst een verslag</span>
-          <button
-            type="button"
-            className="shrink-0 font-medium text-amber-900 underline-offset-2 hover:underline disabled:opacity-50"
-            onClick={() => onGenerate(false)}
-            disabled={busy || recording || !hasTranscript}
-          >
-            Maken
-          </button>
-        </div>
-      ) : null}
-
       {empty ? (
-        <div className="grid gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            className={CHOICE_CLASS}
-            onClick={() => onGenerate(false)}
-            disabled={busy || recording || !hasTranscript}
-            title={hasTranscript ? undefined : 'Er is nog geen transcript'}
+        <>
+          <h3
+            className="text-sm font-semibold text-gray-900"
+            title="Samenvatting van het gesprek. Dit leest de intake."
           >
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <Sparkles className="h-4 w-4 text-emerald-700" aria-hidden />
-              Maak verslag uit transcript
-            </span>
-            <span className="text-xs text-gray-500">
-              {hasTranscript ? 'AI schrijft de samenvatting' : 'Eerst een transcript nodig'}
-            </span>
-          </button>
+            Verslag
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              className={CHOICE_CLASS}
+              onClick={() => onGenerate(false)}
+              disabled={busy || recording || !hasTranscript}
+              title={hasTranscript ? undefined : 'Er is nog geen transcript'}
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
+                <Sparkles className="h-4 w-4 text-emerald-700" aria-hidden />
+                Maak verslag uit transcript
+              </span>
+              <span className="text-xs text-gray-500">
+                {hasTranscript ? 'AI schrijft de samenvatting' : 'Eerst een transcript nodig'}
+              </span>
+            </button>
 
-          <label className={cn(CHOICE_CLASS, (busy || recording) && 'pointer-events-none opacity-50')}>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <FileUp className="h-4 w-4 text-emerald-700" aria-hidden />
-              Bestand uploaden
-            </span>
-            <span className="text-xs text-gray-500">Bestaand verslag (.txt, .md, .docx)</span>
-            <input
-              type="file"
-              accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="sr-only"
-              disabled={busy || recording}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                event.target.value = '';
-                onUploadFile(file);
-              }}
-            />
-          </label>
+            <label className={cn(CHOICE_CLASS, (busy || recording) && 'pointer-events-none opacity-50')}>
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
+                <FileUp className="h-4 w-4 text-emerald-700" aria-hidden />
+                Bestand uploaden
+              </span>
+              <span className="text-xs text-gray-500">Bestaand verslag (.txt, .md, .docx)</span>
+              <input
+                type="file"
+                accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
+                disabled={busy || recording}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.target.value = '';
+                  onUploadFile(file);
+                }}
+              />
+            </label>
 
-          <button type="button" className={CHOICE_CLASS} onClick={onStartWriting} disabled={busy || recording}>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <Type className="h-4 w-4 text-emerald-700" aria-hidden />
-              Zelf schrijven
-            </span>
-            <span className="text-xs text-gray-500">Open de teksteditor</span>
-          </button>
-        </div>
+            <button type="button" className={CHOICE_CLASS} onClick={onStartWriting} disabled={busy || recording}>
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
+                <Type className="h-4 w-4 text-emerald-700" aria-hidden />
+                Zelf schrijven
+              </span>
+              <span className="text-xs text-gray-500">Open de teksteditor</span>
+            </button>
+          </div>
+        </>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <VerslagEditor
-            key={activeId ?? 'new'}
-            markdown={notes}
-            onChange={onNotesChange}
-            appearance="neutral"
-            delay={0}
-            stickyToolbar
-            toolbarEnd={toolbarEnd}
-            minHeightClassName="min-h-[320px]"
-            placeholder="Schrijf het verslag, of maak het uit het transcript."
-          />
-        </div>
+        <>
+          {warningChip}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <VerslagEditor
+              key={activeId ?? 'new'}
+              markdown={notes}
+              onChange={onNotesChange}
+              appearance="neutral"
+              delay={0}
+              stickyToolbar
+              toolbarStart={toolbarStart}
+              toolbarEnd={toolbarEnd}
+              minHeightClassName="min-h-[320px]"
+              placeholder="Schrijf het verslag, of maak het uit het transcript."
+            />
+          </div>
+        </>
       )}
     </section>
   );
