@@ -86,7 +86,8 @@ export function GesprekHeader({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* pr-10 clears the dialog close button (absolute right-4 top-4). */}
+      <div className="flex flex-wrap items-start justify-between gap-3 pr-10">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
