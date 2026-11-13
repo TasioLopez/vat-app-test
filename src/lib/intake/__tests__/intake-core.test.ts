@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { formatIntakeConflictField } from '@/lib/intake/conflict-labels';
 import {
   createEmptyIntakeData,
   ensureIntakeShape,
@@ -68,6 +69,21 @@ describe('intake schema', () => {
 
   it('layout key is intake_v1', () => {
     assert.equal(INTAKE_LAYOUT_KEY, 'intake_v1');
+  });
+
+  it('formats conflict fields with section and Dutch labels', () => {
+    assert.equal(
+      formatIntakeConflictField('s2.employer'),
+      '2. Persoonsgegevens — Werkgever/organisatie'
+    );
+    assert.equal(
+      formatIntakeConflictField('s6.fml_izp_lab_date'),
+      'Dossiergegevens — Datum FML/IZP'
+    );
+    assert.equal(
+      formatIntakeConflictField('s6.opbouwschema_aanwezig'),
+      '6. Re-integratie en houding — Opbouwschema aanwezig'
+    );
   });
 });
 

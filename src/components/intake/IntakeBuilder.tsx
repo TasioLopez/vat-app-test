@@ -38,6 +38,7 @@ import {
 } from '@/context/IntakeInstanceContext';
 import { IntakeSectionEditor } from '@/components/intake/IntakeSectionEditor';
 import { IntakeFillModal } from '@/components/intake/IntakeFillModal';
+import { formatIntakeConflictField } from '@/lib/intake/conflict-labels';
 import {
   INTAKE_DOSSIER_NAV,
   INTAKE_SECTION_DEFS,
@@ -476,7 +477,7 @@ function IntakeBuilderInner({
               <ul className="mt-1 list-disc pl-5">
                 {intakeData.meta.conflicts.map((c, i) => (
                   <li key={`${c.field}-${i}`}>
-                    <strong>{c.field}:</strong> {c.message}
+                    <strong>{formatIntakeConflictField(c.field)}:</strong> {c.message}
                   </li>
                 ))}
               </ul>
