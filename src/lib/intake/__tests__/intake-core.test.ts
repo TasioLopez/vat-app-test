@@ -26,10 +26,44 @@ import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
 describe('intake schema', () => {
   it('ensureIntakeShape fills defaults', () => {
     const shaped = ensureIntakeShape({});
-    assert.equal(shaped.meta.form_version, 'perfectview_v4');
+    assert.equal(shaped.meta.form_version, 'perfectview_v5');
     assert.equal(shaped.s2.current_job, '');
     assert.equal(shaped.s5.fml_beperkingen.werktijden, false);
     assert.deepEqual(shaped.s17.transport_types, []);
+    assert.equal(shaped.s8.tekst, '');
+    assert.equal(shaped.s12.tekst, '');
+  });
+
+  it('migrates legacy multi-field narrative sections into tekst', () => {
+    const shaped = ensureIntakeShape({
+      s8: {
+        woonplaats: 'Zaandam',
+        woonsituatie: 'Woont samen met partner.',
+        uitwonende_kinderen: 'Geen uitwonende kinderen.',
+      },
+      s12: {
+        hobbies: 'Sporten en kickboksen.',
+        leest_of_muziek: 'Lezen lukt minder goed.',
+        kan_uitvoeren: 'Sportschool niet iedere week.',
+        graag_oppakken: 'Mist zelf kickboksen.',
+      },
+    });
+    assert.match(shaped.s8.tekst, /Woont samen met partner/);
+    assert.match(shaped.s8.tekst, /Geen uitwonende kinderen/);
+    assert.match(shaped.s8.tekst, /Zaandam/);
+    assert.equal('woonplaats' in shaped.s8, false);
+    assert.match(shaped.s12.tekst, /Sporten en kickboksen/);
+    assert.match(shaped.s12.tekst, /Mist zelf kickboksen/);
+  });
+
+  it('prefers existing tekst over legacy fields', () => {
+    const shaped = ensureIntakeShape({
+      s9: {
+        tekst: 'Heeft goed contact met familie.',
+        contact_familie: 'Oude waarde',
+      },
+    });
+    assert.equal(shaped.s9.tekst, 'Heeft goed contact met familie.');
   });
 
   it('layout key is intake_v1', () => {

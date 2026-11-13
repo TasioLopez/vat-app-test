@@ -70,33 +70,15 @@ function formatWork(rows: IntakeWorkExperienceRow[]): string | null {
 
 function socialeSections(intake: IntakeData): string[] {
   return [
-    section('Sectie 8 Woonsituatie', [
-      field('Woonplaats', intake.s8.woonplaats),
-      field('Woonsituatie', intake.s8.woonsituatie),
-      field('Uitwonende kinderen', intake.s8.uitwonende_kinderen),
-    ]),
-    section('Sectie 9 Familie en sociaal netwerk', [
-      field('Contact familie', intake.s9.contact_familie),
-      field('Hoe vaak contact', intake.s9.hoe_vaak_contact),
-      field('Ondersteuning familie', intake.s9.ondersteuning_familie),
-      field('Mantelzorg', intake.s9.mantelzorg),
-    ]),
+    section('Sectie 8 Woonsituatie', [field('Notitie', intake.s8.tekst)]),
+    section('Sectie 9 Familie en sociaal netwerk', [field('Notitie', intake.s9.tekst)]),
     section('Sectie 10 Huishoudelijke taken en zorgtaken', [
-      field('Zelfstandig huishouden', intake.s10.zelfstandig_huishouden),
-      field('Hulp huishouden', intake.s10.hulp_huishouden),
-      field('Taken verdeeld', intake.s10.taken_verdeeld),
+      field('Notitie', intake.s10.tekst),
     ]),
     section('Sectie 11 Dagstructuur en energieverdeling', [
-      field('Gemiddelde dag', intake.s11.gemiddelde_dag),
-      field('Activiteiten buitenshuis', intake.s11.activiteiten_buitenshuis),
-      field('Energie en belastbaarheid', intake.s11.energie_belastbaarheid),
+      field('Notitie', intake.s11.tekst),
     ]),
-    section("Sectie 12 Vrije tijd en hobby's", [
-      field("Hobby's", intake.s12.hobbies),
-      field('Leest of muziek', intake.s12.leest_of_muziek),
-      field('Kan uitvoeren', intake.s12.kan_uitvoeren),
-      field('Graag oppakken', intake.s12.graag_oppakken),
-    ]),
+    section("Sectie 12 Vrije tijd en hobby's", [field('Notitie', intake.s12.tekst)]),
   ];
 }
 
@@ -184,9 +166,7 @@ export function intakeTextForVisieWerknemer(intake: IntakeData): string {
   return joinSections([
     reintegratieSection(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Hoe lang werkzaam', intake.s13.hoe_lang_werkzaam),
-      field('Verbonden met organisatie', intake.s13.verbonden_organisatie),
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
     section('Sectie 14 Houding ten opzichte van spoor 2', [
       field('Houding spoor 2', intake.s14.houding_spoor2),
@@ -209,7 +189,7 @@ export function intakeTextForPowMeter(intake: IntakeData): string {
     reintegratieSection(intake),
     ...socialeSections(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
     section('Sectie 14 Houding ten opzichte van spoor 2', [
       field('Houding spoor 2', intake.s14.houding_spoor2),
@@ -221,8 +201,7 @@ export function intakeTextForVisieLoopbaanadviseur(intake: IntakeData): string {
   return joinSections([
     ...profileSections(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Hoe lang werkzaam', intake.s13.hoe_lang_werkzaam),
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
     section('Sectie 16 Toekomstbeeld en voorkeuren', [
       field('Interesses en voorkeuren', intake.s16.interesses_voorkeuren),

@@ -3,7 +3,7 @@
 export const INTAKE_LAYOUT_KEY = 'intake_v1' as const;
 export type IntakeLayoutKey = typeof INTAKE_LAYOUT_KEY;
 
-export const INTAKE_FORM_VERSION = 'perfectview_v4' as const;
+export const INTAKE_FORM_VERSION = 'perfectview_v5' as const;
 
 export type IntakeConflict = {
   field: string;
@@ -110,42 +110,62 @@ export type IntakeSection7 = {
   functie_categorien: IntakeFunctieCategorie[];
 };
 
-export type IntakeSection8 = {
-  woonplaats: string;
-  woonsituatie: string;
-  uitwonende_kinderen: string;
+/** Single narrative field for social/visie sections 8–13. */
+export type IntakeNarrativeSection = {
+  tekst: string;
 };
 
-export type IntakeSection9 = {
-  contact_familie: string;
-  hoe_vaak_contact: string;
-  ondersteuning_familie: string;
-  mantelzorg: string;
-};
+export type IntakeSection8 = IntakeNarrativeSection;
+export type IntakeSection9 = IntakeNarrativeSection;
+export type IntakeSection10 = IntakeNarrativeSection;
+export type IntakeSection11 = IntakeNarrativeSection;
+export type IntakeSection12 = IntakeNarrativeSection;
+export type IntakeSection13 = IntakeNarrativeSection;
 
-export type IntakeSection10 = {
-  zelfstandig_huishouden: string;
-  hulp_huishouden: string;
-  taken_verdeeld: string;
-};
+/** Former sub-questions kept as coverage hints (UI + AI), not separate inputs. */
+export const INTAKE_NARRATIVE_ASPECTS = {
+  s8: [
+    'Woonsituatie werknemer',
+    'Zijn er uitwonende kinderen',
+  ],
+  s9: [
+    'Hoe is het contact met familieleden',
+    'Hoe vaak is er contact',
+    'Ondersteuning van familie/vrienden',
+    'Mantelzorg of wederzijdse hulp',
+  ],
+  s10: [
+    'Zelfstandig zorg voor het huishouden',
+    'Hulp van partner, familie en/of vrienden',
+    'Hoe worden de taken verdeeld',
+  ],
+  s11: [
+    'Hoe ziet een gemiddelde dag eruit',
+    'Activiteiten buitenshuis',
+    'Energie of belastbaarheid',
+  ],
+  s12: [
+    "Hobby's / ontspanningsvormen",
+    'Leest of luistert naar muziek',
+    'Kan werknemer deze nu uitvoeren',
+    'Activiteiten graag (weer) oppakken',
+  ],
+  s13: [
+    'Hoe lang werkzaam bij werkgever',
+    'Verbonden met de organisatie',
+    'Wens terug te keren in eigen functie',
+  ],
+} as const;
 
-export type IntakeSection11 = {
-  gemiddelde_dag: string;
-  activiteiten_buitenshuis: string;
-  energie_belastbaarheid: string;
-};
+export type IntakeNarrativeSectionKey = keyof typeof INTAKE_NARRATIVE_ASPECTS;
 
-export type IntakeSection12 = {
-  hobbies: string;
-  leest_of_muziek: string;
-  kan_uitvoeren: string;
-  graag_oppakken: string;
-};
-
-export type IntakeSection13 = {
-  hoe_lang_werkzaam: string;
-  verbonden_organisatie: string;
-  wens_terugkeer: string;
+const NARRATIVE_LEGACY_KEYS: Record<IntakeNarrativeSectionKey, readonly string[]> = {
+  s8: ['woonplaats', 'woonsituatie', 'uitwonende_kinderen'],
+  s9: ['contact_familie', 'hoe_vaak_contact', 'ondersteuning_familie', 'mantelzorg'],
+  s10: ['zelfstandig_huishouden', 'hulp_huishouden', 'taken_verdeeld'],
+  s11: ['gemiddelde_dag', 'activiteiten_buitenshuis', 'energie_belastbaarheid'],
+  s12: ['hobbies', 'leest_of_muziek', 'kan_uitvoeren', 'graag_oppakken'],
+  s13: ['hoe_lang_werkzaam', 'verbonden_organisatie', 'wens_terugkeer'],
 };
 
 export type IntakeSection14 = {
@@ -277,34 +297,12 @@ export function createEmptyIntakeData(): IntakeData {
       quote_passende_functies: '',
       functie_categorien: [],
     },
-    s8: { woonplaats: '', woonsituatie: '', uitwonende_kinderen: '' },
-    s9: {
-      contact_familie: '',
-      hoe_vaak_contact: '',
-      ondersteuning_familie: '',
-      mantelzorg: '',
-    },
-    s10: {
-      zelfstandig_huishouden: '',
-      hulp_huishouden: '',
-      taken_verdeeld: '',
-    },
-    s11: {
-      gemiddelde_dag: '',
-      activiteiten_buitenshuis: '',
-      energie_belastbaarheid: '',
-    },
-    s12: {
-      hobbies: '',
-      leest_of_muziek: '',
-      kan_uitvoeren: '',
-      graag_oppakken: '',
-    },
-    s13: {
-      hoe_lang_werkzaam: '',
-      verbonden_organisatie: '',
-      wens_terugkeer: '',
-    },
+    s8: { tekst: '' },
+    s9: { tekst: '' },
+    s10: { tekst: '' },
+    s11: { tekst: '' },
+    s12: { tekst: '' },
+    s13: { tekst: '' },
     s14: { houding_spoor2: '' },
     s16: {
       interesses_voorkeuren: '',
@@ -373,6 +371,23 @@ function mergeSection<T extends Record<string, unknown>>(
     }
   }
   return out;
+}
+
+/** Prefer `tekst`; otherwise join legacy multi-field values so old intakes keep content. */
+export function normalizeNarrativeSection(
+  raw: unknown,
+  legacyKeys: readonly string[]
+): IntakeNarrativeSection {
+  const src = asRecord(raw);
+  const existing = str(src.tekst).trim();
+  if (existing) return { tekst: existing };
+
+  const parts: string[] = [];
+  for (const key of legacyKeys) {
+    const value = str(src[key]).trim();
+    if (value) parts.push(value);
+  }
+  return { tekst: parts.join('\n\n') };
 }
 
 function normalizeEducationRows(raw: unknown): IntakeEducationRow[] {
@@ -473,12 +488,12 @@ export function ensureIntakeShape(raw: unknown): IntakeData {
       ...mergeSection(empty.s7 as unknown as Record<string, unknown>, src.s7),
       functie_categorien: normalizeFunctieCategorien(asRecord(src.s7).functie_categorien),
     } as IntakeSection7,
-    s8: mergeSection(empty.s8 as unknown as Record<string, unknown>, src.s8) as IntakeSection8,
-    s9: mergeSection(empty.s9 as unknown as Record<string, unknown>, src.s9) as IntakeSection9,
-    s10: mergeSection(empty.s10 as unknown as Record<string, unknown>, src.s10) as IntakeSection10,
-    s11: mergeSection(empty.s11 as unknown as Record<string, unknown>, src.s11) as IntakeSection11,
-    s12: mergeSection(empty.s12 as unknown as Record<string, unknown>, src.s12) as IntakeSection12,
-    s13: mergeSection(empty.s13 as unknown as Record<string, unknown>, src.s13) as IntakeSection13,
+    s8: normalizeNarrativeSection(src.s8, NARRATIVE_LEGACY_KEYS.s8),
+    s9: normalizeNarrativeSection(src.s9, NARRATIVE_LEGACY_KEYS.s9),
+    s10: normalizeNarrativeSection(src.s10, NARRATIVE_LEGACY_KEYS.s10),
+    s11: normalizeNarrativeSection(src.s11, NARRATIVE_LEGACY_KEYS.s11),
+    s12: normalizeNarrativeSection(src.s12, NARRATIVE_LEGACY_KEYS.s12),
+    s13: normalizeNarrativeSection(src.s13, NARRATIVE_LEGACY_KEYS.s13),
     s14: mergeSection(empty.s14 as unknown as Record<string, unknown>, src.s14) as IntakeSection14,
     s16: mergeSection(empty.s16 as unknown as Record<string, unknown>, src.s16) as IntakeSection16,
     s17: {

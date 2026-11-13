@@ -14,6 +14,7 @@ export function IntakeField({
   multiline,
   rows = 3,
   type = 'text',
+  hint,
 }: {
   label: string;
   value: string;
@@ -21,10 +22,12 @@ export function IntakeField({
   multiline?: boolean;
   rows?: number;
   type?: 'text' | 'date';
+  hint?: string;
 }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-sm font-medium text-gray-600">{label}</span>
+      {hint ? <span className="block text-xs text-gray-500">{hint}</span> : null}
       {multiline ? (
         <textarea
           className={TEXTAREA_CLASS}

@@ -222,63 +222,61 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
     s8: {
       type: 'object',
       properties: {
-        woonplaats: nullableString('Woonplaats'),
-        woonsituatie: nullableString('Woonsituatie'),
-        uitwonende_kinderen: nullableString('Uitwonende kinderen'),
+        tekst: nullableString(
+          'Eén samenhangende notitie over woonsituatie en uitwonende kinderen (aspecten weven in één tekst)'
+        ),
       },
-      required: ['woonplaats', 'woonsituatie', 'uitwonende_kinderen'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s9: {
       type: 'object',
       properties: {
-        contact_familie: nullableString('Contact familie'),
-        hoe_vaak_contact: nullableString('Hoe vaak'),
-        ondersteuning_familie: nullableString('Ondersteuning'),
-        mantelzorg: nullableString('Mantelzorg'),
+        tekst: nullableString(
+          'Eén notitie: contact familie, frequentie, ondersteuning, mantelzorg'
+        ),
       },
-      required: ['contact_familie', 'hoe_vaak_contact', 'ondersteuning_familie', 'mantelzorg'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s10: {
       type: 'object',
       properties: {
-        zelfstandig_huishouden: nullableString('Zelfstandig huishouden'),
-        hulp_huishouden: nullableString('Hulp'),
-        taken_verdeeld: nullableString('Taken verdeeld'),
+        tekst: nullableString(
+          'Eén notitie: zelfstandig huishouden, hulp, taakverdeling'
+        ),
       },
-      required: ['zelfstandig_huishouden', 'hulp_huishouden', 'taken_verdeeld'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s11: {
       type: 'object',
       properties: {
-        gemiddelde_dag: nullableString('Gemiddelde dag'),
-        activiteiten_buitenshuis: nullableString('Buitenshuis'),
-        energie_belastbaarheid: nullableString('Energie'),
+        tekst: nullableString(
+          'Eén notitie: gemiddelde dag, activiteiten buitenshuis, energie/belastbaarheid'
+        ),
       },
-      required: ['gemiddelde_dag', 'activiteiten_buitenshuis', 'energie_belastbaarheid'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s12: {
       type: 'object',
       properties: {
-        hobbies: nullableString("Hobby's"),
-        leest_of_muziek: nullableString('Leest/muziek'),
-        kan_uitvoeren: nullableString('Kan uitvoeren'),
-        graag_oppakken: nullableString('Oppakken'),
+        tekst: nullableString(
+          "Eén notitie: hobby's, lezen/muziek, kan uitvoeren, graag oppakken"
+        ),
       },
-      required: ['hobbies', 'leest_of_muziek', 'kan_uitvoeren', 'graag_oppakken'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s13: {
       type: 'object',
       properties: {
-        hoe_lang_werkzaam: nullableString('Hoe lang'),
-        verbonden_organisatie: nullableString('Verbonden'),
-        wens_terugkeer: nullableString('Terugkeer'),
+        tekst: nullableString(
+          'Eén notitie: hoe lang werkzaam, verbondenheid, wens terugkeer'
+        ),
       },
-      required: ['hoe_lang_werkzaam', 'verbonden_organisatie', 'wens_terugkeer'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s14: {

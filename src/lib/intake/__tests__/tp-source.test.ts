@@ -55,9 +55,9 @@ describe('validated intake TP source', () => {
 
   it('limits sociale achtergrond to social sections plus transport and language', () => {
     const data = createEmptyIntakeData();
-    data.s8.woonsituatie = 'Woont samen met partner.';
-    data.s11.energie_belastbaarheid = 'Energetische beperking.';
-    data.s13.wens_terugkeer = 'Wil terug in eigen werk.';
+    data.s8.tekst = 'Woont samen met partner.';
+    data.s11.tekst = 'Energetische beperking.';
+    data.s13.tekst = 'Wil terug in eigen werk.';
     data.s17.transport_types = ['fiets'];
     data.s17.dutch_speaking = 'G';
     data.s17.dutch_reading = 'Goed';
@@ -76,7 +76,7 @@ describe('validated intake TP source', () => {
     data.s6.actief_spoor1 = 'Ja, 8 uur';
     data.s6.ervaart_belastbaarheid = 'Beperkt belastbaar.';
     data.s14.houding_spoor2 = 'Staat open voor spoor 2.';
-    data.s8.woonplaats = 'Utrecht';
+    data.s8.tekst = 'Woont in Utrecht.';
 
     const text = intakeTextForVisieWerknemer(data);
     assert.match(text, /Ja, 8 uur/);
@@ -92,7 +92,7 @@ describe('validated intake TP source', () => {
     data.s17.opleidingen = [{ opleiding: 'Pabo', afgerond: 'ja' }];
     data.s17.has_pc = true;
     data.s17.computer_skills = '3';
-    data.s12.hobbies = 'Lezen';
+    data.s12.tekst = 'Lezen';
 
     const text = intakeTextForPersoonlijkProfiel(data);
     assert.match(text, /Docent LB/);
@@ -106,7 +106,7 @@ describe('validated intake TP source', () => {
   it('includes hours and daily activity for the POW-meter', () => {
     const data = createEmptyIntakeData();
     data.s6.uren_werkzaam = '12 uur';
-    data.s11.gemiddelde_dag = 'Ochtend rust, middag afspraken.';
+    data.s11.tekst = 'Ochtend rust, middag afspraken.';
     data.s14.houding_spoor2 = 'Wil meewerken.';
 
     const text = intakeTextForPowMeter(data);
@@ -120,7 +120,7 @@ describe('validated intake TP source', () => {
     data.s2.current_job = 'Operator';
     data.s17.work_experience = 'Productie en logistiek.';
     data.s16.interesses_voorkeuren = 'Administratief werk.';
-    data.s12.hobbies = 'Tuinieren';
+    data.s12.tekst = 'Tuinieren';
 
     const zoek = intakeTextForZoekprofiel(data);
     assert.match(zoek, /Operator/);

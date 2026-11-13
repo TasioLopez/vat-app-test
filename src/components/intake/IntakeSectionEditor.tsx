@@ -1,7 +1,7 @@
 'use client';
 
 import type { IntakeData, IntakeFmlBeperkingen, IntakeSectionKey } from '@/lib/intake/schema';
-import { INTAKE_SECTION_DEFS } from '@/lib/intake/schema';
+import { INTAKE_NARRATIVE_ASPECTS, INTAKE_SECTION_DEFS } from '@/lib/intake/schema';
 import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_OPTIONS,
@@ -49,39 +49,16 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
     { key: 'werktijden', label: 'Werktijden' },
   ];
 
+  const narrativeSectionTitles: Record<keyof typeof INTAKE_NARRATIVE_ASPECTS, string> = {
+    s8: 'Woonsituatie',
+    s9: 'Familie en sociaal netwerk',
+    s10: 'Huishoudelijke taken en zorgtaken',
+    s11: 'Dagstructuur en energieverdeling',
+    s12: "Vrije tijd en hobby's",
+    s13: 'Werkverleden en verbondenheid',
+  };
+
   const narrativeLabels: Partial<Record<IntakeSectionKey, Record<string, string>>> = {
-    s8: {
-      woonplaats: 'Woonplaats',
-      woonsituatie: 'Woonsituatie werknemer',
-      uitwonende_kinderen: 'Zijn er uitwonende kinderen',
-    },
-    s9: {
-      contact_familie: 'Hoe is het contact met familieleden',
-      hoe_vaak_contact: 'Hoe vaak is er contact',
-      ondersteuning_familie: 'Ondersteuning van familie/vrienden',
-      mantelzorg: 'Mantelzorg of wederzijdse hulp',
-    },
-    s10: {
-      zelfstandig_huishouden: 'Zelfstandig zorg voor het huishouden',
-      hulp_huishouden: 'Hulp van partner, familie en/of vrienden',
-      taken_verdeeld: 'Hoe worden de taken verdeeld',
-    },
-    s11: {
-      gemiddelde_dag: 'Hoe ziet een gemiddelde dag eruit',
-      activiteiten_buitenshuis: 'Activiteiten buitenshuis',
-      energie_belastbaarheid: 'Energie of belastbaarheid',
-    },
-    s12: {
-      hobbies: "Hobby's / ontspanningsvormen",
-      leest_of_muziek: 'Leest of luistert naar muziek',
-      kan_uitvoeren: 'Kan werknemer deze nu uitvoeren',
-      graag_oppakken: 'Activiteiten graag (weer) oppakken',
-    },
-    s13: {
-      hoe_lang_werkzaam: 'Hoe lang werkzaam bij werkgever',
-      verbonden_organisatie: 'Verbonden met de organisatie',
-      wens_terugkeer: 'Wens terug te keren in eigen functie',
-    },
     s14: {
       houding_spoor2: 'Houding t.o.v. deelname aan spoor 2',
     },
@@ -273,7 +250,21 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
       case 's10':
       case 's11':
       case 's12':
-      case 's13':
+      case 's13': {
+        const aspects = INTAKE_NARRATIVE_ASPECTS[sectionKey];
+        return (
+          <div className="grid gap-4">
+            <IntakeField
+              label={narrativeSectionTitles[sectionKey]}
+              hint={`Denk aan: ${aspects.join('; ')}`}
+              value={data[sectionKey].tekst || ''}
+              onChange={(v) => patch(sectionKey, { tekst: v }, { debounce: true })}
+              multiline
+              rows={8}
+            />
+          </div>
+        );
+      }
       case 's14':
       case 's16': {
         const section = data[sectionKey] as Record<string, string>;
