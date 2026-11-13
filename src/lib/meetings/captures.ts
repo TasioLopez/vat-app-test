@@ -1,8 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { MeetingCapture, NotesOrigin, TranscriptSource } from '@/lib/meetings/audio';
+import type {
+  MeetingCapture,
+  MeetingPurpose,
+  NotesOrigin,
+  TranscriptSource,
+} from '@/lib/meetings/audio';
 
 const CAPTURE_COLUMNS =
-  'id, employee_id, created_by, status, audio_path, transcript_text, transcript_original_text, transcript_source, notes_text, notes_origin, notes_document_id, consent_at, created_at, updated_at';
+  'id, employee_id, created_by, status, purpose, audio_path, transcript_text, transcript_original_text, transcript_source, notes_text, notes_origin, notes_document_id, consent_at, created_at, updated_at';
 
 type CaptureListResult = {
   data: MeetingCapture[] | null;
@@ -65,6 +70,7 @@ export async function insertMeetingCapture(
     employee_id: string;
     created_by: string;
     status: MeetingCapture['status'];
+    purpose?: MeetingPurpose;
     transcript_text?: string | null;
     transcript_original_text?: string | null;
     transcript_source?: TranscriptSource | null;
@@ -99,15 +105,17 @@ export async function updateMeetingCapture(
   return { data, error: null };
 }
 
-/** One published verslag per employee. Other accepted captures become drafts again. */
+/** One published verslag per purpose. Other accepted captures with that purpose become drafts. */
 export async function clearOtherPublishedCaptures(
   supabase: SupabaseClient,
   employeeId: string,
-  captureId: string
+  captureId: string,
+  purpose: MeetingPurpose
 ): Promise<{ error: string | null }> {
   const { error } = await table(supabase)
     .update({ status: 'notes_draft', notes_document_id: null })
     .eq('employee_id', employeeId)
+    .eq('purpose', purpose)
     .eq('status', 'accepted')
     .neq('id', captureId);
   return { error: error?.message ?? null };

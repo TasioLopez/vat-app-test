@@ -10,8 +10,12 @@ import { TranscriptPane } from '@/components/employee/gesprek/TranscriptPane';
 import { VerslagPane } from '@/components/employee/gesprek/VerslagPane';
 import {
   MEETING_AUDIO_MAX_BYTES,
+  documentTypeForPurpose,
   meetingAudioExtension,
+  normalizeMeetingPurpose,
+  publishLabelForPurpose,
   type MeetingCapture,
+  type MeetingPurpose,
   type NotesOrigin,
   type TranscriptSource,
 } from '@/lib/meetings/audio';
@@ -20,6 +24,7 @@ import {
   parseSpeakerTurns,
   serializeSpeakerTurns,
 } from '@/lib/meetings/transcript';
+import { acceptedStatusLabel } from '@/components/employee/gesprek/labels';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -27,8 +32,8 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentsChanged: () => void;
-  /** A gespreksverslag document already exists for this employee. */
-  hasPublishedVerslag?: boolean;
+  /** Document types already present for this employee (used for replace warnings). */
+  publishedDocumentTypes?: string[];
 };
 
 type ConfirmRequest = {
@@ -72,10 +77,11 @@ export default function GesprekPanel({
   open,
   onOpenChange,
   onDocumentsChanged,
-  hasPublishedVerslag = false,
+  publishedDocumentTypes = [],
 }: Props) {
   const [captures, setCaptures] = useState<MeetingCapture[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState<MeetingPurpose>('intake');
   const [transcript, setTranscript] = useState('');
   const [savedTranscript, setSavedTranscript] = useState('');
   const [originalTranscript, setOriginalTranscript] = useState('');
@@ -130,6 +136,7 @@ export default function GesprekPanel({
     captureIdRef.current = capture.id;
     activeCaptureRef.current = capture;
     setActiveId(capture.id);
+    setPurpose(normalizeMeetingPurpose(capture.purpose));
     setTranscript(nextTranscript);
     setSavedTranscript(nextTranscript);
     setOriginalTranscript(capture.transcript_original_text ?? '');
@@ -222,6 +229,7 @@ export default function GesprekPanel({
     captureIdRef.current = capture.id;
     activeCaptureRef.current = capture;
     setActiveId(capture.id);
+    setPurpose(normalizeMeetingPurpose(capture.purpose));
     setCaptures((prev) => {
       const exists = prev.some((item) => item.id === capture.id);
       if (!exists) return [capture, ...prev];
@@ -254,7 +262,12 @@ export default function GesprekPanel({
   async function persistTranscript(next: string, source?: TranscriptSource): Promise<MeetingCapture> {
     const text = next.trim();
     if (!text) throw new Error('Het transcript is leeg.');
-    const payload: Record<string, unknown> = { employeeId, transcriptText: text, consent };
+    const payload: Record<string, unknown> = {
+      employeeId,
+      transcriptText: text,
+      consent,
+      purpose,
+    };
     if (source) payload.transcriptSource = source;
     const captureId = captureIdRef.current;
     const res = await fetch(captureId ? `/api/meetings/captures/${captureId}` : '/api/meetings/captures', {
@@ -276,7 +289,13 @@ export default function GesprekPanel({
     const res = await fetch(captureId ? `/api/meetings/captures/${captureId}` : '/api/meetings/captures', {
       method: captureId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employeeId, notesText: text, notesOrigin: origin, consent }),
+      body: JSON.stringify({
+        employeeId,
+        notesText: text,
+        notesOrigin: origin,
+        consent,
+        purpose,
+      }),
     });
     const json = await readJson(res);
     if (!res.ok) throw new Error(String(json.error || 'Verslag opslaan mislukt'));
@@ -510,7 +529,7 @@ export default function GesprekPanel({
           const res = await fetch('/api/meetings/captures', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employeeId, consent: true }),
+            body: JSON.stringify({ employeeId, consent: true, purpose }),
           });
           const json = await readJson(res);
           if (!res.ok) throw new Error(String(json.error || 'Gesprek aanmaken mislukt'));
@@ -610,9 +629,12 @@ export default function GesprekPanel({
   }
 
   async function acceptNotes(replace: boolean) {
-    setBusy(replace ? 'Gespreksverslag vervangen…' : 'Gespreksverslag opslaan…');
+    setBusy(replace ? 'Bron vervangen…' : 'Bron opslaan…');
     setError(null);
     try {
+      if (!documentTypeForPurpose(purpose)) {
+        throw new Error('Overig publiceert geen bron. Bewaar als concept.');
+      }
       let captureId = captureIdRef.current;
       if (!captureId) {
         const created = await persistNotes(notes, notesOrigin ?? 'pasted');
@@ -627,21 +649,26 @@ export default function GesprekPanel({
           captureId,
           notesText: notes,
           notesOrigin: notesOrigin ?? 'pasted',
+          purpose,
           replace,
         }),
       });
       const json = await readJson(res);
       if (res.status === 409 && json.needsReplace === true) {
         setNeedsReplace(true);
-        setError(String(json.error || 'Er staat al een gespreksverslag.'));
+        setError(String(json.error || 'Er staat al een bron voor dit doel.'));
         return;
       }
       if (!res.ok) throw new Error(String(json.error || 'Opslaan mislukt'));
       const capture = json.capture as MeetingCapture;
+      const acceptedPurpose = normalizeMeetingPurpose(capture.purpose);
       setCaptures((prev) =>
         prev.map((item) => {
           if (item.id === capture.id) return capture;
-          if (item.status === 'accepted') {
+          if (
+            item.status === 'accepted' &&
+            normalizeMeetingPurpose(item.purpose) === acceptedPurpose
+          ) {
             return { ...item, status: 'notes_draft', notes_document_id: null };
           }
           return item;
@@ -662,7 +689,7 @@ export default function GesprekPanel({
       askConfirm({
         title: 'Dit lijkt een transcript',
         description:
-          'De intake verwacht een samenvatting. Wil je dit toch als bron gebruiken?',
+          'De bron verwacht een samenvatting. Wil je dit toch als bron gebruiken?',
         confirmLabel: 'Toch gebruiken',
         cancelLabel: 'Annuleren',
         variant: 'destructive',
@@ -671,6 +698,54 @@ export default function GesprekPanel({
       return;
     }
     run();
+  }
+
+  async function changePurpose(next: MeetingPurpose) {
+    if (next === purpose) return;
+    const captureId = captureIdRef.current;
+    const applyLocal = () => setPurpose(next);
+
+    if (!captureId) {
+      applyLocal();
+      return;
+    }
+
+    const run = async () => {
+      setBusy('Doel bijwerken…');
+      setError(null);
+      try {
+        const res = await fetch(`/api/meetings/captures/${captureId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employeeId, purpose: next }),
+        });
+        const json = await readJson(res);
+        if (!res.ok) throw new Error(String(json.error || 'Doel opslaan mislukt'));
+        const capture = json.capture as MeetingCapture;
+        storeCapture(capture);
+        setNeedsReplace(false);
+        if (activeCaptureRef.current?.status === 'accepted' || capture.status === 'notes_draft') {
+          onDocumentsChanged();
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Doel opslaan mislukt');
+      } finally {
+        setBusy(null);
+      }
+    };
+
+    if (activeCaptureRef.current?.status === 'accepted') {
+      askConfirm({
+        title: 'Doel wijzigen?',
+        description:
+          'Dit gesprek is al een bron. Bij wijzigen van het doel wordt die bronstatus opgeheven.',
+        confirmLabel: 'Doel wijzigen',
+        variant: 'destructive',
+        onConfirm: () => void run(),
+      });
+      return;
+    }
+    void run();
   }
 
   async function removeCapture() {
@@ -688,6 +763,7 @@ export default function GesprekPanel({
       captureIdRef.current = null;
       activeCaptureRef.current = null;
       setActiveId(null);
+      setPurpose('intake');
       setTranscript('');
       setSavedTranscript('');
       setOriginalTranscript('');
@@ -715,6 +791,7 @@ export default function GesprekPanel({
       captureIdRef.current = null;
       activeCaptureRef.current = null;
       setActiveId(null);
+      setPurpose('intake');
       setTranscript('');
       setSavedTranscript('');
       setOriginalTranscript('');
@@ -747,19 +824,36 @@ export default function GesprekPanel({
   }
 
   const activeCapture = captures.find((item) => item.id === activeId) ?? null;
-  const otherPublished = captures.some((item) => item.status === 'accepted' && item.id !== activeId);
+  const otherPublishedSamePurpose = captures.some(
+    (item) =>
+      item.status === 'accepted' &&
+      item.id !== activeId &&
+      normalizeMeetingPurpose(item.purpose) === purpose
+  );
+  const publishedDocType = documentTypeForPurpose(purpose);
+  const hasPublishedDocForPurpose = Boolean(
+    publishedDocType &&
+      publishedDocumentTypes.some(
+        (type) => type.toLowerCase().trim() === publishedDocType
+      )
+  );
   const isAccepted = activeCapture?.status === 'accepted';
+  const publishLabel = publishLabelForPurpose(purpose);
+  const acceptedLabel = acceptedStatusLabel(purpose);
 
-  let statusLine = 'Concept. De intake gebruikt dit nog niet.';
+  let statusLine = 'Concept';
   let statusTone: 'neutral' | 'success' | 'warning' = 'neutral';
   if (dirty) {
-    statusLine = 'Wijzigingen nog niet bewaard.';
+    statusLine = 'Wijzigingen nog niet bewaard';
     statusTone = 'warning';
   } else if (isAccepted) {
-    statusLine = 'Dit is de bron die de intake gebruikt.';
+    statusLine = acceptedLabel;
     statusTone = 'success';
-  } else if (hasPublishedVerslag || otherPublished) {
-    statusLine = 'Concept. Er staat al een bron. Bewaren vervangt die.';
+  } else if (purpose === 'overig') {
+    statusLine = 'Concept · geen bron';
+    statusTone = 'neutral';
+  } else if (hasPublishedDocForPurpose || otherPublishedSamePurpose) {
+    statusLine = 'Concept · bestaande bron wordt vervangen';
     statusTone = 'warning';
   }
 
@@ -774,6 +868,7 @@ export default function GesprekPanel({
         captures={captures}
         activeId={activeId}
         activeCapture={activeCapture}
+        purpose={purpose}
         pane={pane}
         sideBySide={sideBySide}
         hasTranscript={hasTranscript}
@@ -792,6 +887,7 @@ export default function GesprekPanel({
             onConfirm: () => void removeCapture(),
           })
         }
+        onPurposeChange={(next) => void changePurpose(next)}
         onPaneChange={setPane}
         onSideBySideChange={changeSideBySide}
       />
@@ -873,6 +969,8 @@ export default function GesprekPanel({
         dirty={dirty}
         isAccepted={Boolean(isAccepted)}
         canPublish={Boolean(notes.trim())}
+        publishLabel={publishLabel}
+        acceptedLabel={acceptedLabel}
         busy={Boolean(busy)}
         recording={recording}
         needsReplace={needsReplace}

@@ -33,7 +33,12 @@ type Props<TDoc extends SourceDocument> = {
 /** Labels that are too long for a half-width cell; the full label stays in the tooltip and menu. */
 const SHORT_LABELS: Partial<Record<EmployeeDocType, string>> = {
   spreek_reportage: 'Spreekuur',
+  gespreksverslag_vgr: 'Gesprek VGR',
 };
+
+function isGesprekSourceType(type: EmployeeDocType): boolean {
+  return type === 'gespreksverslag' || type === 'gespreksverslag_vgr';
+}
 
 const CELL_CLASS =
   'group flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40';
@@ -79,14 +84,14 @@ export function SourcesCard<TDoc extends SourceDocument>({
           const fullLabel = EMPLOYEE_DOC_LABELS[type];
           const label = SHORT_LABELS[type] ?? fullLabel;
 
-          if (type === 'gespreksverslag') {
+          if (isGesprekSourceType(type)) {
             return (
               <li key={type} className="min-w-0">
                 <button
                   type="button"
                   onClick={onOpenGesprek}
                   className={CELL_CLASS}
-                  title={doc ? 'Gesprek: notities bewaard' : 'Gesprek: transcript en notities'}
+                  title={doc ? `${fullLabel}: bron bewaard` : `${fullLabel}: transcript en notities`}
                 >
                   <StatusDot uploaded={Boolean(doc)} />
                   <span className={cn('min-w-0 flex-1 truncate', doc ? 'text-gray-900' : 'text-gray-500')}>

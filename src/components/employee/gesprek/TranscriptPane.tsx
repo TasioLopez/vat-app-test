@@ -84,9 +84,9 @@ export function TranscriptPane({
   const order = useMemo(() => (turns ? speakerOrder(turns) : []), [turns]);
 
   const actions = !empty && !recording ? (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+    <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-end gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
       {chip ? (
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
+        <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 backdrop-blur-sm">
           {chip}
         </span>
       ) : null}
@@ -154,12 +154,14 @@ export function TranscriptPane({
   ) : null;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">Transcript</h3>
-          <p className="text-xs text-gray-600">Wat er letterlijk is gezegd. De intake leest dit niet.</p>
-        </div>
+    <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h3
+          className="text-sm font-semibold text-gray-900"
+          title="Wat er letterlijk is gezegd. De intake leest dit niet."
+        >
+          Transcript
+        </h3>
         {actions}
       </div>
 
@@ -232,10 +234,10 @@ export function TranscriptPane({
           </button>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto pt-2">
           {editing ? (
             turns ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {turns.map((turn, index) => {
                   const right = order.indexOf(turn.speaker) % 2 === 1;
                   return (
@@ -245,7 +247,7 @@ export function TranscriptPane({
                     >
                       <div
                         className={cn(
-                          'w-full max-w-[min(100%,42rem)] rounded-lg bg-white p-3 ring-1 ring-gray-200',
+                          'w-[90%] rounded-lg bg-white px-2.5 py-2 ring-1 ring-gray-200',
                           right && 'text-right'
                         )}
                       >
@@ -257,7 +259,7 @@ export function TranscriptPane({
                           aria-label={turn.speaker}
                           onChange={(event) => onTurnChange(index, event.target.value)}
                           className={cn(
-                            'w-full resize-y rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-900',
+                            'w-full resize-y rounded-md border border-gray-200 px-2 py-1.5 text-[15px] leading-6 text-gray-900',
                             right && 'text-right'
                           )}
                         />
@@ -271,14 +273,14 @@ export function TranscriptPane({
                 id="gesprek-transcript"
                 value={transcript}
                 onChange={(event) => onTranscriptChange(event.target.value)}
-                className="min-h-[320px] w-full bg-white"
+                className="min-h-[320px] w-full bg-white text-[15px] leading-6"
                 placeholder="Plak het transcript hier."
                 disabled={recording}
                 aria-label="Transcript"
               />
             )
           ) : turns ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {turns.map((turn, index) => {
                 const right = order.indexOf(turn.speaker) % 2 === 1;
                 return (
@@ -288,14 +290,14 @@ export function TranscriptPane({
                   >
                     <div
                       className={cn(
-                        'max-w-[min(100%,42rem)] rounded-2xl px-3.5 py-2.5',
+                        'w-[90%] rounded-2xl px-3 py-2',
                         right
                           ? 'bg-emerald-50 text-right ring-1 ring-emerald-100'
                           : 'bg-white ring-1 ring-gray-200'
                       )}
                     >
                       <p className="mb-0.5 text-xs font-semibold text-emerald-800">{turn.speaker}</p>
-                      <p className="whitespace-pre-wrap text-sm leading-6 text-gray-900">{turn.text}</p>
+                      <p className="whitespace-pre-wrap text-[15px] leading-6 text-gray-900">{turn.text}</p>
                     </div>
                   </div>
                 );
@@ -303,7 +305,7 @@ export function TranscriptPane({
             </div>
           ) : (
             <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-              <p className="whitespace-pre-wrap text-sm leading-6 text-gray-900">{transcript}</p>
+              <p className="whitespace-pre-wrap text-[15px] leading-6 text-gray-900">{transcript}</p>
             </div>
           )}
         </div>

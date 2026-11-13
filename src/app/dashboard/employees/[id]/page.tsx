@@ -1500,9 +1500,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     employeeId={employeeId}
                     open={gesprekOpen}
                     onOpenChange={setGesprekOpen}
-                    hasPublishedVerslag={documents.some(
-                        (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
-                    )}
+                    publishedDocumentTypes={documents
+                        .map((d) => d.type)
+                        .filter((type): type is string => Boolean(type))}
                     onDocumentsChanged={() => {
                         void fetchDocuments();
                     }}

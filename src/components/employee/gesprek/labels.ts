@@ -1,15 +1,28 @@
 import type {
   MeetingCaptureStatus,
+  MeetingPurpose,
   NotesOrigin,
   TranscriptSource,
 } from '@/lib/meetings/audio';
+import { MEETING_PURPOSE_LABELS } from '@/lib/meetings/audio';
 
 export const STATUS_LABEL: Record<MeetingCaptureStatus, string> = {
   recorded: 'Opname',
   transcribed: 'Transcript',
   notes_draft: 'Concept',
-  accepted: 'Bron voor intake',
+  accepted: 'Bron',
 };
+
+export function purposeLabel(purpose: MeetingPurpose | null | undefined): string {
+  if (!purpose) return MEETING_PURPOSE_LABELS.intake;
+  return MEETING_PURPOSE_LABELS[purpose] ?? MEETING_PURPOSE_LABELS.intake;
+}
+
+export function acceptedStatusLabel(purpose: MeetingPurpose | null | undefined): string {
+  if (purpose === 'vgr') return 'Bron voor VGR';
+  if (purpose === 'overig') return 'Concept';
+  return 'Bron voor intake';
+}
 
 export function sourceLabel(source: TranscriptSource | null): string | null {
   if (source === 'upload') return 'Geüpload';

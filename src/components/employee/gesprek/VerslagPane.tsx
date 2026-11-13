@@ -61,27 +61,8 @@ export function VerslagPane({
   const empty = !notes.trim() && !writing;
   const chip = originLabel(notesOrigin);
 
-  const actions = !empty ? (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-      {chip ? (
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-          {chip}
-        </span>
-      ) : null}
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => onGenerate(false)}
-        disabled={busy || recording || !hasTranscript}
-      >
-        <Sparkles className="mr-2 h-3.5 w-3.5" aria-hidden />
-        Opnieuw maken uit transcript
-      </Button>
-      {needsGenerateReplace ? (
-        <Button type="button" variant="destructive" size="sm" onClick={() => onGenerate(true)} disabled={busy}>
-          Vervang en maak verslag
-        </Button>
-      ) : null}
+  const moreMenu = !empty ? (
+    <div className="flex shrink-0 items-center gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button type="button" size="sm" variant="ghost" disabled={busy || recording} aria-label="Meer acties">
@@ -89,6 +70,11 @@ export function VerslagPane({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {chip ? (
+            <DropdownMenuItem disabled className="text-xs text-gray-500">
+              Herkomst: {chip}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem asChild>
             <label className="cursor-pointer">
               Vervangen door bestand
@@ -108,39 +94,60 @@ export function VerslagPane({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  ) : chip ? (
-    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-      {chip}
-    </span>
   ) : null;
 
+  const toolbarEnd = (
+    <div className="flex flex-wrap items-center gap-1">
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-7 px-2 text-xs"
+        onClick={() => onGenerate(false)}
+        disabled={busy || recording || !hasTranscript}
+      >
+        <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        Opnieuw maken uit transcript
+      </Button>
+      {needsGenerateReplace ? (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => onGenerate(true)}
+          disabled={busy}
+        >
+          Vervang en maak verslag
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">Verslag</h3>
-          <p className="text-xs text-gray-600">Samenvatting van het gesprek. Dit leest de intake.</p>
-        </div>
-        {actions}
+    <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h3
+          className="text-sm font-semibold text-gray-900"
+          title="Samenvatting van het gesprek. Dit leest de intake."
+        >
+          Verslag
+        </h3>
+        {moreMenu}
       </div>
 
       {looksLikeTranscript && notes.trim() ? (
-        <div className="flex flex-wrap items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-amber-900">Dit lijkt een transcript</p>
-            <p className="text-xs text-amber-800">
-              De intake verwacht een samenvatting. Maak eerst een verslag uit het transcript.
-            </p>
-          </div>
-          <Button
+        <div className="inline-flex max-w-full items-center gap-2 self-start rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-900">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
+          <span className="truncate">Dit lijkt een transcript — maak eerst een verslag</span>
+          <button
             type="button"
-            size="sm"
+            className="shrink-0 font-medium text-amber-900 underline-offset-2 hover:underline disabled:opacity-50"
             onClick={() => onGenerate(false)}
             disabled={busy || recording || !hasTranscript}
           >
-            Maak verslag uit transcript
-          </Button>
+            Maken
+          </button>
         </div>
       ) : null}
 
@@ -197,6 +204,8 @@ export function VerslagPane({
             onChange={onNotesChange}
             appearance="neutral"
             delay={0}
+            stickyToolbar
+            toolbarEnd={toolbarEnd}
             minHeightClassName="min-h-[320px]"
             placeholder="Schrijf het verslag, of maak het uit het transcript."
           />

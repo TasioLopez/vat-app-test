@@ -17,11 +17,40 @@ export type TranscriptSource = (typeof TRANSCRIPT_SOURCES)[number];
 export const NOTES_ORIGINS = ['generated', 'pasted', 'uploaded'] as const;
 export type NotesOrigin = (typeof NOTES_ORIGINS)[number];
 
+export const MEETING_PURPOSES = ['intake', 'vgr', 'overig'] as const;
+export type MeetingPurpose = (typeof MEETING_PURPOSES)[number];
+
+export const MEETING_PURPOSE_LABELS: Record<MeetingPurpose, string> = {
+  intake: 'Intake',
+  vgr: 'VGR',
+  overig: 'Overig',
+};
+
+/** Published document type for a purpose that can become a bron. */
+export function documentTypeForPurpose(purpose: MeetingPurpose): string | null {
+  if (purpose === 'intake') return 'gespreksverslag';
+  if (purpose === 'vgr') return 'gespreksverslag_vgr';
+  return null;
+}
+
+export function publishLabelForPurpose(purpose: MeetingPurpose): string | null {
+  if (purpose === 'intake') return 'Gebruik als bron voor intake';
+  if (purpose === 'vgr') return 'Gebruik als bron voor VGR';
+  return null;
+}
+
+export function bronStepLabelForPurpose(purpose: MeetingPurpose): string {
+  if (purpose === 'vgr') return 'Bron VGR';
+  if (purpose === 'overig') return 'Bron';
+  return 'Bron intake';
+}
+
 export type MeetingCapture = {
   id: string;
   employee_id: string;
   created_by: string | null;
   status: MeetingCaptureStatus;
+  purpose: MeetingPurpose;
   audio_path: string | null;
   transcript_text: string | null;
   transcript_original_text: string | null;
@@ -40,6 +69,14 @@ export function isTranscriptSource(value: unknown): value is TranscriptSource {
 
 export function isNotesOrigin(value: unknown): value is NotesOrigin {
   return typeof value === 'string' && (NOTES_ORIGINS as readonly string[]).includes(value);
+}
+
+export function isMeetingPurpose(value: unknown): value is MeetingPurpose {
+  return typeof value === 'string' && (MEETING_PURPOSES as readonly string[]).includes(value);
+}
+
+export function normalizeMeetingPurpose(value: unknown): MeetingPurpose {
+  return isMeetingPurpose(value) ? value : 'intake';
 }
 
 export function isMeetingAudioExt(value: string): value is MeetingAudioExt {

@@ -28,7 +28,8 @@ describe('isGespreksverslagDocType', () => {
     assert.equal(isGespreksverslagDocType('gespreksverslag'), true);
   });
 
-  it('does not match intake, AD, or spreekuur types', () => {
+  it('does not match VGR gesprek or other dossier types', () => {
+    assert.equal(isGespreksverslagDocType('gespreksverslag_vgr'), false);
     assert.equal(isGespreksverslagDocType('intakeformulier'), false);
     assert.equal(isGespreksverslagDocType('ad_rapportage'), false);
     assert.equal(isGespreksverslagDocType('spreek_reportage'), false);
@@ -36,12 +37,14 @@ describe('isGespreksverslagDocType', () => {
 });
 
 describe('visibleEmployeeDocTypes', () => {
-  it('hides gespreksverslag outside staging and shows it on staging', () => {
+  it('hides gesprek slots outside staging and shows them on staging', () => {
     const prev = process.env.NEXT_PUBLIC_APP_ENV;
     process.env.NEXT_PUBLIC_APP_ENV = 'production';
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), false);
+    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), false);
     process.env.NEXT_PUBLIC_APP_ENV = 'staging';
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);
+    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), true);
     process.env.NEXT_PUBLIC_APP_ENV = prev;
   });
 

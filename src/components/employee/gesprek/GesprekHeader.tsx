@@ -9,9 +9,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { MeetingCapture } from '@/lib/meetings/audio';
+import {
+  MEETING_PURPOSE_LABELS,
+  MEETING_PURPOSES,
+  bronStepLabelForPurpose,
+  type MeetingCapture,
+  type MeetingPurpose,
+} from '@/lib/meetings/audio';
 import { cn } from '@/lib/utils';
-import { formatCaptureDate, sourceLabel, STATUS_LABEL } from '@/components/employee/gesprek/labels';
+import {
+  acceptedStatusLabel,
+  formatCaptureDate,
+  purposeLabel,
+  sourceLabel,
+  STATUS_LABEL,
+} from '@/components/employee/gesprek/labels';
 
 export type GesprekPane = 'transcript' | 'verslag';
 
@@ -19,6 +31,7 @@ type Props = {
   captures: MeetingCapture[];
   activeId: string | null;
   activeCapture: MeetingCapture | null;
+  purpose: MeetingPurpose;
   pane: GesprekPane;
   sideBySide: boolean;
   hasTranscript: boolean;
@@ -29,6 +42,7 @@ type Props = {
   onSelectCapture: (capture: MeetingCapture) => void;
   onNew: () => void;
   onDelete: () => void;
+  onPurposeChange: (purpose: MeetingPurpose) => void;
   onPaneChange: (pane: GesprekPane) => void;
   onSideBySideChange: (value: boolean) => void;
 };
@@ -67,6 +81,7 @@ export function GesprekHeader({
   captures,
   activeId,
   activeCapture,
+  purpose,
   pane,
   sideBySide,
   hasTranscript,
@@ -77,6 +92,7 @@ export function GesprekHeader({
   onSelectCapture,
   onNew,
   onDelete,
+  onPurposeChange,
   onPaneChange,
   onSideBySideChange,
 }: Props) {
@@ -105,7 +121,7 @@ export function GesprekHeader({
                 <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuContent align="start" className="w-72">
               <DropdownMenuLabel>Gesprekken</DropdownMenuLabel>
               <DropdownMenuItem
                 onSelect={onNew}
@@ -116,6 +132,10 @@ export function GesprekHeader({
               {captures.length > 0 ? <DropdownMenuSeparator /> : null}
               {captures.map((capture) => {
                 const source = sourceLabel(capture.transcript_source);
+                const status =
+                  capture.status === 'accepted'
+                    ? acceptedStatusLabel(capture.purpose)
+                    : STATUS_LABEL[capture.status];
                 return (
                   <DropdownMenuItem
                     key={capture.id}
@@ -125,9 +145,14 @@ export function GesprekHeader({
                       capture.id === activeId && 'bg-emerald-50 text-emerald-800'
                     )}
                   >
-                    <span className="font-medium">{formatCaptureDate(capture.created_at)}</span>
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="font-medium">{formatCaptureDate(capture.created_at)}</span>
+                      <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                        {purposeLabel(capture.purpose)}
+                      </span>
+                    </span>
                     <span className="text-[11px] text-gray-500">
-                      {STATUS_LABEL[capture.status]}
+                      {status}
                       {source ? ` · ${source}` : ''}
                     </span>
                   </DropdownMenuItem>
@@ -147,6 +172,23 @@ export function GesprekHeader({
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <label className="inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <span className="sr-only">Doel</span>
+            <select
+              value={purpose}
+              disabled={busy || recording}
+              onChange={(event) => onPurposeChange(event.target.value as MeetingPurpose)}
+              className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 disabled:opacity-50"
+              aria-label="Doel van dit gesprek"
+            >
+              {MEETING_PURPOSES.map((value) => (
+                <option key={value} value={value}>
+                  {MEETING_PURPOSE_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
@@ -158,7 +200,7 @@ export function GesprekHeader({
           <span className="text-gray-300" aria-hidden>
             –
           </span>
-          <Step index={3} label="Bron intake" done={isAccepted} />
+          <Step index={3} label={bronStepLabelForPurpose(purpose)} done={isAccepted} />
         </div>
       </div>
 

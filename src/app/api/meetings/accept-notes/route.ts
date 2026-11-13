@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
-import { isNotesOrigin } from '@/lib/meetings/audio';
+import {
+  documentTypeForPurpose,
+  isNotesOrigin,
+  normalizeMeetingPurpose,
+} from '@/lib/meetings/audio';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import { clearOtherPublishedCaptures, getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import { saveGespreksverslagDocument } from '@/lib/meetings/save-document';
@@ -26,16 +30,25 @@ export async function POST(req: NextRequest) {
   if (existing.error) return NextResponse.json({ error: existing.error }, { status: 500 });
   if (!existing.data) return NextResponse.json({ error: 'Gesprek niet gevonden' }, { status: 404 });
 
+  const purpose = normalizeMeetingPurpose(body?.purpose ?? existing.data.purpose);
+  if (!documentTypeForPurpose(purpose)) {
+    return NextResponse.json(
+      { error: 'Overig publiceert geen bron. Bewaar als concept.' },
+      { status: 400 }
+    );
+  }
+
   const saved = await saveGespreksverslagDocument({
     supabase: access.supabase,
     employeeId,
     notesText,
     replace,
+    purpose,
   });
   if (!saved.ok && 'needsReplace' in saved) {
     return NextResponse.json(
       {
-        error: 'Er staat al een gespreksverslag. Vervang het expliciet.',
+        error: 'Er staat al een bron voor dit doel. Vervang het expliciet.',
         needsReplace: true,
       },
       { status: 409 }
@@ -51,13 +64,14 @@ export async function POST(req: NextRequest) {
     notes_text: notesText.trim(),
     notes_origin: notesOrigin,
     notes_document_id: saved.documentId,
+    purpose,
     status: 'accepted',
   });
   if (updated.error || !updated.data) {
     return NextResponse.json({ error: updated.error || 'Verslag koppelen mislukt' }, { status: 500 });
   }
 
-  const cleared = await clearOtherPublishedCaptures(access.supabase, employeeId, captureId);
+  const cleared = await clearOtherPublishedCaptures(access.supabase, employeeId, captureId, purpose);
   if (cleared.error) {
     return NextResponse.json({ error: cleared.error }, { status: 500 });
   }

@@ -3,6 +3,7 @@ import { isAuthError, isUuid } from '@/lib/auth/api-auth';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import {
   applyTranscriptWrite,
+  isMeetingPurpose,
   isNotesOrigin,
   isTranscriptSource,
   restoreTranscriptText,
@@ -63,6 +64,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
   if (body?.consent === true && !existing.data.consent_at) {
     patch.consent_at = new Date().toISOString();
+  }
+  if (isMeetingPurpose(body?.purpose) && body.purpose !== existing.data.purpose) {
+    patch.purpose = body.purpose;
+    if (existing.data.status === 'accepted') {
+      patch.status = 'notes_draft';
+      patch.notes_document_id = null;
+    }
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Niets om op te slaan' }, { status: 400 });

@@ -9,6 +9,8 @@ type Props = {
   dirty: boolean;
   isAccepted: boolean;
   canPublish: boolean;
+  publishLabel: string | null;
+  acceptedLabel: string;
   busy: boolean;
   recording: boolean;
   onSaveDraft: () => void;
@@ -23,6 +25,8 @@ export function GesprekFooter({
   dirty,
   isAccepted,
   canPublish,
+  publishLabel,
+  acceptedLabel,
   busy,
   recording,
   onSaveDraft,
@@ -31,6 +35,7 @@ export function GesprekFooter({
   needsReplace = false,
 }: Props) {
   const showAccepted = isAccepted && !dirty && !needsReplace;
+  const showPublish = Boolean(publishLabel);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3">
@@ -71,18 +76,18 @@ export function GesprekFooter({
           </Button>
         ) : showAccepted ? (
           <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
-            Dit is de bron voor de intake
+            {acceptedLabel}
           </span>
-        ) : (
+        ) : showPublish ? (
           <Button
             type="button"
             size="sm"
             onClick={onPublish}
             disabled={busy || recording || !canPublish}
           >
-            Gebruik als bron voor intake
+            {publishLabel}
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );

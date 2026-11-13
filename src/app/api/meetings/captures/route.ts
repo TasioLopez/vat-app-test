@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError } from '@/lib/auth/api-auth';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
-import { isNotesOrigin, isTranscriptSource } from '@/lib/meetings/audio';
+import { isMeetingPurpose, isNotesOrigin, isTranscriptSource } from '@/lib/meetings/audio';
 import { insertMeetingCapture, listMeetingCaptures } from '@/lib/meetings/captures';
 
 export const runtime = 'nodejs';
@@ -39,11 +39,13 @@ export async function POST(req: NextRequest) {
       ? 'paste'
       : null;
   const notesOrigin = isNotesOrigin(body?.notesOrigin) ? body.notesOrigin : notes ? 'pasted' : null;
+  const purpose = isMeetingPurpose(body?.purpose) ? body.purpose : 'intake';
 
   const { data, error } = await insertMeetingCapture(access.supabase, {
     employee_id: employeeId,
     created_by: access.user.id,
     status: notes ? 'notes_draft' : transcript ? 'transcribed' : 'recorded',
+    purpose,
     transcript_text: transcript || null,
     transcript_original_text: transcript || null,
     transcript_source: transcriptSource,

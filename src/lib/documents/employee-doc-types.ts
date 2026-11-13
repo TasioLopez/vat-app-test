@@ -6,6 +6,7 @@ export const EMPLOYEE_DOC_TYPES = [
   'cv',
   'spreek_reportage',
   'gespreksverslag',
+  'gespreksverslag_vgr',
   'extra',
 ] as const;
 
@@ -19,13 +20,19 @@ export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   cv: 'CV',
   spreek_reportage: 'Spreekuurrapportage',
   gespreksverslag: 'Gesprek',
+  gespreksverslag_vgr: 'Gesprek VGR',
   extra: 'Overig',
 };
 
-/** Staging shows the gespreksverslag slot. Production keeps the previous list. */
+const STAGING_ONLY_DOC_TYPES = new Set<EmployeeDocType>([
+  'gespreksverslag',
+  'gespreksverslag_vgr',
+]);
+
+/** Staging shows gesprek bron slots. Production keeps the previous list. */
 export function visibleEmployeeDocTypes(): EmployeeDocType[] {
   if (process.env.NEXT_PUBLIC_APP_ENV === 'staging') return [...EMPLOYEE_DOC_TYPES];
-  return EMPLOYEE_DOC_TYPES.filter((type) => type !== 'gespreksverslag');
+  return EMPLOYEE_DOC_TYPES.filter((type) => !STAGING_ONLY_DOC_TYPES.has(type));
 }
 
 export function getEmployeeDocLabel(type: string): string {
@@ -37,9 +44,15 @@ export function isReservedEmployeeDocType(type: string | null | undefined): bool
   return EMPLOYEE_DOC_TYPES.some((docType) => docType === normalized);
 }
 
+/** Intake bron only — not the VGR gesprek document. */
 export function isGespreksverslagDocType(type: string | null | undefined): boolean {
   const normalized = (type || '').toLowerCase().trim();
-  return normalized === 'gespreksverslag' || normalized.includes('gespreksverslag');
+  return normalized === 'gespreksverslag';
+}
+
+export function isGespreksverslagVgrDocType(type: string | null | undefined): boolean {
+  const normalized = (type || '').toLowerCase().trim();
+  return normalized === 'gespreksverslag_vgr';
 }
 
 export function isSpreekReportageDocType(type: string | null | undefined): boolean {
