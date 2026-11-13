@@ -26,7 +26,14 @@ const components: Components = {
     <h3 className="mb-1.5 mt-2 text-[12px] font-bold leading-tight text-green-800 first:mt-0">{children}</h3>
   ),
   ul: ({ children }) => <ul className="my-1 list-disc pl-5 text-[12px] text-neutral-900">{children}</ul>,
-  ol: ({ children }) => <ol className="my-1 list-decimal pl-5 text-[12px] text-neutral-900">{children}</ol>,
+  ol: ({ children, start }) => (
+    <ol
+      start={typeof start === 'number' ? start : undefined}
+      className="my-1 list-decimal pl-5 text-[12px] text-neutral-900"
+    >
+      {children}
+    </ol>
+  ),
   li: ({ children }) => <li className="my-0 leading-relaxed">{children}</li>,
   a: ({ href, children, ...rest }) =>
     href ? (
@@ -52,21 +59,29 @@ const components: Components = {
   ),
 };
 
+export type MarkdownQuoteMarks = 'both' | 'open' | 'none' | 'close';
+
 export function Basis2026MarkdownBody({
   markdown,
   withInlineQuotes = false,
+  quoteMarks = 'both',
 }: {
   markdown: string;
   withInlineQuotes?: boolean;
+  /** With `withInlineQuotes`, `open` drops the closing mark and `close` drops the opening mark. */
+  quoteMarks?: MarkdownQuoteMarks;
 }) {
   const forDocument = useTPDocumentRender();
   const md = forDocument ? protectDutchDatesInText(markdown) : markdown;
+  const showQuotes = withInlineQuotes && quoteMarks !== 'none';
 
   return (
     <div
       className={cn(
         'tp-body-prose max-w-none text-neutral-900',
-        withInlineQuotes && 'markdown-inline-quotes'
+        showQuotes && 'markdown-inline-quotes',
+        showQuotes && quoteMarks === 'open' && 'markdown-inline-quotes-open',
+        showQuotes && quoteMarks === 'close' && 'markdown-inline-quotes-close'
       )}
     >
       <ReactMarkdown rehypePlugins={[[rehypeSanitize, basisSanitizeSchema]]} components={components}>

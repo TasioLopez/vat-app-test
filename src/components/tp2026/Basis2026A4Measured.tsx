@@ -37,6 +37,12 @@ import { InleidingSubBlock } from '@/components/tp/InleidingSubBlock';
 import { AdviesPassendeArbeidBlock } from '@/components/tp/AdviesPassendeArbeidBlock';
 import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
 import { ADVIES_NB_NO_REPORT, isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
+import {
+  expandAdAdviesByFunctie,
+  mergeAdAdviesFragments,
+  splitAdAdviesInsideCitaat,
+  type AdAdviesQuoteMarks,
+} from '@/lib/tp/ad-advies/split-for-pagination';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { PerspectiefOpWerkBlock } from '@/components/tp/PerspectiefOpWerkBlock';
 import { PowInschalingTable } from '@/components/tp/PowInschalingTable';
@@ -98,6 +104,8 @@ export type BasisAtom =
       md: string;
       showSectionTitle: boolean;
       variant: BasisTextVariant;
+      /** Set when an advies quote is split across pages. Absent means the whole quote. */
+      quoteMarks?: AdAdviesQuoteMarks;
     }
   | {
       id: string;
@@ -391,9 +399,37 @@ function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {
   });
 }
 
+function replaceAtomWithAdviesFragments(
+  atoms: BasisAtom[],
+  idx: number,
+  fragments: { md: string; quoteMarks: AdAdviesQuoteMarks }[]
+): BasisAtom[] | null {
+  const atom = atoms[idx];
+  if (!atom || atom.kind !== 'text' || fragments.length < 2) return null;
+  return [
+    ...atoms.slice(0, idx),
+    ...fragments.map((frag, i) => ({
+      ...atom,
+      id: `${atom.id}-${i}`,
+      md: frag.md,
+      showSectionTitle: i === 0 ? atom.showSectionTitle : false,
+      variant: 'adAdvies' as const,
+      quoteMarks: frag.quoteMarks,
+    })),
+    ...atoms.slice(idx + 1),
+  ];
+}
+
 function trySplitAtom(atoms: BasisAtom[], idx: number): BasisAtom[] | null {
   const atom = atoms[idx];
   if (!atom) return null;
+
+  if (atom.kind === 'text' && atom.variant === 'adAdvies') {
+    const byFunctie = expandAdAdviesByFunctie(atom.md, atom.quoteMarks);
+    const fragments = byFunctie ?? splitAdAdviesInsideCitaat(atom.md, atom.quoteMarks);
+    if (!fragments) return null;
+    return replaceAtomWithAdviesFragments(atoms, idx, fragments);
+  }
 
   if (atom.kind === 'text') {
     if (
@@ -544,12 +580,14 @@ function TextBlockBody({
   fieldKey,
   adReportConcept = false,
   isEx = false,
+  quoteMarks,
 }: {
   variant: BasisTextVariant;
   markdown: string;
   fieldKey: string;
   adReportConcept?: boolean;
   isEx?: boolean;
+  quoteMarks?: AdAdviesQuoteMarks;
 }) {
   const trimmed = String(markdown || '').trim();
   const docTrimmed = useDocumentText(trimmed);
@@ -580,7 +618,13 @@ function TextBlockBody({
   }
 
   if (variant === 'adAdvies') {
-    return <AdviesPassendeArbeidBlock text={trimmed} adReportConcept={adReportConcept} />;
+    return (
+      <AdviesPassendeArbeidBlock
+        text={trimmed}
+        adReportConcept={adReportConcept}
+        quoteMarks={quoteMarks}
+      />
+    );
   }
 
   if (variant === 'powInschaling') {
@@ -656,6 +700,7 @@ function TextAtomPreview({
           fieldKey={atom.key}
           adReportConcept={adReportConcept}
           isEx={isEx}
+          quoteMarks={atom.quoteMarks}
         />
       </div>
     </div>
@@ -703,6 +748,18 @@ function mergeSectionAtomsOnPage(atoms: BasisAtom[]): BasisAtom[] {
       prev.key === atom.key &&
       !atom.showSectionTitle
     ) {
+      if (prev.variant === 'adAdvies' && atom.variant === 'adAdvies') {
+        const merged = mergeAdAdviesFragments(
+          { md: prev.md, quoteMarks: prev.quoteMarks },
+          { md: atom.md, quoteMarks: atom.quoteMarks }
+        );
+        out[out.length - 1] = {
+          ...prev,
+          md: merged.md,
+          quoteMarks: merged.quoteMarks,
+        };
+        continue;
+      }
       out[out.length - 1] = {
         ...prev,
         md: `${prev.md.trim()}\n\n${atom.md.trim()}`.trim(),
