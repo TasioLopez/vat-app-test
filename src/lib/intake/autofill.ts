@@ -4,6 +4,7 @@ import { isStagingEnv } from '@/lib/auth/staging-only';
 import { importIntakeFromPdf } from '@/lib/intake/import-from-pdf';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
 import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
+import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 
 export type AutofillIntakeResult = {
@@ -38,7 +39,7 @@ export async function autofillIntakeFromDocuments(params: {
       try {
         const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
         if (!dossier.error) {
-          const data = ensureIntakeShape(dossier.data);
+          const data = normalizeIntakeControlledFields(ensureIntakeShape(dossier.data));
           data.meta.generation_notes = [
             'Intake gegenereerd vanuit dossierdocumenten (geen intakeformulier).',
             ...data.meta.generation_notes,
@@ -107,7 +108,7 @@ export async function autofillIntakeFromDocuments(params: {
   }
 
   return {
-    data: ensureIntakeShape(data),
+    data: normalizeIntakeControlledFields(ensureIntakeShape(data)),
     sourceDocumentId: imported.sourceDocumentId,
     warning,
     gapFilled,

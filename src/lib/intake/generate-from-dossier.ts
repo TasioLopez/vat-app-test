@@ -4,6 +4,7 @@ import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/lib/intake/generate-prompt';
+import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
 import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { isDossierSourceType } from '@/lib/intake/sources';
@@ -330,20 +331,30 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
             additionalProperties: false,
           },
         },
-        education_level: nullableString('Hoogste opleiding'),
+        education_level: nullableString(
+          'Hoogste opleiding: exact HBO, WO, MBO 1-4, HAVO, VWO, VMBO, … (niet Hbo)'
+        ),
         education_name: nullableString('Richting'),
         work_experience: nullableString('Functietitels komma'),
         has_pc: boolField('PC/laptop'),
         has_smartphone: boolField('Smartphone'),
         has_tablet: boolField('Tablet'),
-        computer_skills: nullableString('Computerniveau'),
-        computer_skills_extra: nullableString('Extra programma’s'),
+        computer_skills: nullableString('Alleen "1"-"5"; programma\'s in computer_skills_extra'),
+        computer_skills_extra: nullableString('Extra programma’s (bijv. Word, Excel)'),
         typing_skills: nullableString('Typvaardigheid'),
-        drivers_license_types: { type: 'array', items: { type: 'string' } },
-        transport_types: { type: 'array', items: { type: 'string' } },
-        dutch_speaking: nullableString('NL spreken'),
-        dutch_writing: nullableString('NL schrijven'),
-        dutch_reading: nullableString('NL lezen'),
+        drivers_license_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Alleen B, Code 95, BE, … bij expliciete vermelding; niet uit Auto afleiden',
+        },
+        transport_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Alleen Auto, Fiets, OV, Lopend',
+        },
+        dutch_speaking: nullableString('Goed|Voldoende|Matig|Geen of null'),
+        dutch_writing: nullableString('Goed|Voldoende|Matig|Geen of null'),
+        dutch_reading: nullableString('Goed|Voldoende|Matig|Geen of null'),
         other_languages: nullableString('Andere talen'),
       },
       required: [
@@ -476,7 +487,7 @@ export async function generateIntakeFromDossier(params: {
     parse: (r) => r as Record<string, unknown>,
   });
 
-  const shaped = ensureIntakeShape(raw);
+  const shaped = normalizeIntakeControlledFields(ensureIntakeShape(raw));
   shaped.meta.generation_notes = [
     ...shaped.meta.generation_notes,
     ...notes.map((n) => `Bron: ${n}`),

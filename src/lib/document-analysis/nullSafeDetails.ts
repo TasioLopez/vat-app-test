@@ -47,7 +47,8 @@ function isPresent(value: unknown): boolean {
   return true;
 }
 
-function normalizeDutchLevel(value: unknown): string | undefined {
+/** Map raw Dutch skill strings (incl. G/R/O) to Goed|Voldoende|Matig|Geen. */
+export function normalizeDutchLevel(value: unknown): string | undefined {
   if (value == null) return undefined;
   const s = String(value).trim();
   const lower = s.toLowerCase();
