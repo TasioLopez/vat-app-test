@@ -6,7 +6,12 @@ import {
   restoreTranscriptText,
   transcribeReplaceDecision,
 } from '@/lib/meetings/audio';
-import { meetingImportKind, parseSpeakerTurns, serializeSpeakerTurns } from '@/lib/meetings/transcript';
+import {
+  looksLikeTranscript,
+  meetingImportKind,
+  parseSpeakerTurns,
+  serializeSpeakerTurns,
+} from '@/lib/meetings/transcript';
 
 describe('parseSpeakerTurns', () => {
   it('splits speaker and spreker lines and keeps continuations', () => {
@@ -14,6 +19,14 @@ describe('parseSpeakerTurns', () => {
     assert.deepEqual(turns, [
       { speaker: 'Speaker 1', text: 'Hallo' },
       { speaker: 'Spreker 2', text: 'Hoi\nvervolg' },
+    ]);
+  });
+
+  it('skips a leading Transcript label before the first speaker', () => {
+    const turns = parseSpeakerTurns('Transcript:\nSpeaker 1: Hallo\n\nSpeaker 2: Hoi');
+    assert.deepEqual(turns, [
+      { speaker: 'Speaker 1', text: 'Hallo' },
+      { speaker: 'Speaker 2', text: 'Hoi' },
     ]);
   });
 
@@ -29,6 +42,25 @@ describe('parseSpeakerTurns', () => {
     assert.ok(turns);
     assert.equal(serializeSpeakerTurns(turns), source);
     assert.deepEqual(parseSpeakerTurns(serializeSpeakerTurns(turns)), turns);
+  });
+});
+
+describe('looksLikeTranscript', () => {
+  it('detects text that is mostly speaker lines', () => {
+    assert.equal(
+      looksLikeTranscript(
+        'Transcript:\nSpeaker 1: a\nSpeaker 2: b\nSpeaker 1: c\nSpeaker 2: d'
+      ),
+      true
+    );
+    assert.equal(
+      looksLikeTranscript('Speaker 1: a\nSpeaker 2: b\nSpeaker 1: c'),
+      false
+    );
+    assert.equal(
+      looksLikeTranscript('## Aanleiding\nDe werknemer werkt bij Ihub.\n\n## Wensen\nLogistiek.'),
+      false
+    );
   });
 });
 

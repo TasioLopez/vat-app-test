@@ -1,65 +1,46 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { ArrowLeft, FileUp, Loader2, Mic, RotateCcw, Square, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { GesprekFooter } from '@/components/employee/gesprek/GesprekFooter';
+import { GesprekHeader, type GesprekPane } from '@/components/employee/gesprek/GesprekHeader';
+import { TranscriptPane } from '@/components/employee/gesprek/TranscriptPane';
+import { VerslagPane } from '@/components/employee/gesprek/VerslagPane';
 import {
   MEETING_AUDIO_MAX_BYTES,
   meetingAudioExtension,
   type MeetingCapture,
-  type MeetingCaptureStatus,
   type NotesOrigin,
   type TranscriptSource,
 } from '@/lib/meetings/audio';
-import { parseSpeakerTurns, serializeSpeakerTurns } from '@/lib/meetings/transcript';
-
-const VerslagEditor = dynamic(
-  () =>
-    import('@/components/tp2026/Basis2026MarkdownFieldEditor').then((mod) => mod.Basis2026MarkdownFieldEditor),
-  {
-    ssr: false,
-    loading: () => <div className="min-h-[280px] rounded-md border border-gray-200 bg-white" />,
-  }
-);
+import {
+  looksLikeTranscript,
+  parseSpeakerTurns,
+  serializeSpeakerTurns,
+} from '@/lib/meetings/transcript';
+import { cn } from '@/lib/utils';
 
 type Props = {
   employeeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentsChanged: () => void;
-  /** Render inside the Bronnen dialog instead of a second window. */
-  embedded?: boolean;
-  onBack?: () => void;
   /** A gespreksverslag document already exists for this employee. */
   hasPublishedVerslag?: boolean;
-  onDirtyChange?: (dirty: boolean) => void;
 };
 
-type Pane = 'transcript' | 'verslag';
-
-const STATUS_LABEL: Record<MeetingCaptureStatus, string> = {
-  recorded: 'Opname',
-  transcribed: 'Transcript',
-  notes_draft: 'Concept',
-  accepted: 'Bron voor intake',
+type ConfirmRequest = {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'default' | 'destructive';
+  onConfirm: () => void | Promise<void>;
 };
 
-function sourceLabel(source: TranscriptSource | null): string | null {
-  if (source === 'upload') return 'Geüpload';
-  if (source === 'paste') return 'Geplakt';
-  if (source === 'recording') return 'Opname';
-  return null;
-}
-
-function originLabel(origin: NotesOrigin | null): string | null {
-  if (origin === 'generated') return 'Gemaakt uit transcript';
-  if (origin === 'pasted') return 'Zelf geschreven';
-  if (origin === 'uploaded') return 'Zelf aangeleverd';
-  return null;
-}
+const SIDE_BY_SIDE_KEY = 'gesprek.sideBySide';
 
 function pickRecorderMime(): string {
   if (typeof MediaRecorder === 'undefined') return '';
@@ -77,15 +58,21 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
   }
 }
 
+function readSideBySide(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(SIDE_BY_SIDE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export default function GesprekPanel({
   employeeId,
   open,
   onOpenChange,
   onDocumentsChanged,
-  embedded = false,
-  onBack,
   hasPublishedVerslag = false,
-  onDirtyChange,
 }: Props) {
   const [captures, setCaptures] = useState<MeetingCapture[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -98,12 +85,19 @@ export default function GesprekPanel({
   const [notesOrigin, setNotesOrigin] = useState<NotesOrigin | null>(null);
   const [consent, setConsent] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsReplace, setNeedsReplace] = useState(false);
   const [needsGenerateReplace, setNeedsGenerateReplace] = useState(false);
   const [forcePlain, setForcePlain] = useState(false);
-  const [pane, setPane] = useState<Pane>('transcript');
+  const [pane, setPane] = useState<GesprekPane>('transcript');
+  const [sideBySide, setSideBySide] = useState(false);
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  const [forceTranscriptEditor, setForceTranscriptEditor] = useState(false);
+  const [writingVerslag, setWritingVerslag] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -112,12 +106,23 @@ export default function GesprekPanel({
   const activeCaptureRef = useRef<MeetingCapture | null>(null);
   const mimeRef = useRef('');
   const replaceTranscriptRef = useRef(false);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   const dirty = transcript !== savedTranscript || notes !== savedNotes;
-  const turns = useMemo(() => (forcePlain ? null : parseSpeakerTurns(transcript)), [forcePlain, transcript]);
-  const transcriptChip = sourceLabel(transcriptSource);
-  const verslagChip = originLabel(notesOrigin);
-  const canRestore = Boolean(originalTranscript.trim()) && originalTranscript.trim() !== transcript.trim();
+  const turns = useMemo(
+    () => (forcePlain ? null : parseSpeakerTurns(transcript)),
+    [forcePlain, transcript]
+  );
+  const canParseTurns = Boolean(parseSpeakerTurns(transcript));
+  const canRestore =
+    Boolean(originalTranscript.trim()) && originalTranscript.trim() !== transcript.trim();
+  const notesLookLikeTranscript = useMemo(() => looksLikeTranscript(notes), [notes]);
+  const hasTranscript = Boolean(transcript.trim() || savedTranscript.trim());
+  const hasVerslag = Boolean(notes.trim() || savedNotes.trim());
+
+  const askConfirm = useCallback((request: ConfirmRequest) => {
+    setConfirm(request);
+  }, []);
 
   const applyCapture = useCallback((capture: MeetingCapture, switchPane = true) => {
     const nextTranscript = capture.transcript_text ?? '';
@@ -135,6 +140,9 @@ export default function GesprekPanel({
     setConsent(Boolean(capture.consent_at));
     setNeedsReplace(false);
     setNeedsGenerateReplace(false);
+    setEditingTranscript(false);
+    setForceTranscriptEditor(false);
+    setWritingVerslag(false);
     if (switchPane) {
       setForcePlain(false);
       setPane(nextNotes.trim() ? 'verslag' : 'transcript');
@@ -153,6 +161,7 @@ export default function GesprekPanel({
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setSideBySide(readSideBySide());
     void load()
       .then((list) => {
         if (!captureIdRef.current && list[0]) applyCapture(list[0]);
@@ -163,23 +172,50 @@ export default function GesprekPanel({
   }, [open, load, applyCapture]);
 
   useEffect(() => {
-    onDirtyChange?.(dirty);
-  }, [dirty, onDirtyChange]);
-
-  useEffect(() => {
-    return () => onDirtyChange?.(false);
-  }, [onDirtyChange]);
-
-  useEffect(() => {
     return () => {
       recorderRef.current?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
-  function guardDirty(): boolean {
-    if (transcript === savedTranscript && notes === savedNotes) return true;
-    return window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch doorgaan?');
+  useEffect(() => {
+    if (!recording) {
+      setRecordingSeconds(0);
+      recordingStartedAtRef.current = null;
+      return;
+    }
+    recordingStartedAtRef.current = Date.now();
+    setRecordingSeconds(0);
+    const timer = window.setInterval(() => {
+      const started = recordingStartedAtRef.current;
+      if (!started) return;
+      setRecordingSeconds(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [recording]);
+
+  function changeSideBySide(value: boolean) {
+    setSideBySide(value);
+    try {
+      localStorage.setItem(SIDE_BY_SIDE_KEY, value ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function guardDirty(onProceed: () => void) {
+    if (!dirty) {
+      onProceed();
+      return;
+    }
+    askConfirm({
+      title: 'Niet-opgeslagen wijzigingen',
+      description: 'Er zijn niet-opgeslagen wijzigingen. Toch doorgaan?',
+      confirmLabel: 'Doorgaan',
+      cancelLabel: 'Blijven',
+      variant: 'destructive',
+      onConfirm: onProceed,
+    });
   }
 
   function storeCapture(capture: MeetingCapture) {
@@ -201,6 +237,7 @@ export default function GesprekPanel({
     setOriginalTranscript(capture.transcript_original_text ?? '');
     setTranscriptSource(capture.transcript_source);
     setConsent(Boolean(capture.consent_at));
+    setForceTranscriptEditor(false);
   }
 
   function adoptNotes(capture: MeetingCapture) {
@@ -211,6 +248,7 @@ export default function GesprekPanel({
     setNotesOrigin(capture.notes_origin);
     setNeedsReplace(false);
     setNeedsGenerateReplace(false);
+    setWritingVerslag(false);
   }
 
   async function persistTranscript(next: string, source?: TranscriptSource): Promise<MeetingCapture> {
@@ -271,17 +309,15 @@ export default function GesprekPanel({
     return text;
   }
 
-  async function uploadTranscriptFile(file: File | null) {
-    if (!file) return;
-    if (transcript.trim() && !window.confirm('Het huidige transcript wordt vervangen. Het origineel blijft bewaard. Doorgaan?')) {
-      return;
-    }
+  async function runUploadTranscript(file: File) {
     setBusy('Transcript lezen…');
     setError(null);
     try {
       const text = await importFile(file);
       setTranscript(text);
       setForcePlain(false);
+      setEditingTranscript(false);
+      setForceTranscriptEditor(false);
       await persistTranscript(text, 'upload');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload mislukt');
@@ -290,15 +326,29 @@ export default function GesprekPanel({
     }
   }
 
-  async function uploadNotesFile(file: File | null) {
+  function uploadTranscriptFile(file: File | null) {
     if (!file) return;
-    if (notes.trim() && !window.confirm('Het huidige verslag wordt vervangen. Doorgaan?')) return;
+    if (transcript.trim()) {
+      askConfirm({
+        title: 'Transcript vervangen?',
+        description: 'Het huidige transcript wordt vervangen. Het origineel blijft bewaard.',
+        confirmLabel: 'Vervangen',
+        variant: 'destructive',
+        onConfirm: () => void runUploadTranscript(file),
+      });
+      return;
+    }
+    void runUploadTranscript(file);
+  }
+
+  async function runUploadNotes(file: File) {
     setBusy('Verslag lezen…');
     setError(null);
     try {
       const text = await importFile(file);
       setNotes(text);
       setNotesOrigin('uploaded');
+      setWritingVerslag(false);
       setPane('verslag');
       await persistNotes(text, 'uploaded');
     } catch (e) {
@@ -308,23 +358,33 @@ export default function GesprekPanel({
     }
   }
 
-  async function saveTranscript() {
-    setBusy('Transcript opslaan…');
-    setError(null);
-    try {
-      await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Opslaan mislukt');
-    } finally {
-      setBusy(null);
+  function uploadNotesFile(file: File | null) {
+    if (!file) return;
+    if (notes.trim()) {
+      askConfirm({
+        title: 'Verslag vervangen?',
+        description: 'Het huidige verslag wordt vervangen.',
+        confirmLabel: 'Vervangen',
+        variant: 'destructive',
+        onConfirm: () => void runUploadNotes(file),
+      });
+      return;
     }
+    void runUploadNotes(file);
   }
 
-  async function saveNotesDraft() {
+  async function saveDraft() {
     setBusy('Concept opslaan…');
     setError(null);
     try {
-      await persistNotes(notes, notesOrigin ?? 'pasted');
+      if (transcript !== savedTranscript) {
+        if (!transcript.trim()) throw new Error('Het transcript is leeg.');
+        await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
+      }
+      if (notes !== savedNotes) {
+        if (!notes.trim()) throw new Error('Het verslag is leeg.');
+        await persistNotes(notes, notesOrigin ?? 'pasted');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Opslaan mislukt');
     } finally {
@@ -346,6 +406,7 @@ export default function GesprekPanel({
       const json = await readJson(res);
       if (!res.ok) throw new Error(String(json.error || 'Herstellen mislukt'));
       adoptTranscript(json.capture as MeetingCapture);
+      setEditingTranscript(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Herstellen mislukt');
     } finally {
@@ -414,6 +475,9 @@ export default function GesprekPanel({
         throw new Error(String(transcribeJson.error || 'Transcriberen mislukt'));
       }
       adoptTranscript(transcribeJson.capture as MeetingCapture);
+      setEditingTranscript(false);
+      setForceTranscriptEditor(false);
+      setPane('transcript');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Transcriberen mislukt');
     } finally {
@@ -435,49 +499,62 @@ export default function GesprekPanel({
       setError('Deze browser kan geen microfoon opnemen. Plak het transcript.');
       return;
     }
+
+    const begin = async () => {
+      replaceTranscriptRef.current = Boolean(transcript.trim() || savedTranscript.trim());
+      try {
+        let capture = activeCaptureRef.current;
+        if (transcript.trim()) {
+          capture = await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
+        } else if (!captureIdRef.current) {
+          const res = await fetch('/api/meetings/captures', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employeeId, consent: true }),
+          });
+          const json = await readJson(res);
+          if (!res.ok) throw new Error(String(json.error || 'Gesprek aanmaken mislukt'));
+          capture = json.capture as MeetingCapture;
+          storeCapture(capture);
+          setConsent(true);
+        }
+        if (!capture) throw new Error('Geen gesprek voor deze opname.');
+        await ensureConsent(capture);
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        const mime = pickRecorderMime();
+        mimeRef.current = mime;
+        const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        chunksRef.current = [];
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) chunksRef.current.push(event.data);
+        };
+        recorder.onstop = () => {
+          void finishRecording(recorder.mimeType || mimeRef.current);
+        };
+        recorderRef.current = recorder;
+        recorder.start();
+        setRecording(true);
+        setPane('transcript');
+      } catch (e) {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        setError(e instanceof Error ? e.message : 'Opname starten mislukt');
+      }
+    };
+
     const hasTranscript = Boolean(transcript.trim() || savedTranscript.trim());
-    if (hasTranscript && !window.confirm('De opname vervangt het huidige transcript. Het origineel blijft bewaard. Doorgaan?')) {
+    if (hasTranscript) {
+      askConfirm({
+        title: 'Transcript vervangen door opname?',
+        description: 'De opname vervangt het huidige transcript. Het origineel blijft bewaard.',
+        confirmLabel: 'Opnemen',
+        variant: 'destructive',
+        onConfirm: () => void begin(),
+      });
       return;
     }
-    replaceTranscriptRef.current = hasTranscript;
-    try {
-      let capture = activeCaptureRef.current;
-      if (transcript.trim()) {
-        capture = await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
-      } else if (!captureIdRef.current) {
-        const res = await fetch('/api/meetings/captures', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId, consent: true }),
-        });
-        const json = await readJson(res);
-        if (!res.ok) throw new Error(String(json.error || 'Gesprek aanmaken mislukt'));
-        capture = json.capture as MeetingCapture;
-        storeCapture(capture);
-        setConsent(true);
-      }
-      if (!capture) throw new Error('Geen gesprek voor deze opname.');
-      await ensureConsent(capture);
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mime = pickRecorderMime();
-      mimeRef.current = mime;
-      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      chunksRef.current = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-      recorder.onstop = () => {
-        void finishRecording(recorder.mimeType || mimeRef.current);
-      };
-      recorderRef.current = recorder;
-      recorder.start();
-      setRecording(true);
-    } catch (e) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      setError(e instanceof Error ? e.message : 'Opname starten mislukt');
-    }
+    void begin();
   }
 
   function stopRecording() {
@@ -487,38 +564,49 @@ export default function GesprekPanel({
 
   async function generateNotes(replace = false) {
     const handWritten = (notesOrigin === 'pasted' || notesOrigin === 'uploaded') && Boolean(notes.trim());
-    if (handWritten && !replace && !window.confirm('Dit verslag is zelf aangeleverd. Het wordt vervangen door een verslag uit het transcript. Doorgaan?')) {
+    const run = async () => {
+      setBusy('Gespreksverslag maken…');
+      setError(null);
+      setNeedsGenerateReplace(false);
+      try {
+        if (!transcript.trim()) throw new Error('Er is nog geen transcript.');
+        const saved = await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
+        const res = await fetch('/api/meetings/generate-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId,
+            captureId: saved.id,
+            replace: replace || handWritten,
+          }),
+        });
+        const json = await readJson(res);
+        if (res.status === 409 && json.needsReplace === true) {
+          setNeedsGenerateReplace(true);
+          setError(String(json.error || 'Dit verslag is zelf aangeleverd.'));
+          return;
+        }
+        if (!res.ok) throw new Error(String(json.error || 'Verslag maken mislukt'));
+        adoptNotes(json.capture as MeetingCapture);
+        setPane('verslag');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Verslag maken mislukt');
+      } finally {
+        setBusy(null);
+      }
+    };
+
+    if (handWritten && !replace) {
+      askConfirm({
+        title: 'Verslag vervangen?',
+        description: 'Dit verslag is zelf aangeleverd. Het wordt vervangen door een verslag uit het transcript.',
+        confirmLabel: 'Vervangen',
+        variant: 'destructive',
+        onConfirm: () => void run(),
+      });
       return;
     }
-    setBusy('Gespreksverslag maken…');
-    setError(null);
-    setNeedsGenerateReplace(false);
-    try {
-      if (!transcript.trim()) throw new Error('Er is nog geen transcript.');
-      const saved = await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
-      const res = await fetch('/api/meetings/generate-notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          captureId: saved.id,
-          replace: replace || handWritten,
-        }),
-      });
-      const json = await readJson(res);
-      if (res.status === 409 && json.needsReplace === true) {
-        setNeedsGenerateReplace(true);
-        setError(String(json.error || 'Dit verslag is zelf aangeleverd.'));
-        return;
-      }
-      if (!res.ok) throw new Error(String(json.error || 'Verslag maken mislukt'));
-      adoptNotes(json.capture as MeetingCapture);
-      setPane('verslag');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Verslag maken mislukt');
-    } finally {
-      setBusy(null);
-    }
+    void run();
   }
 
   async function acceptNotes(replace: boolean) {
@@ -568,10 +656,26 @@ export default function GesprekPanel({
     }
   }
 
+  function publishAsSource() {
+    const run = () => void acceptNotes(false);
+    if (notesLookLikeTranscript) {
+      askConfirm({
+        title: 'Dit lijkt een transcript',
+        description:
+          'De intake verwacht een samenvatting. Wil je dit toch als bron gebruiken?',
+        confirmLabel: 'Toch gebruiken',
+        cancelLabel: 'Annuleren',
+        variant: 'destructive',
+        onConfirm: run,
+      });
+      return;
+    }
+    run();
+  }
+
   async function removeCapture() {
     const captureId = captureIdRef.current;
     if (!captureId) return;
-    if (!window.confirm('Dit gesprek, de opname en het transcript verwijderen?')) return;
     setBusy('Verwijderen…');
     setError(null);
     try {
@@ -592,8 +696,12 @@ export default function GesprekPanel({
       setSavedNotes('');
       setNotesOrigin(null);
       setConsent(false);
+      setEditingTranscript(false);
+      setForceTranscriptEditor(false);
+      setWritingVerslag(false);
       const list = await load();
       if (list[0]) applyCapture(list[0]);
+      else setPane('transcript');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Verwijderen mislukt');
     } finally {
@@ -603,30 +711,33 @@ export default function GesprekPanel({
 
   function startNew() {
     if (recording || busy) return;
-    if (!guardDirty()) return;
-    captureIdRef.current = null;
-    activeCaptureRef.current = null;
-    setActiveId(null);
-    setTranscript('');
-    setSavedTranscript('');
-    setOriginalTranscript('');
-    setTranscriptSource(null);
-    setNotes('');
-    setSavedNotes('');
-    setNotesOrigin(null);
-    setConsent(false);
-    setNeedsReplace(false);
-    setNeedsGenerateReplace(false);
-    setForcePlain(false);
-    setPane('transcript');
-    setError(null);
+    guardDirty(() => {
+      captureIdRef.current = null;
+      activeCaptureRef.current = null;
+      setActiveId(null);
+      setTranscript('');
+      setSavedTranscript('');
+      setOriginalTranscript('');
+      setTranscriptSource(null);
+      setNotes('');
+      setSavedNotes('');
+      setNotesOrigin(null);
+      setConsent(false);
+      setNeedsReplace(false);
+      setNeedsGenerateReplace(false);
+      setForcePlain(false);
+      setEditingTranscript(false);
+      setForceTranscriptEditor(false);
+      setWritingVerslag(false);
+      setPane('transcript');
+      setError(null);
+    });
   }
 
   function selectCapture(capture: MeetingCapture) {
     if (recording || busy) return;
     if (capture.id === activeId) return;
-    if (!guardDirty()) return;
-    applyCapture(capture);
+    guardDirty(() => applyCapture(capture));
   }
 
   function updateTurn(index: number, text: string) {
@@ -637,89 +748,53 @@ export default function GesprekPanel({
 
   const activeCapture = captures.find((item) => item.id === activeId) ?? null;
   const otherPublished = captures.some((item) => item.status === 'accepted' && item.id !== activeId);
+  const isAccepted = activeCapture?.status === 'accepted';
+
   let statusLine = 'Concept. De intake gebruikt dit nog niet.';
-  if (dirty) statusLine = 'Wijzigingen nog niet bewaard.';
-  else if (activeCapture?.status === 'accepted') statusLine = 'Dit is de bron die de intake gebruikt.';
-  else if (hasPublishedVerslag || otherPublished) {
+  let statusTone: 'neutral' | 'success' | 'warning' = 'neutral';
+  if (dirty) {
+    statusLine = 'Wijzigingen nog niet bewaard.';
+    statusTone = 'warning';
+  } else if (isAccepted) {
+    statusLine = 'Dit is de bron die de intake gebruikt.';
+    statusTone = 'success';
+  } else if (hasPublishedVerslag || otherPublished) {
     statusLine = 'Concept. Er staat al een bron. Bewaren vervangt die.';
+    statusTone = 'warning';
   }
 
-  const captureButtons = (
-    <>
-      <button
-        type="button"
-        onClick={startNew}
-        disabled={Boolean(busy) || recording}
-        className={`rounded-lg border px-3 py-2 text-left text-xs ${
-          activeId ? 'border-gray-200 text-gray-600' : 'border-emerald-500 bg-emerald-50 text-emerald-800'
-        }`}
-      >
-        Nieuw gesprek
-      </button>
-      {captures.map((capture) => {
-        const source = sourceLabel(capture.transcript_source);
-        return (
-          <button
-            key={capture.id}
-            type="button"
-            onClick={() => selectCapture(capture)}
-            disabled={Boolean(busy) || recording}
-            className={`rounded-lg border px-3 py-2 text-left text-xs ${
-              capture.id === activeId
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                : 'border-gray-200 text-gray-600'
-            }`}
-          >
-            <span className="block font-medium">
-              {new Date(capture.created_at).toLocaleString('nl-NL', {
-                day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-            <span className="block text-[11px] opacity-80">
-              {STATUS_LABEL[capture.status]}
-              {source ? ` · ${source}` : ''}
-            </span>
-          </button>
-        );
-      })}
-      {activeId ? (
-        <Button type="button" variant="ghost" size="sm" onClick={() => void removeCapture()} disabled={Boolean(busy) || recording}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          Verwijder
-        </Button>
-      ) : null}
-    </>
-  );
+  const showTranscript = sideBySide || pane === 'transcript';
+  const showVerslag = sideBySide || pane === 'verslag';
 
   const body = (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-3">
-      <div className="flex items-start gap-2">
-        {embedded && onBack ? (
-          <button
-            type="button"
-            onClick={() => {
-              if (!guardDirty()) return;
-              onBack();
-            }}
-            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100"
-            aria-label="Terug naar bronnen"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-        ) : null}
-        <div className="min-w-0">
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-gray-900">
-            <Mic className="h-4 w-4 text-emerald-600" />
-            Gesprek
-          </DialogTitle>
-          <p className={`text-sm ${activeCapture?.status === 'accepted' && !dirty ? 'text-emerald-700' : 'text-gray-600'}`}>
-            {statusLine}
-          </p>
-        </div>
-      </div>
+      <DialogTitle className="sr-only">Gesprek</DialogTitle>
+
+      <GesprekHeader
+        captures={captures}
+        activeId={activeId}
+        activeCapture={activeCapture}
+        pane={pane}
+        sideBySide={sideBySide}
+        hasTranscript={hasTranscript}
+        hasVerslag={hasVerslag}
+        isAccepted={Boolean(isAccepted)}
+        busy={Boolean(busy)}
+        recording={recording}
+        onSelectCapture={selectCapture}
+        onNew={startNew}
+        onDelete={() =>
+          askConfirm({
+            title: 'Gesprek verwijderen?',
+            description: 'Dit gesprek, de opname en het transcript worden verwijderd.',
+            confirmLabel: 'Verwijderen',
+            variant: 'destructive',
+            onConfirm: () => void removeCapture(),
+          })
+        }
+        onPaneChange={setPane}
+        onSideBySideChange={changeSideBySide}
+      />
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {busy ? (
@@ -729,243 +804,124 @@ export default function GesprekPanel({
         </p>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
-        <aside className="flex shrink-0 gap-2 overflow-x-auto lg:w-56 lg:flex-col lg:overflow-y-auto">{captureButtons}</aside>
+      <div
+        className={cn(
+          'grid min-h-0 flex-1 gap-3',
+          sideBySide ? 'lg:grid-cols-2' : 'grid-cols-1'
+        )}
+      >
+        {showTranscript ? (
+          <TranscriptPane
+            transcript={transcript}
+            turns={turns}
+            transcriptSource={transcriptSource}
+            consent={consent}
+            recording={recording}
+            recordingSeconds={recordingSeconds}
+            editing={editingTranscript || forceTranscriptEditor}
+            forceEditor={forceTranscriptEditor}
+            forcePlain={forcePlain}
+            canRestore={canRestore}
+            canParseTurns={canParseTurns}
+            busy={Boolean(busy)}
+            onConsentChange={setConsent}
+            onTranscriptChange={setTranscript}
+            onTurnChange={updateTurn}
+            onStartRecording={() => void startRecording()}
+            onStopRecording={stopRecording}
+            onUploadFile={uploadTranscriptFile}
+            onStartPaste={() => {
+              setForceTranscriptEditor(true);
+              setEditingTranscript(true);
+              setForcePlain(true);
+            }}
+            onEditingChange={(value) => {
+              setEditingTranscript(value);
+              if (!value) setForceTranscriptEditor(false);
+            }}
+            onForcePlainChange={setForcePlain}
+            onRestore={() => void restoreOriginal()}
+            onRequestNewRecording={() => void startRecording()}
+          />
+        ) : null}
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-          <div className="flex gap-2 lg:hidden">
-            <button
-              type="button"
-              onClick={() => setPane('transcript')}
-              className={`rounded-full border px-3 py-1 text-xs ${
-                pane === 'transcript' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-gray-200 text-gray-600'
-              }`}
-            >
-              Transcript
-            </button>
-            <button
-              type="button"
-              onClick={() => setPane('verslag')}
-              className={`rounded-full border px-3 py-1 text-xs ${
-                pane === 'verslag' ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-gray-200 text-gray-600'
-              }`}
-            >
-              Verslag
-            </button>
-          </div>
-
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
-            <section
-              className={`min-h-0 flex-col gap-3 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-3 ${
-                pane === 'verslag' ? 'hidden lg:flex' : 'flex'
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Transcript</h4>
-                  <p className="text-xs text-gray-600">Wat er is gezegd. De intake leest dit niet.</p>
-                </div>
-                {transcriptChip ? (
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-                    {transcriptChip}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-lg border-2 border-purple-200 bg-white px-3 text-sm font-medium text-purple-700 hover:bg-purple-50">
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Upload
-                  <input
-                    type="file"
-                    accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    className="sr-only"
-                    disabled={recording || Boolean(busy)}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      event.target.value = '';
-                      void uploadTranscriptFile(file);
-                    }}
-                  />
-                </label>
-                {recording ? (
-                  <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-                    <Square className="mr-2 h-4 w-4" />
-                    Stop opname
-                  </Button>
-                ) : (
-                  <Button type="button" variant="outline" size="sm" onClick={() => void startRecording()} disabled={Boolean(busy)}>
-                    <Mic className="mr-2 h-4 w-4" />
-                    Start opname
-                  </Button>
-                )}
-                <label className="flex items-center gap-2 text-xs text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={consent}
-                    onChange={(event) => setConsent(event.target.checked)}
-                    disabled={recording || Boolean(busy)}
-                  />
-                  <span>De werknemer weet dat dit gesprek wordt opgenomen.</span>
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {transcript !== savedTranscript ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => void saveTranscript()} disabled={Boolean(busy) || recording}>
-                    Bewaar transcript
-                  </Button>
-                ) : null}
-                {canRestore ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => void restoreOriginal()} disabled={Boolean(busy) || recording}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Herstel origineel
-                  </Button>
-                ) : null}
-                {turns ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setForcePlain(true)}>
-                    Als tekst
-                  </Button>
-                ) : parseSpeakerTurns(transcript) ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setForcePlain(false)}>
-                    Als beurten
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                {turns ? (
-                  <div className="space-y-3">
-                    {turns.map((turn, index) => (
-                      <div key={`${turn.speaker}-${index}`} className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
-                        <p className="mb-1 text-xs font-semibold text-emerald-800">{turn.speaker}</p>
-                        <textarea
-                          value={turn.text}
-                          rows={Math.min(8, Math.max(2, turn.text.split('\n').length))}
-                          disabled={recording}
-                          aria-label={turn.speaker}
-                          onChange={(event) => updateTurn(index, event.target.value)}
-                          className="w-full resize-y rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <Textarea
-                    id="gesprek-transcript"
-                    value={transcript}
-                    onChange={(event) => setTranscript(event.target.value)}
-                    className="min-h-[320px] bg-white"
-                    placeholder="Plak het transcript, of upload een tekstbestand."
-                    disabled={recording}
-                    aria-label="Transcript"
-                  />
-                )}
-              </div>
-            </section>
-
-            <section
-              className={`min-h-0 flex-col gap-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 ${
-                pane === 'transcript' ? 'hidden lg:flex' : 'flex'
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Verslag</h4>
-                  <p className="text-xs text-gray-600">Dit wordt de bron voor de intake, nadat je het bewaart.</p>
-                </div>
-                {verslagChip ? (
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-                    {verslagChip}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => void generateNotes(false)}
-                  disabled={Boolean(busy) || recording || !transcript.trim()}
-                >
-                  Maak uit transcript
-                </Button>
-                {needsGenerateReplace ? (
-                  <Button type="button" variant="destructive" size="sm" onClick={() => void generateNotes(true)} disabled={Boolean(busy)}>
-                    Vervang en maak verslag
-                  </Button>
-                ) : null}
-                <label className="inline-flex h-8 cursor-pointer items-center justify-center rounded-lg border-2 border-purple-200 bg-white px-3 text-xs font-medium text-purple-700 hover:bg-purple-50">
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Upload bestaand verslag
-                  <input
-                    type="file"
-                    accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    className="sr-only"
-                    disabled={recording || Boolean(busy)}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      event.target.value = '';
-                      void uploadNotesFile(file);
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <VerslagEditor
-                  key={activeId ?? 'new'}
-                  markdown={notes}
-                  onChange={setNotes}
-                  appearance="neutral"
-                  delay={0}
-                  minHeightClassName="min-h-[320px]"
-                  placeholder="Schrijf het verslag, of maak het uit het transcript."
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {notes !== savedNotes ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void saveNotesDraft()}
-                    disabled={Boolean(busy) || recording || !notes.trim()}
-                  >
-                    Bewaar concept
-                  </Button>
-                ) : null}
-                {needsReplace ? (
-                  <Button type="button" variant="destructive" size="sm" onClick={() => void acceptNotes(true)} disabled={Boolean(busy)}>
-                    Vervang de bestaande bron
-                  </Button>
-                ) : (
-                  <Button type="button" size="sm" onClick={() => void acceptNotes(false)} disabled={Boolean(busy) || recording || !notes.trim()}>
-                    Bewaar als bron
-                  </Button>
-                )}
-              </div>
-            </section>
-          </div>
-        </div>
+        {showVerslag ? (
+          <VerslagPane
+            notes={notes}
+            notesOrigin={notesOrigin}
+            hasTranscript={hasTranscript}
+            looksLikeTranscript={notesLookLikeTranscript}
+            activeId={activeId}
+            busy={Boolean(busy)}
+            recording={recording}
+            needsGenerateReplace={needsGenerateReplace}
+            writing={writingVerslag}
+            onNotesChange={setNotes}
+            onGenerate={(replace) => void generateNotes(Boolean(replace))}
+            onUploadFile={uploadNotesFile}
+            onStartWriting={() => {
+              setWritingVerslag(true);
+              setPane('verslag');
+            }}
+          />
+        ) : null}
       </div>
+
+      <GesprekFooter
+        statusLine={statusLine}
+        statusTone={statusTone}
+        dirty={dirty}
+        isAccepted={Boolean(isAccepted)}
+        canPublish={Boolean(notes.trim())}
+        busy={Boolean(busy)}
+        recording={recording}
+        needsReplace={needsReplace}
+        onSaveDraft={() => void saveDraft()}
+        onPublish={publishAsSource}
+        onForceReplace={() => void acceptNotes(true)}
+      />
     </div>
   );
 
-  if (embedded) return body;
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && !guardDirty()) return;
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]">
-        {body}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) {
+            guardDirty(() => onOpenChange(false));
+            return;
+          }
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent className="flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]">
+          {body}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        onOpenChange={(next) => {
+          if (!next && !confirmLoading) setConfirm(null);
+        }}
+        title={confirm?.title ?? ''}
+        description={confirm?.description}
+        confirmLabel={confirm?.confirmLabel}
+        cancelLabel={confirm?.cancelLabel}
+        variant={confirm?.variant}
+        loading={confirmLoading}
+        onConfirm={async () => {
+          if (!confirm) return;
+          setConfirmLoading(true);
+          try {
+            await confirm.onConfirm();
+            setConfirm(null);
+          } finally {
+            setConfirmLoading(false);
+          }
+        }}
+      />
+    </>
   );
 }

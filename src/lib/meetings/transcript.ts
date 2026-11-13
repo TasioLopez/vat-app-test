@@ -4,9 +4,20 @@ export type SpeakerTurn = {
 };
 
 const SPEAKER_LINE = /^(speaker|spreker)\s+(\d+)\s*:\s*(.*)$/i;
+const TRANSCRIPT_LABEL = /^transcript\s*:?\s*$/i;
 
 function speakerLabel(kind: string, number: string): string {
   return `${kind.toLowerCase() === 'spreker' ? 'Spreker' : 'Speaker'} ${number}`;
+}
+
+/** Drop a leading "Transcript:" label that some uploads prepend. */
+function stripLeadingTranscriptLabel(lines: string[]): string[] {
+  let index = 0;
+  while (index < lines.length && !lines[index].trim()) index += 1;
+  if (index < lines.length && TRANSCRIPT_LABEL.test(lines[index].trim())) {
+    return lines.slice(index + 1);
+  }
+  return lines;
 }
 
 /**
@@ -15,7 +26,7 @@ function speakerLabel(kind: string, number: string): string {
  * or prose before the first speaker), so the editor can keep a plain text area.
  */
 export function parseSpeakerTurns(text: string): SpeakerTurn[] | null {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = stripLeadingTranscriptLabel(text.replace(/\r\n/g, '\n').split('\n'));
   const turns: SpeakerTurn[] = [];
   let current: SpeakerTurn | null = null;
 
@@ -46,6 +57,24 @@ export function serializeSpeakerTurns(turns: SpeakerTurn[]): string {
   return turns
     .map((turn) => `${turn.speaker}: ${turn.text}`.replace(/\s+$/u, ''))
     .join('\n\n');
+}
+
+/**
+ * True when the text is mostly speaker lines: used to warn before saving a
+ * raw transcript as the intake verslag.
+ */
+export function looksLikeTranscript(text: string): boolean {
+  const lines = text
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !TRANSCRIPT_LABEL.test(line));
+
+  if (lines.length === 0) return false;
+
+  const speakerLines = lines.filter((line) => SPEAKER_LINE.test(line));
+  return speakerLines.length >= 4 && speakerLines.length * 2 >= lines.length;
 }
 
 export function meetingImportKind(filename: string): 'text' | 'docx' | null {
