@@ -34,7 +34,7 @@ Velden die met quote_ beginnen: letterlijk 1-op-1 uit de bron. Geen aanhalingste
 
 VISIE WERKNEMER (s13–s16, delen van s6/s8–s12)
 Alleen als duidelijk blijkt dat werknemer dit zelf heeft gezegd.
-Secties 8–13: één samenhangende notitie per sectie (`tekst`). Weef relevante aspecten (woonsituatie/kinderen; familiecontact/steun; huishouden; dagstructuur/energie; hobby's/uitvoerbaarheid; werkverleden/verbondenheid/terugkeer) in die ene tekst wanneer aantoonbaar; geen aparte subvelden.
+Secties 8–13: één samenhangende notitie per sectie (veld tekst). Weef relevante aspecten (woonsituatie/kinderen; familiecontact/steun; huishouden; dagstructuur/energie; hobby's/uitvoerbaarheid; werkverleden/verbondenheid/terugkeer) in die ene tekst wanneer aantoonbaar; geen aparte subvelden.
 
 OPLEIDINGEN / WERKERVARING / VAARDIGHEDEN (s17)
 Vul opleidingen/werkervaring rijen en checkboxes (rijbewijs, vervoer, devices, computer, talen) alleen bij aantoonbare feiten.
