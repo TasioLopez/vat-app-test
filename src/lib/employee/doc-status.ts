@@ -62,6 +62,49 @@ export function buildTpStatusMap(
   return map;
 }
 
+/** Documents the app generates from a builder; their PDFs land in `documents` under these types. */
+export const GENERATED_DOC_KINDS = ['tp', 'intake', 'vgr'] as const;
+export type GeneratedDocKind = (typeof GENERATED_DOC_KINDS)[number];
+
+export type GeneratedDocSummary = {
+  exportCount: number;
+  lastExportAt: string | null;
+};
+
+/** Count exported PDFs per generated document kind and keep the most recent export date. */
+export function summarizeGeneratedDocs(
+  documents: Array<{ type: string | null; uploaded_at: string | null }>
+): Record<GeneratedDocKind, GeneratedDocSummary> {
+  const summary: Record<GeneratedDocKind, GeneratedDocSummary> = {
+    tp: { exportCount: 0, lastExportAt: null },
+    intake: { exportCount: 0, lastExportAt: null },
+    vgr: { exportCount: 0, lastExportAt: null },
+  };
+
+  for (const doc of documents) {
+    const kind = (doc.type || '').toLowerCase().trim();
+    if (kind !== 'tp' && kind !== 'intake' && kind !== 'vgr') continue;
+    const entry = summary[kind];
+    entry.exportCount += 1;
+    if (!doc.uploaded_at) continue;
+    if (!entry.lastExportAt || new Date(doc.uploaded_at) > new Date(entry.lastExportAt)) {
+      entry.lastExportAt = doc.uploaded_at;
+    }
+  }
+
+  return summary;
+}
+
+/** Status of a builder document for one employee: an export or a final instance means completed. */
+export function resolveBuilderDocStatus(input: {
+  hasInstance: boolean;
+  exportCount: number;
+  hasFinalInstance?: boolean;
+}): TpStatus {
+  if (input.exportCount > 0 || input.hasFinalInstance) return 'completed';
+  return input.hasInstance ? 'draft' : 'none';
+}
+
 export function buildCvStatusMap(
   parentCvs: Array<{ employee_id: string }>,
   shares: Array<{

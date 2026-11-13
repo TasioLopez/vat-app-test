@@ -1,28 +1,28 @@
 import { CheckCircle2, Circle, Clock, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CvStatus, TpStatus } from '@/lib/employee/doc-status';
+import type { CvStatus, GeneratedDocKind, TpStatus } from '@/lib/employee/doc-status';
 
-type DocKind = 'tp' | 'cv';
+type DocKind = GeneratedDocKind | 'cv';
 
-const TP_META: Record<
-  TpStatus,
-  { label: string; full: string; tone: string; Icon: typeof Circle }
-> = {
+const BUILDER_KIND_LABEL: Record<GeneratedDocKind, string> = {
+  tp: 'Trajectplan',
+  intake: 'Intake',
+  vgr: 'VGR',
+};
+
+const BUILDER_META: Record<TpStatus, { label: string; tone: string; Icon: typeof Circle }> = {
   none: {
     label: 'Niet gestart',
-    full: 'Trajectplan: Niet gestart',
     tone: 'bg-gray-50 text-gray-600 ring-gray-200',
     Icon: Circle,
   },
   draft: {
     label: 'Concept',
-    full: 'Trajectplan: Concept',
     tone: 'bg-amber-50 text-amber-900 ring-amber-200',
     Icon: Clock,
   },
   completed: {
     label: 'Klaar',
-    full: 'Trajectplan: Klaar',
     tone: 'bg-green-50 text-green-800 ring-green-200',
     Icon: CheckCircle2,
   },
@@ -67,7 +67,13 @@ export function DocStatusPill({
   status: TpStatus | CvStatus;
   className?: string;
 }) {
-  const meta = kind === 'tp' ? TP_META[status as TpStatus] : CV_META[status as CvStatus];
+  const meta =
+    kind === 'cv'
+      ? CV_META[status as CvStatus]
+      : {
+          ...BUILDER_META[status as TpStatus],
+          full: `${BUILDER_KIND_LABEL[kind]}: ${BUILDER_META[status as TpStatus].label}`,
+        };
   const { Icon } = meta;
 
   return (

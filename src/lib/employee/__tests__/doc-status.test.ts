@@ -8,6 +8,8 @@ import {
   isShareLinkActive,
   maxCvStatus,
   maxTpStatus,
+  resolveBuilderDocStatus,
+  summarizeGeneratedDocs,
   tpStatusRank,
 } from '@/lib/employee/doc-status';
 
@@ -92,6 +94,31 @@ describe('doc-status helpers', () => {
         now,
       }),
       false
+    );
+  });
+
+  it('summarizes exported PDFs per generated document kind', () => {
+    const summary = summarizeGeneratedDocs([
+      { type: 'tp', uploaded_at: '2026-10-01T10:00:00.000Z' },
+      { type: 'TP ', uploaded_at: '2026-11-02T10:00:00.000Z' },
+      { type: 'vgr', uploaded_at: null },
+      { type: 'intakeformulier', uploaded_at: '2026-09-01T10:00:00.000Z' },
+      { type: null, uploaded_at: '2026-09-01T10:00:00.000Z' },
+    ]);
+
+    assert.deepEqual(summary.tp, { exportCount: 2, lastExportAt: '2026-11-02T10:00:00.000Z' });
+    assert.deepEqual(summary.vgr, { exportCount: 1, lastExportAt: null });
+    assert.deepEqual(summary.intake, { exportCount: 0, lastExportAt: null });
+  });
+
+  it('resolves builder status from instances and exports', () => {
+    assert.equal(resolveBuilderDocStatus({ hasInstance: false, exportCount: 0 }), 'none');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: true, exportCount: 0 }), 'draft');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: true, exportCount: 2 }), 'completed');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: false, exportCount: 1 }), 'completed');
+    assert.equal(
+      resolveBuilderDocStatus({ hasInstance: true, exportCount: 0, hasFinalInstance: true }),
+      'completed'
     );
   });
 

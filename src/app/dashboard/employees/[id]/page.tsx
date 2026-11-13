@@ -4,54 +4,20 @@ import { useState, useEffect, use, useMemo, useRef, useCallback } from 'react';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
 import EmployeeUnsavedGuard from '@/components/employee/EmployeeUnsavedGuard';
 import { supabase } from '@/lib/supabase/client';
-import {
-    Map,
-    Compass,
-    Sparkles,
-    Save,
-    ArrowLeft,
-    Briefcase,
-    GraduationCap,
-    Car,
-    Languages,
-    Computer,
-    Clock,
-    Building2,
-    FileText,
-    FolderOpen,
-    Files,
-    IdCard,
-    CheckCircle2,
-    CircleDashed,
-    UserRoundX,
-    Eye,
-    Pencil,
-    Trash2,
-} from 'lucide-react';
 import DocumentModal from '@/components/DocumentModal';
 import { DocumentPreviewDialog } from '@/components/DocumentPreviewDialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
-import { INPUT_CLASS, SELECT_CLASS } from '@/lib/select-class';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
-    COMPUTER_SKILLS_OPTIONS,
-    getComputerSkillsDefaultDescription,
     nextComputerSkillsDescriptionOnLevelChange,
+    repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { trackAccess } from '@/lib/tracking';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import { ReferentEditDialog } from '@/components/employee/ReferentEditDialog';
-import {
-    AutofillProgressOverlay,
-    type AutofillProgressState,
-} from '@/components/ui/AutofillProgressOverlay';
+import { type AutofillProgressState } from '@/components/ui/AutofillProgressOverlay';
 import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
 import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
 import { isAutofillAbortError } from '@/lib/tp2026/autofill-runner';
@@ -64,10 +30,6 @@ import {
 import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
 import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
 import {
-    isIncompleteContractHoursInput,
-    parseContractHours,
-} from '@/lib/employee/contract-hours';
-import {
   EMPLOYEE_DETAIL_FIELD_KEYS,
   computeEmployeeFieldHash,
   getEmployeeFieldDisplayStatus,
@@ -76,26 +38,23 @@ import {
   type EmployeeDetailFieldKey,
   type EmployeeFieldReviewStatus,
 } from '@/lib/employee/field-review';
-import {
-    DUTCH_LANGUAGE_OPTIONS,
-    EDUCATION_LEVEL_CUSTOM_SELECT_VALUE,
-    EDUCATION_LEVEL_OPTIONS,
-    TRANSPORT_TYPE_OPTIONS,
-    addCustomTransportType,
-    coerceEducationLevelInput,
-    getCustomEducationLevelLabel,
-    normalizeEducationLevel,
-    removeTransportType,
-    repairEmployeeEducationFields,
-    splitTransportTypes,
-} from '@/lib/tp2026/gegevens-field-options';
 import GesprekPanel from '@/components/employee/GesprekPanel';
-import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
-import { ValidatableField } from '@/components/employee/ValidatableField';
 import {
     EMPLOYEE_DOC_LABELS,
     visibleEmployeeDocTypes,
+    type EmployeeDocType,
 } from '@/lib/documents/employee-doc-types';
+import { buildEmployeeProfileView } from '@/lib/employee/profile-view';
+import { useEmployeeDocStatuses } from '@/hooks/useEmployeeDocStatuses';
+import type { AutosaveStatus } from '@/hooks/useDebouncedAutosave';
+import { EmployeeHeader } from '@/components/employee/detail/EmployeeHeader';
+import { ProfileView } from '@/components/employee/detail/ProfileView';
+import { ProfileForm } from '@/components/employee/detail/ProfileForm';
+import { DocumentsCard } from '@/components/employee/detail/DocumentsCard';
+import { SourcesCard } from '@/components/employee/detail/SourcesCard';
+import { DossierCard } from '@/components/employee/detail/DossierCard';
+import { EditBar } from '@/components/employee/detail/EditBar';
+import { EmployeeNotFound, EmployeePageSkeleton } from '@/components/employee/detail/PageStates';
 
 type Employee = {
     id: string;
@@ -163,6 +122,8 @@ type Document = {
     uploaded_at: string | null;
     url: string;
 };
+
+type LoadState = 'loading' | 'ready' | 'failed';
 
 const DOC_LABELS = EMPLOYEE_DOC_LABELS;
 
@@ -317,29 +278,34 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [existingReferentId, setExistingReferentId] = useState<string | null>(null);
     const [savedEmployeeSnapshot, setSavedEmployeeSnapshot] = useState<EditableEmployeePayload | null>(null);
     const [savedDetailsSnapshot, setSavedDetailsSnapshot] = useState<EmployeeDetails | null>(null);
-    const [contractHoursText, setContractHoursText] = useState<string | null>(null);
-    const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
-    const [sourcesView, setSourcesView] = useState<'list' | 'gesprek'>('list');
-    const gesprekDirtyRef = useRef(false);
-    const onGesprekDirty = useCallback((dirty: boolean) => {
-        gesprekDirtyRef.current = dirty;
-    }, []);
-    const [docsModalOpen, setDocsModalOpen] = useState(false);
     const [referentDialogOpen, setReferentDialogOpen] = useState(false);
     const [referentDialogMode, setReferentDialogMode] = useState<'edit' | 'create'>('edit');
     const [tpOpening, setTpOpening] = useState(false);
     const [vgrOpening, setVgrOpening] = useState(false);
     const [intakeOpening, setIntakeOpening] = useState(false);
-    const [customTransportDraft, setCustomTransportDraft] = useState('');
-    const [customEducationDraft, setCustomEducationDraft] = useState('');
-    const [educationAndereOpen, setEducationAndereOpen] = useState(false);
     const [previewDoc, setPreviewDoc] = useState<{
         title: string;
         url: string;
     } | null>(null);
 
+    // Page load: the profile renders only once everything it shows has arrived.
+    const [employeeLoad, setEmployeeLoad] = useState<LoadState>('loading');
+    const [detailsLoad, setDetailsLoad] = useState<LoadState>('loading');
+    const [clientsLoaded, setClientsLoaded] = useState(false);
+    const [documentsLoaded, setDocumentsLoaded] = useState(false);
+
+    // Read mode is the default; the form only opens through Bewerken.
+    const [editing, setEditing] = useState(false);
+    const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+    const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
+    // Bumped to remount the guard: its autosave status only leaves 'error' through its own save run.
+    const [guardEpoch, setGuardEpoch] = useState(0);
+    const [gesprekOpen, setGesprekOpen] = useState(false);
+    const [sourceToDelete, setSourceToDelete] = useState<Document | null>(null);
+    const [deletingSource, setDeletingSource] = useState(false);
+
     const docTypes = useMemo(() => visibleEmployeeDocTypes(), []);
-    const stagingGesprek = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+    const docStatuses = useEmployeeDocStatuses(employeeId, documents);
 
     const uploadedSourcesCount = useMemo(
         () =>
@@ -396,12 +362,14 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         if (error) {
             console.error('Error fetching employee:', error);
+            setEmployeeLoad('failed');
             return;
         }
 
         const mapped = mapEmployeeRow(data);
         setEmployee(mapped);
         setSavedEmployeeSnapshot(toEditableEmployeePayload(mapped));
+        setEmployeeLoad('ready');
         if (data.client_id) {
             fetchClient(data.client_id);
             fetchReferents(data.client_id);
@@ -434,6 +402,8 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching employee details:', error);
+            // Keep the profile unloaded: starting from an empty form here could overwrite stored values.
+            setDetailsLoad('failed');
             return;
         }
 
@@ -503,8 +473,12 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 setAutofilledFields(new Set(data.autofilled_fields));
             }
         } else {
-            setSavedDetailsSnapshot(null);
+            // No details row yet: start from an empty profile so the form can be filled in.
+            const emptyDetails = toNormalizedDetailsPayload({}, employeeId);
+            setEmployeeDetails(emptyDetails);
+            setSavedDetailsSnapshot(emptyDetails);
         }
+        setDetailsLoad('ready');
     };
 
     const fetchClients = async () => {
@@ -513,6 +487,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             .select('*')
             .order('name');
 
+        setClientsLoaded(true);
         if (error) {
             console.error('Error fetching clients:', error);
             return;
@@ -570,11 +545,15 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             setDocuments(data || []);
         } catch (err) {
             console.error('Fout bij ophalen documenten:', err);
+        } finally {
+            setDocumentsLoaded(true);
         }
     };
 
-    const deleteSourceDocument = async (doc: Document) => {
-        if (!confirm('Weet je zeker dat je dit document wilt verwijderen?')) return;
+    const confirmDeleteSource = async () => {
+        const doc = sourceToDelete;
+        if (!doc) return;
+        setDeletingSource(true);
         try {
             const res = await fetch('/api/documents/delete', {
                 method: 'POST',
@@ -590,6 +569,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         } catch (err) {
             console.error(err);
             showError(err instanceof Error ? err.message : 'Verwijderen mislukt');
+        } finally {
+            setDeletingSource(false);
+            setSourceToDelete(null);
         }
     };
 
@@ -685,6 +667,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 },
             };
         });
+    };
+
+    /** One profile row can sit on several fields (e.g. the three Dutch language levels). */
+    const validateFields = (fields: EmployeeDetailFieldKey[]) => {
+        fields.forEach(validateField);
     };
 
     const validateAllPendingFields = () => {
@@ -1096,12 +1083,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         }
     };
 
-    const getFieldStatusClass = (status: 'empty' | 'review' | 'validated') => {
-        if (status === 'validated') return 'border-green-500 bg-green-50/30';
-        if (status === 'review') return 'border-yellow-400 bg-yellow-50/30';
-        return '';
-    };
-
     const getFieldDisplayStatus = (field: EmployeeDetailFieldKey) =>
         getEmployeeFieldDisplayStatus(
             field,
@@ -1110,14 +1091,51 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             employeeDetails?.field_content_hash
         );
 
-    const canValidateField = (field: EmployeeDetailFieldKey) =>
-        getFieldDisplayStatus(field) === 'review';
+    // Dossier card: employer, contact person and owner save on change, outside the edit form.
+    const handleClientChange = async (clientId: string) => {
+        if (!employee || !clientId || clientId === employee.client_id) return;
+        const previous = { client_id: employee.client_id, referent_id: employee.referent_id ?? null };
 
-    const fieldClass = (field: EmployeeDetailFieldKey) =>
-        cn(INPUT_CLASS, getFieldStatusClass(getFieldDisplayStatus(field)));
+        // A contact person belongs to one employer, so the link is cleared with the old employer.
+        setEmployee((prev) => (prev ? { ...prev, client_id: clientId, referent_id: null } : null));
+        const { error } = await supabase
+            .from('employees')
+            .update({ client_id: clientId, referent_id: null })
+            .eq('id', employeeId);
+        if (error) {
+            setEmployee((prev) => (prev ? { ...prev, ...previous } : null));
+            showError('Fout', 'Kon werkgever niet bijwerken.');
+            return;
+        }
 
-    const selectFieldClass = (field: EmployeeDetailFieldKey) =>
-        cn(SELECT_CLASS, getFieldStatusClass(getFieldDisplayStatus(field)));
+        setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, client_id: clientId, referent_id: null } : prev));
+        setSuggestedReferent(null);
+        setReferentExists(false);
+        setExistingReferentId(null);
+        fetchClient(clientId);
+        fetchReferents(clientId);
+        showSuccess('Werkgever bijgewerkt.');
+    };
+
+    const handleReferentChange = async (refId: string | null) => {
+        setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
+        const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
+        if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
+        else {
+            setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
+            showSuccess('Contactpersoon bijgewerkt.');
+        }
+    };
+
+    const handleOwnerChange = async (ownerId: string | null) => {
+        setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
+        const { error } = await supabase
+            .from('employees')
+            .update({ owner_id: ownerId })
+            .eq('id', employeeId);
+        if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
+        else showSuccess('Dossier-eigenaar bijgewerkt.');
+    };
 
     const openTpBuilder = async () => {
         setTpOpening(true);
@@ -1162,7 +1180,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 tpInstanceId = inserted.id;
             }
 
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/tp/${employeeId}/${tpInstanceId}`);
         } catch (error) {
             console.error(error);
@@ -1175,7 +1192,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openVgrBuilder = async () => {
         setVgrOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/vgr/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1188,7 +1204,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const openIntakeBuilder = async () => {
         setIntakeOpening(true);
         try {
-            setDocsModalOpen(false);
             guardedRouter.push(`/dashboard/intake/${employeeId}`);
         } catch (error) {
             console.error(error);
@@ -1196,6 +1211,13 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         } finally {
             setIntakeOpening(false);
         }
+    };
+
+    const openDocument = (kind: 'intake' | 'tp' | 'vgr' | 'cv') => {
+        if (kind === 'intake') void openIntakeBuilder();
+        else if (kind === 'tp') void openTpBuilder();
+        else if (kind === 'vgr') void openVgrBuilder();
+        else guardedRouter.push(`/dashboard/cv/${employeeId}`);
     };
 
     const acceptValidatedFacts = async () => {
@@ -1229,1191 +1251,263 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         showSuccess('Gevalideerde velden bijgewerkt.');
     };
 
+    // Edit mode. Autosave is off while the form is open, so Annuleren can discard everything.
+    const startEditing = async () => {
+        if (editing || aiLoading || detailsLoad !== 'ready') return;
+        if (hasUnsavedChanges) {
+            // Flush pending read-mode changes (validations) first; cancel must not undo those.
+            try {
+                await saveUnified({ silent: true });
+            } catch {
+                showError('Opslaan mislukt', 'Openstaande wijzigingen konden niet worden opgeslagen. Probeer het opnieuw.');
+                return;
+            }
+        }
+        setEditing(true);
+    };
+
+    const discardEdits = () => {
+        if (savedEmployeeSnapshot) {
+            setEmployee((prev) => (prev ? { ...prev, ...savedEmployeeSnapshot } : prev));
+        }
+        setEmployeeDetails(savedDetailsSnapshot);
+        setConfirmDiscardOpen(false);
+        setEditing(false);
+    };
+
+    const cancelEditing = () => {
+        if (hasUnsavedChanges) {
+            setConfirmDiscardOpen(true);
+            return;
+        }
+        setEditing(false);
+    };
+
+    const saveAndCloseEditing = async () => {
+        if (!hasUnsavedChanges) {
+            setEditing(false);
+            return;
+        }
+        try {
+            await saveUnified();
+            setEditing(false);
+        } catch {
+            // saveUnified already reported the error; stay in the form so nothing is lost.
+        }
+    };
+
+    /** "Opnieuw" after a failed autosave in read mode. */
+    const retryFailedSave = async () => {
+        try {
+            await saveUnified();
+            setGuardEpoch((epoch) => epoch + 1);
+        } catch {
+            // saveUnified already reported the error; the retry link stays visible.
+        }
+    };
+
+    // The loaded client list answers immediately after an employer change; clientName arrives a request later.
+    const employerName = useMemo(
+        () => clients.find((client) => client.id === employee?.client_id)?.name ?? clientName,
+        [clients, employee?.client_id, clientName]
+    );
+
+    const profileView = useMemo(
+        () =>
+            buildEmployeeProfileView({
+                firstName: employee?.first_name,
+                lastName: employee?.last_name,
+                email: employee?.email,
+                clientName: employerName,
+                details: currentDetailsPayload,
+            }),
+        [employee?.first_name, employee?.last_name, employee?.email, employerName, currentDetailsPayload]
+    );
+
+    const pageReady =
+        employeeLoad === 'ready' && detailsLoad !== 'loading' && clientsLoaded && documentsLoaded;
+    const backToEmployees = () => guardedRouter.push('/dashboard/employees');
+    const suggestedReferentName = suggestedReferent
+        ? [suggestedReferent.first_name, suggestedReferent.last_name].filter(Boolean).join(' ').trim() || '—'
+        : null;
+
     return (
-        <div className="p-4 space-y-6">
+        <div className="flex min-h-full flex-1 flex-col">
             <EmployeeUnsavedGuard
+                key={`${editing ? 'edit' : 'read'}-${guardEpoch}`}
                 isDirty={hasUnsavedChanges}
                 onSave={() => saveUnified({ silent: true })}
+                autosave={!editing}
+                onAutosaveStatusChange={setAutosaveStatus}
             />
             <ValidatedFactsDialog
                 conflicts={pendingFacts?.conflicts ?? null}
                 onDismiss={() => setPendingFacts(null)}
                 onAccept={() => void acceptValidatedFacts()}
             />
-            <div className="flex items-center gap-1">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 text-gray-600"
-                    aria-label="Terug naar werknemers"
-                    onClick={() => guardedRouter.push('/dashboard/employees')}
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <h1 className="text-xl font-bold">Werknemer Details</h1>
-            </div>
 
-            {employee && (
-                <div className="flex flex-col lg:flex-row gap-4">
-                    <div className="flex-col bg-white p-4 rounded shadow flex-1 space-y-4 w-2/5">
-                        <h2 className="text-lg font-semibold mb-4">Gegevens werknemer</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 items-start">
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Voornaam"
-                                value={employee.first_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, first_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('gender')}
-                                canValidate={canValidateField('gender')}
-                                validateLabel="Valideer geslacht"
-                            >
-                                <Select
-                                    value={employeeDetails?.gender || undefined}
-                                    onValueChange={(v) => handleDetailChange('gender', v)}
-                                >
-                                    <SelectTrigger className={cn(selectFieldClass('gender'), 'pr-10')}>
-                                        <SelectValue placeholder="Geslacht selecteren" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Man">Man</SelectItem>
-                                        <SelectItem value="Vrouw">Vrouw</SelectItem>
-                                        <SelectItem value="Anders">Anders</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
+            <div className="@container/page mx-auto w-full max-w-[1280px] space-y-5 px-6 py-5">
+                {employeeLoad === 'failed' ? (
+                    <EmployeeNotFound onBack={backToEmployees} />
+                ) : !pageReady || !employee ? (
+                    <EmployeePageSkeleton />
+                ) : (
+                    <>
+                        <EmployeeHeader
+                            view={profileView}
+                            editing={editing}
+                            busy={aiLoading}
+                            canEdit={detailsLoad === 'ready'}
+                            onBack={backToEmployees}
+                            onEdit={() => void startEditing()}
+                            onValidate={validateFields}
+                        />
 
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="Achternaam"
-                                value={employee.last_name || ''}
-                                onChange={(e) => setEmployee({ ...employee, last_name: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('phone')}
-                                canValidate={canValidateField('phone')}
-                                validateLabel="Valideer telefoon"
-                            >
-                                <input
-                                    className={cn(fieldClass('phone'), 'pr-10')}
-                                    placeholder="Telefoon"
-                                    value={employeeDetails?.phone || ''}
-                                    onChange={(e) => handleDetailChange('phone', e.target.value)}
-                                />
-                            </ValidatableField>
+                        <div className="grid items-start gap-5 @4xl/page:grid-cols-[minmax(0,1fr)_340px]">
+                            <div className="min-w-0">
+                                {editing ? (
+                                    <ProfileForm
+                                        employee={employee}
+                                        onEmployeeChange={(patch) =>
+                                            setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
+                                        }
+                                        details={employeeDetails}
+                                        onDetailChange={handleDetailChange}
+                                        getStatus={getFieldDisplayStatus}
+                                        onValidate={validateField}
+                                        clientName={employerName}
+                                    />
+                                ) : (
+                                    <ProfileView
+                                        view={profileView}
+                                        loadFailed={detailsLoad === 'failed'}
+                                        onRetryLoad={() => {
+                                            setDetailsLoad('loading');
+                                            void fetchEmployeeDetails();
+                                        }}
+                                        uploadedSourcesCount={uploadedSourcesCount}
+                                        aiLoading={aiLoading}
+                                        aiCancelling={aiCancelling}
+                                        autofillProgress={autofillProgress}
+                                        onAutofill={() => void autofillWithAI()}
+                                        onCancelAutofill={cancelAiAutofill}
+                                        busy={aiLoading}
+                                        saveStatus={autosaveStatus}
+                                        onRetrySave={() => void retryFailedSave()}
+                                        onValidate={validateFields}
+                                        onValidateAll={validateAllPendingFields}
+                                        onEdit={() => void startEditing()}
+                                    />
+                                )}
+                            </div>
 
-                            <input
-                                className={INPUT_CLASS}
-                                placeholder="E-mail"
-                                value={employee.email || ''}
-                                onChange={(e) => setEmployee({ ...employee, email: e.target.value })}
-                            />
-                            <ValidatableField
-                                onValidate={() => validateField('date_of_birth')}
-                                canValidate={canValidateField('date_of_birth')}
-                                validateLabel="Valideer geboortedatum"
-                            >
-                                <input
-                                    className={cn(fieldClass('date_of_birth'), 'pr-10')}
-                                    type="date"
-                                    value={employeeDetails?.date_of_birth || ''}
-                                    onChange={(e) => handleDetailChange('date_of_birth', e.target.value)}
-                                />
-                            </ValidatableField>
-
-                            <div
+                            <aside
+                                aria-label="Documenten, bronnen en dossier"
                                 className={cn(
-                                    'grid gap-2 min-w-0',
-                                    employee.client_id ? 'grid-cols-2' : 'grid-cols-1'
+                                    'min-w-0 space-y-5',
+                                    // Sticky only when the whole rail fits the viewport; otherwise its last card would be cut off.
+                                    !editing &&
+                                        '@4xl/page:[@media(min-height:640px)]:sticky @4xl/page:[@media(min-height:640px)]:top-5'
                                 )}
                             >
-                                <div className="space-y-1 min-w-0">
-                                    <label className="text-sm text-gray-600">Dossier-eigenaar</label>
-                                    <OrgUserSelect
-                                        supabase={supabase}
-                                        value={employee.owner_id}
-                                        currentUserId={currentUserId}
-                                        allowNone
-                                        noneLabel="— Geen eigenaar —"
-                                        placeholder="Selecteer eigenaar"
-                                        onChange={async (ownerId) => {
-                                            setEmployee((prev) => (prev ? { ...prev, owner_id: ownerId } : null));
-                                            const { error } = await supabase
-                                                .from('employees')
-                                                .update({ owner_id: ownerId })
-                                                .eq('id', employeeId);
-                                            if (error) showError('Fout', 'Kon dossier-eigenaar niet bijwerken.');
-                                            else showSuccess('Dossier-eigenaar bijgewerkt.');
-                                        }}
-                                    />
-                                </div>
-                                {employee.client_id ? (
-                                    <div className="space-y-1 min-w-0">
-                                        <label className="text-sm text-gray-600">Contactpersoon</label>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <Select
-                                                value={employee.referent_id ?? '__none__'}
-                                                onValueChange={async (v) => {
-                                                    const refId = v === '__none__' ? null : v;
-                                                    setEmployee(prev => prev ? { ...prev, referent_id: refId } : null);
-                                                    const { error } = await supabase.from('employees').update({ referent_id: refId }).eq('id', employeeId);
-                                                    if (error) showError('Fout', 'Kon contactpersoon niet bijwerken.');
-                                                    else {
-                                                        setSavedEmployeeSnapshot((prev) => (prev ? { ...prev, referent_id: refId } : prev));
-                                                        showSuccess('Contactpersoon bijgewerkt.');
-                                                    }
-                                                }}
-                                            >
-                                                <SelectTrigger className={cn(SELECT_CLASS, 'min-w-0 flex-1')}>
-                                                    <SelectValue placeholder="— Geen / Default —" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="__none__">— Geen / Default —</SelectItem>
-                                                    {referents.map((r) => (
-                                                        <SelectItem key={r.id} value={r.id}>
-                                                            {[r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'Naamloos'}
-                                                            {r.referent_function ? ` (${r.referent_function})` : ''}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="shrink-0"
-                                                disabled={!employee.referent_id}
-                                                title="Contactpersoon bewerken"
-                                                onClick={() => {
-                                                    setReferentDialogMode('edit');
-                                                    setReferentDialogOpen(true);
-                                                }}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="shrink-0"
-                                                title="Nieuwe contactpersoon"
-                                                onClick={() => {
-                                                    setReferentDialogMode('create');
-                                                    setReferentDialogOpen(true);
-                                                }}
-                                            >
-                                                Nieuw
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : null}
-                            </div>
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-sm text-gray-600">Werkgever</label>
-                                <Select
-                                    value={employee.client_id || undefined}
-                                    onValueChange={(v) => {
-                                        setEmployee({ ...employee, client_id: v, referent_id: v ? employee.referent_id : null });
-                                        fetchClient(v);
-                                        if (v) fetchReferents(v);
-                                        else setReferents([]);
-                                    }}
-                                >
-                                    <SelectTrigger className={SELECT_CLASS}>
-                                        <SelectValue placeholder="Selecteer werkgever" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {clients.map((client) => (
-                                            <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg shadow border border-purple-100/80 w-full lg:w-[400px] space-y-4">
-                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-purple-600" />
-                            Documenten
-                        </h2>
-                        <div className="flex flex-col gap-3">
-                            <Dialog
-                                open={sourcesModalOpen}
-                                onOpenChange={(open) => {
-                                    if (!open && sourcesView === 'gesprek' && gesprekDirtyRef.current) {
-                                        if (!window.confirm('Er zijn niet-opgeslagen wijzigingen. Toch sluiten?')) return;
-                                    }
-                                    setSourcesModalOpen(open);
-                                    if (!open) setSourcesView('list');
-                                }}
-                            >
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="h-auto justify-start gap-3 border-2 border-emerald-200 bg-gradient-to-r from-emerald-50/80 to-white py-4 px-4 text-left hover:border-emerald-400 hover:bg-emerald-50/50"
-                                    onClick={() => setSourcesModalOpen(true)}
-                                >
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                                        <FolderOpen className="h-5 w-5" />
-                                    </span>
-                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                        <span className="font-semibold text-gray-900">Bronnen beheren</span>
-                                        <span className="text-xs font-normal text-gray-600">
-                                            {stagingGesprek
-                                                ? 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, gesprek, overig'
-                                                : 'Uploads per type: intake, aanmeldformulier, AD, FML/IZP, CV, Spreekuurrapportage, overig'}
-                                        </span>
-                                        <span className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                            {uploadedSourcesCount}/{docTypes.length} geüpload
-                                        </span>
-                                    </span>
-                                </Button>
-                                <DialogContent
-                                    className={
-                                        sourcesView === 'gesprek'
-                                            ? 'flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[1400px] flex-col overflow-hidden sm:max-w-[1400px]'
-                                            : 'max-w-md sm:max-w-lg'
-                                    }
-                                    onOpenAutoFocus={(e) => e.preventDefault()}
-                                >
-                                    {sourcesView === 'gesprek' ? (
-                                        <GesprekPanel
-                                            embedded
-                                            employeeId={employeeId}
-                                            open={sourcesModalOpen}
-                                            onOpenChange={setSourcesModalOpen}
-                                            onBack={() => setSourcesView('list')}
-                                            hasPublishedVerslag={documents.some(
-                                                (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
-                                            )}
-                                            onDirtyChange={onGesprekDirty}
-                                            onDocumentsChanged={() => {
-                                                void fetchDocuments();
-                                            }}
-                                        />
-                                    ) : (
-                                    <>
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                            <FolderOpen className="h-5 w-5 text-emerald-600" />
-                                            Bronnen & uploads
-                                        </DialogTitle>
-                                        <p className="text-sm text-gray-600">
-                                            Kies een documenttype om te uploaden of te vervangen.
-                                        </p>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-2 gap-2 pt-1">
-                                        {docTypes.map((type) => {
-                                            const doc = documents.find((d) => d.type?.toLowerCase().trim() === type);
-                                            return (
-                                                <div
-                                                    key={type}
-                                                    className={cn(
-                                                        'group relative rounded-xl p-4 text-left text-sm transition-colors',
-                                                        'border-2',
-                                                        doc
-                                                            ? 'border-emerald-500 bg-emerald-50/60'
-                                                            : 'border-gray-200 bg-gray-50/80 hover:bg-gray-100'
-                                                    )}
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (type === 'gespreksverslag') {
-                                                                setSourcesView('gesprek');
-                                                                return;
-                                                            }
-                                                            setSourcesModalOpen(false);
-                                                            setActiveDocType(type);
-                                                        }}
-                                                        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 rounded-lg"
-                                                    >
-                                                        <p className="mb-1 flex items-center gap-1.5 font-semibold text-gray-900">
-                                                            {doc ? (
-                                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                                                            ) : (
-                                                                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" />
-                                                            )}
-                                                            {DOC_LABELS[type]}
-                                                        </p>
-                                                        {type === 'gespreksverslag' ? (
-                                                            <p className="text-xs text-gray-500">
-                                                                {doc ? 'Notities bewaard' : 'Transcript en notities'}
-                                                            </p>
-                                                        ) : doc ? (
-                                                            <p className="text-xs text-emerald-700">Geüpload</p>
-                                                        ) : (
-                                                            <p className="text-xs text-gray-500">Niet geüpload</p>
-                                                        )}
-                                                    </button>
-                                                    {doc && type !== 'gespreksverslag' ? (
-                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 rounded-[10px] bg-white/75 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                                                            <button
-                                                                type="button"
-                                                                title="Bekijken"
-                                                                aria-label="Bekijken"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSourcesModalOpen(false);
-                                                                    setPreviewDoc({
-                                                                        title: doc.name || DOC_LABELS[type],
-                                                                        url: doc.url,
-                                                                    });
-                                                                }}
-                                                            >
-                                                                <Eye className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                title="Bewerken"
-                                                                aria-label="Bewerken"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-gray-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-purple-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSourcesModalOpen(false);
-                                                                    setActiveDocType(type);
-                                                                }}
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                title="Verwijderen"
-                                                                aria-label="Verwijderen"
-                                                                tabIndex={-1}
-                                                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/90 text-red-600 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-red-700"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    void deleteSourceDocument(doc);
-                                                                }}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    </>
-                                    )}
-                                </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={docsModalOpen} onOpenChange={setDocsModalOpen}>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="h-auto justify-start gap-3 border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white py-4 px-4 text-left hover:border-indigo-400 hover:bg-indigo-50/50"
-                                    onClick={() => setDocsModalOpen(true)}
-                                >
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
-                                        <Files className="h-5 w-5" />
-                                    </span>
-                                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                        <span className="font-semibold text-gray-900">Documenten maken</span>
-                                        <span className="text-xs font-normal text-gray-600">
-                                            Intake, Trajectplan, VGR of CV openen
-                                        </span>
-                                    </span>
-                                </Button>
-                                <DialogContent className="max-w-md sm:max-w-lg">
-                                    <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2 text-gray-900">
-                                            <Files className="h-5 w-5 text-indigo-600" />
-                                            Welk document wil je maken?
-                                        </DialogTitle>
-                                        <p className="text-sm text-gray-600">
-                                            Ga naar de editor of placeholder-pagina voor dit dossier.
-                                        </p>
-                                    </DialogHeader>
-                                    <div className="flex flex-col gap-3 pt-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => void openIntakeBuilder()}
-                                            disabled={intakeOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-teal-200 bg-gradient-to-r from-teal-50/90 to-white p-4 text-left transition-colors hover:border-teal-400 hover:bg-teal-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-800 group-hover:bg-teal-200">
-                                                <FileText className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">
-                                                    Intakeformulier
-                                                </span>
-                                                <span className="text-sm text-gray-600">
-                                                    {intakeOpening
-                                                        ? 'Openen…'
-                                                        : 'Eerste document — digitaal intakeformulier'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void openTpBuilder()}
-                                            disabled={tpOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-white p-4 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 group-hover:bg-indigo-200">
-                                                <Map className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">Trajectplan</span>
-                                                <span className="text-sm text-gray-600">
-                                                    {tpOpening ? 'Openen…' : 'TP-editor voor deze werknemer'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void openVgrBuilder()}
-                                            disabled={vgrOpening}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 to-white p-4 text-left transition-colors hover:border-purple-400 hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 disabled:opacity-60"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 group-hover:bg-purple-200">
-                                                <Compass className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">VGR</span>
-                                                <span className="text-sm text-gray-600">
-                                                    {vgrOpening ? 'Openen…' : 'Voortgangsrapportage-editor'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setDocsModalOpen(false);
-                                                guardedRouter.push(`/dashboard/cv/${employeeId}`);
-                                            }}
-                                            className="group flex w-full items-center gap-4 rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50/90 to-white p-4 text-left transition-colors hover:border-amber-400 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
-                                        >
-                                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 group-hover:bg-amber-200">
-                                                <IdCard className="h-6 w-6" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block font-semibold text-gray-900">CV</span>
-                                                <span className="text-sm text-gray-600">Meerdere CV&apos;s per werknemer</span>
-                                            </span>
-                                        </button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Worker Profile Section */}
-            <div className="relative bg-white p-6 rounded-lg shadow-md space-y-6 border border-purple-100">
-                {aiLoading && autofillProgress ? (
-                    <AutofillProgressOverlay
-                        progress={autofillProgress}
-                        title="Invullen met AI"
-                        onCancel={cancelAiAutofill}
-                        cancelling={aiCancelling}
-                    />
-                ) : null}
-                <div className="flex justify-between items-center pb-4 border-b border-purple-200">
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-purple-600" />
-                        Werknemersprofiel
-                    </h2>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            onClick={autofillWithAI}
-                            disabled={aiLoading}
-                            variant="secondary"
-                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-                        >
-                            <Sparkles className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
-                            {aiLoading ? 'AI uitvoeren...' : 'Invullen met AI'}
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={validateAllPendingFields}
-                            disabled={aiLoading || pendingValidationFields.length === 0 || updating}
-                            variant="outline"
-                            className="h-10 border-green-200 text-green-700 hover:border-green-300 bg-white"
-                        >
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Valideer alles
-                        </Button>
-                    </div>
-                </div>
-
-                {suggestedReferent && (employee?.client_id) && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 flex flex-wrap items-center gap-2">
-                        <span className="text-sm text-gray-700">
-                            Contactpersoon uit document: <strong>{[suggestedReferent.first_name, suggestedReferent.last_name].filter(Boolean).join(' ').trim() || '—'}</strong>
-                            {referentExists ? (
-                                <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={applySuggestedReferentSet} disabled={updating}>
-                                    Als contactpersoon koppelen
-                                </Button>
-                            ) : (
-                                <Button type="button" variant="secondary" size="sm" className="ml-2" onClick={applySuggestedReferentCreate} disabled={updating}>
-                                    Aanmaken en koppelen als contactpersoon
-                                </Button>
-                            )}
-                        </span>
-                    </div>
-                )}
-
-                {/* Current Job */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-purple-600" />
-                        Huidig werk
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('current_job')}
-                        canValidate={canValidateField('current_job')}
-                        validateLabel="Valideer huidig werk"
-                    >
-                        <Input
-                            className={cn(fieldClass('current_job'), 'pr-10')}
-                            placeholder="Bijv. Jobcoach/stagebegeleider"
-                            value={employeeDetails?.current_job || ''}
-                            onChange={e => handleDetailChange('current_job', e.target.value)}
-                        />
-                    </ValidatableField>
-                </div>
-
-                {/* Work Experience */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-purple-600" />
-                        Werkervaring
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('work_experience')}
-                        canValidate={canValidateField('work_experience')}
-                        validateLabel="Valideer werkervaring"
-                        placement="textarea-top"
-                    >
-                        <Textarea
-                            className={cn(fieldClass('work_experience'), 'h-auto min-h-[60px] pr-10')}
-                            placeholder="Functietitels, komma-gescheiden (bijv. Magazijnmedewerker, Teamleider)"
-                            value={employeeDetails?.work_experience || ''}
-                            onChange={e => handleDetailChange('work_experience', e.target.value)}
-                        />
-                    </ValidatableField>
-                </div>
-                
-                {/* Education */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2 group">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-purple-600" />
-                            Opleidingsniveau
-                        </label>
-                        <ValidatableField
-                            onValidate={() => validateField('education_level')}
-                            canValidate={canValidateField('education_level')}
-                            validateLabel="Valideer opleidingsniveau"
-                        >
-                            {(() => {
-                                const storedCustom = getCustomEducationLevelLabel(
-                                    employeeDetails?.education_level
-                                );
-                                const showAndere = educationAndereOpen || !!storedCustom;
-                                const selectValue = showAndere
-                                    ? EDUCATION_LEVEL_CUSTOM_SELECT_VALUE
-                                    : normalizeEducationLevel(employeeDetails?.education_level) ??
-                                      undefined;
-                                const draftValue =
-                                    educationAndereOpen || customEducationDraft
-                                        ? customEducationDraft
-                                        : storedCustom;
-                                const commitCustomEducation = () => {
-                                    const next = coerceEducationLevelInput(draftValue);
-                                    if (!next) return;
-                                    handleDetailChange('education_level', next);
-                                    setEducationAndereOpen(false);
-                                    setCustomEducationDraft('');
-                                };
-                                return (
-                                    <div className="space-y-2">
-                                        <Select
-                                            value={selectValue}
-                                            onValueChange={(v) => {
-                                                if (v === EDUCATION_LEVEL_CUSTOM_SELECT_VALUE) {
-                                                    setEducationAndereOpen(true);
-                                                    setCustomEducationDraft(storedCustom);
-                                                    return;
-                                                }
-                                                setEducationAndereOpen(false);
-                                                setCustomEducationDraft('');
-                                                handleDetailChange('education_level', v);
-                                            }}
-                                        >
-                                            <SelectTrigger
-                                                className={cn(
-                                                    selectFieldClass('education_level'),
-                                                    'pr-10'
-                                                )}
-                                            >
-                                                <SelectValue placeholder="Selecteer opleidingsniveau" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {EDUCATION_LEVEL_OPTIONS.map((level) => (
-                                                    <SelectItem key={level} value={level}>
-                                                        {level}
-                                                    </SelectItem>
-                                                ))}
-                                                <SelectItem value={EDUCATION_LEVEL_CUSTOM_SELECT_VALUE}>
-                                                    Andere
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {showAndere && (
-                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                                                <Input
-                                                    value={draftValue}
-                                                    onChange={(e) => {
-                                                        setEducationAndereOpen(true);
-                                                        setCustomEducationDraft(e.target.value);
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            commitCustomEducation();
-                                                        }
-                                                    }}
-                                                    placeholder="Bijv. Buitenlands diploma"
-                                                    className="h-9 bg-white"
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
-                                                    onClick={commitCustomEducation}
-                                                >
-                                                    Toevoegen
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })()}
-                        </ValidatableField>
-                    </div>
-                    <div className="space-y-2 group">
-                        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-purple-600" />
-                            Specialisatie
-                        </label>
-                        <ValidatableField
-                            onValidate={() => validateField('education_name')}
-                            canValidate={canValidateField('education_name')}
-                            validateLabel="Valideer specialisatie"
-                        >
-                            <Input
-                                className={cn(fieldClass('education_name'), 'pr-10')}
-                                placeholder="Bijv. Kappersopleiding"
-                                value={employeeDetails?.education_name || ''}
-                                onChange={e => handleDetailChange('education_name', e.target.value)}
-                            />
-                        </ValidatableField>
-                    </div>
-                </div>
-
-                {/* Checkboxes for drivers_license, has_computer, is_ex_werknemer */}
-                <div className='flex flex-wrap gap-6 p-4 bg-purple-50/50 rounded-lg border border-purple-100'>
-                    {([
-                        { key: 'drivers_license', label: 'Rijbewijs', Icon: Car },
-                        { key: 'has_computer', label: 'Heeft PC', Icon: Computer },
-                        { key: 'is_ex_werknemer', label: 'Ex-werknemer', Icon: UserRoundX },
-                    ] as const).map(({ key, label, Icon }) => (
-                        <label 
-                            key={key} 
-                            className="flex items-center space-x-3 cursor-pointer group/checkbox p-3 rounded-lg hover:bg-white transition-colors duration-200 flex-1"
-                        >
-                            <input 
-                                type="checkbox" 
-                                checked={Boolean(employeeDetails?.[key as keyof EmployeeDetails])} 
-                                onChange={e => handleDetailChange(key as keyof EmployeeDetails, e.target.checked)}
-                                className="w-5 h-5 rounded border-2 border-purple-300 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 cursor-pointer transition-all checked:bg-purple-600 checked:border-purple-600"
-                            />
-                            <div className="flex items-center gap-2">
-                                <Icon
-                                    className={`w-4 h-4 ${
-                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
-                                            ? 'text-green-600'
-                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
-                                              ? 'text-yellow-600'
-                                              : 'text-purple-600'
-                                    }`}
+                                <DocumentsCard
+                                    statuses={docStatuses}
+                                    opening={{ intake: intakeOpening, tp: tpOpening, vgr: vgrOpening }}
+                                    onOpen={openDocument}
                                 />
-                                <span
-                                    className={`font-medium ${
-                                        getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'validated'
-                                            ? 'text-green-700'
-                                            : getFieldDisplayStatus(key as EmployeeDetailFieldKey) === 'review'
-                                              ? 'text-yellow-600'
-                                              : 'text-gray-700'
-                                    }`}
-                                >
-                                    {label}
-                                </span>
-                            </div>
-                            <FieldValidateButton
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    validateField(key as EmployeeDetailFieldKey);
-                                }}
-                                disabled={!canValidateField(key as EmployeeDetailFieldKey)}
-                                label={`Valideer ${label}`}
-                                className="ml-auto"
-                            />
-                        </label>
-                    ))}
-                </div>
-
-                {/* Multi-select driver's license types */}
-                {employeeDetails?.drivers_license && (
-                    <div className="relative p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                        <FieldValidateButton
-                            onClick={() => validateField('drivers_license_type')}
-                            disabled={!canValidateField('drivers_license_type')}
-                            label="Valideer rijbewijstype"
-                            className="absolute right-3 top-3 z-10"
-                        />
-                        <label className="mb-3 block pr-10 text-sm font-semibold flex items-center gap-2 text-gray-700">
-                            <Car className="w-4 h-4 text-purple-600" />
-                            Rijbewijstype
-                        </label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                            {[
-                                { value: 'B', label: 'B (Auto)' },
-                                { value: 'C', label: 'C (Vrachtwagen)' },
-                                { value: 'C1', label: 'C1 (Middelgrote vrachtwagen)' },
-                                { value: 'D', label: 'D (Bus)' },
-                                { value: 'D1', label: 'D1 (Kleine bus)' },
-                                { value: 'E', label: 'E (Aanhangwagen)' },
-                                { value: 'A', label: 'A (Motor)' },
-                                { value: 'AM', label: 'AM (Bromfiets)' },
-                                { value: 'A1', label: 'A1 (Motor beperkt)' },
-                                { value: 'A2', label: 'A2 (Motor beperkt)' },
-                                { value: 'BE', label: 'BE (Auto + Aanhangwagen)' },
-                                { value: 'CE', label: 'CE (Vrachtwagen + Aanhangwagen)' },
-                                { value: 'DE', label: 'DE (Bus + Aanhangwagen)' },
-                                { value: 'T', label: 'T (Trekker)' },
-                            ].map((option) => {
-                                const selected = Array.isArray(employeeDetails?.drivers_license_type) 
-                                    ? employeeDetails.drivers_license_type.includes(option.value)
-                                    : false;
-                                return (
-                                    <label 
-                                        key={option.value} 
-                                        className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
-                                            selected 
-                                                ? 'border-purple-500 bg-purple-100 shadow-md' 
-                                                : 'border-purple-200 bg-white hover:border-purple-300 hover:bg-purple-50'
-                                        }`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={selected}
-                                            onChange={(e) => {
-                                                const currentTypes = Array.isArray(employeeDetails?.drivers_license_type) 
-                                                    ? employeeDetails.drivers_license_type 
-                                                    : [];
-                                                if (e.target.checked) {
-                                                    handleDetailChange('drivers_license_type', [...currentTypes, option.value]);
-                                                } else {
-                                                    handleDetailChange('drivers_license_type', currentTypes.filter(t => t !== option.value));
-                                                }
-                                            }}
-                                            className="sr-only"
-                                        />
-                                        <span className={`text-sm font-medium ${selected ? 'text-purple-700' : 'text-gray-700'}`}>
-                                            {option.label}
-                                        </span>
-                                    </label>
-                                );
-                            })}
+                                <SourcesCard
+                                    docTypes={docTypes}
+                                    documents={documents}
+                                    onUpload={(type: EmployeeDocType) => setActiveDocType(type)}
+                                    onPreview={(doc, type) =>
+                                        setPreviewDoc({ title: doc.name || DOC_LABELS[type], url: doc.url })
+                                    }
+                                    onDelete={(doc) => setSourceToDelete(doc)}
+                                    onOpenGesprek={() => setGesprekOpen(true)}
+                                />
+                                <DossierCard
+                                    clients={clients}
+                                    clientId={employee.client_id}
+                                    onClientChange={(clientId) => void handleClientChange(clientId)}
+                                    referents={referents}
+                                    referentId={employee.referent_id}
+                                    onReferentChange={(refId) => void handleReferentChange(refId)}
+                                    onEditReferent={() => {
+                                        setReferentDialogMode('edit');
+                                        setReferentDialogOpen(true);
+                                    }}
+                                    onNewReferent={() => {
+                                        setReferentDialogMode('create');
+                                        setReferentDialogOpen(true);
+                                    }}
+                                    ownerId={employee.owner_id}
+                                    currentUserId={currentUserId}
+                                    onOwnerChange={(ownerId) => void handleOwnerChange(ownerId)}
+                                    suggestedReferentName={suggestedReferentName}
+                                    suggestedReferentExists={referentExists}
+                                    onApplySuggestedReferent={() =>
+                                        void (referentExists
+                                            ? applySuggestedReferentSet()
+                                            : applySuggestedReferentCreate())
+                                    }
+                                    busy={updating}
+                                />
+                            </aside>
                         </div>
-                    </div>
+                    </>
                 )}
-
-                {/* Multi-select transport */}
-                <div className="relative p-4 bg-purple-50/50 rounded-lg border border-purple-100">
-                    <FieldValidateButton
-                        onClick={() => validateField('transport_type')}
-                        disabled={!canValidateField('transport_type')}
-                        label="Valideer eigen vervoer"
-                        className="absolute right-3 top-3 z-10"
-                    />
-                    <label className="mb-3 block pr-10 text-sm font-semibold flex items-center gap-2 text-gray-700">
-                        <Car className="w-4 h-4 text-purple-600" />
-                        Eigen vervoer
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {TRANSPORT_TYPE_OPTIONS.map((option) => {
-                            const selected = Array.isArray(employeeDetails?.transport_type) 
-                                ? employeeDetails.transport_type.includes(option)
-                                : false;
-                            return (
-                                <label 
-                                    key={option} 
-                                    className={`flex items-center space-x-2 cursor-pointer p-3 rounded-lg border-2 transition-all duration-200 ${
-                                        selected 
-                                            ? 'border-purple-500 bg-purple-100 shadow-md' 
-                                            : 'border-purple-200 bg-white hover:border-purple-300 hover:bg-purple-50'
-                                    }`}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selected}
-                                        onChange={(e) => {
-                                            const current = Array.isArray(employeeDetails?.transport_type) 
-                                                ? employeeDetails.transport_type 
-                                                : (typeof employeeDetails?.transport_type === 'string' && employeeDetails.transport_type 
-                                                    ? [employeeDetails.transport_type] 
-                                                    : []);
-                                            if (e.target.checked) {
-                                                handleDetailChange('transport_type', [...current, option]);
-                                            } else {
-                                                handleDetailChange('transport_type', current.filter(v => v !== option));
-                                            }
-                                        }}
-                                        className="rounded border-border text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
-                                    />
-                                    <span
-                                        className={`text-sm font-medium ${
-                                            selected ? 'text-purple-700' : 'text-gray-600'
-                                        } ${
-                                            getFieldDisplayStatus('transport_type') === 'review'
-                                                ? 'text-yellow-600'
-                                                : getFieldDisplayStatus('transport_type') === 'validated'
-                                                  ? 'text-green-700'
-                                                  : ''
-                                        }`}
-                                    >
-                                        {option}
-                                    </span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                    {(() => {
-                        const current = Array.isArray(employeeDetails?.transport_type)
-                            ? employeeDetails.transport_type
-                            : [];
-                        const { custom } = splitTransportTypes(current);
-                        const commitCustom = () => {
-                            const next = addCustomTransportType(current, customTransportDraft);
-                            if (next === current) {
-                                setCustomTransportDraft('');
-                                return;
-                            }
-                            handleDetailChange('transport_type', next);
-                            setCustomTransportDraft('');
-                        };
-                        return (
-                            <div className="mt-3 space-y-2">
-                                {custom.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {custom.map((label) => (
-                                            <span
-                                                key={label}
-                                                className="inline-flex items-center gap-1.5 rounded-full border border-purple-300 bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-800"
-                                            >
-                                                {label}
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Verwijder ${label}`}
-                                                    className="rounded-full px-1 text-purple-600 hover:bg-purple-200 hover:text-purple-900"
-                                                    onClick={() =>
-                                                        handleDetailChange(
-                                                            'transport_type',
-                                                            removeTransportType(current, label)
-                                                        )
-                                                    }
-                                                >
-                                                    ×
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                                    <span className="text-xs font-medium text-gray-600 shrink-0">Andere</span>
-                                    <Input
-                                        value={customTransportDraft}
-                                        onChange={(e) => setCustomTransportDraft(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                commitCustom();
-                                            }
-                                        }}
-                                        placeholder="Bijv. Scootmobiel"
-                                        className="h-9 bg-white sm:max-w-xs"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
-                                        onClick={commitCustom}
-                                    >
-                                        Toevoegen
-                                    </Button>
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-
-                {/* Language proficiency dropdowns - Side by side */}
-                <div className="space-y-3">
-                    <label className="block text-sm font-semibold flex items-center gap-2 text-gray-700">
-                        <Languages className="w-4 h-4 text-purple-600" />
-                        Nederlandse taalvaardigheid
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Spreekvaardigheid</label>
-                            <ValidatableField
-                                onValidate={() => validateField('dutch_speaking')}
-                                canValidate={canValidateField('dutch_speaking')}
-                                validateLabel="Valideer spreekvaardigheid"
-                                buttonSize="sm"
-                            >
-                                <Select value={employeeDetails?.dutch_speaking || undefined} onValueChange={(v) => handleDetailChange('dutch_speaking', v || null)}>
-                                    <SelectTrigger className={cn(selectFieldClass('dutch_speaking'), 'pr-9')}>
-                                        <SelectValue placeholder="Selecteer..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
-                                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
-                        </div>
-                        <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Schrijfvaardigheid</label>
-                            <ValidatableField
-                                onValidate={() => validateField('dutch_writing')}
-                                canValidate={canValidateField('dutch_writing')}
-                                validateLabel="Valideer schrijfvaardigheid"
-                                buttonSize="sm"
-                            >
-                                <Select value={employeeDetails?.dutch_writing || undefined} onValueChange={(v) => handleDetailChange('dutch_writing', v || null)}>
-                                    <SelectTrigger className={cn(selectFieldClass('dutch_writing'), 'pr-9')}>
-                                        <SelectValue placeholder="Selecteer..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
-                                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
-                        </div>
-                        <div className="space-y-2 group">
-                            <label className="text-xs text-gray-500 font-medium">Leesvaardigheid</label>
-                            <ValidatableField
-                                onValidate={() => validateField('dutch_reading')}
-                                canValidate={canValidateField('dutch_reading')}
-                                validateLabel="Valideer leesvaardigheid"
-                                buttonSize="sm"
-                            >
-                                <Select value={employeeDetails?.dutch_reading || undefined} onValueChange={(v) => handleDetailChange('dutch_reading', v || null)}>
-                                    <SelectTrigger className={cn(selectFieldClass('dutch_reading'), 'pr-9')}>
-                                        <SelectValue placeholder="Selecteer..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DUTCH_LANGUAGE_OPTIONS.map((level) => (
-                                            <SelectItem key={level} value={level}>{level}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </ValidatableField>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Computer Skills */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Computer className="w-4 h-4 text-purple-600" />
-                        Computervaardigheden
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('computer_skills')}
-                        canValidate={canValidateField('computer_skills')}
-                        validateLabel="Valideer computervaardigheden"
-                    >
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <Select
-                                value={employeeDetails?.computer_skills || undefined}
-                                onValueChange={(v) => handleDetailChange('computer_skills', v)}
-                            >
-                                <SelectTrigger className={cn(selectFieldClass('computer_skills'), 'pr-10 sm:w-44')}>
-                                    <SelectValue placeholder="Niveau" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {COMPUTER_SKILLS_OPTIONS.map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                            {opt.value} - {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {employeeDetails?.computer_skills &&
-                            employeeDetails.computer_skills !== '1' ? (
-                                <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-700">
-                                    <span className="shrink-0 text-muted-foreground">(</span>
-                                    <Input
-                                        className={cn(
-                                            selectFieldClass('computer_skills_description'),
-                                            'min-w-0 flex-1'
-                                        )}
-                                        value={
-                                            employeeDetails.computer_skills_description ??
-                                            getComputerSkillsDefaultDescription(
-                                                employeeDetails.computer_skills
-                                            )
-                                        }
-                                        onChange={(e) =>
-                                            handleDetailChange(
-                                                'computer_skills_description',
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder={getComputerSkillsDefaultDescription(
-                                            employeeDetails.computer_skills
-                                        )}
-                                    />
-                                    <span className="shrink-0 text-muted-foreground">)</span>
-                                </div>
-                            ) : null}
-                        </div>
-                    </ValidatableField>
-                </div>
-
-                {/* Contract Hours */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-purple-600" />
-                        Contracturen
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('contract_hours')}
-                        canValidate={canValidateField('contract_hours')}
-                        validateLabel="Valideer contracturen"
-                    >
-                        <Input
-                            className={cn(fieldClass('contract_hours'), 'pr-10')}
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Bijv. 36.5"
-                            value={
-                                contractHoursText !== null
-                                    ? contractHoursText
-                                    : employeeDetails?.contract_hours != null
-                                      ? String(employeeDetails.contract_hours)
-                                      : ''
-                            }
-                            onFocus={() => {
-                                setContractHoursText(
-                                    employeeDetails?.contract_hours != null
-                                        ? String(employeeDetails.contract_hours)
-                                        : ''
-                                );
-                            }}
-                            onChange={(e) => {
-                                const raw = e.target.value;
-                                if (raw !== '' && !/^[\d.,]*$/.test(raw)) return;
-                                setContractHoursText(raw);
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                if (isIncompleteContractHoursInput(raw)) return;
-                                const parsed = parseContractHours(raw);
-                                if (parsed != null) {
-                                    handleDetailChange('contract_hours', parsed);
-                                }
-                            }}
-                            onBlur={() => {
-                                const raw = contractHoursText;
-                                setContractHoursText(null);
-                                if (raw == null) return;
-                                if (raw.trim() === '') {
-                                    handleDetailChange('contract_hours', null);
-                                    return;
-                                }
-                                const parsed = parseContractHours(raw);
-                                handleDetailChange('contract_hours', parsed);
-                            }}
-                        />
-                    </ValidatableField>
-                </div>
-                
-                {/* Other Employers */}
-                <div className="space-y-2 group">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-purple-600" />
-                        Andere werkgevers
-                    </label>
-                    <ValidatableField
-                        onValidate={() => validateField('other_employers')}
-                        canValidate={canValidateField('other_employers')}
-                        validateLabel="Valideer andere werkgevers"
-                        placement="textarea-top"
-                    >
-                        <Textarea
-                            className={cn(fieldClass('other_employers'), 'h-auto min-h-[100px] pr-10')}
-                            placeholder="Vul hier andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever..."
-                            value={isAbsentText(employeeDetails?.other_employers) ? 'Geen' : (employeeDetails?.other_employers || 'Geen')}
-                            onChange={e => handleDetailChange('other_employers', e.target.value)}
-                        />
-                    </ValidatableField>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                        <span className="text-purple-500">ℹ️</span>
-                        Vul hier alleen andere huidige werkgevers in (bij meerdere banen), niet de hoofdwerkgever ({clientName})
-                    </p>
-                </div>
-
             </div>
 
-            <Button
-                onClick={() => void saveUnified()}
-                disabled={updating}
-                variant="default"
-                aria-label="Opslaan werknemer en profiel"
-                aria-busy={updating}
-                className={cn(
-                    'fixed bottom-6 right-6 z-50 h-12 rounded-full px-5 shadow-xl',
-                    'cursor-pointer disabled:cursor-not-allowed',
-                    'text-white border border-white/15',
-                    'transition-all duration-200 ease-out',
-                    'opacity-60 hover:opacity-100 focus-visible:opacity-100',
-                    'active:scale-[0.97] active:duration-100',
-                    'disabled:active:scale-100',
-                    updating && 'animate-pulse',
-                    hasUnsavedChanges &&
-                        'opacity-75 ring-2 ring-purple-300/35 ring-offset-2 ring-offset-transparent hover:opacity-100'
-                )}
-            >
-                <Save className="w-4 h-4 mr-2" />
-                {updating ? 'Opslaan...' : hasUnsavedChanges ? 'Alles opslaan' : 'Alles opgeslagen'}
-            </Button>
+            {editing ? (
+                <EditBar
+                    dirty={hasUnsavedChanges}
+                    saving={updating}
+                    onCancel={cancelEditing}
+                    onSave={() => void saveAndCloseEditing()}
+                />
+            ) : null}
+
+            <ConfirmDialog
+                open={confirmDiscardOpen}
+                onOpenChange={setConfirmDiscardOpen}
+                title="Wijzigingen weggooien?"
+                description="De wijzigingen in dit formulier worden niet opgeslagen."
+                confirmLabel="Weggooien"
+                cancelLabel="Verder bewerken"
+                variant="destructive"
+                onConfirm={discardEdits}
+            />
+
+            <ConfirmDialog
+                open={!!sourceToDelete}
+                onOpenChange={(open) => {
+                    if (!open && !deletingSource) setSourceToDelete(null);
+                }}
+                title="Document verwijderen?"
+                description={
+                    sourceToDelete
+                        ? `${sourceToDelete.name || DOC_LABELS[sourceToDelete.type?.toLowerCase().trim() as EmployeeDocType] || 'Dit document'} wordt verwijderd uit de bronnen van deze werknemer.`
+                        : undefined
+                }
+                confirmLabel="Verwijderen"
+                variant="destructive"
+                loading={deletingSource}
+                onConfirm={confirmDeleteSource}
+            />
+
+            {gesprekOpen ? (
+                <GesprekPanel
+                    employeeId={employeeId}
+                    open={gesprekOpen}
+                    onOpenChange={setGesprekOpen}
+                    hasPublishedVerslag={documents.some(
+                        (d) => d.type?.toLowerCase().trim() === 'gespreksverslag'
+                    )}
+                    onDocumentsChanged={() => {
+                        void fetchDocuments();
+                    }}
+                />
+            ) : null}
 
             {activeDocType && (
                 <DocumentModal
