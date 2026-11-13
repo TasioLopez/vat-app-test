@@ -552,8 +552,8 @@ export const INTAKE_SECTION_DEFS = [
   { key: 's12', title: "12. Vrije tijd en hobby's", icon: 'sparkles' as IntakeSectionIcon },
   { key: 's13', title: '13. Werkverleden en verbondenheid', icon: 'history' as IntakeSectionIcon },
   { key: 's14', title: '14. Houding t.o.v. spoor 2', icon: 'compass' as IntakeSectionIcon },
-  { key: 's16', title: '16. Toekomstbeeld en voorkeuren', icon: 'target' as IntakeSectionIcon },
-  { key: 's17', title: '17. Bijzonderheden', icon: 'info' as IntakeSectionIcon },
+  { key: 's16', title: '15. Toekomstbeeld en voorkeuren', icon: 'target' as IntakeSectionIcon },
+  { key: 's17', title: '16. Bijzonderheden', icon: 'info' as IntakeSectionIcon },
 ] as const;
 
 export type IntakeSectionKey = (typeof INTAKE_SECTION_DEFS)[number]['key'];

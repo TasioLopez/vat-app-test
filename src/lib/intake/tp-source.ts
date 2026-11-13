@@ -97,7 +97,7 @@ function reintegratieSection(intake: IntakeData): string {
 function profileSections(intake: IntakeData): string[] {
   return [
     section('Sectie 2 Functie', [field('Huidige functie', intake.s2.current_job)]),
-    section('Sectie 17 Opleiding, werk, vervoer en taal', [
+    section('Sectie 16 Opleiding, werk, vervoer en taal', [
       field('Opleidingsniveau', intake.s17.education_level),
       field('Opleiding', intake.s17.education_name),
       formatEducation(intake.s17.opleidingen),
@@ -171,7 +171,7 @@ export function intakeTextForVisieWerknemer(intake: IntakeData): string {
     section('Sectie 14 Houding ten opzichte van spoor 2', [
       field('Houding spoor 2', intake.s14.houding_spoor2),
     ]),
-    section('Sectie 16 Toekomstbeeld en voorkeuren', [
+    section('Sectie 15 Toekomstbeeld en voorkeuren', [
       field('Interesses en voorkeuren', intake.s16.interesses_voorkeuren),
       field('Ideeën passend werk', intake.s16.ideeen_passend_werk),
       field('Bereid tot scholing', intake.s16.bereid_scholing),
@@ -203,7 +203,7 @@ export function intakeTextForVisieLoopbaanadviseur(intake: IntakeData): string {
     section('Sectie 13 Werkverleden en verbondenheid', [
       field('Notitie', intake.s13.tekst),
     ]),
-    section('Sectie 16 Toekomstbeeld en voorkeuren', [
+    section('Sectie 15 Toekomstbeeld en voorkeuren', [
       field('Interesses en voorkeuren', intake.s16.interesses_voorkeuren),
       field('Ideeën passend werk', intake.s16.ideeen_passend_werk),
       field('Bereid tot scholing', intake.s16.bereid_scholing),
@@ -214,7 +214,7 @@ export function intakeTextForVisieLoopbaanadviseur(intake: IntakeData): string {
 export function intakeTextForZoekprofiel(intake: IntakeData): string {
   return joinSections([
     section('Sectie 2 Functie', [field('Huidige functie', intake.s2.current_job)]),
-    section('Sectie 17 Opleiding en werkervaring', [
+    section('Sectie 16 Opleiding en werkervaring', [
       field('Opleidingsniveau', intake.s17.education_level),
       field('Opleiding', intake.s17.education_name),
       formatEducation(intake.s17.opleidingen),

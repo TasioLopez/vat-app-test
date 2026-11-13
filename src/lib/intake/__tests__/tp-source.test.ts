@@ -85,7 +85,7 @@ describe('validated intake TP source', () => {
     assert.doesNotMatch(text, /Utrecht/);
   });
 
-  it('builds persoonlijk profiel from job and section 17 profile facts', () => {
+  it('builds persoonlijk profiel from job and section 16 profile facts', () => {
     const data = createEmptyIntakeData();
     data.s2.current_job = 'Docent LB';
     data.s17.education_level = 'HBO';

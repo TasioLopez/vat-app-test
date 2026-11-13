@@ -314,6 +314,8 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 label="Werkervaring (functies)"
                 value={data.s17.work_experience}
                 onChange={(v) => patch('s17', { work_experience: v }, { debounce: true })}
+                multiline
+                rows={5}
               />
               <IntakeSelectField
                 label="Computervaardigheden"
