@@ -262,6 +262,17 @@ html, body {
 .markdown-inline-quotes > ol:last-child > li:last-child::after {
   content: "\201D";
 }
+/* A quote that continues on the next page keeps one mark: open at the start, close at the end. */
+.markdown-inline-quotes-open > :last-child::after,
+.markdown-inline-quotes-open > ul:last-child > li:last-child::after,
+.markdown-inline-quotes-open > ol:last-child > li:last-child::after {
+  content: none;
+}
+.markdown-inline-quotes-close > :first-child::before,
+.markdown-inline-quotes-close > ul:first-child > li:first-child::before,
+.markdown-inline-quotes-close > ol:first-child > li:first-child::before {
+  content: none;
+}
 
 /* Remove chrome in print */
 @media print {
