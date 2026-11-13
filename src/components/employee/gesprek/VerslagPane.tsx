@@ -61,18 +61,67 @@ export function VerslagPane({
   const empty = !notes.trim() && !writing;
   const chip = originLabel(notesOrigin);
 
+  const actions = !empty ? (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+      {chip ? (
+        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
+          {chip}
+        </span>
+      ) : null}
+      <Button
+        type="button"
+        size="sm"
+        onClick={() => onGenerate(false)}
+        disabled={busy || recording || !hasTranscript}
+      >
+        <Sparkles className="mr-2 h-3.5 w-3.5" aria-hidden />
+        Opnieuw maken uit transcript
+      </Button>
+      {needsGenerateReplace ? (
+        <Button type="button" variant="destructive" size="sm" onClick={() => onGenerate(true)} disabled={busy}>
+          Vervang en maak verslag
+        </Button>
+      ) : null}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" size="sm" variant="ghost" disabled={busy || recording} aria-label="Meer acties">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <label className="cursor-pointer">
+              Vervangen door bestand
+              <input
+                type="file"
+                accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
+                disabled={busy || recording}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.target.value = '';
+                  onUploadFile(file);
+                }}
+              />
+            </label>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  ) : chip ? (
+    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
+      {chip}
+    </span>
+  ) : null;
+
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-gray-900">Verslag</h3>
           <p className="text-xs text-gray-600">Samenvatting van het gesprek. Dit leest de intake.</p>
         </div>
-        {chip ? (
-          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-            {chip}
-          </span>
-        ) : null}
+        {actions}
       </div>
 
       {looksLikeTranscript && notes.trim() ? (
@@ -141,70 +190,17 @@ export function VerslagPane({
           </button>
         </div>
       ) : (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => onGenerate(false)}
-              disabled={busy || recording || !hasTranscript}
-            >
-              <Sparkles className="mr-2 h-3.5 w-3.5" aria-hidden />
-              Opnieuw maken uit transcript
-            </Button>
-            {needsGenerateReplace ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => onGenerate(true)}
-                disabled={busy}
-              >
-                Vervang en maak verslag
-              </Button>
-            ) : null}
-
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" size="sm" variant="ghost" disabled={busy || recording} aria-label="Meer acties">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <label className="cursor-pointer">
-                    Vervangen door bestand
-                    <input
-                      type="file"
-                      accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      className="sr-only"
-                      disabled={busy || recording}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        event.target.value = '';
-                        onUploadFile(file);
-                      }}
-                    />
-                  </label>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl">
-              <VerslagEditor
-                key={activeId ?? 'new'}
-                markdown={notes}
-                onChange={onNotesChange}
-                appearance="neutral"
-                delay={0}
-                minHeightClassName="min-h-[320px]"
-                placeholder="Schrijf het verslag, of maak het uit het transcript."
-              />
-            </div>
-          </div>
-        </>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <VerslagEditor
+            key={activeId ?? 'new'}
+            markdown={notes}
+            onChange={onNotesChange}
+            appearance="neutral"
+            delay={0}
+            minHeightClassName="min-h-[320px]"
+            placeholder="Schrijf het verslag, of maak het uit het transcript."
+          />
+        </div>
       )}
     </section>
   );
