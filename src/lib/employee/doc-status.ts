@@ -50,13 +50,46 @@ export function isShareLinkActive(row: {
   return new Date(row.expires_at).getTime() > now.getTime();
 }
 
-export function buildTpStatusMap(
+/** Bulk map for builder docs that become completed when an export row exists (TP, Intake). */
+export function buildBuilderStatusMap(
   instances: Array<{ id: string; employee_id: string }>,
   exportInstanceIds: Set<string>
 ): Map<string, TpStatus> {
   const map = new Map<string, TpStatus>();
   for (const row of instances) {
     const next: TpStatus = exportInstanceIds.has(row.id) ? 'completed' : 'draft';
+    map.set(row.employee_id, maxTpStatus(map.get(row.employee_id) ?? 'none', next));
+  }
+  return map;
+}
+
+export function buildTpStatusMap(
+  instances: Array<{ id: string; employee_id: string }>,
+  exportInstanceIds: Set<string>
+): Map<string, TpStatus> {
+  return buildBuilderStatusMap(instances, exportInstanceIds);
+}
+
+/** Same rules as TP: instance → draft, export → completed. */
+export function buildIntakeStatusMap(
+  instances: Array<{ id: string; employee_id: string }>,
+  exportInstanceIds: Set<string>
+): Map<string, TpStatus> {
+  return buildBuilderStatusMap(instances, exportInstanceIds);
+}
+
+/**
+ * VGR list status: export or a `final` instance counts as completed;
+ * any other instance is draft.
+ */
+export function buildVgrStatusMap(
+  instances: Array<{ id: string; employee_id: string; status: string | null }>,
+  exportInstanceIds: Set<string>
+): Map<string, TpStatus> {
+  const map = new Map<string, TpStatus>();
+  for (const row of instances) {
+    const next: TpStatus =
+      exportInstanceIds.has(row.id) || row.status === 'final' ? 'completed' : 'draft';
     map.set(row.employee_id, maxTpStatus(map.get(row.employee_id) ?? 'none', next));
   }
   return map;

@@ -61,10 +61,13 @@ const CV_META: Record<
 export function DocStatusPill({
   kind,
   status,
+  variant = 'default',
   className,
 }: {
   kind: DocKind;
   status: TpStatus | CvStatus;
+  /** `icon` hides the label; status text stays on title / aria-label for hover. */
+  variant?: 'default' | 'icon';
   className?: string;
 }) {
   const meta =
@@ -75,11 +78,13 @@ export function DocStatusPill({
           full: `${BUILDER_KIND_LABEL[kind]}: ${BUILDER_META[status as TpStatus].label}`,
         };
   const { Icon } = meta;
+  const iconOnly = variant === 'icon';
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-full text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        iconOnly ? 'h-7 w-7 p-0' : 'gap-1 px-2 py-0.5',
         meta.tone,
         className
       )}
@@ -87,7 +92,7 @@ export function DocStatusPill({
       aria-label={meta.full}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      {meta.label}
+      {!iconOnly ? meta.label : null}
     </span>
   );
 }

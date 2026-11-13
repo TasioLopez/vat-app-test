@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildCvStatusMap,
+  buildIntakeStatusMap,
   buildTpStatusMap,
+  buildVgrStatusMap,
   chunkIds,
   cvStatusRank,
   isShareLinkActive,
@@ -39,6 +41,34 @@ describe('doc-status helpers', () => {
     assert.equal(map.get('e1'), 'draft');
     assert.equal(map.get('e2'), 'completed');
     assert.equal(map.get('e3'), undefined);
+  });
+
+  it('builds Intake map with the same instance/export rules as TP', () => {
+    const map = buildIntakeStatusMap(
+      [
+        { id: 'in1', employee_id: 'e1' },
+        { id: 'in2', employee_id: 'e2' },
+      ],
+      new Set(['in2'])
+    );
+    assert.equal(map.get('e1'), 'draft');
+    assert.equal(map.get('e2'), 'completed');
+  });
+
+  it('builds VGR map from exports and final instances', () => {
+    const map = buildVgrStatusMap(
+      [
+        { id: 'v1', employee_id: 'e1', status: 'draft' },
+        { id: 'v2', employee_id: 'e2', status: 'final' },
+        { id: 'v3', employee_id: 'e3', status: 'draft' },
+        { id: 'v4', employee_id: 'e3', status: 'in_progress' },
+      ],
+      new Set(['v3'])
+    );
+    assert.equal(map.get('e1'), 'draft');
+    assert.equal(map.get('e2'), 'completed');
+    assert.equal(map.get('e3'), 'completed');
+    assert.equal(map.get('e4'), undefined);
   });
 
   it('builds CV map with share progression', () => {
