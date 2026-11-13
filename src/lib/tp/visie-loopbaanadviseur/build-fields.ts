@@ -99,6 +99,14 @@ function validateFuncties(content: VisieLoopbaanadviseurContentResult): void {
   }
 }
 
+/**
+ * Dutch keeps a lowercase letter after a colon. A following abbreviation
+ * (HBO, FML) stays uppercase because its second letter is also a capital.
+ */
+export function lowercaseDutchAfterColon(text: string): string {
+  return text.replace(/^(\p{Lu})(?=\p{Ll})/u, (letter) => letter.toLowerCase());
+}
+
 function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): string {
   const functies = content.functies.filter(
     (f) => f.naam.trim().toLowerCase() !== EN_SOORTGELIJK.toLowerCase()
@@ -107,7 +115,7 @@ function formatFunctieBullets(content: VisieLoopbaanadviseurContentResult): stri
   return functies
     .map((f) => {
       const naam = f.naam.trim();
-      const toel = stripCitations(f.toelichting.trim());
+      const toel = lowercaseDutchAfterColon(stripCitations(f.toelichting.trim()));
       if (!naam) return null;
       if (!toel) return `• ${naam}`;
       return `• ${naam}: ${toel}`;

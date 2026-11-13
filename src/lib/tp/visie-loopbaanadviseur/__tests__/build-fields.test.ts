@@ -5,6 +5,7 @@ import {
   buildFunctiesIntro,
   buildVisieLoopbaanadviseurBlock,
   buildVisieLoopbaanadviseurFields,
+  lowercaseDutchAfterColon,
   parseVisieLoopbaanadviseur,
 } from '../build-fields';
 import {
@@ -311,10 +312,10 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
       'ad_with_functies'
     );
     assert.ok(!visie_loopbaanadviseur.includes('En soortgelijk'));
-    assert.match(visie_loopbaanadviseur, /• Functie A: Passend\./);
-    assert.match(visie_loopbaanadviseur, /• Functie B: Passend\./);
-    assert.match(visie_loopbaanadviseur, /• Functie C: Passend\./);
-    assert.match(visie_loopbaanadviseur, /• Functie D: Ook passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie A: passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie B: passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie C: passend\./);
+    assert.match(visie_loopbaanadviseur, /• Functie D: ook passend\./);
   });
 
   it('emits a single functie when only one is provided', () => {
@@ -326,7 +327,7 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
       content,
       'ad_with_functies'
     );
-    assert.match(visie_loopbaanadviseur, /• Alleen A: Passend\./);
+    assert.match(visie_loopbaanadviseur, /• Alleen A: passend\./);
     assert.equal(
       (visie_loopbaanadviseur.match(/^• /gm) || []).length,
       1
@@ -469,6 +470,21 @@ describe('parseVisieLoopbaanadviseurContentResult', () => {
     });
     assert.equal(result.functies.length, 5);
     assert.equal(result.functies[4].naam, 'E');
+  });
+});
+
+describe('lowercaseDutchAfterColon', () => {
+  it('lowercases the first letter after a colon and keeps abbreviations', () => {
+    assert.equal(
+      lowercaseDutchAfterColon('De hbo-opleiding biedt een basis.'),
+      'de hbo-opleiding biedt een basis.'
+    );
+    assert.equal(
+      lowercaseDutchAfterColon('Haar voorkeur voor systeemwerk.'),
+      'haar voorkeur voor systeemwerk.'
+    );
+    assert.equal(lowercaseDutchAfterColon('HBO-opleiding biedt een basis.'), 'HBO-opleiding biedt een basis.');
+    assert.equal(lowercaseDutchAfterColon('de hbo-opleiding'), 'de hbo-opleiding');
   });
 });
 

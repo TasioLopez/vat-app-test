@@ -5,7 +5,10 @@ import {
   FUNCTIES_SUBHEADING,
   TOELICHTING_DELIMITER,
 } from '@/lib/tp/visie-loopbaanadviseur/constants';
-import { parseVisieLoopbaanadviseur } from '@/lib/tp/visie-loopbaanadviseur/build-fields';
+import {
+  lowercaseDutchAfterColon,
+  parseVisieLoopbaanadviseur,
+} from '@/lib/tp/visie-loopbaanadviseur/build-fields';
 import { parseFunctieLine } from '@/lib/tp/visie-loopbaanadviseur/parse-functie-line';
 import { BasisToelichtingHeading, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { formatInlineText } from '@/components/tp2026/BasisLegacyText';
@@ -33,7 +36,9 @@ function renderVisieLaFunctieBullets(bullets: string, protectDates: boolean): Re
             {parsed.description ? (
               <>
                 {': '}
-                <span className="font-normal">{formatInlineText(parsed.description, inlineOpts)}</span>
+                <span className="font-normal">
+                  {formatInlineText(lowercaseDutchAfterColon(parsed.description), inlineOpts)}
+                </span>
               </>
             ) : null}
           </ValentineZLogoBulletRow>
