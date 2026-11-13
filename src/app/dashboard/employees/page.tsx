@@ -226,65 +226,56 @@ export default function EmployeesPage() {
     const intakeExportIds = new Set<string>();
     const vgrExportIds = new Set<string>();
 
-    const collectExportIds = async (
-      instanceIds: string[],
-      table: 'tp_exports' | 'intake_exports' | 'vgr_exports',
-      column: 'tp_instance_id' | 'intake_instance_id' | 'vgr_instance_id',
-      into: Set<string>
-    ) => {
-      for (const chunk of chunkIds(instanceIds)) {
-        if (chunk.length === 0) continue;
-        if (table === 'intake_exports') {
-          const { data, error } = await intakeClient
-            .from('intake_exports')
-            .select(column)
-            .in(column, chunk);
-          if (error) {
-            console.error(`Error fetching ${table}:`, error);
-            continue;
-          }
-          for (const row of data ?? []) {
-            const id = row[column];
-            if (id) into.add(id);
-          }
-          continue;
-        }
-
+    // Table and column names stay literal in each query: the Supabase types cannot follow them as variables.
+    const collectTpExportIds = async () => {
+      for (const chunk of chunkIds(tpInstances.map((r) => r.id))) {
         const { data, error } = await supabase
-          .from(table)
-          .select(column)
-          .in(column, chunk);
+          .from('tp_exports')
+          .select('tp_instance_id')
+          .in('tp_instance_id', chunk);
         if (error) {
-          console.error(`Error fetching ${table}:`, error);
+          console.error('Error fetching tp_exports:', error);
           continue;
         }
         for (const row of data ?? []) {
-          const id = (row as Record<string, string | null>)[column];
-          if (id) into.add(id);
+          if (row.tp_instance_id) tpExportIds.add(row.tp_instance_id);
         }
       }
     };
 
-    await Promise.all([
-      collectExportIds(
-        tpInstances.map((r) => r.id),
-        'tp_exports',
-        'tp_instance_id',
-        tpExportIds
-      ),
-      collectExportIds(
-        intakeInstances.map((r) => r.id),
-        'intake_exports',
-        'intake_instance_id',
-        intakeExportIds
-      ),
-      collectExportIds(
-        vgrInstances.map((r) => r.id),
-        'vgr_exports',
-        'vgr_instance_id',
-        vgrExportIds
-      ),
-    ]);
+    const collectIntakeExportIds = async () => {
+      for (const chunk of chunkIds(intakeInstances.map((r) => r.id))) {
+        const { data, error } = await intakeClient
+          .from('intake_exports')
+          .select('intake_instance_id')
+          .in('intake_instance_id', chunk);
+        if (error) {
+          console.error('Error fetching intake_exports:', error);
+          continue;
+        }
+        for (const row of data ?? []) {
+          if (row.intake_instance_id) intakeExportIds.add(row.intake_instance_id);
+        }
+      }
+    };
+
+    const collectVgrExportIds = async () => {
+      for (const chunk of chunkIds(vgrInstances.map((r) => r.id))) {
+        const { data, error } = await supabase
+          .from('vgr_exports')
+          .select('vgr_instance_id')
+          .in('vgr_instance_id', chunk);
+        if (error) {
+          console.error('Error fetching vgr_exports:', error);
+          continue;
+        }
+        for (const row of data ?? []) {
+          if (row.vgr_instance_id) vgrExportIds.add(row.vgr_instance_id);
+        }
+      }
+    };
+
+    await Promise.all([collectTpExportIds(), collectIntakeExportIds(), collectVgrExportIds()]);
 
     setIntakeStatusByEmployee(buildIntakeStatusMap(intakeInstances, intakeExportIds));
     setTpStatusByEmployee(buildTpStatusMap(tpInstances, tpExportIds));
