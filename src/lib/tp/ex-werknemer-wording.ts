@@ -76,6 +76,8 @@ const PROTECTED_PHRASES = [
   'omdat een werknemer kan worden ingezet',
   'nieuwe werkgever',
   'potentiële werkgevers',
+  'andere werkgever(s)',
+  'andere werkgevers',
 ];
 
 /** Generic workers in the control document use the parenthetical form. */

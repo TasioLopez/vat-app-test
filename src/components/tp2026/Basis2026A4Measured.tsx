@@ -367,7 +367,7 @@ const BASIS_EX_WORDING_KEYS = new Set([
   'zp',
   'vlb',
   'pow-toelichting',
-  'pow-inschaling',
+  // pow-inschaling: wording applied to parsed cells in PowInschalingTable (JSON quotes would skip it)
   'prog',
 ]);
 
@@ -628,7 +628,7 @@ function TextBlockBody({
   }
 
   if (variant === 'powInschaling') {
-    return <PowInschalingTable raw={trimmed} />;
+    return <PowInschalingTable raw={trimmed} isEx={isEx} />;
   }
 
   if (variant === 'powToelichting') {
