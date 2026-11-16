@@ -92,6 +92,41 @@ describe('booking validation', () => {
     assert.equal(parsed.data.title, 'Overleg');
     assert.equal(parsed.data.note, null);
     assert.deepEqual(parsed.data.guestEmails, []);
+    assert.equal(parsed.data.bookedByUserId, null);
+  });
+
+  it('keeps a chosen owner and ignores a missing one', () => {
+    const ownerId = '22222222-2222-4222-8222-222222222222';
+    const withOwner = parseBookingRequest({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      title: 'Overleg',
+      startsAt: morning.toISOString(),
+      endsAt: lateMorning.toISOString(),
+      bookedByUserId: `  ${ownerId}  `,
+    });
+    assert.ok('data' in withOwner);
+    if (!('data' in withOwner)) return;
+    assert.equal(withOwner.data.bookedByUserId, ownerId);
+
+    const withoutOwner = parseBookingRequest({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      title: 'Overleg',
+      startsAt: morning.toISOString(),
+      endsAt: lateMorning.toISOString(),
+      bookedByUserId: '',
+    });
+    assert.ok('data' in withoutOwner);
+    if (!('data' in withoutOwner)) return;
+    assert.equal(withoutOwner.data.bookedByUserId, null);
+
+    const invalid = parseBookingRequest({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      title: 'Overleg',
+      startsAt: morning.toISOString(),
+      endsAt: lateMorning.toISOString(),
+      bookedByUserId: 'niet-een-id',
+    });
+    assert.ok('error' in invalid);
   });
 });
 

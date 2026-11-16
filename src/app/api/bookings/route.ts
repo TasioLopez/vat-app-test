@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUserWithRole } from '@/lib/help/auth';
 import { sendBookingEmails } from '@/lib/booking/email';
 import { isSpaceKind } from '@/lib/booking/types';
+import { resolveBookingOwner } from '@/lib/booking/owner';
 import { parseBookingRequest } from '@/lib/booking/validate';
-import { formatOrgUserDisplayName } from '@/lib/users/org-directory';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 const EMAIL_WARNING =
@@ -32,14 +32,9 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await getSupabaseServerClient();
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('first_name, last_name, email')
-    .eq('id', session.userId)
-    .single();
-
-  if (profileError || !profile) {
-    return NextResponse.json({ error: 'Gebruikersprofiel niet gevonden.' }, { status: 400 });
+  const resolved = await resolveBookingOwner(supabase, session, parsed.data.bookedByUserId);
+  if ('error' in resolved) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status });
   }
 
   const { data: space, error: spaceError } = await supabase
@@ -71,15 +66,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Deze ruimte is niet beschikbaar.' }, { status: 400 });
   }
 
-  const bookerName = formatOrgUserDisplayName(profile);
-  const bookerEmail = profile.email.trim().toLowerCase();
-
   const { data: booking, error: insertError } = await supabase
     .from('bookings')
     .insert({
       space_id: space.id,
-      booked_by: session.userId,
-      booker_name: bookerName,
+      booked_by: resolved.owner.id,
+      booker_name: 'Onbekend',
       title: parsed.data.title,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
@@ -110,7 +102,7 @@ export async function POST(req: NextRequest) {
     note: booking.note,
   };
   try {
-    const failures = await sendBookingEmails('confirmation', 'booker', [bookerEmail], mailDetails);
+    const failures = await sendBookingEmails('confirmation', 'booker', [resolved.owner.email], mailDetails);
     if (failures.length > 0) emailWarning = EMAIL_WARNING;
   } catch (error) {
     console.error('Booking confirmation email failed', error);
