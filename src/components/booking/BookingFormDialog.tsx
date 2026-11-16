@@ -13,9 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { OrgUserSelect } from '@/components/users/OrgUserSelect';
 import { bookingRangeFromInputs, parseDateInput } from '@/lib/booking/validate';
 import { formatBookingWhen } from '@/lib/booking/time';
 import { spaceKindLabel, type SpaceRow } from '@/lib/booking/types';
+import { supabase } from '@/lib/supabase/client';
 
 export type BookingDraft = {
   space: SpaceRow;
@@ -26,22 +28,33 @@ export type BookingDraft = {
   bookingId?: string;
   title?: string;
   note?: string;
+  bookedBy?: string | null;
 };
 
 type BookingFormDialogProps = {
   draft: BookingDraft | null;
   spaceOptions: SpaceRow[];
+  canAssignOwner: boolean;
+  currentUserId: string;
   onOpenChange: (open: boolean) => void;
   onBooked: (emailWarning: string | null, updated: boolean) => void;
 };
 
-export default function BookingFormDialog({ draft, spaceOptions, onOpenChange, onBooked }: BookingFormDialogProps) {
+export default function BookingFormDialog({
+  draft,
+  spaceOptions,
+  canAssignOwner,
+  currentUserId,
+  onOpenChange,
+  onBooked,
+}: BookingFormDialogProps) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [note, setNote] = useState('');
   const [spaceId, setSpaceId] = useState('');
+  const [ownerId, setOwnerId] = useState(currentUserId);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const editing = Boolean(draft?.bookingId);
@@ -54,9 +67,10 @@ export default function BookingFormDialog({ draft, spaceOptions, onOpenChange, o
     setEnd(draft.end);
     setNote(draft.note ?? '');
     setSpaceId(draft.space.id);
+    setOwnerId(draft.bookedBy || currentUserId);
     setFormError(null);
     setSaving(false);
-  }, [draft]);
+  }, [currentUserId, draft]);
 
   const selectedSpace = spaceOptions.find((space) => space.id === spaceId) ?? draft?.space ?? null;
 
@@ -99,6 +113,7 @@ export default function BookingFormDialog({ draft, spaceOptions, onOpenChange, o
           startsAt: range.startsAt.toISOString(),
           endsAt: range.endsAt.toISOString(),
           note: note.trim(),
+          ...(canAssignOwner ? { bookedByUserId: ownerId } : {}),
         }),
       });
       const body = (await response.json().catch(() => ({}))) as { error?: string; emailWarning?: string | null };
@@ -149,6 +164,18 @@ export default function BookingFormDialog({ draft, spaceOptions, onOpenChange, o
                 {draft.locationName}
               </p>
             )}
+            {canAssignOwner ? (
+              <div className="space-y-2">
+                <Label>Gereserveerd voor</Label>
+                <OrgUserSelect
+                  supabase={supabase}
+                  value={ownerId}
+                  currentUserId={currentUserId}
+                  onChange={(userId) => setOwnerId(userId ?? currentUserId)}
+                  placeholder="Kies een persoon"
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="booking-title">Titel</Label>
               <Input

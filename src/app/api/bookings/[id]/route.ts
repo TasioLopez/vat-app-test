@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { canChangeBooking } from '@/lib/auth/roles';
 import { sendBookingEmails, type BookingMailKind } from '@/lib/booking/email';
 import { isSpaceKind, type SpaceKind } from '@/lib/booking/types';
+import { resolveBookingOwner } from '@/lib/booking/owner';
 import { parseBookingRequest } from '@/lib/booking/validate';
 import { getSessionUserWithRole } from '@/lib/help/auth';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
@@ -78,6 +79,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'U kunt alleen uw eigen reservering wijzigen.' }, { status: 403 });
   }
 
+  const resolved = await resolveBookingOwner(supabase, session, parsed.data.bookedByUserId);
+  if ('error' in resolved) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status });
+  }
+
   if (parsed.data.spaceId !== booking.space_id) {
     const { data: nextSpace, error: spaceError } = await supabase
       .from('spaces')
@@ -99,6 +105,7 @@ export async function PATCH(
     .from('bookings')
     .update({
       space_id: parsed.data.spaceId,
+      booked_by: resolved.owner.id,
       title: parsed.data.title,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
@@ -132,18 +139,8 @@ export async function PATCH(
     ? await supabase.from('locations').select('name, address').eq('id', space.location_id).maybeSingle()
     : { data: null };
 
-  let bookerEmail: string | null = null;
-  if (updated.booked_by) {
-    const { data: booker } = await supabase
-      .from('users')
-      .select('email')
-      .eq('id', updated.booked_by)
-      .maybeSingle();
-    bookerEmail = booker?.email ?? null;
-  }
-
   const kind = space && isSpaceKind(space.kind) ? space.kind : 'room';
-  const emailFailed = await notifyBooker('update', bookerEmail, {
+  const emailFailed = await notifyBooker('update', resolved.owner.email, {
     bookerName: updated.booker_name,
     title: updated.title,
     locationName: location?.name ?? 'Locatie',

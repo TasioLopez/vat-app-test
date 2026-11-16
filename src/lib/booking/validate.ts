@@ -12,6 +12,8 @@ export const MAX_NOTE_LENGTH = 1000;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export type BookingRequest = {
   spaceId: string;
   title: string;
@@ -19,6 +21,8 @@ export type BookingRequest = {
   endsAt: Date;
   note: string | null;
   guestEmails: string[];
+  /** Null means the signed-in user. */
+  bookedByUserId: string | null;
 };
 
 export function validateBookingWindow(startsAt: Date, endsAt: Date): string | null {
@@ -123,6 +127,15 @@ export function parseBookingRequest(body: unknown): { data: BookingRequest } | {
   const windowError = validateBookingWindow(startsAt, endsAt);
   if (windowError) return { error: windowError };
 
+  const bookedByRaw = record.bookedByUserId;
+  let bookedByUserId: string | null = null;
+  if (bookedByRaw != null && bookedByRaw !== '') {
+    if (typeof bookedByRaw !== 'string' || !USER_ID_PATTERN.test(bookedByRaw.trim())) {
+      return { error: 'Kies een bestaande gebruiker.' };
+    }
+    bookedByUserId = bookedByRaw.trim();
+  }
+
   return {
     data: {
       spaceId,
@@ -131,6 +144,7 @@ export function parseBookingRequest(body: unknown): { data: BookingRequest } | {
       endsAt,
       note: noteRaw || null,
       guestEmails: [],
+      bookedByUserId,
     },
   };
 }

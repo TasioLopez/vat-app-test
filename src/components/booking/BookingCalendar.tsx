@@ -10,7 +10,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { canChangeBooking, canManageSpaces } from '@/lib/auth/roles';
+import { canChangeBooking, canManageAnyBooking, canManageSpaces } from '@/lib/auth/roles';
 import {
   addCalendarDays,
   amsterdamWallTimeToUtc,
@@ -214,6 +214,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       end: formatClock(new Date(booking.ends_at)),
       title: booking.title,
       note: data?.note ?? '',
+      bookedBy: booking.booked_by,
     });
   }
 
@@ -631,6 +632,8 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
               )
             : []
         }
+        canAssignOwner={canManageAnyBooking(role)}
+        currentUserId={userId}
         onOpenChange={(open) => {
           if (!open) setDraft(null);
         }}
