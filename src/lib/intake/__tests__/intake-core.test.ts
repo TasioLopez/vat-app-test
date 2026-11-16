@@ -17,6 +17,8 @@ import { isAdDocumentType } from '@/lib/document-analysis/doc-type-matchers';
 import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { formatIntakeDateNl } from '@/lib/intake/format-date';
 import {
+  dossierSourceLabel,
+  fileNameLooksLikeAanmeld,
   intakeDraftHasContent,
   isDossierSourceType,
   isIntakeDocumentType,
@@ -270,6 +272,20 @@ describe('intake sources helpers', () => {
     filled.s1.employee_name = 'Jan';
     assert.equal(intakeDraftHasContent(filled), true);
   });
+
+  it('labels extra+aanmeld filename as aanmeldformulier bron', () => {
+    assert.equal(fileNameLooksLikeAanmeld('Aanmelding per mail Bounou.docx'), true);
+    assert.equal(fileNameLooksLikeAanmeld('IZP.pdf'), false);
+    assert.equal(
+      dossierSourceLabel('extra', 'Aanmeldformulier_ValentineZ_C._de_Ridder.docx'),
+      'aanmeldformulier: Aanmeldformulier_ValentineZ_C._de_Ridder.docx'
+    );
+    assert.equal(
+      dossierSourceLabel('aanmeldformulier', 'Aanmelding per mail Bounou.docx'),
+      'aanmeldformulier: Aanmelding per mail Bounou.docx'
+    );
+    assert.equal(dossierSourceLabel('extra', 'notitie.docx'), 'extra: notitie.docx');
+  });
 });
 
 describe('applyIntakeCheckboxOverridesFromText', () => {
@@ -317,14 +333,33 @@ describe('mergeIntakeFillBlanks', () => {
   it('does not flip intake-authoritative false booleans from dossier true', () => {
     const base = createEmptyIntakeData();
     base.s6.is_ex_werknemer = false;
-    base.s5.fml_beperkingen.werktijden = false;
+    base.s6.ad_report_concept = false;
+    base.s17.has_pc = false;
 
     const gap = createEmptyIntakeData();
     gap.s6.is_ex_werknemer = true;
-    gap.s5.fml_beperkingen.werktijden = true;
+    gap.s6.ad_report_concept = true;
+    gap.s17.has_pc = true;
 
     const merged = mergeIntakeFillBlanks(base, gap);
     assert.equal(merged.s6.is_ex_werknemer, false);
-    assert.equal(merged.s5.fml_beperkingen.werktijden, false);
+    assert.equal(merged.s6.ad_report_concept, false);
+    assert.equal(merged.s17.has_pc, false);
+  });
+
+  it('lets dossier FML true fill unchecked intake FML rubrics', () => {
+    const base = createEmptyIntakeData();
+    base.s5.fml_beperkingen.werktijden = false;
+    base.s5.fml_beperkingen.dynamische_handelingen = false;
+
+    const gap = createEmptyIntakeData();
+    gap.s5.fml_beperkingen.werktijden = true;
+    gap.s5.fml_beperkingen.dynamische_handelingen = true;
+    gap.s5.fml_beperkingen.persoonlijk_functioneren = false;
+
+    const merged = mergeIntakeFillBlanks(base, gap);
+    assert.equal(merged.s5.fml_beperkingen.werktijden, true);
+    assert.equal(merged.s5.fml_beperkingen.dynamische_handelingen, true);
+    assert.equal(merged.s5.fml_beperkingen.persoonlijk_functioneren, false);
   });
 });

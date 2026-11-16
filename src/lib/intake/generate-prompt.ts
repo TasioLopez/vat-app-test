@@ -6,19 +6,26 @@ WERKWIJZE
 1. Lees alle bronnen volledig.
 2. Bepaal per veld de juiste bron. Voor belastbaarheid: nieuwste FML of nieuwste IZP.
 3. Vul alleen aantoonbare informatie in. Niet gevonden = leeg/false/null. Verzin niets.
-4. Bij tegenstrijdige bronnen: laat het veld leeg en noteer het conflict in meta.conflicts.
+4. Bij tegenstrijdige bronnen van gelijke autoriteit (bijv. twee FML's zonder nieuwere winnaar): laat het veld leeg en noteer het conflict in meta.conflicts.
+5. Werknemer vs medische bron: FML/IZP/BA-schriftelijke adviezen gaan vóór het gespreksverslag. Vul het veld vanuit de medische bron en noteer het conflict in meta.conflicts (veld niet leeglaten).
 
 STRUCTUUR
 Lever exact het gevraagde JSON-schema. Geen bronvermeldingen in veldwaarden.
 
 SELECTIEVAKJES / BOOLEANS
 True alleen als eenduidig aangetoond. Anders false.
+FML/IZP-beperkingsvakjes: true voor elke rubriek waarin de nieuwste FML/IZP minstens één beperking noemt.
 
 DOSSIERTABEL (sectie 6)
 - fml_izp_lab_kind: "fml" of "izp" (niet beide); datum alleen in fml_izp_lab_date (YYYY-MM-DD).
 - doctor_role / osv_doctor_role: Arts | Anios | Aios | BA | VA. Anios ≠ Aios.
-- OSV alleen invullen bij expliciete supervisie.
+- Arts/BA-naam (occupational_doctor_name + doctor_role), strikte prioriteit:
+  1. Ondertekenaar / opsteller van de nieuwste FML of IZP
+  2. Anders arts uit spreekuurrapportage
+  3. NOOIT de AD-naam hier; AD hoort in occupational_doctor_ad_name en/of s7.ad_auteur
+- OSV (osv_doctor_name / osv_doctor_role): alleen bij expliciete supervisie op FML/IZP ("werkend onder supervisie van …").
 - occupational_doctor_ad_name = naam AD; occupational_doctor_name = naam arts/BA.
+- opbouwschema_aanwezig: vul vanuit BA/spreekuur-schriftelijk advies wanneer aanwezig. Als het gespreksverslag dat betwist: toch BA-advies invullen en conflict noteren in meta.conflicts.
 - ad_report_concept: true ALLEEN als het AD-rapport expliciet een concept is (bijv. titel/status "concept"/"conceptrapport", of intakeformulier-checkbox Concept aangevinkt). Anders false. Het woord "concept" in lopende tekst is niet genoeg.
 - is_ex_werknemer: true ALLEEN bij duidelijk aangevinkt Ex-werknemer; anders false.
 
@@ -27,7 +34,7 @@ Maximaal vijf doorlopende zinnen. Begin exact: "Als [werkelijke functienaam] is 
 Alleen kerntaken; geen opsomming van fysieke/mentale belasting.
 
 MEDISCHE SITUATIE (s5)
-FML/IZP-beperkingen: alleen rubrieken met minstens één beperking true. Geen tekstlijst.
+FML/IZP-beperkingen: alleen rubrieken met minstens één beperking true. Geen tekstlijst. Nieuwste FML/IZP is leidend, ook als werknemer delen niet herkent (noteer dan conflict).
 
 QUOTES
 Velden die met quote_ beginnen: letterlijk 1-op-1 uit de bron. Geen aanhalingstekens toevoegen. Zonder exacte passage = leeg.
@@ -46,21 +53,22 @@ Gecontroleerde waarden (exact, anders leeg):
 - transport_types: alleen Auto | Fiets | OV | Lopend
 
 AANMELDFORMULIER (sectie 4 contactpersoon)
-Een bron met label aanmeldformulier is het aanmeldformulier van de opdrachtgever.
-Als die bron aanwezig is, vul s4 (referent_name, referent_function, referent_phone, referent_email) ALLEEN vanuit het blok contactpersoon op dat formulier:
+Een bron met label aanmeldformulier (ook als het bestandstype "extra" was maar de bestandsnaam "aanmeld" bevat) is het aanmeldformulier van de opdrachtgever.
+Als die bron aanwezig is, vul s4 volledig vanuit het blok contactpersoon op dat formulier:
 - Telefoonnr. contactpersoon → referent_phone
 - Mailadres contactpersoon → referent_email
-- referent_name en referent_function alleen als het formulier die expliciet noemt
-Verzin geen naam uit het e-mailadres. Geen naamveld = referent_name leeg.
+- Naam contactpersoon → referent_name (expliciet op het formulier; verzin geen naam uit het e-mailadres)
+- Functie contactpersoon → referent_function wanneer aanwezig
+Telefoon/e-mail alleen is niet voldoende wanneer naam en/of functie ook op het formulier staan — vul alle aanwezige contactvelden.
 Gebruik NOOIT de leidinggevende, de budgethouder of het facturatiecontact als contactpersoon.
 Laat extra_referent_name en extra_referent_function leeg, tenzij het aanmeldformulier expliciet een tweede contactpersoon noemt.
 
 GESPREKSVERSLAG
 Een bron met label gespreksverslag is het verslag van wat de werknemer zelf heeft verteld.
 Gebruik die bron voor de functieomschrijving (s3), de eigen ervaring in s6, de narratieve delen s8–s16 en s17 (opleiding, werkervaring, vaardigheden en praktische belemmeringen die de werknemer noemde).
-FML/IZP en spreekuurrapportage blijven leidend voor beperkingsvakjes, prognose en andere medische quotes.
+FML/IZP en spreekuurrapportage blijven leidend voor beperkingsvakjes, prognose, artsnaam en andere medische quotes.
 Quotes uit het AD-rapport blijven letterlijk uit het AD-rapport.
-Als het gespreksverslag iets anders zegt dan FML of AD: laat het veld leeg en noteer het conflict in meta.conflicts.
+Als het gespreksverslag iets anders zegt dan FML/IZP/BA: vul vanuit FML/IZP/BA en noteer het conflict in meta.conflicts (niet leeglaten om die reden).
 
 meta.conflicts: array van { field, message } bij tegenstrijdigheden.
 meta.generation_notes: korte lijst verwerkte bestanden.

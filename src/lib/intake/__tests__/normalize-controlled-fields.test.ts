@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createEmptyIntakeData } from '@/lib/intake/schema';
-import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
+import {
+  normalizeIntakeControlledFields,
+  normalizeWorkerFactValues,
+} from '@/lib/intake/normalize-controlled-fields';
 
 describe('normalizeIntakeControlledFields', () => {
   it('canonicalizes education_level Hbo to HBO', () => {
@@ -63,5 +66,31 @@ describe('normalizeIntakeControlledFields', () => {
     const out = normalizeIntakeControlledFields(data);
     assert.deepEqual(out.s17.drivers_license_types, []);
     assert.deepEqual(out.s17.transport_types, ['Auto']);
+  });
+});
+
+describe('normalizeWorkerFactValues', () => {
+  it('maps Redelijk computer and Hbo education on flat facts', () => {
+    const out = normalizeWorkerFactValues({
+      education_level: 'Hbo',
+      computer_skills: 'Redelijk',
+      computer_skills_description: '',
+      dutch_speaking: 'goed',
+      transport_type: ['Auto'],
+      drivers_license_type: [],
+    });
+    assert.equal(out.education_level, 'HBO');
+    assert.equal(out.computer_skills, '3');
+    assert.equal(out.dutch_speaking, 'Goed');
+    assert.deepEqual(out.drivers_license_type, []);
+    assert.deepEqual(out.transport_type, ['Auto']);
+  });
+
+  it('does not invent rijbewijs B from Auto alone on flat facts', () => {
+    const out = normalizeWorkerFactValues({
+      transport_type: ['Auto'],
+      drivers_license_type: [],
+    });
+    assert.deepEqual(out.drivers_license_type, []);
   });
 });

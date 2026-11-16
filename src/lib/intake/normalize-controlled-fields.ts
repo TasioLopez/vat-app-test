@@ -94,3 +94,58 @@ export function normalizeIntakeControlledFields(raw: IntakeData): IntakeData {
 
   return data;
 }
+
+/**
+ * Normalize flat worker-fact / employee_details values before persist.
+ * Keys match employee_details / intakeSharedFacts (computer_skills_description, drivers_license_type, …).
+ * Does not invent rijbewijs B from Auto alone.
+ */
+export function normalizeWorkerFactValues(facts: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...facts };
+
+  if (typeof out.education_level === 'string') {
+    out.education_level = normalizeEducationLevel(out.education_level) || null;
+  }
+
+  for (const key of ['dutch_speaking', 'dutch_writing', 'dutch_reading'] as const) {
+    if (Object.prototype.hasOwnProperty.call(out, key)) {
+      out[key] = normalizeDutchLevel(out[key]) ?? null;
+    }
+  }
+
+  const levelRaw = typeof out.computer_skills === 'string' ? out.computer_skills : '';
+  const extraRaw =
+    typeof out.computer_skills_description === 'string'
+      ? out.computer_skills_description
+      : typeof out.computer_skills_extra === 'string'
+        ? out.computer_skills_extra
+        : '';
+  if (levelRaw || extraRaw) {
+    const computer = normalizeComputerFields(levelRaw, extraRaw);
+    out.computer_skills = computer.computer_skills || null;
+    if (Object.prototype.hasOwnProperty.call(out, 'computer_skills_description')) {
+      out.computer_skills_description = computer.computer_skills_extra || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(out, 'computer_skills_extra')) {
+      out.computer_skills_extra = computer.computer_skills_extra || null;
+    }
+  }
+
+  if (Array.isArray(out.drivers_license_type)) {
+    out.drivers_license_type = canonicalizeDriversLicenseTypes(
+      out.drivers_license_type.map((v) => String(v))
+    );
+  } else if (Array.isArray(out.drivers_license_types)) {
+    out.drivers_license_types = canonicalizeDriversLicenseTypes(
+      out.drivers_license_types.map((v) => String(v))
+    );
+  }
+
+  if (Array.isArray(out.transport_type)) {
+    out.transport_type = filterAllowedTransportTypes(out.transport_type.map((v) => String(v)));
+  } else if (Array.isArray(out.transport_types)) {
+    out.transport_types = filterAllowedTransportTypes(out.transport_types.map((v) => String(v)));
+  }
+
+  return out;
+}

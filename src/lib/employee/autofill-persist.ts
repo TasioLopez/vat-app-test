@@ -8,6 +8,7 @@ import {
   type EmployeeFieldReviewStatus,
 } from '@/lib/employee/field-review';
 import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { normalizeWorkerFactValues } from '@/lib/intake/normalize-controlled-fields';
 
 export const EMPLOYEE_DETAILS_PERSIST_KEYS = [
   'gender',
@@ -95,7 +96,7 @@ export function processEmployeeAutofillRawDetails(
   if (isAbsentText(processed.other_employers)) {
     delete processed.other_employers;
   }
-  return processed;
+  return normalizeWorkerFactValues(processed);
 }
 
 export function buildEmployeeDetailsPayload(

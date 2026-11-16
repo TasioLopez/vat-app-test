@@ -6,6 +6,7 @@ import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { autofillIntakeFromDocuments } from '@/lib/intake/autofill';
 import { ensureIntakeShape } from '@/lib/intake/schema';
 import { saveWorkerFacts } from '@/lib/employee/save-worker-facts';
+import { normalizeWorkerFactValues } from '@/lib/intake/normalize-controlled-fields';
 import { blankIntakeSharedFacts, intakeSharedFacts, overlayIntakeWithWorkerFacts } from '@/lib/intake/worker-overlay';
 
 export const runtime = 'nodejs';
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     }
 
     const generated = ensureIntakeShape(result.data);
-    const shared = intakeSharedFacts(generated);
+    const shared = normalizeWorkerFactValues(intakeSharedFacts(generated));
     const saved = await saveWorkerFacts(supabase, employeeId, shared, 'autofill');
     if (saved.error) {
       return NextResponse.json({ error: saved.error }, { status: 500 });

@@ -7,7 +7,7 @@ import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/l
 import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
 import { classifyDossierFileName } from '@/lib/intake/dossier-files';
-import { isDossierSourceType } from '@/lib/intake/sources';
+import { dossierSourceLabel, isDossierSourceType } from '@/lib/intake/sources';
 
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
@@ -151,18 +151,24 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         fml_izp_lab_date: nullableString('Datum FML/IZP'),
         fml_izp_lab_kind: { type: ['string', 'null'], enum: ['fml', 'izp', null] },
         tp_end_date: nullableString('Einddatum'),
-        doctor_role: nullableString('Arts/Anios/Aios/BA/VA'),
-        occupational_doctor_name: nullableString('Naam arts'),
+        doctor_role: nullableString(
+          'Arts/Anios/Aios/BA/VA — FML/IZP-ondertekenaar eerst, anders spreekuur'
+        ),
+        occupational_doctor_name: nullableString(
+          'Naam arts/BA van nieuwste FML/IZP; anders spreekuur; nooit AD'
+        ),
         ad_report_date: nullableString('Datum AD-rapport'),
         ad_report_concept: boolField('Concept'),
-        osv_doctor_role: nullableString('OSV rol'),
-        osv_doctor_name: nullableString('OSV naam'),
-        occupational_doctor_ad_name: nullableString('Naam AD'),
+        osv_doctor_role: nullableString('OSV rol uit FML/IZP supervisie'),
+        osv_doctor_name: nullableString('OSV naam uit FML/IZP supervisie'),
+        occupational_doctor_ad_name: nullableString('Naam AD (niet arts/BA)'),
         is_ex_werknemer: boolField('Ex-werknemer'),
         actief_spoor1: nullableString('Actief spoor 1'),
         eigen_of_aangepast_werk: nullableString('Eigen/aangepast'),
         uren_werkzaam: nullableString('Uren werkzaam'),
-        opbouwschema_aanwezig: nullableString('Opbouwschema'),
+        opbouwschema_aanwezig: nullableString(
+          'Opbouwschema uit BA-advies; bij werknemer-conflict toch BA + meta.conflicts'
+        ),
         wat_lukt_wel_niet: nullableString('Wat lukt wel/niet'),
         ervaart_belastbaarheid: nullableString('Ervaart belastbaarheid'),
         andere_werkgever: nullableString('Andere werkgever'),
@@ -440,7 +446,7 @@ export async function generateIntakeFromDossier(params: {
     if (!file) continue;
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = doc.name || path;
-    const label = `${doc.type || 'doc'}: ${name}`;
+    const label = dossierSourceLabel(doc.type, name);
     if (classifyDossierFileName(name) === 'inline-text') {
       const text = buffer.toString('utf8').trim();
       if (!text) continue;
