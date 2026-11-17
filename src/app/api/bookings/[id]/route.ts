@@ -106,7 +106,7 @@ export async function PATCH(
     .update({
       space_id: parsed.data.spaceId,
       booked_by: resolved.owner.id,
-      title: parsed.data.title,
+      title: resolved.owner.name,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
       note: parsed.data.note,

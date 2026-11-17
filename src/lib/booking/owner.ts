@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { canManageAnyBooking } from '@/lib/auth/roles';
+import { MAX_TITLE_LENGTH } from '@/lib/booking/validate';
 import type { Database } from '@/types/supabase';
+import { formatOrgUserDisplayName } from '@/lib/users/org-directory';
 
 export type BookingOwner = {
   id: string;
   email: string;
+  name: string;
 };
 
 type ResolveBookingOwnerResult = { owner: BookingOwner } | { error: string; status: number };
@@ -33,5 +36,6 @@ export async function resolveBookingOwner(
     return { error: 'Kies een bestaande gebruiker.', status: 400 };
   }
 
-  return { owner: { id: match.id, email } };
+  const name = formatOrgUserDisplayName(match).slice(0, MAX_TITLE_LENGTH);
+  return { owner: { id: match.id, email, name } };
 }
