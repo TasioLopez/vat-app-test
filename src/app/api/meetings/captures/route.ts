@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     notes_text: notes || null,
     notes_origin: notesOrigin,
     consent_at: consent ? new Date().toISOString() : null,
+    consent_by: consent ? access.user.id : null,
   });
 
   if (error || !data) {

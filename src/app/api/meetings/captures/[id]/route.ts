@@ -3,6 +3,7 @@ import { isAuthError, isUuid } from '@/lib/auth/api-auth';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import {
   applyTranscriptWrite,
+  isCanonicalMeetingAudioPath,
   isMeetingPurpose,
   isNotesOrigin,
   isTranscriptSource,
@@ -64,6 +65,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
   if (body?.consent === true && !existing.data.consent_at) {
     patch.consent_at = new Date().toISOString();
+    patch.consent_by = access.user.id;
   }
   if (isMeetingPurpose(body?.purpose) && body.purpose !== existing.data.purpose) {
     patch.purpose = body.purpose;
@@ -95,7 +97,15 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
   if (!existing.data) return NextResponse.json({ error: 'Gesprek niet gevonden' }, { status: 404 });
 
   if (existing.data.audio_path) {
-    await supabaseAdmin.storage.from('documents').remove([existing.data.audio_path]);
+    if (isCanonicalMeetingAudioPath(employeeId, id, existing.data.audio_path)) {
+      await supabaseAdmin.storage.from('documents').remove([existing.data.audio_path]);
+    } else {
+      console.warn('meeting capture delete: refusing non-canonical audio_path', {
+        captureId: id,
+        employeeId,
+        audio_path: existing.data.audio_path,
+      });
+    }
   }
 
   const removed = await deleteMeetingCapture(access.supabase, employeeId, id);

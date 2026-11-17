@@ -5,6 +5,7 @@ import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import {
   MEETING_AUDIO_MAX_BYTES,
   applyTranscriptWrite,
+  isCanonicalMeetingAudioPath,
   meetingAudioContentType,
   transcribeReplaceDecision,
   type MeetingAudioExt,
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest) {
       { error: 'Er staat al een transcript. Vervang het expliciet.', needsReplace: true },
       { status: 409 }
     );
+  }
+
+  if (!isCanonicalMeetingAudioPath(employeeId, captureId, existing.data.audio_path)) {
+    return NextResponse.json({ error: 'Ongeldig opnamepad' }, { status: 400 });
   }
 
   const { data: file, error: downloadError } = await supabaseAdmin.storage

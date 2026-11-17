@@ -1,0 +1,357 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+const Logo = "/branding/vat-app-logo.svg";
+import { validateForm, authValidation } from "@/lib/validation";
+import { getConfiguredClientAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
+import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
+import { listVerifiedTotpFactors } from "@/lib/auth/mfa";
+import { markSessionAuthenticated } from "@/lib/auth/session-client";
+
+export default function LoginPageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  async function finishLoginRedirect() {
+    markSessionAuthenticated();
+    const next = searchParams.get("redirect");
+    router.push(next && next.startsWith("/") ? next : "/dashboard");
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const supabase = tryCreateBrowserSupabase();
+    if (!supabase) {
+      alert("App-configuratie ontbreekt (Supabase).");
+      return;
+    }
+
+    const {
+      data: authData,
+      error: loginError,
+    } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (loginError || !authData.session?.user) {
+      alert("Ongeldige inloggegevens.");
+      return;
+    }
+
+    const userId = authData.session.user.id;
+
+    if (!userId || typeof userId !== "string") {
+      alert("Unexpected error: Missing or invalid user ID.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    const { data: userRecord, error: fetchError } = await supabase
+      .from("users")
+      .select("role, status")
+      .eq("id", userId.trim())
+      .maybeSingle();
+
+    if (fetchError) {
+      alert("Er ging iets mis tijdens de verificatie.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    if (!userRecord) {
+      alert("Unauthorized: Your account is not whitelisted.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    if (userRecord.status !== "confirmed") {
+      alert("Account not confirmed. Contact admin.");
+      await supabase.auth.signOut();
+      return;
+    }
+
+    const totpFactors = await listVerifiedTotpFactors(supabase);
+    if (totpFactors.length > 0) {
+      setMfaFactorId(totpFactors[0].id);
+      setMfaCode("");
+      setMfaError(null);
+      return;
+    }
+
+    router.push('/mfa/setup');
+  };
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaFactorId) return;
+    setMfaLoading(true);
+    setMfaError(null);
+    const supabase = tryCreateBrowserSupabase();
+    if (!supabase) {
+      setMfaError("App-configuratie ontbreekt.");
+      setMfaLoading(false);
+      return;
+    }
+    const challenge = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+    if (challenge.error || !challenge.data) {
+      setMfaError(challenge.error?.message || "Challenge mislukt.");
+      setMfaLoading(false);
+      return;
+    }
+    const verified = await supabase.auth.mfa.verify({
+      factorId: mfaFactorId,
+      challengeId: challenge.data.id,
+      code: mfaCode.trim(),
+    });
+    if (verified.error) {
+      setMfaError("Ongeldige code. Probeer opnieuw.");
+      setMfaLoading(false);
+      return;
+    }
+    await finishLoginRedirect();
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetMessage(null);
+
+    try {
+      const supabase = tryCreateBrowserSupabase();
+      if (!supabase) {
+        setResetMessage({ type: 'error', text: 'App-configuratie ontbreekt (Supabase).' });
+        setResetLoading(false);
+        return;
+      }
+
+      const validation = validateForm(authValidation.forgotPassword, { email: resetEmail });
+      if (!validation.success) {
+        const firstError = Object.values(validation.errors || {})[0];
+        setResetMessage({ type: 'error', text: firstError || 'Ongeldig e-mailadres' });
+        setResetLoading(false);
+        return;
+      }
+
+      const emailNorm = resetEmail.trim().toLowerCase();
+      const authOrigin =
+        getConfiguredClientAuthOrigin() ?? normalizeAuthOrigin(window.location.origin);
+      const callbackUrl = new URL("/auth/callback", authOrigin);
+      callbackUrl.searchParams.set("next", "/reset-password");
+
+      const { error } = await supabase.auth.resetPasswordForEmail(emailNorm, {
+        redirectTo: callbackUrl.toString(),
+      });
+
+      if (error) {
+        console.error("Supabase password reset error:", error);
+        let errorMessage = 'Er is een fout opgetreden bij het verzenden van de reset link.';
+        if (error.message.includes('redirect_to')) {
+          errorMessage = 'De redirect URL is niet geconfigureerd in Supabase. Neem contact op met de beheerder.';
+        } else if (error.message.includes('email')) {
+          errorMessage = 'Er is een probleem met het e-mailadres. Controleer of het correct is.';
+        } else if (error.message.includes('rate limit') || error.message.includes('too many')) {
+          errorMessage = 'Te veel verzoeken. Wacht even en probeer het later opnieuw.';
+        } else {
+          errorMessage = `Fout: ${error.message}`;
+        }
+        setResetMessage({ type: 'error', text: errorMessage });
+        setResetLoading(false);
+        return;
+      }
+
+      setResetMessage({
+        type: 'success',
+        text: 'Als dit e-mailadres bij ons bekend is, ontvang je een link om je wachtwoord te resetten. Controleer je inbox en spam.',
+      });
+      setResetEmail("");
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setResetMessage(null);
+      }, 5000);
+    } catch (error: any) {
+      console.error("Unexpected error sending reset email:", error);
+      setResetMessage({
+        type: 'error',
+        text: error?.message || 'Er is een onverwachte fout opgetreden. Probeer het later opnieuw of neem contact op met de beheerder.',
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const reasonMessage =
+    reason === 'idle_timeout'
+      ? 'Je bent uitgelogd door inactiviteit.'
+      : reason === 'session_expired'
+        ? 'Je sessie is verlopen. Log opnieuw in.'
+        : null;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="flex flex-col items-center space-y-4">
+        <Image
+          src={Logo}
+          alt="Valentinez Logo"
+          width={64}
+          height={64}
+          className="rounded-2xl"
+        />
+
+        <h1 className="flex text-3xl font-semibold text-gray-800 mb-12">
+          <p className="font-bold">V</p> alentinez <p className="font-bold ml-2"> A</p> ssist <p className="font-bold ml-2"> T</p> ool
+        </h1>
+
+        {reasonMessage ? (
+          <div className="w-full max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {reasonMessage}
+          </div>
+        ) : null}
+
+        {mfaFactorId ? (
+          <form
+            onSubmit={handleMfaVerify}
+            className="w-full max-w-xs bg-white p-6 rounded-lg shadow-md space-y-4"
+          >
+            <h2 className="text-xl font-medium text-center">Tweestapsverificatie</h2>
+            <p className="text-sm text-slate-600 text-center">
+              Voer de 6-cijferige code uit je authenticator-app in.
+            </p>
+            {mfaError ? (
+              <div className="rounded bg-red-50 px-3 py-2 text-sm text-red-800">{mfaError}</div>
+            ) : null}
+            <input
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 tracking-widest"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+              maxLength={8}
+              required
+            />
+            <button
+              type="submit"
+              disabled={mfaLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition duration-200 disabled:opacity-50"
+            >
+              {mfaLoading ? "Controleren…" : "Bevestigen"}
+            </button>
+            <button
+              type="button"
+              className="w-full text-sm text-slate-600"
+              onClick={async () => {
+                const supabase = tryCreateBrowserSupabase();
+                await supabase?.auth.signOut();
+                setMfaFactorId(null);
+                setMfaCode("");
+              }}
+            >
+              Annuleren
+            </button>
+          </form>
+        ) : (
+          <form
+            onSubmit={handleLogin}
+            className="w-full max-w-xs bg-white p-6 rounded-lg shadow-md space-y-4"
+          >
+            <h2 className="text-xl font-medium text-center">Inloggen</h2>
+
+            <input
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="password"
+              placeholder="Wachtwoord"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition duration-200"
+            >
+              Inloggen
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="w-full text-blue-600 hover:text-blue-700 text-sm py-2 transition duration-200"
+            >
+              Wachtwoord vergeten?
+            </button>
+          </form>
+        )}
+      </div>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-gray-100/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Wachtwoord Resetten</h3>
+
+            {resetMessage && (
+              <div className={`mb-4 p-3 rounded ${resetMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {resetMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mailadres
+                </label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Voer je e-mailadres in"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetMessage(null);
+                    setResetEmail("");
+                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded transition duration-200"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition duration-200 disabled:opacity-50"
+                  disabled={resetLoading}
+                >
+                  {resetLoading ? 'Verzenden...' : 'Reset Link Verzenden'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

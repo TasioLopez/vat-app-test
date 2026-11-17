@@ -1,7 +1,7 @@
-// app/dashboard/layout.tsx
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import ClientLayout from '@/app/dashboard/ClientLayout';
+import { hasVerifiedTotp, needsMfaChallenge } from '@/lib/auth/mfa';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await getSupabaseServerClient();
@@ -19,9 +19,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (error) redirect('/login');
 
-  return (
-    <ClientLayout role={userData.role}>
-      {children}
-    </ClientLayout>
-  );
+  if (!(await hasVerifiedTotp(supabase))) {
+    redirect('/mfa/setup');
+  }
+  if (await needsMfaChallenge(supabase)) {
+    redirect('/login?reason=session_expired');
+  }
+
+  return <ClientLayout role={userData.role}>{children}</ClientLayout>;
 }

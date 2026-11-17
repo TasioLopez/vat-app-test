@@ -59,6 +59,7 @@ export type MeetingCapture = {
   notes_origin: NotesOrigin | null;
   notes_document_id: string | null;
   consent_at: string | null;
+  consent_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -101,6 +102,22 @@ export function meetingAudioStoragePath(
   ext: MeetingAudioExt
 ): string {
   return `${employeeId}/meeting-audio/${captureId}.${ext}`;
+}
+
+/** True when path is exactly `{employeeId}/meeting-audio/{captureId}.{webm|m4a|mp4}`. */
+export function isCanonicalMeetingAudioPath(
+  employeeId: string,
+  captureId: string,
+  path: string | null | undefined
+): boolean {
+  if (!path) return false;
+  const normalized = path.trim();
+  if (!normalized || normalized.includes('..') || normalized.includes('\\')) return false;
+  return (
+    normalized === meetingAudioStoragePath(employeeId, captureId, 'webm') ||
+    normalized === meetingAudioStoragePath(employeeId, captureId, 'm4a') ||
+    normalized === meetingAudioStoragePath(employeeId, captureId, 'mp4')
+  );
 }
 
 /** Uploaded note wins until the adviser explicitly replaces it. */

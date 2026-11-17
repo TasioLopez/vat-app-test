@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { serviceRoleSupabase as service } from '@/lib/supabase/service-role';
 import { getActiveCvModel, normalizeCvModel, normalizeCvPayload } from '@/lib/cv/normalize';
 import type { CvLocale, CvModel } from '@/types/cv';
@@ -86,26 +85,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'employeeId and cvId required' }, { status: 400 });
   }
 
-  const cookieStore = await cookies();
-  const auth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key) => cookieStore.get(key)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
-  const {
-    data: { user },
-  } = await auth.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const access = await requireEmployeeAccess(employeeId);
+  if (isAuthError(access)) return access;
 
-  const { data: cvRow, error: cvErr } = await auth
+  const { data: cvRow, error: cvErr } = await access.supabase
     .from('cv_documents')
     .select('*')
     .eq('id', cvId)

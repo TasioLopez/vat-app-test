@@ -6,6 +6,10 @@ import { supabaseAdmin } from '@/lib/supabase/serverAdmin';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 import { coerceCvTemplateKey, DEFAULT_ACCENT_COLOR } from '@/types/cv';
 import { getActiveCvModel } from '@/lib/cv/normalize';
+import {
+  isValidCvPhotoStoragePath,
+  sanitizeCvPayloadPhotoPaths,
+} from '@/lib/cv/photoPath';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +45,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
   let initialPhotoSignedUrl: string | null = null;
   const photoPath = activeModel.personal.photoStoragePath?.trim();
-  if (photoPath && activeModel.options?.includePhotoInCv) {
+  if (
+    photoPath &&
+    activeModel.options?.includePhotoInCv &&
+    isValidCvPhotoStoragePath(share.employee_id, share.cv_document_id, photoPath)
+  ) {
     const { data, error: signErr } = await supabaseAdmin.storage
       .from('cv-photos')
       .createSignedUrl(photoPath, 3600);
@@ -117,7 +125,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         ? body.template_key
         : existingDoc?.template_key
     );
-    patch.payload_json = normalizeCvPayload(body.payload_json, templateKey);
+    patch.payload_json = sanitizeCvPayloadPhotoPaths(
+      normalizeCvPayload(body.payload_json, templateKey),
+      share.employee_id,
+      share.cv_document_id
+    );
   }
 
   if (Object.keys(patch).length === 0) {

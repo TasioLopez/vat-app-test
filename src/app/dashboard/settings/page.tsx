@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { FaUser, FaLock, FaMicrophone } from "react-icons/fa";
+import { useState } from "react";
+import { FaUser, FaLock, FaMicrophone, FaShieldAlt } from "react-icons/fa";
 import ProfileInformation from "./components/ProfileInformation";
 import PasswordChange from "./components/PasswordChange";
 import MijnStem from "./components/MijnStem";
+import SecurityMfa from "./components/SecurityMfa";
 
-type SettingsTab = 'profile' | 'password' | 'mijn-stem';
+type SettingsTab = 'profile' | 'password' | 'security' | 'mijn-stem';
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
@@ -24,6 +24,12 @@ export default function SettingsPage() {
             name: 'Wachtwoord Wijzigen',
             icon: <FaLock />,
             component: <PasswordChange />
+        },
+        {
+            id: 'security' as SettingsTab,
+            name: 'Beveiliging',
+            icon: <FaShieldAlt />,
+            component: <SecurityMfa />
         },
         {
             id: 'mijn-stem' as SettingsTab,

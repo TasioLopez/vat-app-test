@@ -7,7 +7,7 @@ import type {
 } from '@/lib/meetings/audio';
 
 const CAPTURE_COLUMNS =
-  'id, employee_id, created_by, status, purpose, audio_path, transcript_text, transcript_original_text, transcript_source, notes_text, notes_origin, notes_document_id, consent_at, created_at, updated_at';
+  'id, employee_id, created_by, status, purpose, audio_path, transcript_text, transcript_original_text, transcript_source, notes_text, notes_origin, notes_document_id, consent_at, consent_by, created_at, updated_at';
 
 type CaptureListResult = {
   data: MeetingCapture[] | null;
@@ -77,6 +77,7 @@ export async function insertMeetingCapture(
     notes_text?: string | null;
     notes_origin?: NotesOrigin | null;
     consent_at?: string | null;
+    consent_by?: string | null;
   }
 ): Promise<{ data: MeetingCapture | null; error: string | null }> {
   const { data, error } = await table(supabase)
