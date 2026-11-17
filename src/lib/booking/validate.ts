@@ -116,7 +116,6 @@ export function parseBookingRequest(body: unknown): { data: BookingRequest } | {
   }
 
   const title = typeof record.title === 'string' ? record.title.trim() : '';
-  if (!title) return { error: 'Vul een titel in.' };
   if (title.length > MAX_TITLE_LENGTH) return { error: 'De titel is te lang.' };
 
   const noteRaw = typeof record.note === 'string' ? record.note.trim() : '';

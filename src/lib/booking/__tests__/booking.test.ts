@@ -95,6 +95,17 @@ describe('booking validation', () => {
     assert.equal(parsed.data.bookedByUserId, null);
   });
 
+  it('allows a booking request without a typed title', () => {
+    const parsed = parseBookingRequest({
+      spaceId: '11111111-1111-4111-8111-111111111111',
+      startsAt: morning.toISOString(),
+      endsAt: lateMorning.toISOString(),
+    });
+    assert.ok('data' in parsed);
+    if (!('data' in parsed)) return;
+    assert.equal(parsed.data.title, '');
+  });
+
   it('keeps a chosen owner and ignores a missing one', () => {
     const ownerId = '22222222-2222-4222-8222-222222222222';
     const withOwner = parseBookingRequest({

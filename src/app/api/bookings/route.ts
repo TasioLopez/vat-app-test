@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       space_id: space.id,
       booked_by: resolved.owner.id,
       booker_name: 'Onbekend',
-      title: parsed.data.title,
+      title: resolved.owner.name,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
       note: parsed.data.note,

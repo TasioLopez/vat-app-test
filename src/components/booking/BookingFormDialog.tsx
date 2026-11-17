@@ -48,7 +48,6 @@ export default function BookingFormDialog({
   onOpenChange,
   onBooked,
 }: BookingFormDialogProps) {
-  const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -61,7 +60,6 @@ export default function BookingFormDialog({
 
   useEffect(() => {
     if (!draft) return;
-    setTitle(draft.title ?? '');
     setDate(draft.date);
     setStart(draft.start);
     setEnd(draft.end);
@@ -95,11 +93,6 @@ export default function BookingFormDialog({
       setFormError(range.error);
       return;
     }
-    if (!title.trim()) {
-      setFormError('Vul een titel in.');
-      return;
-    }
-
     setSaving(true);
     setFormError(null);
     const updated = Boolean(draft.bookingId);
@@ -109,7 +102,6 @@ export default function BookingFormDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           spaceId: selectedSpace.id,
-          title: title.trim(),
           startsAt: range.startsAt.toISOString(),
           endsAt: range.endsAt.toISOString(),
           note: note.trim(),
@@ -176,17 +168,6 @@ export default function BookingFormDialog({
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="booking-title">Titel</Label>
-              <Input
-                id="booking-title"
-                value={title}
-                maxLength={120}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Bijvoorbeeld teamoverleg"
-                required
-              />
-            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="booking-date">Datum</Label>
