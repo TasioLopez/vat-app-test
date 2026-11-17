@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { canChangeBooking } from '@/lib/auth/roles';
 import { sendBookingEmails, type BookingMailKind } from '@/lib/booking/email';
 import { isSpaceKind, type SpaceKind } from '@/lib/booking/types';
+import { getBookingNote, upsertBookingNote } from '@/lib/booking/notes';
 import { resolveBookingOwner } from '@/lib/booking/owner';
 import { parseBookingRequest } from '@/lib/booking/validate';
 import { getSessionUserWithRole } from '@/lib/help/auth';
@@ -109,10 +110,9 @@ export async function PATCH(
       title: resolved.owner.name,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
-      note: parsed.data.note,
     })
     .eq('id', booking.id)
-    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at, note')
+    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at')
     .maybeSingle();
 
   if (updateError) {
@@ -129,6 +129,12 @@ export async function PATCH(
   if (!updated) {
     return NextResponse.json({ error: 'U kunt alleen uw eigen reservering wijzigen.' }, { status: 403 });
   }
+
+  const noteResult = await upsertBookingNote(supabase, updated.id, parsed.data.note);
+  if (noteResult.error) {
+    console.error('booking note upsert failed', noteResult.error);
+  }
+  const updatedWithNote = { ...updated, note: parsed.data.note };
 
   const { data: space } = await supabase
     .from('spaces')
@@ -149,11 +155,11 @@ export async function PATCH(
     spaceKind: kind,
     startsAt: new Date(updated.starts_at),
     endsAt: new Date(updated.ends_at),
-    note: updated.note,
+    note: parsed.data.note,
   });
 
   return NextResponse.json({
-    booking: updated,
+    booking: updatedWithNote,
     emailWarning: emailFailed ? UPDATE_EMAIL_WARNING : null,
   });
 }
@@ -172,7 +178,7 @@ export async function DELETE(
 
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
-    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at, note')
+    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at')
     .eq('id', id)
     .maybeSingle();
 
@@ -185,6 +191,8 @@ export async function DELETE(
   if (!canChangeBooking(session.role, session.userId, booking.booked_by)) {
     return NextResponse.json({ error: 'U kunt alleen uw eigen reservering annuleren.' }, { status: 403 });
   }
+
+  const noteBeforeDelete = await getBookingNote(supabase, booking.id);
 
   const { data: space } = await supabase
     .from('spaces')
@@ -223,7 +231,7 @@ export async function DELETE(
     spaceKind: kind,
     startsAt: new Date(booking.starts_at),
     endsAt: new Date(booking.ends_at),
-    note: booking.note,
+    note: noteBeforeDelete.note,
   });
 
   return NextResponse.json({ ok: true, emailWarning: emailFailed ? CANCEL_EMAIL_WARNING : null });

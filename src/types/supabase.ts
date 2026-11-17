@@ -878,6 +878,8 @@ export type Database = {
           visie_werknemer: string | null
           wettelijke_kaders: string | null
           zoekprofiel: string | null
+          field_review_status: Json
+          field_content_hash: Json
         }
         Insert: {
           ad_report_concept?: boolean | null
@@ -922,6 +924,8 @@ export type Database = {
           visie_werknemer?: string | null
           wettelijke_kaders?: string | null
           zoekprofiel?: string | null
+          field_review_status?: Json
+          field_content_hash?: Json
         }
         Update: {
           ad_report_concept?: boolean | null
@@ -966,6 +970,8 @@ export type Database = {
           visie_werknemer?: string | null
           wettelijke_kaders?: string | null
           zoekprofiel?: string | null
+          field_review_status?: Json
+          field_content_hash?: Json
         }
         Relationships: [
           {
@@ -1496,6 +1502,32 @@ export type Database = {
           },
         ]
       },
+      booking_notes: {
+        Row: {
+          booking_id: string
+          body: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          body?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          body?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_notes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booked_by: string | null
@@ -1503,7 +1535,6 @@ export type Database = {
           created_at: string
           ends_at: string
           id: string
-          note: string | null
           space_id: string
           starts_at: string
           title: string
@@ -1514,7 +1545,6 @@ export type Database = {
           created_at?: string
           ends_at: string
           id?: string
-          note?: string | null
           space_id: string
           starts_at: string
           title: string
@@ -1525,7 +1555,6 @@ export type Database = {
           created_at?: string
           ends_at?: string
           id?: string
-          note?: string | null
           space_id?: string
           starts_at?: string
           title?: string

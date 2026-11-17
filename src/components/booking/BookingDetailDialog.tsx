@@ -45,13 +45,14 @@ export default function BookingDetailDialog({
     }
     let cancelled = false;
     supabase
-      .from('bookings')
-      .select('note')
-      .eq('id', booking.id)
+      .from('booking_notes')
+      .select('body')
+      .eq('booking_id', booking.id)
       .maybeSingle()
       .then((noteResult) => {
         if (cancelled) return;
-        setNote(noteResult.data?.note ?? null);
+        const body = noteResult.data?.body?.trim() ?? '';
+        setNote(body || null);
       });
     return () => {
       cancelled = true;

@@ -198,7 +198,11 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       showError('Wijzigen mislukt', 'De ruimte van deze reservering is niet gevonden.');
       return;
     }
-    const { data, error } = await supabase.from('bookings').select('note').eq('id', booking.id).maybeSingle();
+    const { data, error } = await supabase
+      .from('booking_notes')
+      .select('body')
+      .eq('booking_id', booking.id)
+      .maybeSingle();
     if (error) {
       showError('Wijzigen mislukt', error.message);
       return;
@@ -213,7 +217,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       start: formatClock(new Date(booking.starts_at)),
       end: formatClock(new Date(booking.ends_at)),
       title: booking.title,
-      note: data?.note ?? '',
+      note: data?.body ?? '',
       bookedBy: booking.booked_by,
     });
   }

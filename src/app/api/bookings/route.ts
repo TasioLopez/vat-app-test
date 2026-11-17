@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUserWithRole } from '@/lib/help/auth';
 import { sendBookingEmails } from '@/lib/booking/email';
 import { isSpaceKind } from '@/lib/booking/types';
+import { upsertBookingNote } from '@/lib/booking/notes';
 import { resolveBookingOwner } from '@/lib/booking/owner';
 import { parseBookingRequest } from '@/lib/booking/validate';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
@@ -75,9 +76,8 @@ export async function POST(req: NextRequest) {
       title: resolved.owner.name,
       starts_at: parsed.data.startsAt.toISOString(),
       ends_at: parsed.data.endsAt.toISOString(),
-      note: parsed.data.note,
     })
-    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at, note, created_at')
+    .select('id, space_id, booked_by, booker_name, title, starts_at, ends_at, created_at')
     .single();
 
   if (insertError || !booking) {
@@ -89,6 +89,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
 
+  const noteResult = await upsertBookingNote(supabase, booking.id, parsed.data.note);
+  if (noteResult.error) {
+    console.error('booking note upsert failed', noteResult.error);
+  }
+
+  const bookingWithNote = { ...booking, note: parsed.data.note };
+
   let emailWarning: string | null = null;
   const mailDetails = {
     bookerName: booking.booker_name,
@@ -99,7 +106,7 @@ export async function POST(req: NextRequest) {
     spaceKind: space.kind,
     startsAt: new Date(booking.starts_at),
     endsAt: new Date(booking.ends_at),
-    note: booking.note,
+    note: parsed.data.note,
   };
   try {
     const failures = await sendBookingEmails('confirmation', 'booker', [resolved.owner.email], mailDetails);
@@ -109,5 +116,5 @@ export async function POST(req: NextRequest) {
     emailWarning = EMAIL_WARNING;
   }
 
-  return NextResponse.json({ booking, emailWarning }, { status: 201 });
+  return NextResponse.json({ booking: bookingWithNote, emailWarning }, { status: 201 });
 }
