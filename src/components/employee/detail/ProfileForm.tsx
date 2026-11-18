@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AutofillProgressOverlay,
+  type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
 import { FieldValidateButton } from '@/components/employee/FieldValidateButton';
 import { ValidatableField } from '@/components/employee/ValidatableField';
 import type { EmployeeDetailsPersist } from '@/lib/employee/autofill-persist';
@@ -29,7 +34,12 @@ import {
   splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
 import { cn, isAbsentText } from '@/lib/utils';
-import { CARD_CLASS, SECTION_LABEL_CLASS } from '@/components/employee/detail/shared';
+import {
+  CARD_CLASS,
+  CARD_TITLE_CLASS,
+  QUIET_BUTTON_CLASS,
+  SECTION_LABEL_CLASS,
+} from '@/components/employee/detail/shared';
 
 type EmployeeNameFields = {
   first_name: string;
@@ -46,6 +56,11 @@ type Props = {
   onValidate: (field: EmployeeDetailFieldKey) => void;
   /** Main employer, named in the hint for other employers. */
   clientName: string;
+  aiLoading: boolean;
+  aiCancelling: boolean;
+  autofillProgress: AutofillProgressState | null;
+  onAutofill: () => void;
+  onCancelAutofill: () => void;
 };
 
 const DRIVERS_LICENSE_OPTIONS = [
@@ -218,6 +233,11 @@ export function ProfileForm({
   getStatus,
   onValidate,
   clientName,
+  aiLoading,
+  aiCancelling,
+  autofillProgress,
+  onAutofill,
+  onCancelAutofill,
 }: Props) {
   const [contractHoursText, setContractHoursText] = useState<string | null>(null);
   const [customTransportDraft, setCustomTransportDraft] = useState('');
@@ -256,7 +276,37 @@ export function ProfileForm({
   };
 
   return (
-    <section aria-label="Gegevens bewerken" className={cn(CARD_CLASS, '@container divide-y divide-gray-100')}>
+    <section
+      aria-label="Gegevens bewerken"
+      className={cn(
+        CARD_CLASS,
+        '@container relative divide-y divide-gray-100',
+        aiLoading && 'min-h-[22rem]'
+      )}
+    >
+      {aiLoading && autofillProgress ? (
+        <AutofillProgressOverlay
+          progress={autofillProgress}
+          title="Invullen met AI"
+          onCancel={onCancelAutofill}
+          cancelling={aiCancelling}
+        />
+      ) : null}
+
+      <div className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-2">
+        <h2 className={CARD_TITLE_CLASS}>Profiel bewerken</h2>
+        <Button
+          type="button"
+          variant="outline"
+          className={QUIET_BUTTON_CLASS}
+          onClick={onAutofill}
+          disabled={aiLoading}
+        >
+          <Sparkles className={cn('h-4 w-4 text-purple-600', aiLoading && 'animate-pulse')} aria-hidden />
+          {aiLoading ? 'AI bezig…' : 'Invullen met AI'}
+        </Button>
+      </div>
+
       <FormSection title="Persoonsgegevens">
         <div className={FIELD_GRID_CLASS}>
           <Field label="Voornaam" htmlFor="employee-first-name">

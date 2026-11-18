@@ -1376,6 +1376,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         getStatus={getFieldDisplayStatus}
                                         onValidate={validateField}
                                         clientName={employerName}
+                                        aiLoading={aiLoading}
+                                        aiCancelling={aiCancelling}
+                                        autofillProgress={autofillProgress}
+                                        onAutofill={() => void autofillWithAI()}
+                                        onCancelAutofill={cancelAiAutofill}
                                     />
                                 ) : (
                                     <ProfileView
@@ -1385,12 +1390,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                             setDetailsLoad('loading');
                                             void fetchEmployeeDetails();
                                         }}
-                                        uploadedSourcesCount={uploadedSourcesCount}
-                                        aiLoading={aiLoading}
-                                        aiCancelling={aiCancelling}
-                                        autofillProgress={autofillProgress}
-                                        onAutofill={() => void autofillWithAI()}
-                                        onCancelAutofill={cancelAiAutofill}
                                         busy={aiLoading}
                                         saveStatus={autosaveStatus}
                                         onRetrySave={() => void retryFailedSave()}

@@ -1,11 +1,7 @@
 'use client';
 
-import { AlertCircle, Sparkles, UserRoundSearch } from 'lucide-react';
+import { AlertCircle, CheckCircle2, UserRoundSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  AutofillProgressOverlay,
-  type AutofillProgressState,
-} from '@/components/ui/AutofillProgressOverlay';
 import type { AutosaveStatus } from '@/hooks/useDebouncedAutosave';
 import type { EmployeeDetailFieldKey } from '@/lib/employee/field-review';
 import type { EmployeeProfileView, ProfileRow } from '@/lib/employee/profile-view';
@@ -23,12 +19,6 @@ type Props = {
   /** Profile data could not be loaded; show a retry instead of an empty profile. */
   loadFailed: boolean;
   onRetryLoad: () => void;
-  uploadedSourcesCount: number;
-  aiLoading: boolean;
-  aiCancelling: boolean;
-  autofillProgress: AutofillProgressState | null;
-  onAutofill: () => void;
-  onCancelAutofill: () => void;
   /** Disables validate actions while a save or autofill runs. */
   busy: boolean;
   saveStatus: AutosaveStatus;
@@ -85,12 +75,6 @@ export function ProfileView({
   view,
   loadFailed,
   onRetryLoad,
-  uploadedSourcesCount,
-  aiLoading,
-  aiCancelling,
-  autofillProgress,
-  onAutofill,
-  onCancelAutofill,
   busy,
   saveStatus,
   onRetrySave,
@@ -100,42 +84,20 @@ export function ProfileView({
 }: Props) {
   const showEmptyState = !loadFailed && !view.hasProfileFacts;
   const emptyCount = view.emptyLabels.length;
+  const needsValidation = view.reviewCount > 0;
 
   return (
-    <section
-      aria-labelledby="employee-profile-title"
-      className={cn(CARD_CLASS, '@container relative', aiLoading && 'min-h-[22rem]')}
-    >
-      {aiLoading && autofillProgress ? (
-        <AutofillProgressOverlay
-          progress={autofillProgress}
-          title="Invullen met AI"
-          onCancel={onCancelAutofill}
-          cancelling={aiCancelling}
-        />
-      ) : null}
-
+    <section aria-labelledby="employee-profile-title" className={cn(CARD_CLASS, '@container relative')}>
       <div className="flex min-h-[3.25rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-gray-100 px-5 py-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 id="employee-profile-title" className={CARD_TITLE_CLASS}>
             Profiel
           </h2>
 
-          {view.reviewCount > 0 ? (
+          {needsValidation ? (
             <p className="inline-flex items-center gap-1.5 text-[13px] text-gray-600">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               {view.reviewCount} te controleren
-              <span aria-hidden className="text-gray-300">
-                ·
-              </span>
-              <button
-                type="button"
-                onClick={onValidateAll}
-                disabled={busy}
-                className="rounded-sm font-medium text-purple-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 disabled:opacity-50"
-              >
-                Valideer alles
-              </button>
             </p>
           ) : null}
 
@@ -160,16 +122,25 @@ export function ProfileView({
         </div>
 
         {!showEmptyState && !loadFailed ? (
-          <Button
-            type="button"
-            variant="outline"
-            className={QUIET_BUTTON_CLASS}
-            onClick={onAutofill}
-            disabled={aiLoading}
-          >
-            <Sparkles className={cn('h-4 w-4 text-purple-600', aiLoading && 'animate-pulse')} aria-hidden />
-            {aiLoading ? 'AI bezig…' : 'Invullen met AI'}
-          </Button>
+          needsValidation ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={QUIET_BUTTON_CLASS}
+              onClick={onValidateAll}
+              disabled={busy}
+            >
+              Valideer
+            </Button>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[13px] font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200"
+              role="status"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+              Gevalideerd
+            </span>
+          )
         ) : null}
       </div>
 
@@ -196,25 +167,11 @@ export function ProfileView({
           </span>
           <p className="mt-3 text-sm font-medium text-gray-900">Nog geen profielgegevens</p>
           <p className="mt-1 max-w-sm text-[13px] leading-5 text-gray-500">
-            {uploadedSourcesCount > 0
-              ? `Er ${uploadedSourcesCount === 1 ? 'staat 1 bron' : `staan ${uploadedSourcesCount} bronnen`} klaar. Laat AI het profiel invullen of vul het zelf in.`
-              : 'Upload een bron om het profiel met AI te laten invullen, of vul het zelf in.'}
+            Ga naar bewerken om het profiel met AI of handmatig in te vullen.
           </p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            {uploadedSourcesCount > 0 ? (
-              <Button type="button" className="h-9 gap-2 px-3" onClick={onAutofill} disabled={aiLoading}>
-                <Sparkles className={cn('h-4 w-4', aiLoading && 'animate-pulse')} aria-hidden />
-                {aiLoading ? 'AI bezig…' : 'Invullen met AI'}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              className={QUIET_BUTTON_CLASS}
-              onClick={onEdit}
-              disabled={aiLoading}
-            >
-              Zelf invullen
+            <Button type="button" variant="outline" className={QUIET_BUTTON_CLASS} onClick={onEdit}>
+              Bewerken
             </Button>
           </div>
         </div>
@@ -245,8 +202,7 @@ export function ProfileView({
               <button
                 type="button"
                 onClick={onEdit}
-                disabled={aiLoading}
-                className="rounded-sm font-medium text-purple-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 disabled:opacity-50"
+                className="rounded-sm font-medium text-purple-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50"
               >
                 Aanvullen
               </button>
