@@ -1,10 +1,19 @@
 export type TpStatus = 'none' | 'draft' | 'completed';
+/** Intake list/status: Concept → Gevalideerd → Afgerond (export). */
+export type IntakeStatus = 'none' | 'draft' | 'validated' | 'completed';
 export type CvStatus = 'none' | 'draft' | 'shared' | 'opened';
 
 const TP_RANK: Record<TpStatus, number> = {
   none: 0,
   draft: 1,
   completed: 2,
+};
+
+const INTAKE_RANK: Record<IntakeStatus, number> = {
+  none: 0,
+  draft: 1,
+  validated: 2,
+  completed: 3,
 };
 
 const CV_RANK: Record<CvStatus, number> = {
@@ -24,6 +33,14 @@ export function cvStatusRank(status: CvStatus): number {
 
 export function maxTpStatus(a: TpStatus, b: TpStatus): TpStatus {
   return tpStatusRank(a) >= tpStatusRank(b) ? a : b;
+}
+
+export function intakeStatusRank(status: IntakeStatus): number {
+  return INTAKE_RANK[status];
+}
+
+export function maxIntakeStatus(a: IntakeStatus, b: IntakeStatus): IntakeStatus {
+  return intakeStatusRank(a) >= intakeStatusRank(b) ? a : b;
 }
 
 export function maxCvStatus(a: CvStatus, b: CvStatus): CvStatus {
@@ -70,12 +87,24 @@ export function buildTpStatusMap(
   return buildBuilderStatusMap(instances, exportInstanceIds);
 }
 
-/** Same rules as TP: instance → draft, export → completed. */
+/**
+ * Intake status: export → Afgerond (completed), validated_at → Gevalideerd,
+ * else instance → Concept (draft).
+ */
 export function buildIntakeStatusMap(
-  instances: Array<{ id: string; employee_id: string }>,
+  instances: Array<{ id: string; employee_id: string; validated_at?: string | null }>,
   exportInstanceIds: Set<string>
-): Map<string, TpStatus> {
-  return buildBuilderStatusMap(instances, exportInstanceIds);
+): Map<string, IntakeStatus> {
+  const map = new Map<string, IntakeStatus>();
+  for (const row of instances) {
+    const next: IntakeStatus = exportInstanceIds.has(row.id)
+      ? 'completed'
+      : row.validated_at
+        ? 'validated'
+        : 'draft';
+    map.set(row.employee_id, maxIntakeStatus(map.get(row.employee_id) ?? 'none', next));
+  }
+  return map;
 }
 
 /**

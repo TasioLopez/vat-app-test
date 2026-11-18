@@ -1,4 +1,5 @@
 import { parseContractHours } from '@/lib/employee/contract-hours';
+import { isEmptyGegevensField } from '@/lib/tp2026/gegevens-autofill';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 
 /** Shared facts that round-trip between the intake form and the worker record. */
@@ -45,8 +46,9 @@ export function intakeSharedFacts(raw: unknown): Record<string, unknown> {
   const facts: Record<string, unknown> = {
     contract_hours: parseContractHours(data.s2.contract_hours),
     is_ex_werknemer: data.s6.is_ex_werknemer,
+    // Atomic license group: no types ⇒ false + [] (clears orphan chips on save).
     drivers_license: drivers.length > 0,
-    drivers_license_type: drivers.length > 0 ? drivers : null,
+    drivers_license_type: drivers,
     transport_type: transport.length > 0 ? transport : null,
     has_computer: data.s17.has_pc || Boolean(data.s17.computer_skills),
     ad_report_concept: data.s6.ad_report_concept,
@@ -63,6 +65,34 @@ export function intakeSharedFacts(raw: unknown): Record<string, unknown> {
 /** Show the worker record in the intake sections that edit those facts. */
 function hasFact(facts: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(facts, key);
+}
+
+/**
+ * Seed intake shared fields from known WorkerFacts only (non-empty / explicit false).
+ * Does not blank extracted values when the worker store has no value yet.
+ */
+export function seedIntakeFromWorkerFacts(raw: unknown, facts: Record<string, unknown>): IntakeData {
+  const known: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(facts)) {
+    if (key === 'drivers_license' && value === false) {
+      known.drivers_license = false;
+      known.drivers_license_type = Array.isArray(facts.drivers_license_type)
+        ? facts.drivers_license_type
+        : [];
+      continue;
+    }
+    if (isEmptyGegevensField(key, value)) continue;
+    known[key] = value;
+  }
+  if (
+    hasFact(facts, 'drivers_license_type') &&
+    !hasFact(known, 'drivers_license_type') &&
+    facts.drivers_license === false
+  ) {
+    known.drivers_license = false;
+    known.drivers_license_type = [];
+  }
+  return overlayIntakeWithWorkerFacts(raw, known);
 }
 
 export function overlayIntakeWithWorkerFacts(raw: unknown, facts: Record<string, unknown>): IntakeData {
@@ -82,7 +112,9 @@ export function overlayIntakeWithWorkerFacts(raw: unknown, facts: Record<string,
     data.s6.fml_izp_lab_kind =
       facts.fml_izp_lab_kind === 'fml' || facts.fml_izp_lab_kind === 'izp' ? facts.fml_izp_lab_kind : '';
   }
-  if (hasFact(facts, 'drivers_license_type')) {
+  if (facts.drivers_license === false) {
+    data.s17.drivers_license_types = [];
+  } else if (hasFact(facts, 'drivers_license_type')) {
     data.s17.drivers_license_types = asStringArray(facts.drivers_license_type);
   }
   if (hasFact(facts, 'transport_type')) {

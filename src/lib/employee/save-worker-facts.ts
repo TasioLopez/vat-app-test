@@ -46,13 +46,16 @@ const DEPENDENT_BASIS_SECTIONS = [
 
 export const WORKER_FACTS_HASH_FIELD = 'worker_facts_hash';
 
-export type SaveWorkerFactsMode = 'human' | 'autofill' | 'confirm';
+export type SaveWorkerFactsMode = 'human' | 'autofill' | 'confirm' | 'promote';
 
 export type SkippedValidatedField = {
   key: string;
   current: unknown;
   proposed: unknown;
 };
+
+/** License boolean + types are one compound fact. */
+export const LICENSE_FACT_KEYS = ['drivers_license', 'drivers_license_type'] as const;
 
 export type WorkerFactsSnapshot = {
   values: Record<string, unknown>;
@@ -155,18 +158,81 @@ function markReview(
   delete snapshot.caseHash[key];
 }
 
+function markValidated(snapshot: WorkerFactsSnapshot, key: string): void {
+  const value = snapshot.values[key];
+  const hash = factHash(key, value);
+  if (isProfileKey(key)) {
+    const field = key as EmployeeDetailFieldKey;
+    snapshot.profileReview[field] = 'validated';
+    snapshot.profileHash[field] = hash;
+    return;
+  }
+  snapshot.caseReview[key] = 'validated';
+  snapshot.caseHash[key] = hash;
+}
+
+function asLicenseTypes(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+/**
+ * Keep drivers_license + drivers_license_type atomic:
+ * false ⇒ types []; types with length ⇒ true; true + [] stays Ja without chips.
+ */
+export function normalizeIncomingLicenseGroup(
+  incoming: Record<string, unknown>
+): Record<string, unknown> {
+  const hasLicense = Object.prototype.hasOwnProperty.call(incoming, 'drivers_license');
+  const hasTypes = Object.prototype.hasOwnProperty.call(incoming, 'drivers_license_type');
+  if (!hasLicense && !hasTypes) return incoming;
+
+  const next = { ...incoming };
+  let types = hasTypes ? asLicenseTypes(incoming.drivers_license_type) : undefined;
+  let license: unknown = hasLicense ? incoming.drivers_license : undefined;
+
+  if (types && types.length > 0) license = true;
+  // Only clear/attach types when the types key was proposed (atomic group) — do not
+  // invent types: [] from a lone drivers_license: false (untouched checkbox).
+  if (license === false && hasTypes) types = [];
+  if (license === true && hasTypes && types === undefined) types = [];
+
+  if (license !== undefined) next.drivers_license = license;
+  if (types !== undefined) next.drivers_license_type = types;
+  return next;
+}
+
+/** Autofill may clear types when the license group explicitly proposes no license. */
+function isLicenseTypesClear(incoming: Record<string, unknown>, key: string, proposed: unknown): boolean {
+  return (
+    key === 'drivers_license_type' &&
+    Array.isArray(proposed) &&
+    proposed.length === 0 &&
+    Object.prototype.hasOwnProperty.call(incoming, 'drivers_license') &&
+    incoming.drivers_license === false
+  );
+}
+
+function isPromotableValue(key: string, value: unknown): boolean {
+  if (key === 'drivers_license' && value === false) return true;
+  if (key === 'drivers_license_type' && Array.isArray(value)) return true;
+  return !isEmptyGegevensField(key, value);
+}
+
 /**
  * Decide which shared facts to write.
  * `human` writes changed keys, including a clear. A boolean `false` does not replace `null`
- * (an untouched checkbox). `autofill` skips empty incoming values and validated fields.
- * `confirm` writes the accepted keys even when they were validated.
+ * (an untouched checkbox). `autofill` fills empty keys only, skips validated fields, and may
+ * clear license types when proposing no license. `confirm` writes accepted keys even when
+ * validated. `promote` writes filled keys and locks them as validated.
  */
 export function planWorkerFactWrites(
   current: WorkerFactsSnapshot,
-  incoming: Record<string, unknown>,
+  incomingRaw: Record<string, unknown>,
   mode: SaveWorkerFactsMode,
   options?: PlanWorkerFactWritesOptions
 ): PlannedWorkerFactWrites {
+  const incoming = normalizeIncomingLicenseGroup(incomingRaw);
   const values = { ...current.values };
   const profileReview = { ...current.profileReview };
   const profileHash = { ...current.profileHash };
@@ -188,21 +254,50 @@ export function planWorkerFactWrites(
     if (mode === 'confirm' && !confirmSet.has(key)) continue;
     const proposed = incoming[key];
     const existing = values[key];
-    if (factsEqual(key, existing, proposed)) continue;
+    const licenseClear = isLicenseTypesClear(incoming, key, proposed);
 
-    if (mode === 'autofill' || mode === 'confirm') {
-      if (isEmptyGegevensField(key, proposed)) continue;
-    } else if (
-      typeof proposed === 'boolean' &&
-      proposed === false &&
-      (existing === null || existing === undefined)
-    ) {
+    if (mode === 'promote') {
+      if (!isPromotableValue(key, proposed)) continue;
+      if (!factsEqual(key, existing, proposed)) {
+        values[key] = isProfileKey(key)
+          ? JSON.parse(factHash(key, proposed))
+          : normalizeCaseValue(key, proposed);
+        written.push(key);
+      }
+      markValidated(working, key);
       continue;
     }
 
-    if (mode === 'autofill' && isValidated(working, key)) {
-      skippedValidated.push({ key, current: existing ?? null, proposed });
+    if (factsEqual(key, existing, proposed)) continue;
+
+    if (mode === 'autofill' || mode === 'confirm') {
+      if (isEmptyGegevensField(key, proposed) && !licenseClear) continue;
+    } else if (
+      typeof proposed === 'boolean' &&
+      proposed === false &&
+      (existing === null || existing === undefined) &&
+      key !== 'drivers_license'
+    ) {
       continue;
+    } else if (
+      key === 'drivers_license' &&
+      proposed === false &&
+      (existing === null || existing === undefined) &&
+      !Object.prototype.hasOwnProperty.call(incoming, 'drivers_license_type')
+    ) {
+      // Alone, false over null is an untouched checkbox — skip unless the license group is atomic.
+      continue;
+    }
+
+    if (mode === 'autofill') {
+      if (isValidated(working, key)) {
+        skippedValidated.push({ key, current: existing ?? null, proposed });
+        continue;
+      }
+      // Fill empty only — except clearing orphan license types with an explicit no-license group.
+      if (!isEmptyGegevensField(key, existing) && !licenseClear) {
+        continue;
+      }
     }
 
     values[key] = isProfileKey(key)
@@ -210,7 +305,7 @@ export function planWorkerFactWrites(
       : normalizeCaseValue(key, proposed);
     written.push(key);
     if (mode !== 'human' || !options?.preserveProfileReview) {
-      markReview(working, key, isEmptyGegevensField(key, values[key]));
+      markReview(working, key, isEmptyGegevensField(key, values[key]) && !licenseClear);
     }
   }
 

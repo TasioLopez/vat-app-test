@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Clock, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CvStatus, GeneratedDocKind, TpStatus } from '@/lib/employee/doc-status';
+import type { CvStatus, GeneratedDocKind, IntakeStatus, TpStatus } from '@/lib/employee/doc-status';
 
 type DocKind = GeneratedDocKind | 'cv';
 
@@ -23,6 +23,21 @@ const BUILDER_META: Record<TpStatus, { label: string; tone: string; Icon: typeof
   },
   completed: {
     label: 'Klaar',
+    tone: 'bg-green-50 text-green-800 ring-green-200',
+    Icon: CheckCircle2,
+  },
+};
+
+const INTAKE_META: Record<IntakeStatus, { label: string; tone: string; Icon: typeof Circle }> = {
+  none: BUILDER_META.none,
+  draft: BUILDER_META.draft,
+  validated: {
+    label: 'Gevalideerd',
+    tone: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+    Icon: CheckCircle2,
+  },
+  completed: {
+    label: 'Afgerond',
     tone: 'bg-green-50 text-green-800 ring-green-200',
     Icon: CheckCircle2,
   },
@@ -65,7 +80,7 @@ export function DocStatusPill({
   className,
 }: {
   kind: DocKind;
-  status: TpStatus | CvStatus;
+  status: TpStatus | IntakeStatus | CvStatus;
   /** `icon` hides the label; status text stays on title / aria-label for hover. */
   variant?: 'default' | 'icon';
   className?: string;
@@ -73,10 +88,15 @@ export function DocStatusPill({
   const meta =
     kind === 'cv'
       ? CV_META[status as CvStatus]
-      : {
-          ...BUILDER_META[status as TpStatus],
-          full: `${BUILDER_KIND_LABEL[kind]}: ${BUILDER_META[status as TpStatus].label}`,
-        };
+      : kind === 'intake'
+        ? {
+            ...INTAKE_META[status as IntakeStatus],
+            full: `${BUILDER_KIND_LABEL.intake}: ${INTAKE_META[status as IntakeStatus].label}`,
+          }
+        : {
+            ...BUILDER_META[status as TpStatus],
+            full: `${BUILDER_KIND_LABEL[kind]}: ${BUILDER_META[status as TpStatus].label}`,
+          };
   const { Icon } = meta;
   const iconOnly = variant === 'icon';
 

@@ -1,17 +1,26 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import {
+  saveWorkerFacts,
+  type SaveWorkerFactsMode,
+  type SkippedValidatedField,
+} from '@/lib/employee/save-worker-facts';
 import { persistReferentFromTpData } from '@/lib/referents';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 import { intakeToGegevensFields } from '@/lib/intake/project';
 import { blankIntakeSharedFacts, intakeSharedFacts } from '@/lib/intake/worker-overlay';
+
+/** Document status the intake UI can set (Afgerond is derived from exports). */
+export type IntakeDocumentStatus = 'concept' | 'gevalideerd';
 
 export type PersistIntakeDraftParams = {
   intakeInstanceId: string;
   employeeId: string;
   intakeData: IntakeData | Record<string, unknown>;
   userId?: string | null;
-  /** When true, also project profile/meta/referents and set validated_at. */
+  /** @deprecated Prefer `status: 'gevalideerd'`. */
   validate?: boolean;
+  /** Concept clears validated_at; Gevalideerd sets it and promotes WorkerFacts locks. */
+  status?: IntakeDocumentStatus;
 };
 
 export type PersistIntakeDraftResult = {
@@ -25,7 +34,7 @@ async function projectIntakeToEmployeeTables(
   supabase: SupabaseClient,
   employeeId: string,
   intakeData: IntakeData,
-  mode: 'human' | 'autofill'
+  mode: SaveWorkerFactsMode
 ): Promise<{ error?: string; skippedValidated?: SkippedValidatedField[]; values?: Record<string, unknown> }> {
   const flat = intakeSharedFacts(intakeData);
   const saved = await saveWorkerFacts(supabase, employeeId, flat, mode);
@@ -42,14 +51,17 @@ export async function persistIntakeDraft(
   supabase: SupabaseClient,
   params: PersistIntakeDraftParams
 ): Promise<PersistIntakeDraftResult> {
-  const { intakeInstanceId, employeeId, userId, validate } = params;
+  const { intakeInstanceId, employeeId, userId } = params;
   const shaped = ensureIntakeShape(params.intakeData);
+  const status: IntakeDocumentStatus | undefined =
+    params.status ?? (params.validate ? 'gevalideerd' : undefined);
+  const promote = status === 'gevalideerd';
 
   const projectResult = await projectIntakeToEmployeeTables(
     supabase,
     employeeId,
     shaped,
-    validate ? 'autofill' : 'human'
+    promote ? 'promote' : 'human'
   );
   if (projectResult.error) return { error: projectResult.error };
 
@@ -58,11 +70,15 @@ export async function persistIntakeDraft(
     updated_by: userId ?? null,
   };
 
-  let validatedAt: string | null = null;
-  if (validate) {
+  let validatedAt: string | null | undefined;
+  if (status === 'gevalideerd') {
     validatedAt = new Date().toISOString();
     updatePayload.validated_at = validatedAt;
     updatePayload.validated_by = userId ?? null;
+  } else if (status === 'concept') {
+    validatedAt = null;
+    updatePayload.validated_at = null;
+    updatePayload.validated_by = null;
   }
 
   const { error: instanceError } = await (supabase as any)
@@ -74,5 +90,9 @@ export async function persistIntakeDraft(
     return { error: `intake_instances: ${instanceError.message}` };
   }
 
-  return { validated_at: validatedAt, skippedValidated: projectResult.skippedValidated, values: projectResult.values };
+  return {
+    validated_at: validatedAt === undefined ? undefined : validatedAt,
+    skippedValidated: projectResult.skippedValidated,
+    values: projectResult.values,
+  };
 }

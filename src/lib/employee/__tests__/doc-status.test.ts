@@ -7,8 +7,10 @@ import {
   buildVgrStatusMap,
   chunkIds,
   cvStatusRank,
+  intakeStatusRank,
   isShareLinkActive,
   maxCvStatus,
+  maxIntakeStatus,
   maxTpStatus,
   resolveBuilderDocStatus,
   summarizeGeneratedDocs,
@@ -43,16 +45,22 @@ describe('doc-status helpers', () => {
     assert.equal(map.get('e3'), undefined);
   });
 
-  it('builds Intake map with the same instance/export rules as TP', () => {
+  it('builds Intake map from validated_at and exports', () => {
+    assert.ok(intakeStatusRank('draft') < intakeStatusRank('validated'));
+    assert.ok(intakeStatusRank('validated') < intakeStatusRank('completed'));
+    assert.equal(maxIntakeStatus('draft', 'validated'), 'validated');
+
     const map = buildIntakeStatusMap(
       [
-        { id: 'in1', employee_id: 'e1' },
-        { id: 'in2', employee_id: 'e2' },
+        { id: 'in1', employee_id: 'e1', validated_at: null },
+        { id: 'in2', employee_id: 'e2', validated_at: '2026-01-01T00:00:00.000Z' },
+        { id: 'in3', employee_id: 'e3', validated_at: '2026-01-01T00:00:00.000Z' },
       ],
-      new Set(['in2'])
+      new Set(['in3'])
     );
     assert.equal(map.get('e1'), 'draft');
-    assert.equal(map.get('e2'), 'completed');
+    assert.equal(map.get('e2'), 'validated');
+    assert.equal(map.get('e3'), 'completed');
   });
 
   it('builds VGR map from exports and final instances', () => {

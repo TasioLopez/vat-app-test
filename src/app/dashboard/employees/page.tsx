@@ -42,8 +42,10 @@ import {
   buildVgrStatusMap,
   chunkIds,
   cvStatusRank,
+  intakeStatusRank,
   tpStatusRank,
   type CvStatus,
+  type IntakeStatus,
   type TpStatus,
 } from '@/lib/employee/doc-status';
 
@@ -57,6 +59,7 @@ type ViewMode = 'table' | 'cards';
 type OwnerFilterMode = 'mine' | 'all' | 'colleague' | 'unassigned';
 
 type BuilderInstanceRow = { id: string; employee_id: string };
+type IntakeInstanceRow = { id: string; employee_id: string; validated_at: string | null };
 type VgrInstanceRow = { id: string; employee_id: string; status: string | null };
 
 /** `intake_instances` / `intake_exports` are not in the generated Supabase types yet. */
@@ -117,7 +120,7 @@ export default function EmployeesPage() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [intakeStatusByEmployee, setIntakeStatusByEmployee] = useState<Map<string, TpStatus>>(
+  const [intakeStatusByEmployee, setIntakeStatusByEmployee] = useState<Map<string, IntakeStatus>>(
     () => new Map()
   );
   const [tpStatusByEmployee, setTpStatusByEmployee] = useState<Map<string, TpStatus>>(
@@ -130,7 +133,10 @@ export default function EmployeesPage() {
     () => new Map()
   );
 
-  const statusFor = (kind: 'intake' | 'tp' | 'vgr' | 'cv', employeeId: string): TpStatus | CvStatus => {
+  const statusFor = (
+    kind: 'intake' | 'tp' | 'vgr' | 'cv',
+    employeeId: string
+  ): TpStatus | IntakeStatus | CvStatus => {
     if (kind === 'intake') return intakeStatusByEmployee.get(employeeId) ?? 'none';
     if (kind === 'tp') return tpStatusByEmployee.get(employeeId) ?? 'none';
     if (kind === 'vgr') return vgrStatusByEmployee.get(employeeId) ?? 'none';
@@ -177,7 +183,7 @@ export default function EmployeesPage() {
     const intakeClient = supabase as unknown as IntakeTablesClient;
     const idChunks = chunkIds(employeeIds);
     const tpInstances: BuilderInstanceRow[] = [];
-    const intakeInstances: BuilderInstanceRow[] = [];
+    const intakeInstances: IntakeInstanceRow[] = [];
     const vgrInstances: VgrInstanceRow[] = [];
     const parentCvs: Array<{ employee_id: string }> = [];
     const shares: Array<{
@@ -190,7 +196,10 @@ export default function EmployeesPage() {
     for (const chunk of idChunks) {
       const [tpRes, intakeRes, vgrRes, cvRes, shareRes] = await Promise.all([
         supabase.from('tp_instances').select('id, employee_id').in('employee_id', chunk),
-        intakeClient.from('intake_instances').select('id, employee_id').in('employee_id', chunk),
+        intakeClient
+          .from('intake_instances')
+          .select('id, employee_id, validated_at')
+          .in('employee_id', chunk),
         supabase.from('vgr_instances').select('id, employee_id, status').in('employee_id', chunk),
         supabase
           .from('cv_documents')
@@ -213,7 +222,11 @@ export default function EmployeesPage() {
       if (intakeRes.data) {
         for (const row of intakeRes.data) {
           if (row.id && row.employee_id) {
-            intakeInstances.push({ id: row.id, employee_id: row.employee_id });
+            intakeInstances.push({
+              id: row.id,
+              employee_id: row.employee_id,
+              validated_at: typeof row.validated_at === 'string' ? row.validated_at : null,
+            });
           }
         }
       }
@@ -398,7 +411,7 @@ export default function EmployeesPage() {
           next.delete(selectedEmployeeId);
           return next;
         };
-        setIntakeStatusByEmployee((prev) => removeStatus(prev) as Map<string, TpStatus>);
+        setIntakeStatusByEmployee((prev) => removeStatus(prev) as Map<string, IntakeStatus>);
         setTpStatusByEmployee((prev) => removeStatus(prev) as Map<string, TpStatus>);
         setVgrStatusByEmployee((prev) => removeStatus(prev) as Map<string, TpStatus>);
         setCvStatusByEmployee((prev) => removeStatus(prev) as Map<string, CvStatus>);
@@ -474,8 +487,8 @@ export default function EmployeesPage() {
           bValue = ownerDisplayName(b.owner_id).toLowerCase();
           break;
         case 'intake':
-          aValue = tpStatusRank(intakeStatusByEmployee.get(a.id) ?? 'none');
-          bValue = tpStatusRank(intakeStatusByEmployee.get(b.id) ?? 'none');
+          aValue = intakeStatusRank(intakeStatusByEmployee.get(a.id) ?? 'none');
+          bValue = intakeStatusRank(intakeStatusByEmployee.get(b.id) ?? 'none');
           break;
         case 'tp':
           aValue = tpStatusRank(tpStatusByEmployee.get(a.id) ?? 'none');

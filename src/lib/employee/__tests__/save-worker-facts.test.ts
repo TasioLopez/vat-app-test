@@ -34,6 +34,50 @@ describe('planWorkerFactWrites', () => {
     assert.equal(planned.values.drivers_license, true);
   });
 
+  it('clears orphan license types when autofill proposes no license', () => {
+    const current = snapshot({
+      drivers_license: false,
+      drivers_license_type: ['C1'],
+    });
+    const planned = planWorkerFactWrites(
+      current,
+      { drivers_license: false, drivers_license_type: [] },
+      'autofill'
+    );
+    assert.ok(planned.written.includes('drivers_license_type'));
+    // Empty license types normalize to null in the worker store.
+    assert.equal(planned.values.drivers_license_type, null);
+    assert.equal(planned.values.drivers_license, false);
+  });
+
+  it('does not overwrite a known non-empty value during autofill', () => {
+    const current = snapshot({ dutch_speaking: 'Goed', education_level: 'MBO 2' });
+    const planned = planWorkerFactWrites(
+      current,
+      { dutch_speaking: 'Geen', education_level: 'HBO' },
+      'autofill'
+    );
+    assert.deepEqual(planned.written, []);
+    assert.equal(planned.values.dutch_speaking, 'Goed');
+    assert.equal(planned.values.education_level, 'MBO 2');
+  });
+
+  it('promote locks filled shared keys as validated', () => {
+    const current = snapshot({ dutch_speaking: 'Goed', phone: null });
+    const planned = planWorkerFactWrites(
+      current,
+      { dutch_speaking: 'Goed', phone: null, drivers_license: false, drivers_license_type: [] },
+      'promote'
+    );
+    assert.equal(planned.profileReview.dutch_speaking, 'validated');
+    assert.ok(planned.profileHash.dutch_speaking);
+    assert.equal(planned.profileReview.phone, undefined);
+    assert.equal(planned.values.drivers_license, false);
+    assert.equal(planned.values.drivers_license_type ?? null, null);
+    assert.equal(planned.profileReview.drivers_license, 'validated');
+    assert.equal(planned.profileReview.drivers_license_type, 'validated');
+  });
+
   it('skips a validated field and reports it', () => {
     const hash = computeEmployeeFieldHash('education_level', { education_level: 'HBO' });
     const current = snapshot(

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Check,
   ChevronLeft,
   Download,
   FileUp,
@@ -28,6 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import type { AutosaveStatus } from '@/hooks/useDebouncedAutosave';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
@@ -57,7 +57,10 @@ type Props = {
   intakeInstanceId: string;
   initialData: unknown;
   initialValidatedAt: string | null;
+  initialHasExport?: boolean;
 };
+
+type IntakeUiStatus = 'concept' | 'gevalideerd' | 'afgerond';
 
 type NavKey = 'dossier' | IntakeSectionKey;
 
@@ -96,9 +99,11 @@ function autosaveLabel(status: AutosaveStatus, isDirty: boolean): string {
 function IntakeBuilderInner({
   employeeId,
   intakeInstanceId,
+  initialHasExport,
 }: {
   employeeId: string;
   intakeInstanceId: string;
+  initialHasExport: boolean;
 }) {
   const guardedRouter = useGuardedRouter();
   const {
@@ -120,11 +125,18 @@ function IntakeBuilderInner({
   const [noIntakeMessage, setNoIntakeMessage] = useState<string | undefined>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [activeSection, setActiveSection] = useState<NavKey>('dossier');
+  const [hasExport, setHasExport] = useState(initialHasExport);
   const [pendingFacts, setPendingFacts] = useState<{
     conflicts: SkippedValidatedField[];
     proposal: Record<string, unknown>;
   } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const uiStatus: IntakeUiStatus = hasExport
+    ? 'afgerond'
+    : validatedAt
+      ? 'gevalideerd'
+      : 'concept';
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -171,7 +183,7 @@ function IntakeBuilderInner({
   }, []);
 
   const persist = useCallback(
-    async (opts?: { validate?: boolean }) => {
+    async (opts?: { status?: 'concept' | 'gevalideerd' }) => {
       const res = await fetch('/api/intake/persist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -179,12 +191,16 @@ function IntakeBuilderInner({
           employeeId,
           intakeInstanceId,
           data_json: intakeData,
-          validate: opts?.validate === true,
+          ...(opts?.status ? { status: opts.status } : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Opslaan mislukt');
-      if (json.validated_at) setValidatedAt(json.validated_at);
+      if (opts?.status === 'concept') {
+        setValidatedAt(null);
+      } else if (opts?.status === 'gevalideerd' || json.validated_at) {
+        setValidatedAt(json.validated_at ?? new Date().toISOString());
+      }
       if (Array.isArray(json.skipped_validated) && json.skipped_validated.length > 0) {
         const kept =
           json.worker_facts && typeof json.worker_facts === 'object'
@@ -218,13 +234,25 @@ function IntakeBuilderInner({
     }
   };
 
-  const onValidate = async () => {
+  const onStatusChange = async (next: IntakeUiStatus) => {
+    if (next === 'afgerond') {
+      showError('Afgerond', 'Afgerond volgt wanneer je een PDF exporteert.');
+      return;
+    }
+    if (next === uiStatus) return;
     setSaving(true);
     try {
-      await persist({ validate: true });
-      showSuccess('Gevalideerd', 'Intake is gevalideerd en doorgezet naar werknemersprofiel/TP-meta.');
+      await persist({ status: next });
+      if (next === 'gevalideerd') {
+        showSuccess(
+          'Gevalideerd',
+          'Intake is gevalideerd; gedeelde feiten zijn vastgezet op het werknemersprofiel.'
+        );
+      } else {
+        showSuccess('Concept', 'Intake staat weer op concept.');
+      }
     } catch (e) {
-      showError('Fout', e instanceof Error ? e.message : 'Valideren mislukt');
+      showError('Fout', e instanceof Error ? e.message : 'Status wijzigen mislukt');
     } finally {
       setSaving(false);
     }
@@ -309,6 +337,7 @@ function IntakeBuilderInner({
       document.body.appendChild(a);
       a.click();
       a.remove();
+      setHasExport(true);
       showSuccess('Export', 'Intake-PDF is gedownload.');
     } catch (e) {
       showError('Fout', e instanceof Error ? e.message : 'Export mislukt');
@@ -364,11 +393,21 @@ function IntakeBuilderInner({
           <div className="min-w-0">
             <h1 className="truncate text-xl font-bold text-gray-900">Intakeformulier</h1>
             <p className="text-sm text-gray-600">
-              {validatedAt ? (
-                <span className="text-emerald-700">Gevalideerd</span>
-              ) : (
-                <span className="text-amber-700">Concept</span>
-              )}
+              <span
+                className={
+                  uiStatus === 'afgerond'
+                    ? 'text-green-700'
+                    : uiStatus === 'gevalideerd'
+                      ? 'text-emerald-700'
+                      : 'text-amber-700'
+                }
+              >
+                {uiStatus === 'afgerond'
+                  ? 'Afgerond'
+                  : uiStatus === 'gevalideerd'
+                    ? 'Gevalideerd'
+                    : 'Concept'}
+              </span>
               <span className="mx-1.5 text-gray-300">·</span>
               <span
                 className={
@@ -434,10 +473,22 @@ function IntakeBuilderInner({
               {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
               Opslaan
             </Button>
-            <Button size="sm" onClick={() => void onValidate()} disabled={saving}>
-              <Check className="mr-1 h-4 w-4" />
-              Valideer
-            </Button>
+            <Select
+              value={uiStatus}
+              onValueChange={(value) => void onStatusChange(value as IntakeUiStatus)}
+              disabled={saving || !!busyLabel}
+            >
+              <SelectTrigger className="h-8 w-[140px]" aria-label="Intake status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="concept">Concept</SelectItem>
+                <SelectItem value="gevalideerd">Gevalideerd</SelectItem>
+                <SelectItem value="afgerond" disabled={!hasExport}>
+                  Afgerond
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -502,13 +553,18 @@ export default function IntakeBuilder({
   intakeInstanceId,
   initialData,
   initialValidatedAt,
+  initialHasExport = false,
 }: Props) {
   return (
     <IntakeInstanceProvider
       initialData={initialData}
       initialValidatedAt={initialValidatedAt}
     >
-      <IntakeBuilderInner employeeId={employeeId} intakeInstanceId={intakeInstanceId} />
+      <IntakeBuilderInner
+        employeeId={employeeId}
+        intakeInstanceId={intakeInstanceId}
+        initialHasExport={initialHasExport}
+      />
     </IntakeInstanceProvider>
   );
 }

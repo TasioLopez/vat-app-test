@@ -21,7 +21,8 @@ import {
 import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import {
   getValidatedIntakeForEmployee,
-  gegevensFromValidatedIntake,
+  gegevensFromWorkerFacts,
+  workerFactsHaveSharedGegevens,
 } from '@/lib/intake/tp-hydrate';
 import {
   applyWorkerFacts,
@@ -157,18 +158,27 @@ async function runEmployeeAutofillStep(
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-    if (validated) {
-      const details = gegevensFromValidatedIntake(validated.data);
+    // Shared profile keys always come from WorkerFacts — never blanked intake JSON.
+    const fromWorker = await gegevensFromWorkerFacts(ctx.supabase, ctx.employeeId);
+    if (fromWorker.error) return { data: currentData, error: fromWorker.error };
+
+    if (workerFactsHaveSharedGegevens(fromWorker.details)) {
+      const details = fromWorker.details;
       const preview = await previewFactProposal(ctx, currentData, details);
       if (preview.error) return { data: currentData, error: preview.error };
-      let next = applySuggestedReferentToTpData(preview.data, {
-        first_name: details.referent_first_name as string | undefined,
-        last_name: details.referent_last_name as string | undefined,
-        referent_function: details.referent_function as string | undefined,
-        phone: details.referent_phone as string | undefined,
-        email: details.referent_email as string | undefined,
-      } as SuggestedReferent);
+      const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
+      let next = preview.data;
+      if (validated) {
+        const ref = validated.data.s4;
+        const nameParts = (ref.referent_name || '').trim().split(/\s+/).filter(Boolean);
+        next = applySuggestedReferentToTpData(next, {
+          first_name: nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : nameParts[0],
+          last_name: nameParts.length > 1 ? nameParts[nameParts.length - 1] : undefined,
+          referent_function: ref.referent_function || undefined,
+          phone: ref.referent_phone || undefined,
+          email: ref.referent_email || undefined,
+        } as SuggestedReferent);
+      }
       return {
         data: ensureTP2026Shape(next),
         employeePersist: { rawDetails: details },
@@ -224,9 +234,12 @@ async function runTp2AutofillStep(
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    const validated = await getValidatedIntakeForEmployee(ctx.supabase, ctx.employeeId);
-    if (validated) {
-      const details = gegevensFromValidatedIntake(validated.data);
+    // TP stap-2 shared keys hydrate from WorkerFacts only (intake JSON blanks them).
+    const fromWorker = await gegevensFromWorkerFacts(ctx.supabase, ctx.employeeId);
+    if (fromWorker.error) return { data: currentData, error: fromWorker.error };
+
+    if (workerFactsHaveSharedGegevens(fromWorker.details)) {
+      const details = fromWorker.details;
       const preview = await previewFactProposal(ctx, currentData, details);
       if (preview.error) return { data: currentData, error: preview.error };
       let next = preview.data;

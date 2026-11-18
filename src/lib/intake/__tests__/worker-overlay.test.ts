@@ -4,6 +4,7 @@ import {
   blankIntakeSharedFacts,
   intakeSharedFacts,
   overlayIntakeWithWorkerFacts,
+  seedIntakeFromWorkerFacts,
 } from '@/lib/intake/worker-overlay';
 
 describe('intake worker overlay', () => {
@@ -43,5 +44,29 @@ describe('intake worker overlay', () => {
     assert.equal(stored.s1.employee_name, '');
     assert.equal(stored.s17.praktische_belemmeringen, 'Reistijd.');
     assert.equal(intakeSharedFacts(stored).education_level, null);
+  });
+
+  it('seeds known worker facts without blanking extracted gaps', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      {
+        s17: {
+          education_level: 'VMBO',
+          dutch_speaking: 'Matig',
+          drivers_license_types: ['C1'],
+        },
+      },
+      {
+        education_level: 'HBO',
+        dutch_speaking: null,
+        drivers_license: false,
+        drivers_license_type: [],
+      }
+    );
+    assert.equal(seeded.s17.education_level, 'HBO');
+    assert.equal(seeded.s17.dutch_speaking, 'Matig');
+    assert.deepEqual(seeded.s17.drivers_license_types, []);
+    const flat = intakeSharedFacts(seeded);
+    assert.equal(flat.drivers_license, false);
+    assert.deepEqual(flat.drivers_license_type, []);
   });
 });

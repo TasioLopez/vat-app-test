@@ -1,11 +1,13 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isStagingEnv } from '@/lib/auth/staging-only';
+import { loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 import { importIntakeFromPdf } from '@/lib/intake/import-from-pdf';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
 import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
 import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import { seedIntakeFromWorkerFacts } from '@/lib/intake/worker-overlay';
 
 export type AutofillIntakeResult = {
   data: IntakeData;
@@ -15,10 +17,12 @@ export type AutofillIntakeResult = {
   gapFilled: boolean;
   /** Staging: the form was built from dossier documents because no intake PDF exists. */
   generatedFromDossier?: boolean;
+  workerFacts?: Record<string, unknown>;
 };
 
 /**
- * Intake-first autofill: import from intake PDF, then blank-only gap-fill from dossier docs.
+ * Intake-first autofill: seed from WorkerFacts, import from intake PDF for gaps,
+ * then blank-only gap-fill from dossier docs. Known worker values always win for shared keys.
  */
 export async function autofillIntakeFromDocuments(params: {
   openai: OpenAI;
@@ -26,6 +30,9 @@ export async function autofillIntakeFromDocuments(params: {
   employeeId: string;
 }): Promise<AutofillIntakeResult> {
   const { openai, supabase, employeeId } = params;
+
+  const loaded = await loadWorkerFacts(supabase, employeeId);
+  const workerFacts = loaded.snapshot?.values ?? {};
 
   const imported = await importIntakeFromPdf({
     openai,
@@ -39,7 +46,10 @@ export async function autofillIntakeFromDocuments(params: {
       try {
         const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
         if (!dossier.error) {
-          const data = normalizeIntakeControlledFields(ensureIntakeShape(dossier.data));
+          const data = seedIntakeFromWorkerFacts(
+            normalizeIntakeControlledFields(ensureIntakeShape(dossier.data)),
+            workerFacts
+          );
           data.meta.generation_notes = [
             'Intake gegenereerd vanuit dossierdocumenten (geen intakeformulier).',
             ...data.meta.generation_notes,
@@ -50,6 +60,7 @@ export async function autofillIntakeFromDocuments(params: {
             warning: null,
             gapFilled: false,
             generatedFromDossier: true,
+            workerFacts,
           };
         }
       } catch (e) {
@@ -57,29 +68,30 @@ export async function autofillIntakeFromDocuments(params: {
       }
     }
     return {
-      data: ensureIntakeShape(imported.data),
+      data: seedIntakeFromWorkerFacts(ensureIntakeShape(imported.data), workerFacts),
       sourceDocumentId: null,
       error: imported.error,
       gapFilled: false,
+      workerFacts,
     };
   }
 
-  let data = ensureIntakeShape(imported.data);
+  // Known worker facts win over PDF extraction for shared keys; extraction fills the rest.
+  let data = seedIntakeFromWorkerFacts(ensureIntakeShape(imported.data), workerFacts);
   let gapFilled = false;
   let warning: string | null = imported.error || null;
 
   try {
     const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
     if (!dossier.error) {
-      data = mergeIntakeFillBlanks(data, dossier.data);
+      data = seedIntakeFromWorkerFacts(mergeIntakeFillBlanks(data, dossier.data), workerFacts);
       gapFilled = true;
       data.meta.generation_notes = [
         ...data.meta.generation_notes,
         'Aangevuld vanuit dossierdocumenten (alleen lege velden).',
       ];
     } else if (dossier.data.meta.generation_notes.length > 0) {
-      // Partial generate — still merge what we got.
-      data = mergeIntakeFillBlanks(data, dossier.data);
+      data = seedIntakeFromWorkerFacts(mergeIntakeFillBlanks(data, dossier.data), workerFacts);
       gapFilled = true;
       warning = warning || dossier.error;
       data.meta.generation_notes = [
@@ -87,7 +99,6 @@ export async function autofillIntakeFromDocuments(params: {
         'Aangevuld vanuit dossierdocumenten (alleen lege velden).',
       ];
     } else {
-      // No dossier docs — intake-only is fine.
       data.meta.generation_notes = [
         ...data.meta.generation_notes,
         'Geen dossierdocumenten voor aanvulling; alleen intakeformulier gebruikt.',
@@ -112,5 +123,6 @@ export async function autofillIntakeFromDocuments(params: {
     sourceDocumentId: imported.sourceDocumentId,
     warning,
     gapFilled,
+    workerFacts,
   };
 }

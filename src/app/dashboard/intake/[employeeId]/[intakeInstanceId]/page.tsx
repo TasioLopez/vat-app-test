@@ -45,12 +45,18 @@ export default async function IntakeInstancePage({ params }: { params: Promise<P
     ? overlayIntakeWithWorkerFacts(instance.data_json || {}, facts.snapshot.values)
     : instance.data_json || {};
 
+  const { count: exportCount } = await (supabase as any)
+    .from('intake_exports')
+    .select('id', { count: 'exact', head: true })
+    .eq('intake_instance_id', intakeInstanceId);
+
   return (
     <IntakeBuilder
       employeeId={employeeId}
       intakeInstanceId={intakeInstanceId}
       initialData={initialData}
       initialValidatedAt={instance.validated_at ?? null}
+      initialHasExport={(exportCount ?? 0) > 0}
     />
   );
 }
