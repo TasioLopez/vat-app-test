@@ -307,14 +307,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const docTypes = useMemo(() => visibleEmployeeDocTypes(), []);
     const docStatuses = useEmployeeDocStatuses(employeeId, documents);
 
-    const uploadedSourcesCount = useMemo(
-        () =>
-            docTypes.filter((type) =>
-                documents.some((d) => d.type?.toLowerCase().trim() === type)
-            ).length,
-        [docTypes, documents]
-    );
-
     useEffect(() => {
         if (!aiLoading) {
             setAutofillProgress(null);
