@@ -28,7 +28,7 @@ function shouldHideField(key: string, data: Record<string, unknown>): boolean {
     return true;
   }
   if (key === 'drivers_license_type' && data.drivers_license !== true) return true;
-  if (key === 'computer_skills' && data.has_computer === false) return true;
+  // PC skills stay editable regardless of has_computer (availability ≠ skill level).
   return false;
 }
 
