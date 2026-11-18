@@ -150,19 +150,19 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
       case 's5':
         return (
           <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <IntakeField
-                label="Datum eerste ziekte dag"
-                type="date"
-                value={data.s5.first_sick_day}
-                onChange={(v) => patch('s5', { first_sick_day: v })}
-              />
-              <IntakeField
-                label="Reden ziekmelding"
-                value={data.s5.reden_ziekmelding}
-                onChange={(v) => patch('s5', { reden_ziekmelding: v }, { debounce: true })}
-              />
-            </div>
+            <IntakeField
+              label="Datum eerste ziekte dag"
+              type="date"
+              value={data.s5.first_sick_day}
+              onChange={(v) => patch('s5', { first_sick_day: v })}
+            />
+            <IntakeField
+              label="Reden ziekmelding"
+              value={data.s5.reden_ziekmelding}
+              onChange={(v) => patch('s5', { reden_ziekmelding: v }, { debounce: true })}
+              multiline
+              rows={4}
+            />
             <div>
               <p className="mb-2 text-sm font-medium text-gray-600">FML/IZP-beperkingen</p>
               <div className="flex flex-wrap gap-2">
