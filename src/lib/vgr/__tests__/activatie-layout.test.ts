@@ -75,6 +75,8 @@ describe('fase activatie layout', () => {
     assert.equal(byId.get('ia-vervolg-text')?.panel, 'ia-vervolg');
     assert.match(markup(byId.get('ia-vervolg-text')), /val-logo\.jpg/);
     assert.match(markup(byId.get('ia-vervolg-text')), /Netwerken afronden/);
+    assert.ok(byId.get('ia-wekelijks-spacer'));
+    assert.equal(byId.get('ia-wekelijks-spacer')?.panel, undefined);
 
     for (const id of ['ia-wekelijks_solliciteren-h', 'ia-wekelijks_solliciteren-std-0', 'ia-wekelijks_solliciteren-std-1', 'ia-wekelijks_solliciteren-toel']) {
       assert.equal(byId.get(id)?.panel, 'ia-wekelijks_solliciteren', id);
@@ -116,6 +118,11 @@ describe('fase activatie layout', () => {
     assert.equal(byId.get('pw-m-pow-1-h')?.panel, 'pw-toel');
     assert.equal(byId.get('pw-m-pow-1')?.panel, 'pw-toel');
     assert.match(markup(byId.get('pw-toel-h')), /Toelichting onderbouwing PoW-meter/);
+    const onderbouwing = markup(byId.get('pw-m-pow-1-h'));
+    assert.match(onderbouwing, /Onderbouwing PoW-meter/);
+    assert.match(onderbouwing, /text-\[#782A90\]/);
+    assert.match(onderbouwing, /font-bold/);
+    assert.match(onderbouwing, /text-\[10pt\]/);
     const parts = splitVgrBodyAtom(byId.get('pw-m-pow-1')!);
     assert.ok(parts);
     assert.equal(parts.length, 2);
@@ -123,15 +130,19 @@ describe('fase activatie layout', () => {
     assert.equal(parts[1].panel, 'pw-toel');
   });
 
-  it('keeps the visie body in one panel, with a purple quote and Z-mark functies', () => {
+  it('keeps the visie body in one panel, with a black quote and Z-mark functies', () => {
     assert.equal(byId.get('vp-h')?.panel, undefined);
     for (const id of ['vp-ad-lead', 'vp-ad-q', 'vp-la-h', 'vp-kansen', 'vp-fun-lead', 'vp-fun-list', 'vp-fun-foot', 'vp-conc-h', 'vp-conc']) {
       assert.equal(byId.get(id)?.panel, 'vp', id);
     }
     const quote = markup(byId.get('vp-ad-q'));
-    assert.match(quote, /italic/);
-    assert.match(quote, /text-\[#782A90\]/);
+    assert.doesNotMatch(quote, /italic/);
+    assert.doesNotMatch(quote, /text-\[#782A90\]/);
     assert.match(quote, /theoretisch passende functies/);
+    const lead = markup(byId.get('vp-fun-lead'));
+    assert.match(lead, /text-\[#782A90\]/);
+    assert.match(lead, /font-bold/);
+    assert.match(lead, /de volgende functies/);
     const functies = markup(byId.get('vp-fun-list'));
     assert.match(functies, /val-logo\.jpg/);
     assert.match(functies, /Taalredacteur/);
@@ -217,8 +228,8 @@ describe('fase activatie visie from a trajectplan blob', () => {
   it('quotes only the text after the advies delimiter', () => {
     const quote = markup(byId.get('vp-ad-q'));
     assert.match(quote, /theoretisch passende functies/);
-    assert.match(quote, /italic/);
-    assert.match(quote, /text-\[#782A90\]/);
+    assert.doesNotMatch(quote, /italic/);
+    assert.doesNotMatch(quote, /text-\[#782A90\]/);
     assert.doesNotMatch(quote, /ADVIES/);
     assert.doesNotMatch(quote, /staat het volgende advies/);
     assert.match(markup(byId.get('vp-ad-lead')), /staat het volgende advies/);
@@ -237,8 +248,27 @@ describe('fase activatie visie from a trajectplan blob', () => {
     assert.match(list, /val-logo\.jpg/);
     assert.match(list, /Taalredacteur/);
     assert.match(list, /Toetsontwikkelaar/);
-    assert.match(markup(byId.get('vp-fun-lead')), /de volgende functies/);
+    const funLead = markup(byId.get('vp-fun-lead'));
+    assert.match(funLead, /de volgende functies/);
+    assert.match(funLead, /text-\[#782A90\]/);
+    assert.match(funLead, /font-bold/);
     assert.match(markup(byId.get('vp-fun-foot')), /momentopname/);
+  });
+
+  it('bolds functie titles and lowercases the letter after each colon', () => {
+    const data = draft();
+    data.body.visie_plaatsbaarheid.functies = [
+      'Taalredacteur: De afgeronde hbo-opleiding Nederlands.',
+      'Toetsontwikkelaar: Deze functie sluit aan.',
+    ];
+    const atoms = buildVgrBodyAtoms(data);
+    const list = markup(atoms.find((a) => a.id === 'vp-fun-list'));
+    assert.match(list, /font-bold/);
+    assert.match(list, /Taalredacteur/);
+    assert.match(list, /: de afgeronde hbo-opleiding Nederlands\./);
+    assert.match(list, /: deze functie sluit aan\./);
+    assert.doesNotMatch(list, /: De afgeronde/);
+    assert.doesNotMatch(list, /: Deze functie/);
   });
 
   it('uses the parsed toelichting once when the kansen dropdown is empty', () => {

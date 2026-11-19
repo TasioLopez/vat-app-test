@@ -3,7 +3,7 @@ export const VGR_ATOM_GAP_PX = 6;
 /** Horizontal inset of text inside a shaded panel. Measurement uses the narrower width. */
 export const VGR_PANEL_PAD_X_PX = 14;
 /** Top and bottom padding of a shaded panel, including a fragment continued on the next page. */
-export const VGR_PANEL_PAD_Y_PX = 10;
+export const VGR_PANEL_PAD_Y_PX = 14;
 /** Space between blocks inside one panel (label, lead, quote). */
 export const VGR_PANEL_INNER_GAP_PX = 14;
 /** Top or bottom stroke of a bordered table frame. Rows inside the frame have no extra gap. */

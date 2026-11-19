@@ -69,7 +69,9 @@ describe('profiel werknemer layout', () => {
     const html = markup(atoms[0]);
     assert.match(html, /Voortgangsrapportage periode:/);
     assert.match(html, /text-\[#782A90\]/);
+    assert.match(html, /padding-bottom:12px/);
     assert.doesNotMatch(html, /text-neutral-900/);
+    assert.match(markup(atoms[1]), /padding-bottom:14px/);
   });
 
   it('puts the five vragen in one panel with Z marks, and the title outside it', () => {

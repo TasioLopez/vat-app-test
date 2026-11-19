@@ -118,9 +118,17 @@ const VGR_PURPLE_Z_CLASS = 'text-[10.5pt] font-bold leading-[1.42] text-[#782A90
 /** Italic bijlage reference inside Wekelijks solliciteren. Not a Para: that class forces black text. */
 const VGR_BIJLAGE_CLASS = 'whitespace-pre-line text-[10.5pt] italic leading-[1.42] text-[#660066]';
 
-/** Italic purple quote and the small PoW / visie footnotes. */
-const VGR_PURPLE_ITALIC_QUOTE_CLASS = 'whitespace-pre-line text-[10.5pt] italic leading-[1.42] text-[#782A90]';
+/** Small PoW / visie footnotes. */
 const VGR_FOOTNOTE_CLASS = 'text-[8pt] italic leading-tight text-[#782A90]';
+
+/** Measured gap under the period line before Profiel werknemer. */
+const VGR_PERIODE_PAD_BOTTOM_PX = 12;
+/** Measured gap under a chapter band before the next block. */
+const VGR_CHAPTER_PAD_BOTTOM_PX = 14;
+/** Extra measured spacer above the Wekelijks solliciteren panel. */
+const VGR_WEKELIJKS_SPACER_PX = 12;
+/** Tighter gap between a doelstelling date label and its body lines. */
+const VGR_DOELSTELLING_INNER_GAP_PX = 6;
 
 function PanelLabel({ children }: { children: React.ReactNode }) {
   return <div className={VGR_PANEL_LABEL_CLASS}>{children}</div>;
@@ -130,20 +138,17 @@ function BijlageSentence({ text }: { text: string }) {
   return <p className={VGR_BIJLAGE_CLASS}>{text}</p>;
 }
 
-function PurpleItalicQuote({ text }: { text: string }) {
-  const t = text.trim() || '—';
-  return <p className={VGR_PURPLE_ITALIC_QUOTE_CLASS}>“{t}”</p>;
-}
-
 export function ChapterBand({ chapter }: { chapter: VGRChapterId }) {
   const def = VGR_CHAPTERS.find((c) => c.id === chapter)!;
   return (
-    <div
-      className="px-2.5 py-2 text-[15px] font-bold leading-tight text-white"
-      style={{ backgroundColor: def.color }}
-      data-vgr-chapter={chapter}
-    >
-      {def.title}
+    <div style={{ paddingBottom: VGR_CHAPTER_PAD_BOTTOM_PX }}>
+      <div
+        className="px-2.5 py-2 text-[15px] font-bold leading-tight text-white"
+        style={{ backgroundColor: def.color }}
+        data-vgr-chapter={chapter}
+      >
+        {def.title}
+      </div>
     </div>
   );
 }
@@ -162,8 +167,10 @@ export function Para({ children, className = '' }: { children: React.ReactNode; 
 
 export function Quote({ text, plain = false }: { text: string; plain?: boolean }) {
   const t = text.trim();
-  if (!t) return <Para className={plain ? 'text-neutral-500' : 'italic text-neutral-500'}>“—”</Para>;
-  return <Para className={plain ? '' : 'italic'}>“{t}”</Para>;
+  // Quotes are never italic; `plain` is kept for call-site compatibility.
+  void plain;
+  if (!t) return <Para className="text-neutral-500">“—”</Para>;
+  return <Para>“{t}”</Para>;
 }
 
 export function CheckLine({ checked, label }: { checked: boolean; label: React.ReactNode }) {
@@ -245,6 +252,33 @@ function zBulletList(items: string[], className = VGR_BODY_TEXT_CLASS) {
       {items.map((item, i) => (
         <ValentineZLogoBulletRow key={`${i}-${item}`} className={className} eagerLoading>
           {item}
+        </ValentineZLogoBulletRow>
+      ))}
+    </div>
+  );
+}
+
+/** Bold job title; lowercase the first letter of the description after the colon. */
+function formatFunctieTitleDescription(line: string): React.ReactNode {
+  const idx = line.indexOf(':');
+  if (idx < 0) return line;
+  const title = line.slice(0, idx).trim();
+  let desc = line.slice(idx + 1).trim();
+  if (desc) desc = desc.charAt(0).toLocaleLowerCase('nl-NL') + desc.slice(1);
+  return (
+    <>
+      <span className="font-bold">{title}</span>
+      {desc ? `: ${desc}` : ':'}
+    </>
+  );
+}
+
+function zFunctieBulletList(items: string[]) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {items.map((item, i) => (
+        <ValentineZLogoBulletRow key={`${i}-${item}`} className={VGR_BODY_TEXT_CLASS} eagerLoading>
+          {formatFunctieTitleDescription(item)}
         </ValentineZLogoBulletRow>
       ))}
     </div>
@@ -484,7 +518,10 @@ function buildProfiel(ctx: Ctx) {
     pageBreakBefore: true,
     keepWithNext: true,
     node: (
-      <div className="text-[11pt] font-bold leading-tight text-[#782A90]">
+      <div
+        className="text-[11pt] font-bold leading-tight text-[#782A90]"
+        style={{ paddingBottom: VGR_PERIODE_PAD_BOTTOM_PX }}
+      >
         Voortgangsrapportage periode: {periode || '…'}
       </div>
     ),
@@ -562,7 +599,7 @@ function buildProfiel(ctx: Ctx) {
     node: (
       <div className="flex flex-col" style={{ rowGap: VGR_PANEL_INNER_GAP_PX }}>
         {history.map((h) => (
-          <div key={h.id} className="flex flex-col" style={{ rowGap: VGR_PANEL_INNER_GAP_PX }}>
+          <div key={h.id} className="flex flex-col" style={{ rowGap: VGR_DOELSTELLING_INNER_GAP_PX }}>
             <PanelLabel>Doelstelling {formatNLDate(h.date)}</PanelLabel>
             <Para>{vgrDoelstellingWijzigingZin(h.changed, trajectDoelLabel(h.from), trajectDoelLabel(h.to))}</Para>
             {h.toelichting.trim() ? <Para>{h.toelichting.trim()}</Para> : null}
@@ -801,6 +838,13 @@ function buildActivatie(ctx: Ctx) {
   heading(ctx, 'ia-h', 'Interventies activatie en arbeidsbemiddeling');
   selectionChecklist(ctx, 'ia-checks', ia, VGR_ACTIVATIE_OPTIONS);
   vervolgLine(ctx, 'ia-vervolg', ia, 'ia-vervolg');
+  if (ia.selected.includes('wekelijks_solliciteren')) {
+    push(ctx, {
+      id: 'ia-wekelijks-spacer',
+      keepWithNext: true,
+      node: <div style={{ height: VGR_WEKELIJKS_SPACER_PX }} aria-hidden />,
+    });
+  }
   interventionBlocks(ctx, 'ia', ia, VGR_ACTIVATIE_OPTIONS, undefined, {
     itemsLead: 'body',
     items: 'z',
@@ -889,7 +933,7 @@ function buildActivatie(ctx: Ctx) {
     push(ctx, {
       id: `pw-m-${m.id}-h`,
       panel: 'pw-toel',
-      node: <div className={`${VGR_BODY_TEXT_CLASS} font-bold`}>Onderbouwing PoW-meter™ – {formatNLDate(m.date)}</div>,
+      node: <PanelLabel>Onderbouwing PoW-meter™ – {formatNLDate(m.date)}</PanelLabel>,
       keepWithNext: true,
     });
     prose(ctx, `pw-m-${m.id}`, m.toelichting || '—', '', 'pw-toel');
@@ -910,7 +954,7 @@ function buildActivatie(ctx: Ctx) {
       ),
       keepWithNext: true,
     });
-    push(ctx, { id: 'vp-ad-q', panel: visiePanel, node: <PurpleItalicQuote text={adCitaatForPrint(vp.ad.citaat)} /> });
+    push(ctx, { id: 'vp-ad-q', panel: visiePanel, node: <Quote text={adCitaatForPrint(vp.ad.citaat)} plain /> });
   }
   push(ctx, {
     id: 'vp-la-h',
@@ -927,8 +971,13 @@ function buildActivatie(ctx: Ctx) {
   const storedFuncties = vp.functies.map((f) => f.trim()).filter(Boolean);
   const functies = storedFuncties.length ? storedFuncties : functieLines(visieBlock?.functieBullets ?? '');
   if (functies.length) {
-    push(ctx, { id: 'vp-fun-lead', panel: visiePanel, node: <Para>{VGR_VISIE_FUNCTIES_LEAD}</Para>, keepWithNext: true });
-    push(ctx, { id: 'vp-fun-list', panel: visiePanel, node: zBulletList(functies) });
+    push(ctx, {
+      id: 'vp-fun-lead',
+      panel: visiePanel,
+      node: <PanelLabel>{VGR_VISIE_FUNCTIES_LEAD}</PanelLabel>,
+      keepWithNext: true,
+    });
+    push(ctx, { id: 'vp-fun-list', panel: visiePanel, node: zFunctieBulletList(functies) });
     push(ctx, {
       id: 'vp-fun-foot',
       panel: visiePanel,
