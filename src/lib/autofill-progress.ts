@@ -2,7 +2,7 @@ import { TP2026_PROFIEL_WERKNEMER_FIELD_ORDER } from '@/lib/tp2026/basis-profiel
 
 /** Intake autofill with PDF: last step is always "opslaan" (emitted by the API route). */
 export const INTAKE_AUTOFILL_STEPS_WITH_PDF = [
-  'Werknemersfeiten laden…',
+  'Werknemersfeiten uit documenten…',
   'Intakeformulier scannen…',
   'Trajectgegevens extraheren…',
   'Toelichtingen extraheren…',
@@ -10,15 +10,13 @@ export const INTAKE_AUTOFILL_STEPS_WITH_PDF = [
   'Sectie 5 invullen…',
   'Sectie 7 invullen…',
   'Dossier aanvullen…',
-  'Gespreksverslag toepassen…',
   'Gegevens opslaan…',
 ] as const;
 
 /** Staging dossier-only path when no intake PDF exists. */
 export const INTAKE_AUTOFILL_STEPS_DOSSIER_ONLY = [
-  'Werknemersfeiten laden…',
+  'Werknemersfeiten uit documenten…',
   'Intake genereren uit dossier…',
-  'Gespreksverslag toepassen…',
   'Gegevens opslaan…',
 ] as const;
 

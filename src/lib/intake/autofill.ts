@@ -9,12 +9,15 @@ import {
   createStepProgressReporter,
   type AutofillProgressReporter,
 } from '@/lib/autofill-progress-stream';
-import { extractStoragePath } from '@/lib/document-analysis/storage';
-import { isGespreksverslagDocType } from '@/lib/documents/employee-doc-types';
-import { loadWorkerFacts, type WorkerFactsSnapshot } from '@/lib/employee/save-worker-facts';
+import { processEmployeeAutofillRawDetails } from '@/lib/employee/autofill-persist';
+import { extractWorkerFactsFromDocuments } from '@/lib/employee/extract-worker-facts-from-documents';
+import {
+  loadWorkerFacts,
+  saveWorkerFacts,
+  type WorkerFactsSnapshot,
+} from '@/lib/employee/save-worker-facts';
 import { importIntakeFromPdf, type ImportIntakePhase } from '@/lib/intake/import-from-pdf';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
-import { applyGespreksverslagFactHints } from '@/lib/intake/gespreksverslag-fact-hints';
 import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
 import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
@@ -57,28 +60,9 @@ function seedLockedThenFillGaps(
   return seedIntakeFromWorkerFacts(withLocks, workerFacts);
 }
 
-async function loadGespreksverslagText(
-  supabase: SupabaseClient,
-  employeeId: string
-): Promise<string | null> {
-  const { data: docs } = await supabase
-    .from('documents')
-    .select('type, url, name, uploaded_at')
-    .eq('employee_id', employeeId)
-    .order('uploaded_at', { ascending: false });
-  const hit = (docs || []).find((d) => isGespreksverslagDocType(d.type) && d.url);
-  if (!hit?.url) return null;
-  const path = extractStoragePath(hit.url);
-  if (!path) return null;
-  const { data: file } = await supabase.storage.from('documents').download(path);
-  if (!file) return null;
-  const text = Buffer.from(await file.arrayBuffer()).toString('utf8').trim();
-  return text || null;
-}
-
 /**
- * Intake-first autofill: extract from intake PDF, gap-fill from dossier, then apply
- * validated WorkerFacts locks. Unvalidated worker noise must not overwrite extraction.
+ * Shared facts via the same chatlike path as worker/TP; intake PDF/dossier for narratives.
+ * WorkerFacts overlay wins for shared keys after narrative merge.
  */
 export async function autofillIntakeFromDocuments(params: {
   openai: OpenAI;
@@ -92,9 +76,34 @@ export async function autofillIntakeFromDocuments(params: {
   const reportPdf = createStepProgressReporter(withPdfSteps, onProgress);
 
   reportPdf(0);
-  const loaded = await loadWorkerFacts(supabase, employeeId);
-  const snapshot = loaded.snapshot;
-  const workerFacts = snapshot?.values ?? {};
+  let loaded = await loadWorkerFacts(supabase, employeeId);
+  let snapshot = loaded.snapshot;
+  let workerFacts = snapshot?.values ?? {};
+  let warning: string | null = null;
+
+  // Same shared-fact extraction as worker profile Invullen / TP Stap 2 chatlike.
+  try {
+    const extracted = await extractWorkerFactsFromDocuments(openai, employeeId);
+    if (Object.keys(extracted.details).length > 0) {
+      const processed = processEmployeeAutofillRawDetails(extracted.details);
+      const saved = await saveWorkerFacts(supabase, employeeId, processed, 'autofill');
+      if (saved.error) {
+        warning = saved.error;
+      } else {
+        loaded = await loadWorkerFacts(supabase, employeeId);
+        snapshot = loaded.snapshot;
+        workerFacts = snapshot?.values ?? saved.values ?? workerFacts;
+      }
+    } else if (extracted.error) {
+      console.warn('Intake chatlike shared-fact extract:', extracted.error);
+      warning = warning || extracted.error;
+    }
+  } catch (e) {
+    console.warn('Intake chatlike shared-fact extract failed', e);
+    warning =
+      warning ||
+      (e instanceof Error ? e.message : 'Werknemersgegevens uit documenten mislukt');
+  }
 
   const imported = await importIntakeFromPdf({
     openai,
@@ -109,22 +118,15 @@ export async function autofillIntakeFromDocuments(params: {
         const dossierSteps = [...INTAKE_AUTOFILL_STEPS_DOSSIER_ONLY];
         const reportDossier = createStepProgressReporter(dossierSteps, onProgress);
         reportDossier(0);
+        // Reuse chatlike facts already saved above; step 0 is "feiten", step 1 generate.
         reportDossier(1);
         const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
         if (!dossier.error) {
-          let data = seedLockedThenFillGaps(
+          const data = seedLockedThenFillGaps(
             normalizeIntakeControlledFields(ensureIntakeShape(dossier.data)),
             snapshot,
             workerFacts
           );
-          reportDossier(2);
-          try {
-            const prose =
-              dossier.gespreksverslagText || (await loadGespreksverslagText(supabase, employeeId));
-            if (prose) data = applyGespreksverslagFactHints(data, prose);
-          } catch (e) {
-            console.warn('Gespreksverslag fact hints failed', e);
-          }
           data.meta.generation_notes = [
             'Intake gegenereerd vanuit dossierdocumenten (geen intakeformulier).',
             ...data.meta.generation_notes,
@@ -132,7 +134,7 @@ export async function autofillIntakeFromDocuments(params: {
           return {
             data,
             sourceDocumentId: null,
-            warning: null,
+            warning,
             gapFilled: false,
             generatedFromDossier: true,
             workerFacts,
@@ -147,22 +149,21 @@ export async function autofillIntakeFromDocuments(params: {
       data: seedLockedThenFillGaps(ensureIntakeShape(imported.data), snapshot, workerFacts),
       sourceDocumentId: null,
       error: imported.error,
+      warning,
       gapFilled: false,
       workerFacts,
       progressTotal: withPdfSteps.length,
     };
   }
 
-  // Document extraction first; locked worker facts win; unvalidated facts only fill blanks.
+  // Narratives from intake PDF; shared keys overlaid from WorkerFacts (chatlike).
   let data = seedLockedThenFillGaps(ensureIntakeShape(imported.data), snapshot, workerFacts);
   let gapFilled = false;
-  let warning: string | null = imported.error || null;
+  warning = warning || imported.error || null;
 
-  let gespreksverslagText: string | null = null;
   reportPdf(7);
   try {
     const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
-    gespreksverslagText = dossier.gespreksverslagText ?? null;
     if (!dossier.error) {
       data = seedLockedThenFillGaps(mergeIntakeFillBlanks(data, dossier.data), snapshot, workerFacts);
       gapFilled = true;
@@ -191,29 +192,9 @@ export async function autofillIntakeFromDocuments(params: {
       (e instanceof Error ? e.message : 'Dossier-aanvulling mislukt; intakeresultaat behouden.');
   }
 
-  // Deterministic prose hints on the merged intake (reuse dossier download; fallback fetch).
-  reportPdf(8);
-  try {
-    const prose = gespreksverslagText || (await loadGespreksverslagText(supabase, employeeId));
-    if (prose) {
-      const beforeHours = data.s2.contract_hours;
-      const beforeDutch = data.s17.dutch_speaking;
-      data = applyGespreksverslagFactHints(data, prose);
-      if (data.s2.contract_hours !== beforeHours || data.s17.dutch_speaking !== beforeDutch) {
-        data.meta.generation_notes = [
-          ...data.meta.generation_notes,
-          'Aangevuld vanuit gespreksverslag (uren/taal, alleen lege velden).',
-        ];
-        gapFilled = true;
-      }
-    }
-  } catch (e) {
-    console.warn('Gespreksverslag fact hints failed', e);
-  }
-
   if (!data.meta.generation_notes.some((n) => n.includes('Intake automatisch ingevuld'))) {
     data.meta.generation_notes = [
-      'Intake automatisch ingevuld (intakeformulier + eventuele dossier-aanvulling).',
+      'Intake automatisch ingevuld (werknemersfeiten + intakeformulier + eventuele dossier-aanvulling).',
       ...data.meta.generation_notes,
     ];
   }
