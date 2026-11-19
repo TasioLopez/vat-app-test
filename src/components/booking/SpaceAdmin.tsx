@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { isSpaceKind, spaceKindLabel, spaceKindPlural, type LocationRow, type SpaceKind, type SpaceRow } from '@/lib/booking/types';
+import { compareLocations, isSpaceKind, spaceKindLabel, spaceKindPlural, type LocationRow, type SpaceKind, type SpaceRow } from '@/lib/booking/types';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -68,7 +68,7 @@ export default function SpaceAdmin() {
       setLoading(false);
       return;
     }
-    setLocations(locationRows ?? []);
+    setLocations([...(locationRows ?? [])].sort(compareLocations));
     setSpaces(
       (spaceRows ?? []).flatMap((row) => (isSpaceKind(row.kind) ? [{ ...row, kind: row.kind }] : []))
     );

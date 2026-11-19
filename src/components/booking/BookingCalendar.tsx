@@ -31,6 +31,7 @@ import {
   weekdayIndex,
 } from '@/lib/booking/time';
 import {
+  compareLocations,
   isSpaceKind,
   spaceKindPlural,
   type BookingRow,
@@ -87,7 +88,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       throw new Error(locationError?.message || spaceError?.message || 'Laden mislukt');
     }
     return {
-      locations: locationRows ?? [],
+      locations: [...(locationRows ?? [])].sort(compareLocations),
       spaces: (spaceRows ?? []).flatMap((row) =>
         isSpaceKind(row.kind) ? [{ ...row, kind: row.kind }] : []
       ),
