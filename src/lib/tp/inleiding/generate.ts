@@ -221,6 +221,12 @@ export async function generateInleiding(
     );
   }
 
+  // Prefer intake schedule phrasing (e.g. "3 x 2 uur per week") over a model total.
+  const intakeUren = intake?.s6?.uren_werkzaam?.trim() || '';
+  if (content.reintegreert_spoor1 && intakeUren) {
+    content.reintegratie_uren = intakeUren;
+  }
+
   return buildInleidingFields(ctx, content);
 }
 

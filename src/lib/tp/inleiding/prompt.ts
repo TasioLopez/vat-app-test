@@ -38,7 +38,8 @@ medische_begeleiding — kies exact één waarde:
 
 reintegreert_spoor1 / reintegratie_uren / reintegratie_werk_type
 - Bepaal uit documenten of werknemer re-integreert in spoor 1.
-- Bij true: vul uren per week en werktype (eigen werk | aangepast werk | deels aangepast werk).
+- Bij true: vul reintegratie_uren en werktype (eigen werk | aangepast werk | deels aangepast werk).
+- reintegratie_uren: behoud de bronformulering als die er is (bijv. intake "Uren werkzaam" = "3 x 2 uur per week"). Tel N×M NIET op tot één wekelijks totaal. Alleen een kaal getal (bijv. "8") wanneer de bron geen schema-detail geeft.
 
 werknemer_doel_toelichting
 - Alleen invullen als werknemer het doel van het 2e spoor anders ervaart dan standaard; anders null.

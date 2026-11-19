@@ -4,6 +4,7 @@ import {
   buildAdSubBlock,
   buildInleidingFields,
   buildInleidingSubBlock,
+  formatReintegratieUrenDuration,
   parseInleidingSub,
   type InleidingBuildContext,
 } from '../build-fields';
@@ -167,6 +168,18 @@ describe('buildInleidingFields', () => {
     assert.match(inleiding, /8 uur per week in deels aangepast werk/);
   });
 
+  it('preserves schedule phrasing like 3 x 2 uur per week without doubling uur per week', () => {
+    const content = {
+      ...baseContent,
+      reintegreert_spoor1: true,
+      reintegratie_uren: '3 x 2 uur per week',
+      reintegratie_werk_type: 'aangepast werk' as const,
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /gedurende 3 x 2 uur per week in aangepast werk/);
+    assert.doesNotMatch(inleiding, /uur per week uur per week/);
+  });
+
   it('uses extra aanmelder sentence when provided', () => {
     const content = {
       ...baseContent,
@@ -310,6 +323,20 @@ describe('buildInleidingFields', () => {
     const { inleiding_sub } = buildInleidingFields(baseCtx, content);
     assert.match(inleiding_sub, /Blijf de re-integratiemogelijkheden/);
     assert.doesNotMatch(inleiding_sub, /Quote advies spoor 2/);
+  });
+});
+
+describe('formatReintegratieUrenDuration', () => {
+  it('appends uur per week for bare numbers', () => {
+    assert.equal(formatReintegratieUrenDuration('8'), '8 uur per week');
+    assert.equal(formatReintegratieUrenDuration('36.5'), '36.5 uur per week');
+  });
+
+  it('keeps schedule phrasing that already includes uur', () => {
+    assert.equal(
+      formatReintegratieUrenDuration('3 x 2 uur per week'),
+      '3 x 2 uur per week'
+    );
   });
 });
 

@@ -221,12 +221,26 @@ function buildMedischeSituatie(ctx: InleidingBuildContext, content: InleidingCon
   return `${opening} ${applyGenderToMedischeText(extra, ctx.details.gender)}`;
 }
 
+/**
+ * Duration clause for spoor-1 hours.
+ * Bare number → "8 uur per week"; schedule phrasing with uur/uren → keep as-is
+ * (e.g. "3 x 2 uur per week") so we do not append a second "uur per week".
+ */
+export function formatReintegratieUrenDuration(raw: string): string {
+  const uren = raw.trim();
+  if (!uren) return '[uren] uur per week';
+  if (/\buur(?:en)?\b/i.test(uren)) return uren;
+  return `${uren} uur per week`;
+}
+
 function buildReintegratieEnDoel(ctx: InleidingBuildContext, content: InleidingContentResult): string {
   let reinteg: string;
   if (content.reintegreert_spoor1) {
-    const uren = coerceText(content.reintegratie_uren, '[uren]');
+    const duration = formatReintegratieUrenDuration(
+      coerceText(content.reintegratie_uren, '')
+    );
     const werkType = content.reintegratie_werk_type || 'eigen werk';
-    reinteg = `Ten tijde van het intakegesprek re-integreert werknemer in spoor 1 gedurende ${uren} uur per week in ${werkType}.`;
+    reinteg = `Ten tijde van het intakegesprek re-integreert werknemer in spoor 1 gedurende ${duration} in ${werkType}.`;
   } else {
     reinteg = 'Ten tijde van het intakegesprek re-integreert werknemer niet in spoor 1.';
   }
