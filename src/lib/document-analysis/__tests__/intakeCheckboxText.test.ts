@@ -5,6 +5,7 @@ import {
   detectDriversLicenseFromIntakeText,
   detectTransportFromIntakeText,
 } from '../intakeCheckboxText';
+import { inferDriversLicenseFromOwnCar } from '../inferLicenseFromOwnCar';
 
 const HIPPMAN_RIJBEWIJS_VERVOER = `
 Rijbewijzen
@@ -21,6 +22,13 @@ aanhanger
 [ ] T – Tractor                              [ ] Code 95
 Hoe verplaatst werknemer zich:
 [X] Auto [ ] Fiets [ ] OV [ ] Lopend [ ] Anders namelijk:
+`;
+
+const ALL_UNCHECKED_INTAKE = `
+Rijbewijzen
+☐ B – Personenauto               ☐ BE – Personenauto met aanhanger
+Hoe verplaatst werknemer zich:
+☐ Auto ☐ Fiets ☐ OV ☐ Lopend ☐ Anders namelijk:
 `;
 
 describe('detectDriversLicenseFromIntakeText', () => {
@@ -48,6 +56,10 @@ describe('detectDriversLicenseFromIntakeText', () => {
     assert.equal(detectDriversLicenseFromIntakeText(''), null);
     assert.equal(detectDriversLicenseFromIntakeText(null), null);
   });
+
+  it('returns empty array when glyphs exist but nothing is checked', () => {
+    assert.deepEqual(detectDriversLicenseFromIntakeText(ALL_UNCHECKED_INTAKE), []);
+  });
 });
 
 describe('detectTransportFromIntakeText', () => {
@@ -66,6 +78,10 @@ Hoe verplaatst werknemer zich:
   it('returns null when Hoe-verplaatst section missing or without glyphs', () => {
     assert.equal(detectTransportFromIntakeText('Werknemer rijdt auto'), null);
   });
+
+  it('returns empty array when vervoer row is all unchecked', () => {
+    assert.deepEqual(detectTransportFromIntakeText(ALL_UNCHECKED_INTAKE), []);
+  });
 });
 
 describe('applyIntakeCheckboxTextOverrides', () => {
@@ -83,26 +99,40 @@ describe('applyIntakeCheckboxTextOverrides', () => {
     assert.equal(sources.licenseSource, 'text');
   });
 
-  it('clears invented vision transport/license when text is inconclusive', () => {
+  it('preserves mapped values when intake text has no positive checkbox selection', () => {
     const mapped: Record<string, unknown> = {
       transport_type: ['Auto', 'OV'],
       drivers_license_type: ['B', 'BE'],
       drivers_license: true,
     };
     const sources = applyIntakeCheckboxTextOverrides(mapped, 'geen checkboxes hier');
-    assert.equal('transport_type' in mapped, false);
-    assert.equal('drivers_license_type' in mapped, false);
-    assert.equal('drivers_license' in mapped, false);
-    assert.equal(sources.transportSource, 'cleared');
-    assert.equal(sources.licenseSource, 'cleared');
+    assert.deepEqual(mapped.transport_type, ['Auto', 'OV']);
+    assert.deepEqual(mapped.drivers_license_type, ['B', 'BE']);
+    assert.equal(mapped.drivers_license, true);
+    assert.equal(sources.transportSource, 'absent');
+    assert.equal(sources.licenseSource, 'absent');
   });
 
-  it('marks absent when text is empty', () => {
+  it('preserves mapped values when intake checkboxes are all unchecked', () => {
+    const mapped: Record<string, unknown> = {
+      transport_type: ['Auto'],
+      drivers_license: false,
+      drivers_license_type: [],
+    };
+    const sources = applyIntakeCheckboxTextOverrides(mapped, ALL_UNCHECKED_INTAKE);
+    assert.deepEqual(mapped.transport_type, ['Auto']);
+    assert.equal(mapped.drivers_license, false);
+    assert.deepEqual(mapped.drivers_license_type, []);
+    assert.equal(sources.transportSource, 'absent');
+    assert.equal(sources.licenseSource, 'absent');
+  });
+
+  it('leaves mapped alone when text is empty', () => {
     const mapped: Record<string, unknown> = {
       transport_type: ['Auto', 'OV'],
     };
     const sources = applyIntakeCheckboxTextOverrides(mapped, '');
-    assert.equal('transport_type' in mapped, false);
+    assert.deepEqual(mapped.transport_type, ['Auto', 'OV']);
     assert.equal(sources.transportSource, 'absent');
     assert.equal(sources.licenseSource, 'absent');
     assert.equal(sources.exWerknemerSource, 'absent');
@@ -117,5 +147,17 @@ describe('applyIntakeCheckboxTextOverrides', () => {
     const mappedOff: Record<string, unknown> = { is_ex_werknemer: true };
     applyIntakeCheckboxTextOverrides(mappedOff, '☐ Ex-werknemer');
     assert.equal(mappedOff.is_ex_werknemer, false);
+  });
+
+  it('keeps Auto through incomplete intake so Auto→B inference can run', () => {
+    const mapped: Record<string, unknown> = {
+      transport_type: ['Auto'],
+      drivers_license: false,
+      drivers_license_type: [],
+    };
+    applyIntakeCheckboxTextOverrides(mapped, ALL_UNCHECKED_INTAKE);
+    assert.equal(inferDriversLicenseFromOwnCar(mapped), true);
+    assert.equal(mapped.drivers_license, true);
+    assert.deepEqual(mapped.drivers_license_type, ['B']);
   });
 });
