@@ -213,6 +213,24 @@ function isLicenseTypesClear(incoming: Record<string, unknown>, key: string, pro
   );
 }
 
+/** Weak autofill defaults that should not block a better document extraction. */
+function isWeakAutofillValue(key: string, value: unknown, allValues: Record<string, unknown>): boolean {
+  if (key === 'dutch_speaking' || key === 'dutch_writing' || key === 'dutch_reading') {
+    return value === 'Geen';
+  }
+  if (key === 'drivers_license' && value === false) {
+    const types = allValues.drivers_license_type;
+    return !Array.isArray(types) || types.length === 0;
+  }
+  if (key === 'drivers_license_type') {
+    return (
+      allValues.drivers_license === false &&
+      (value == null || (Array.isArray(value) && value.length === 0))
+    );
+  }
+  return false;
+}
+
 function isPromotableValue(key: string, value: unknown): boolean {
   if (key === 'drivers_license' && value === false) return true;
   if (key === 'drivers_license_type' && Array.isArray(value)) return true;
@@ -270,8 +288,19 @@ export function planWorkerFactWrites(
 
     if (factsEqual(key, existing, proposed)) continue;
 
+    const existingWeak =
+      mode === 'autofill' && isWeakAutofillValue(key, existing, values);
+
     if (mode === 'autofill' || mode === 'confirm') {
-      if (isEmptyGegevensField(key, proposed) && !licenseClear) continue;
+      if (isEmptyGegevensField(key, proposed) && !licenseClear) {
+        // Autofill may clear a weak unvalidated default (fake Geen / empty no-license).
+        if (mode === 'autofill' && existingWeak && !isValidated(working, key)) {
+          values[key] = isProfileKey(key) ? null : normalizeCaseValue(key, null);
+          written.push(key);
+          markReview(working, key, true);
+        }
+        continue;
+      }
     } else if (
       typeof proposed === 'boolean' &&
       proposed === false &&
@@ -294,8 +323,8 @@ export function planWorkerFactWrites(
         skippedValidated.push({ key, current: existing ?? null, proposed });
         continue;
       }
-      // Fill empty only — except clearing orphan license types with an explicit no-license group.
-      if (!isEmptyGegevensField(key, existing) && !licenseClear) {
+      // Fill empty / weak defaults only — except clearing orphan license types with no-license.
+      if (!isEmptyGegevensField(key, existing) && !existingWeak && !licenseClear) {
         continue;
       }
     }

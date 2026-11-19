@@ -63,10 +63,25 @@ describe('intake worker overlay', () => {
       }
     );
     assert.equal(seeded.s17.education_level, 'HBO');
+    // Unvalidated null dutch and false license must not wipe extraction.
     assert.equal(seeded.s17.dutch_speaking, 'Matig');
+    assert.deepEqual(seeded.s17.drivers_license_types, ['C1']);
+  });
+
+  it('lets validated no-license clear extracted types', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      { s17: { drivers_license_types: ['C1'] } },
+      { drivers_license: false, drivers_license_type: [] },
+      { onlyKeys: new Set(['drivers_license', 'drivers_license_type']) }
+    );
     assert.deepEqual(seeded.s17.drivers_license_types, []);
-    const flat = intakeSharedFacts(seeded);
-    assert.equal(flat.drivers_license, false);
-    assert.deepEqual(flat.drivers_license_type, []);
+  });
+
+  it('does not seed fake Dutch Geen over extracted levels', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      { s17: { dutch_speaking: 'Goed' } },
+      { dutch_speaking: 'Geen' }
+    );
+    assert.equal(seeded.s17.dutch_speaking, 'Goed');
   });
 });

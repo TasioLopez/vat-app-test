@@ -30,8 +30,8 @@ Vervoer:
 - drivers_license_type: array zoals ["B"] — weglaten indien geen rijbewijs
 
 Talen (Nederlands, G/R/O):
-- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen"
-  (G → "Goed", R → "Voldoende", O → "Matig", geen vakje aangevinkt → "Geen")
+- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen" alleen als dat vakje expliciet is aangevinkt
+  (G → "Goed", R → "Voldoende", O → "Matig"; geen vakje / onbekend → weglaten of null — nooit fake "Geen")
 
 Computer:
 - has_computer: true/false (PC/Laptop aangevinkt)

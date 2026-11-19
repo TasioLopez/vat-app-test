@@ -67,32 +67,68 @@ function hasFact(facts: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(facts, key);
 }
 
+export type SeedWorkerFactsOptions = {
+  /**
+   * When set, only these keys are seeded (typically validated locks).
+   * Unvalidated review noise (fake Geen, false license) must not overwrite extraction.
+   */
+  onlyKeys?: ReadonlySet<string>;
+};
+
 /**
- * Seed intake shared fields from known WorkerFacts only (non-empty / explicit false).
- * Does not blank extracted values when the worker store has no value yet.
+ * Seed intake shared fields from WorkerFacts.
+ * By default seeds non-empty values; pass `onlyKeys` during Invullen so only locked
+ * facts win over document extraction.
  */
-export function seedIntakeFromWorkerFacts(raw: unknown, facts: Record<string, unknown>): IntakeData {
+export function seedIntakeFromWorkerFacts(
+  raw: unknown,
+  facts: Record<string, unknown>,
+  options?: SeedWorkerFactsOptions
+): IntakeData {
+  const onlyKeys = options?.onlyKeys;
   const known: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(facts)) {
-    if (key === 'drivers_license' && value === false) {
+    if (onlyKeys && !onlyKeys.has(key)) continue;
+    // Never seed unvalidated "no license" — it wipes types extracted from the PDF.
+    if (key === 'drivers_license' && value === false && !onlyKeys) {
+      continue;
+    }
+    if (key === 'drivers_license' && value === false && onlyKeys?.has(key)) {
       known.drivers_license = false;
       known.drivers_license_type = Array.isArray(facts.drivers_license_type)
         ? facts.drivers_license_type
         : [];
       continue;
     }
+    // Fake Geen from unchecked boxes must not block dossier prose.
+    if (
+      (key === 'dutch_speaking' || key === 'dutch_writing' || key === 'dutch_reading') &&
+      value === 'Geen' &&
+      !onlyKeys
+    ) {
+      continue;
+    }
     if (isEmptyGegevensField(key, value)) continue;
     known[key] = value;
   }
-  if (
-    hasFact(facts, 'drivers_license_type') &&
-    !hasFact(known, 'drivers_license_type') &&
-    facts.drivers_license === false
-  ) {
-    known.drivers_license = false;
-    known.drivers_license_type = [];
-  }
   return overlayIntakeWithWorkerFacts(raw, known);
+}
+
+/** Keys locked as validated on the worker record (profile + case). */
+export function validatedWorkerFactKeys(snapshot: {
+  values: Record<string, unknown>;
+  profileReview: Partial<Record<string, string>>;
+  profileHash: Partial<Record<string, string>>;
+  caseReview: Partial<Record<string, string>>;
+  caseHash: Partial<Record<string, string>>;
+}): Set<string> {
+  const keys = new Set<string>();
+  for (const key of Object.keys(snapshot.values)) {
+    const profileStatus = snapshot.profileReview[key];
+    const caseStatus = snapshot.caseReview[key];
+    if (profileStatus === 'validated' || caseStatus === 'validated') keys.add(key);
+  }
+  return keys;
 }
 
 export function overlayIntakeWithWorkerFacts(raw: unknown, facts: Record<string, unknown>): IntakeData {

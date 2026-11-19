@@ -62,6 +62,26 @@ describe('planWorkerFactWrites', () => {
     assert.equal(planned.values.education_level, 'MBO 2');
   });
 
+  it('lets autofill replace weak Geen with a real Dutch level', () => {
+    const current = snapshot({ dutch_speaking: 'Geen' });
+    const planned = planWorkerFactWrites(current, { dutch_speaking: 'Goed' }, 'autofill');
+    assert.deepEqual(planned.written, ['dutch_speaking']);
+    assert.equal(planned.values.dutch_speaking, 'Goed');
+  });
+
+  it('lets autofill replace false no-license when types are found', () => {
+    const current = snapshot({ drivers_license: false, drivers_license_type: null });
+    const planned = planWorkerFactWrites(
+      current,
+      { drivers_license: true, drivers_license_type: ['B'] },
+      'autofill'
+    );
+    assert.ok(planned.written.includes('drivers_license'));
+    assert.ok(planned.written.includes('drivers_license_type'));
+    assert.equal(planned.values.drivers_license, true);
+    assert.deepEqual(planned.values.drivers_license_type, ['B']);
+  });
+
   it('promote locks filled shared keys as validated', () => {
     const current = snapshot({ dutch_speaking: 'Goed', phone: null });
     const planned = planWorkerFactWrites(

@@ -53,7 +53,7 @@ Engels
     assert.equal(result?.dutch_reading, 'Matig');
   });
 
-  it('maps all-unchecked triples to Geen', () => {
+  it('omits dutch levels when all triples are unchecked', () => {
     const text = `
 Nederlands
 Spreken ☐ ☐ ☐
@@ -62,8 +62,6 @@ Lezen ☐ ☐ ☐
 Engels
 `;
     const result = detectDutchLevelsFromIntakeText(text);
-    assert.equal(result?.dutch_speaking, 'Geen');
-    assert.equal(result?.dutch_writing, 'Geen');
-    assert.equal(result?.dutch_reading, 'Geen');
+    assert.equal(result, null);
   });
 });
