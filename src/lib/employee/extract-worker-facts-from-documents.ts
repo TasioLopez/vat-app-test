@@ -49,14 +49,20 @@ async function downloadDocumentBuffer(
   return { buffer, path };
 }
 
+export type ExtractWorkerFactsPhase = 'prepare' | 'analyze' | 'merge';
+
 /**
  * Same document → WorkerFacts extraction used by worker profile / TP chatlike autofill.
  * Downloads via service role, then one multi-doc chatlike pass.
  */
 export async function extractWorkerFactsFromDocuments(
   openai: OpenAI,
-  employeeId: string
+  employeeId: string,
+  options?: { onPhase?: (phase: ExtractWorkerFactsPhase) => void }
 ): Promise<ExtractWorkerFactsFromDocumentsResult> {
+  const onPhase = options?.onPhase;
+  onPhase?.('prepare');
+
   const { data: docs, error: docsError } = await serviceRoleSupabase
     .from('documents')
     .select('type, url, name')
@@ -115,7 +121,9 @@ export async function extractWorkerFactsFromDocuments(
       (d.docType || '').toLowerCase().includes('intake')
   );
 
+  onPhase?.('analyze');
   const extraction = await extractEmployeeDetailsChatlike(openai, chatlikeDocs);
+  onPhase?.('merge');
   const cleaned = stripAssistantArtifactsFromRecord(extraction.raw);
   const mapped = mapAndValidateEmployeeDetails(cleaned);
   applyIntakeCheckboxTextOverrides(mapped, extraction.intakePlainText);

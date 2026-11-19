@@ -30,13 +30,22 @@ export type ImportIntakeFromPdfResult = {
   error?: string;
 };
 
+export type ImportIntakePhase =
+  | 'vision'
+  | 'tp2'
+  | 'narrative'
+  | 'sectie3'
+  | 'sectie5'
+  | 'sectie7';
+
 export async function importIntakeFromPdf(params: {
   openai: OpenAI;
   supabase: SupabaseClient;
   employeeId: string;
   existingData?: unknown;
+  onPhase?: (phase: ImportIntakePhase) => void;
 }): Promise<ImportIntakeFromPdfResult> {
-  const { openai, supabase, employeeId } = params;
+  const { openai, supabase, employeeId, onPhase } = params;
   const base = params.existingData
     ? ensureIntakeShape(params.existingData)
     : createEmptyIntakeData();
@@ -82,9 +91,11 @@ export async function importIntakeFromPdf(params: {
   }
 
   const filename = doc.displayName || doc.path;
+  onPhase?.('vision');
   const vision = await extractIntakeEmployeeDetailsFromVision(openai, doc.buffer, filename);
 
   const { pdfBuffer, analysisFilename } = await normalizeForAnalysis(doc.buffer, filename);
+  onPhase?.('tp2');
   const tp2Raw = await runStructuredFileExtraction({
     openai,
     buffer: pdfBuffer,
@@ -108,6 +119,7 @@ export async function importIntakeFromPdf(params: {
     applyIntakeCheckboxOverridesFromText(tp2Raw || {}, plainText, 'Intake import')
   );
 
+  onPhase?.('narrative');
   const narrativeRaw = await runStructuredFileExtraction({
     openai,
     buffer: pdfBuffer,
@@ -132,6 +144,7 @@ export async function importIntakeFromPdf(params: {
   let sectie5: Record<string, unknown> = {};
   let sectie7: Record<string, unknown> = {};
   try {
+    onPhase?.('sectie3');
     sectie3 = (await generateIntakeSectie3Content(openai, supabase, employeeDocs)) as Record<
       string,
       unknown
@@ -140,6 +153,7 @@ export async function importIntakeFromPdf(params: {
     console.warn('Intake import sectie3 failed', e);
   }
   try {
+    onPhase?.('sectie5');
     sectie5 = (await generateIntakeSectie5Content(openai, supabase, employeeDocs)) as Record<
       string,
       unknown
@@ -148,6 +162,7 @@ export async function importIntakeFromPdf(params: {
     console.warn('Intake import sectie5 failed', e);
   }
   try {
+    onPhase?.('sectie7');
     sectie7 = (await generateIntakeSectie7Content(openai, supabase, employeeDocs, {
       meta: tp2,
     })) as Record<string, unknown>;

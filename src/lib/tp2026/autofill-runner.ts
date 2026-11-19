@@ -13,6 +13,7 @@ import {
 } from '@/lib/tp2026/gegevens-autofill';
 import { ensureTP2026Shape, mergeAutofillIntoTP2026 } from '@/lib/tp2026/mapping';
 import { applyTrajectoryDateDerivations } from '@/lib/tp2026/trajectory-dates';
+import { consumeAutofillProgressStream } from '@/lib/autofill-progress-stream';
 import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
 import {
   applyExWerknemerBijlage1Rule,
@@ -190,14 +191,25 @@ async function runEmployeeAutofillStep(
     const res = await fetch(`/api/autofill-employee-info-chatlike?employeeId=${ctx.employeeId}`, {
       signal: ctx.signal,
     });
-    const parsed = await readAutofillResponse(res);
-    if (!parsed.ok) {
+    let json: Record<string, unknown>;
+    try {
+      json = await consumeAutofillProgressStream(res);
+    } catch (e) {
+      if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
       return {
         data: currentData,
-        error: parsed.error,
+        error: e instanceof Error ? e.message : 'Werknemersprofiel autofill mislukt',
       };
     }
-    const json = parsed.json;
+    if (json.success === false) {
+      return {
+        data: currentData,
+        error:
+          (typeof json.error === 'string' && json.error) ||
+          (typeof json.message === 'string' && json.message) ||
+          'Werknemersprofiel autofill mislukt',
+      };
+    }
     const { details, data } = getAutofillDetailsPayload(json);
     if (!details || Object.keys(details).length === 0) {
       return { data: currentData, error: 'Geen werknemersgegevens gevonden in documenten' };

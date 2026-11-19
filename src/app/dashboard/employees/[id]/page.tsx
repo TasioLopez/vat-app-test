@@ -18,8 +18,8 @@ import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info
 import { trackAccess } from '@/lib/tracking';
 import { ReferentEditDialog } from '@/components/employee/ReferentEditDialog';
 import { type AutofillProgressState } from '@/components/ui/AutofillProgressOverlay';
-import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
-import { getAutofillDetailsPayload, readAutofillResponse } from '@/lib/autofill-response';
+import { consumeAutofillProgressStream } from '@/lib/autofill-progress-stream';
+import { getAutofillDetailsPayload } from '@/lib/autofill-response';
 import { isAutofillAbortError } from '@/lib/tp2026/autofill-runner';
 import {
     applyEmployeeAutofillDetails,
@@ -306,32 +306,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
     const docTypes = useMemo(() => visibleEmployeeDocTypes(), []);
     const docStatuses = useEmployeeDocStatuses(employeeId, documents);
-
-    useEffect(() => {
-        if (!aiLoading) {
-            setAutofillProgress(null);
-            return;
-        }
-
-        const steps = buildEmployeeAutofillSteps(documents);
-        let idx = 0;
-        setAutofillProgress({
-            currentIndex: 1,
-            total: steps.length,
-            currentLabel: steps[0] ?? 'Documenten analyseren…',
-        });
-
-        const interval = setInterval(() => {
-            idx = Math.min(idx + 1, Math.max(steps.length - 2, 0));
-            setAutofillProgress({
-                currentIndex: idx + 1,
-                total: steps.length,
-                currentLabel: steps[idx] ?? 'Documenten analyseren…',
-            });
-        }, 3500);
-
-        return () => clearInterval(interval);
-    }, [aiLoading, documents]);
 
     useEffect(() => {
         fetchEmployee();
@@ -850,6 +824,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         aiAbortRef.current = abortController;
 
         setAiLoading(true);
+        setAutofillProgress({
+            currentIndex: 1,
+            total: 4,
+            currentLabel: 'Documenten voorbereiden…',
+        });
         try {
             const useLegacyPipeline =
                 typeof window !== 'undefined' &&
@@ -871,11 +850,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 return;
             }
 
-            const parsed = await readAutofillResponse(res);
-            if (!parsed.ok) {
-                throw new Error(parsed.error);
-            }
-            const json = parsed.json;
+            const json = await consumeAutofillProgressStream(res, setAutofillProgress);
 
             if (abortController.signal.aborted || aiCancelRef.current) {
                 setEmployeeDetails(snapshot.employeeDetails);
@@ -885,6 +860,16 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 setExistingReferentId(snapshot.existingReferentId);
                 showInfo('Autofill geannuleerd', 'Geen wijzigingen opgeslagen.');
                 return;
+            }
+
+            if (json.success === false) {
+                throw new Error(
+                    typeof json.error === 'string'
+                        ? json.error
+                        : typeof json.message === 'string'
+                          ? json.message
+                          : 'Automatisch invullen mislukt'
+                );
             }
 
             const { details, data } = getAutofillDetailsPayload(json);
@@ -1000,6 +985,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             aiAbortRef.current = null;
             setAiCancelling(false);
             setAiLoading(false);
+            setAutofillProgress(null);
         }
     };
 

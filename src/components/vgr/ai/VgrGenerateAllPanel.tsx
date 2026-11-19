@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AutofillProgressOverlay,
+  type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { useVGRInstance } from '@/context/VGRInstanceContext';
 import { VGR_AI_SECTION_IDS, VGR_AI_SECTIONS } from '@/lib/vgr/ai/sections';
@@ -24,18 +28,31 @@ export function VgrGenerateAllPanel({
   const { updateField } = useVGRInstance();
   const { showError, showSuccess } = useToastHelpers();
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState('');
+  const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
 
   const run = async () => {
+    const runnable = VGR_AI_SECTION_IDS.filter((sectionId) =>
+      VGR_AI_SECTIONS[sectionId].fields(data).length > 0
+    );
+    const total = Math.max(runnable.length, 1);
     setBusy(true);
+    setAutofillProgress({
+      currentIndex: 1,
+      total,
+      currentLabel: 'Voorbereiden…',
+    });
     const proposals = { ...(data.ai_proposals ?? {}) };
     let ok = 0;
     let failed = 0;
     try {
-      for (const sectionId of VGR_AI_SECTION_IDS) {
+      for (let i = 0; i < runnable.length; i++) {
+        const sectionId = runnable[i];
         const def = VGR_AI_SECTIONS[sectionId];
-        if (!def.fields(data).length) continue;
-        setProgress(def.label);
+        setAutofillProgress({
+          currentIndex: i + 1,
+          total,
+          currentLabel: `${def.label} genereren…`,
+        });
         const res = await fetch('/api/vgr/generate-section', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -60,20 +77,26 @@ export function VgrGenerateAllPanel({
       showError('AI-fout', err instanceof Error ? err.message : 'Genereren mislukt');
     } finally {
       setBusy(false);
-      setProgress('');
+      setAutofillProgress(null);
     }
   };
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+    <section className="relative rounded-lg border border-border bg-card p-4 shadow-sm">
+      {autofillProgress ? (
+        <AutofillProgressOverlay
+          progress={autofillProgress}
+          title="Eerste concept genereren"
+        />
+      ) : null}
       <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Eerste concept (AI)</h3>
       <p className="mb-3 text-xs text-muted-foreground">
         Genereert per onderdeel een voorstel op basis van de geselecteerde brondocumenten. Niets wordt automatisch
         overgenomen; PoW-tredes en medische ja/nee-keuzes blijven van de loopbaanadviseur.
       </p>
       <Button type="button" size="sm" className="h-8 gap-1.5 bg-[#702A90] hover:bg-[#5a1f75]" disabled={busy} onClick={() => void run()}>
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
-        {busy ? `Bezig: ${progress}…` : 'Genereer eerste concept'}
+        <Sparkles className="h-3.5 w-3.5" aria-hidden />
+        Genereer eerste concept
       </Button>
     </section>
   );

@@ -46,8 +46,12 @@ import {
   type IntakeSectionIcon,
   type IntakeSectionKey,
 } from '@/lib/intake/schema';
-import { AutofillProgressOverlay } from '@/components/ui/AutofillProgressOverlay';
+import {
+  AutofillProgressOverlay,
+  type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
 import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
+import { consumeAutofillProgressStream } from '@/lib/autofill-progress-stream';
 import { supabase } from '@/lib/supabase/client';
 import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
 import { overlayIntakeWithWorkerFacts, intakeSharedFacts } from '@/lib/intake/worker-overlay';
@@ -121,6 +125,8 @@ function IntakeBuilderInner({
   const { showSuccess, showError } = useToastHelpers();
   const [saving, setSaving] = useState(false);
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  const [busyIndeterminate, setBusyIndeterminate] = useState(false);
+  const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
   const [noIntakeOpen, setNoIntakeOpen] = useState(false);
   const [noIntakeMessage, setNoIntakeMessage] = useState<string | undefined>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
@@ -259,24 +265,34 @@ function IntakeBuilderInner({
   };
 
   const onAutofill = async () => {
-    setBusyLabel('Intake automatisch invullen…');
+    setBusyIndeterminate(false);
+    setAutofillProgress({
+      currentIndex: 1,
+      total: 10,
+      currentLabel: 'Intake automatisch invullen…',
+    });
     try {
       const res = await fetch('/api/intake/autofill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId, intakeInstanceId }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (res.status === 404) {
-        setNoIntakeMessage(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Er is geen intakeformulier-document gevonden bij deze werknemer. Upload eerst een intakeformulier bij de documenten.'
-        );
-        setNoIntakeOpen(true);
-        return;
+      let json: Record<string, unknown>;
+      try {
+        json = await consumeAutofillProgressStream(res, setAutofillProgress);
+      } catch (e) {
+        const status = e && typeof e === 'object' && 'status' in e ? Number((e as { status?: number }).status) : undefined;
+        const message = e instanceof Error ? e.message : 'Automatisch invullen mislukt';
+        if (status === 404 || /geen intakeformulier/i.test(message)) {
+          setNoIntakeMessage(
+            message ||
+              'Er is geen intakeformulier-document gevonden bij deze werknemer. Upload eerst een intakeformulier bij de documenten.'
+          );
+          setNoIntakeOpen(true);
+          return;
+        }
+        throw e instanceof Error ? e : new Error(message);
       }
-      if (!res.ok) throw new Error(json.error || 'Automatisch invullen mislukt');
       replaceIntakeData(json.data_json, { markDirty: false });
       setValidatedAt(null);
       markSaved();
@@ -295,7 +311,7 @@ function IntakeBuilderInner({
           'Conflicten',
           `${conflicts.length} veld(en) leeg gelaten wegens tegenstrijdige bronnen.`
         );
-      } else if (json.warning) {
+      } else if (typeof json.warning === 'string' && json.warning) {
         showError('Let op', json.warning);
       } else {
         showSuccess(
@@ -310,11 +326,12 @@ function IntakeBuilderInner({
     } catch (e) {
       showError('Fout', e instanceof Error ? e.message : 'Automatisch invullen mislukt');
     } finally {
-      setBusyLabel(null);
+      setAutofillProgress(null);
     }
   };
 
   const onExport = async () => {
+    setBusyIndeterminate(true);
     setBusyLabel('PDF exporteren…');
     try {
       await persist();
@@ -343,6 +360,7 @@ function IntakeBuilderInner({
       showError('Fout', e instanceof Error ? e.message : 'Export mislukt');
     } finally {
       setBusyLabel(null);
+      setBusyIndeterminate(false);
     }
   };
 
@@ -375,10 +393,13 @@ function IntakeBuilderInner({
         onDismiss={() => setPendingFacts(null)}
         onAccept={() => void acceptValidatedFacts()}
       />
-      {busyLabel ? (
+      {autofillProgress ? (
+        <AutofillProgressOverlay progress={autofillProgress} title="Bezig…" />
+      ) : busyLabel ? (
         <AutofillProgressOverlay
-          progress={{ currentLabel: busyLabel, currentIndex: 0, total: 1 }}
+          progress={{ currentLabel: busyLabel, currentIndex: 1, total: 1 }}
           title="Bezig…"
+          indeterminate={busyIndeterminate}
         />
       ) : null}
 
