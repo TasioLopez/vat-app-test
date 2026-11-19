@@ -84,4 +84,28 @@ describe('intake worker overlay', () => {
     );
     assert.equal(seeded.s17.dutch_speaking, 'Goed');
   });
+
+  it('fills blank intake shared fields from chatlike WorkerFacts (hours/dutch/license)', () => {
+    // After Invullen: narrative PDF may leave shared keys empty; chatlike WorkerFacts overlay fills them.
+    const seeded = seedIntakeFromWorkerFacts(
+      {
+        s2: { contract_hours: '' },
+        s17: {
+          dutch_speaking: '',
+          drivers_license_types: [],
+          praktische_belemmeringen: 'Reistijd.',
+        },
+      },
+      {
+        contract_hours: 36,
+        dutch_speaking: 'Goed',
+        drivers_license: true,
+        drivers_license_type: ['B'],
+      }
+    );
+    assert.equal(seeded.s2.contract_hours, '36');
+    assert.equal(seeded.s17.dutch_speaking, 'Goed');
+    assert.deepEqual(seeded.s17.drivers_license_types, ['B']);
+    assert.equal(seeded.s17.praktische_belemmeringen, 'Reistijd.');
+  });
 });

@@ -2,51 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
 import OpenAI from 'openai';
 import {
-  extractStoragePath,
-  isIntakeDocumentType,
-  mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   getAutofillCompleteness,
   GotenbergConversionError,
 } from '@/lib/document-analysis';
-import { extractEmployeeDetailsChatlike } from '@/lib/document-analysis/extractEmployeeDetailsChatlike';
-import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
-import { stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
+import { extractWorkerFactsFromDocuments } from '@/lib/employee/extract-worker-facts-from-documents';
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 
 export const maxDuration = 180;
 
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-type DocRow = { type?: string | null; url?: string | null; name?: string | null };
-
-async function downloadDocumentBuffer(
-  doc: DocRow
-): Promise<{ buffer: Buffer; path: string } | null> {
-  const path = extractStoragePath(doc.url || '');
-  if (!path) {
-    console.log('⚠️ Chatlike: could not extract storage path', {
-      type: doc.type,
-      url: doc.url?.substring(0, 120),
-    });
-    return null;
-  }
-
-  const { data: file, error } = await supabase.storage.from('documents').download(path);
-  if (!file) {
-    console.log('⚠️ Chatlike: could not download', {
-      type: doc.type,
-      path,
-      error: error?.message,
-    });
-    return null;
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  return { buffer, path };
-}
 
 /**
  * Parallel chat-like employee autofill: all docs in one call, intake preferred in prompt.
@@ -58,24 +24,9 @@ export async function GET(req: NextRequest) {
     if (access instanceof NextResponse) return access;
     const { employeeId } = access;
 
-    const { data: docs, error: docsError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('employee_id', employeeId);
+    const extracted = await extractWorkerFactsFromDocuments(openai, employeeId);
 
-    if (docsError) {
-      console.error('Database error:', docsError);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Database error',
-          data: { details: {}, pipeline: 'chatlike' },
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!docs || docs.length === 0) {
+    if (extracted.error === 'Geen documenten gevonden') {
       return NextResponse.json({
         success: true,
         data: { details: {}, pipeline: 'chatlike' },
@@ -83,26 +34,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    console.log(`📄 Chatlike: found ${docs.length} document(s) — uploading all`);
-
-    const chatlikeDocs: {
-      buffer: Buffer;
-      filename: string;
-      docType?: string | null;
-    }[] = [];
-
-    for (const doc of docs as DocRow[]) {
-      const downloaded = await downloadDocumentBuffer(doc);
-      if (!downloaded) continue;
-      const filename = doc.name || downloaded.path.split('/').pop() || `${doc.type || 'document'}.pdf`;
-      chatlikeDocs.push({
-        buffer: downloaded.buffer,
-        filename,
-        docType: doc.type,
-      });
-    }
-
-    if (chatlikeDocs.length === 0) {
+    if (extracted.error === 'Geen documenten konden worden gedownload') {
       return NextResponse.json(
         {
           success: false,
@@ -113,14 +45,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const intakeProcessed = chatlikeDocs.some((d) =>
-      isIntakeDocumentType(d.docType || '') || (d.docType || '').toLowerCase().includes('intake')
-    );
+    if (extracted.error && !extracted.extraction) {
+      console.error('Database error:', extracted.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Database error',
+          data: { details: {}, pipeline: 'chatlike' },
+        },
+        { status: 500 }
+      );
+    }
 
-    const extraction = await extractEmployeeDetailsChatlike(openai, chatlikeDocs);
-    const cleaned = stripAssistantArtifactsFromRecord(extraction.raw);
-    const mapped = mapAndValidateEmployeeDetails(cleaned);
-    applyIntakeCheckboxTextOverrides(mapped, extraction.intakePlainText);
+    const mapped = extracted.details;
+    const cleaned = extracted.cleaned;
+    const extraction = extracted.extraction!;
+
     const referent = extractReferentFromRaw({
       ...cleaned,
       ...extraction.referentFields,
@@ -137,7 +77,7 @@ export async function GET(req: NextRequest) {
 
     const { incomplete: autofill_incomplete, warnings: autofill_warnings } = getAutofillCompleteness(
       mapped,
-      { intakeProcessed }
+      { intakeProcessed: extracted.intakeProcessed }
     );
 
     let suggested_referent: {

@@ -15,7 +15,7 @@ export const maxDuration = 300;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/** Intake-first autofill, then blank-only dossier gap-fill. */
+/** Chatlike WorkerFacts first (via autofillIntakeFromDocuments), then narrative import; blank shared keys in data_json. */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const employeeId = body?.employeeId as string | undefined;

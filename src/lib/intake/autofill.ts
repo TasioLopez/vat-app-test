@@ -1,10 +1,18 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isStagingEnv } from '@/lib/auth/staging-only';
+import {
+  INTAKE_AUTOFILL_STEPS_DOSSIER_ONLY,
+  INTAKE_AUTOFILL_STEPS_WITH_PDF,
+} from '@/lib/autofill-progress';
+import {
+  createStepProgressReporter,
+  type AutofillProgressReporter,
+} from '@/lib/autofill-progress-stream';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { isGespreksverslagDocType } from '@/lib/documents/employee-doc-types';
 import { loadWorkerFacts, type WorkerFactsSnapshot } from '@/lib/employee/save-worker-facts';
-import { importIntakeFromPdf } from '@/lib/intake/import-from-pdf';
+import { importIntakeFromPdf, type ImportIntakePhase } from '@/lib/intake/import-from-pdf';
 import { generateIntakeFromDossier } from '@/lib/intake/generate-from-dossier';
 import { applyGespreksverslagFactHints } from '@/lib/intake/gespreksverslag-fact-hints';
 import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
@@ -24,6 +32,17 @@ export type AutofillIntakeResult = {
   /** Staging: the form was built from dossier documents because no intake PDF exists. */
   generatedFromDossier?: boolean;
   workerFacts?: Record<string, unknown>;
+  /** Last progress step is reserved for "opslaan" in the API route. */
+  progressTotal: number;
+};
+
+const IMPORT_PHASE_STEP: Record<ImportIntakePhase, number> = {
+  vision: 1,
+  tp2: 2,
+  narrative: 3,
+  sectie3: 4,
+  sectie5: 5,
+  sectie7: 6,
 };
 
 function seedLockedThenFillGaps(
@@ -65,9 +84,14 @@ export async function autofillIntakeFromDocuments(params: {
   openai: OpenAI;
   supabase: SupabaseClient;
   employeeId: string;
+  onProgress?: AutofillProgressReporter;
 }): Promise<AutofillIntakeResult> {
-  const { openai, supabase, employeeId } = params;
+  const { openai, supabase, employeeId, onProgress } = params;
 
+  const withPdfSteps = [...INTAKE_AUTOFILL_STEPS_WITH_PDF];
+  const reportPdf = createStepProgressReporter(withPdfSteps, onProgress);
+
+  reportPdf(0);
   const loaded = await loadWorkerFacts(supabase, employeeId);
   const snapshot = loaded.snapshot;
   const workerFacts = snapshot?.values ?? {};
@@ -76,12 +100,16 @@ export async function autofillIntakeFromDocuments(params: {
     openai,
     supabase,
     employeeId,
-    // Fresh base — document truth for this run (draft snapshotted client-side for undo).
+    onPhase: (phase) => reportPdf(IMPORT_PHASE_STEP[phase]),
   });
 
   if (imported.error && !imported.sourceDocumentId) {
     if (isStagingEnv()) {
       try {
+        const dossierSteps = [...INTAKE_AUTOFILL_STEPS_DOSSIER_ONLY];
+        const reportDossier = createStepProgressReporter(dossierSteps, onProgress);
+        reportDossier(0);
+        reportDossier(1);
         const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
         if (!dossier.error) {
           let data = seedLockedThenFillGaps(
@@ -89,8 +117,10 @@ export async function autofillIntakeFromDocuments(params: {
             snapshot,
             workerFacts
           );
+          reportDossier(2);
           try {
-            const prose = await loadGespreksverslagText(supabase, employeeId);
+            const prose =
+              dossier.gespreksverslagText || (await loadGespreksverslagText(supabase, employeeId));
             if (prose) data = applyGespreksverslagFactHints(data, prose);
           } catch (e) {
             console.warn('Gespreksverslag fact hints failed', e);
@@ -106,6 +136,7 @@ export async function autofillIntakeFromDocuments(params: {
             gapFilled: false,
             generatedFromDossier: true,
             workerFacts,
+            progressTotal: dossierSteps.length,
           };
         }
       } catch (e) {
@@ -118,6 +149,7 @@ export async function autofillIntakeFromDocuments(params: {
       error: imported.error,
       gapFilled: false,
       workerFacts,
+      progressTotal: withPdfSteps.length,
     };
   }
 
@@ -127,6 +159,7 @@ export async function autofillIntakeFromDocuments(params: {
   let warning: string | null = imported.error || null;
 
   let gespreksverslagText: string | null = null;
+  reportPdf(7);
   try {
     const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
     gespreksverslagText = dossier.gespreksverslagText ?? null;
@@ -159,6 +192,7 @@ export async function autofillIntakeFromDocuments(params: {
   }
 
   // Deterministic prose hints on the merged intake (reuse dossier download; fallback fetch).
+  reportPdf(8);
   try {
     const prose = gespreksverslagText || (await loadGespreksverslagText(supabase, employeeId));
     if (prose) {
@@ -190,5 +224,6 @@ export async function autofillIntakeFromDocuments(params: {
     warning,
     gapFilled,
     workerFacts,
+    progressTotal: withPdfSteps.length,
   };
 }
