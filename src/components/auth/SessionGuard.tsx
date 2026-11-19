@@ -11,7 +11,7 @@ import {
 } from '@/lib/auth/session-client';
 
 /**
- * Enforces 60 min idle + 12 h absolute session for dashboard users.
+ * Enforces 2 h idle + 12 h absolute session for dashboard users.
  * Mount only inside authenticated dashboard shell.
  */
 export default function SessionGuard({ children }: { children: React.ReactNode }) {
