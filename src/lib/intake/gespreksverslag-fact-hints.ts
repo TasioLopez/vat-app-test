@@ -10,7 +10,10 @@ export function applyGespreksverslagFactHints(raw: unknown, text: string | null 
   const normalized = text.replace(/\u00a0/g, ' ');
 
   if (!String(data.s2.contract_hours || '').trim()) {
-    const hours = normalized.match(/\b(\d{1,2})\s*uur(?:en)?\s*per\s*week\b/i);
+    const hours =
+      normalized.match(/\b(\d{1,2})\s*uur(?:en)?\s*per\s*week\b/i) ||
+      normalized.match(/\bwerkt\s+(\d{1,2})\s*uur(?:en)?\b/i) ||
+      normalized.match(/\b(\d{1,2})\s*u(?:ren)?\s*(?:\/|p\.?\s*w\.?|per\s*week)\b/i);
     if (hours?.[1]) data.s2.contract_hours = hours[1];
   }
 

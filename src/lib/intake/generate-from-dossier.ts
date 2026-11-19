@@ -6,7 +6,9 @@ import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStr
 import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/lib/intake/generate-prompt';
 import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
+import { isGespreksverslagDocType } from '@/lib/documents/employee-doc-types';
 import { classifyDossierFileName } from '@/lib/intake/dossier-files';
+import { applyGespreksverslagFactHints } from '@/lib/intake/gespreksverslag-fact-hints';
 import { dossierSourceLabel, isDossierSourceType } from '@/lib/intake/sources';
 
 function nullableString(description: string) {
@@ -412,6 +414,8 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
 export type GenerateIntakeFromDossierResult = {
   data: IntakeData;
   error?: string;
+  /** Raw gespreksverslag prose already downloaded for this run (for deterministic fact hints). */
+  gespreksverslagText?: string | null;
 };
 
 export async function generateIntakeFromDossier(params: {
@@ -432,12 +436,14 @@ export async function generateIntakeFromDossier(params: {
     return {
       data: createEmptyIntakeData(),
       error: 'Geen aanmeldformulier/AD/FML/spreekuur/gespreksverslag/overige documenten gevonden om te genereren.',
+      gespreksverslagText: null,
     };
   }
 
   const files: { pdfBuffer: Buffer; analysisFilename: string; label?: string }[] = [];
   const inlineTexts: { label: string; text: string }[] = [];
   const notes: string[] = [];
+  const gespreksverslagChunks: string[] = [];
 
   for (const doc of sources.slice(0, 8)) {
     const path = extractStoragePath(doc.url || '');
@@ -452,6 +458,7 @@ export async function generateIntakeFromDossier(params: {
       if (!text) continue;
       inlineTexts.push({ label, text });
       notes.push(label);
+      if (isGespreksverslagDocType(doc.type)) gespreksverslagChunks.push(text);
       continue;
     }
     try {
@@ -471,6 +478,7 @@ export async function generateIntakeFromDossier(params: {
     return {
       data: createEmptyIntakeData(),
       error: 'Kon geen dossierdocumenten lezen voor generatie.',
+      gespreksverslagText: null,
     };
   }
 
@@ -493,7 +501,21 @@ export async function generateIntakeFromDossier(params: {
     parse: (r) => r as Record<string, unknown>,
   });
 
-  const shaped = normalizeIntakeControlledFields(ensureIntakeShape(raw));
+  const gespreksverslagText = gespreksverslagChunks.length
+    ? gespreksverslagChunks.join('\n\n')
+    : null;
+  let shaped = normalizeIntakeControlledFields(ensureIntakeShape(raw));
+  // Deterministic hours/Dutch from prose — LLM often skips "36 uur per week".
+  if (gespreksverslagText) {
+    const beforeHours = shaped.s2.contract_hours;
+    shaped = applyGespreksverslagFactHints(shaped, gespreksverslagText);
+    if (shaped.s2.contract_hours && shaped.s2.contract_hours !== beforeHours) {
+      shaped.meta.generation_notes = [
+        ...shaped.meta.generation_notes,
+        `Urenomvang gezet op ${shaped.s2.contract_hours} vanuit gespreksverslag.`,
+      ];
+    }
+  }
   shaped.meta.generation_notes = [
     ...shaped.meta.generation_notes,
     ...notes.map((n) => `Bron: ${n}`),
@@ -502,5 +524,5 @@ export async function generateIntakeFromDossier(params: {
     shaped.s1.employee_name = employeeName;
   }
 
-  return { data: shaped };
+  return { data: shaped, gespreksverslagText };
 }

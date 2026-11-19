@@ -126,8 +126,10 @@ export async function autofillIntakeFromDocuments(params: {
   let gapFilled = false;
   let warning: string | null = imported.error || null;
 
+  let gespreksverslagText: string | null = null;
   try {
     const dossier = await generateIntakeFromDossier({ openai, supabase, employeeId });
+    gespreksverslagText = dossier.gespreksverslagText ?? null;
     if (!dossier.error) {
       data = seedLockedThenFillGaps(mergeIntakeFillBlanks(data, dossier.data), snapshot, workerFacts);
       gapFilled = true;
@@ -156,9 +158,9 @@ export async function autofillIntakeFromDocuments(params: {
       (e instanceof Error ? e.message : 'Dossier-aanvulling mislukt; intakeresultaat behouden.');
   }
 
-  // Deterministic prose hints (hours / Dutch) when intake checkboxes were blank.
+  // Deterministic prose hints on the merged intake (reuse dossier download; fallback fetch).
   try {
-    const prose = await loadGespreksverslagText(supabase, employeeId);
+    const prose = gespreksverslagText || (await loadGespreksverslagText(supabase, employeeId));
     if (prose) {
       const beforeHours = data.s2.contract_hours;
       const beforeDutch = data.s17.dutch_speaking;
