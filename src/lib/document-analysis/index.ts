@@ -5,6 +5,7 @@ export {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   mergeReferentFields,
+  composeReferentByPriority,
   splitContactPersonName,
 } from './nullSafeDetails';
 export { getAutofillCompleteness, type AutofillWarning } from './incomplete';

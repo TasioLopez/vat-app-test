@@ -340,3 +340,21 @@ export function mergeReferentFields(
   }
   return out;
 }
+
+/**
+ * Aanmeld wins field-by-field, then intake sectie 4, then AD/FML/extra gap-fill.
+ * Call sources in product priority; each pass only fills empty slots.
+ */
+export function composeReferentByPriority(parts: {
+  aanmeld?: Record<string, unknown> | null;
+  intake?: Record<string, unknown> | null;
+  secondary?: Array<Record<string, unknown> | null | undefined>;
+}): Record<string, unknown> {
+  let out: Record<string, unknown> = {};
+  if (parts.aanmeld) out = mergeReferentFields(out, parts.aanmeld);
+  if (parts.intake) out = mergeReferentFields(out, parts.intake);
+  for (const src of parts.secondary ?? []) {
+    if (src) out = mergeReferentFields(out, src);
+  }
+  return out;
+}

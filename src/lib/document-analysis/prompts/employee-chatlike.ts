@@ -42,8 +42,14 @@ drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
 dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Voldoende"|"Matig"|"Geen"),
 has_computer (boolean), computer_skills ("1"-"5": 1=Geen … 5=Expert),
 computer_skills_description (tekst tussen haakjes bij niveau en/of "Aanvullende programma's", bijv. "SAP ERP, WMS"),
-referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
-(referent_* ALLEEN uit intake sectie 4 contactpersoon werkgever).
+referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender.
+
+CONTACTPERSOON / REFERENT_* (veld-voor-veld; bestaande waarden niet overschrijven met zwakkere bron):
+1. Aanmeldformulier (type of bestandsnaam met "aanmeld") — contactblok wint voor elk veld dat daar staat.
+2. Intake sectie 4 "contactpersoon werkgever" — alleen lege referent_*-velden vullen.
+3. AD-rapport / overige — alleen resterende lege velden vullen als het duidelijk dezelfde werkgever-contactpersoon / opdrachtgever-contact is.
+NOOIT: leidinggevende, budgethouder, facturatiecontact, bedrijfsarts, AD-persoon of ValentineZ-medewerker als referent.
+NOOIT: een naam verzinnen uit het e-mailadres (local-part).
 
 Vul wat je ziet. Laat een key weg alleen als die info echt ontbreekt — niet uit voorzichtigheid alles leeg laten als de checkboxes leesbaar zijn.`;
 

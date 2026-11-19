@@ -7,6 +7,7 @@ import {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   mergeReferentFields,
+  composeReferentByPriority,
   getAutofillCompleteness,
   AD_EMPLOYEE_PROMPT,
   AD_EMPLOYEE_USER_MESSAGE,
@@ -34,6 +35,10 @@ import {
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-options';
 import { shouldSkipSecondaryDocsForWorkerProfile } from '@/lib/document-analysis/worker-profile-autofill';
+import {
+  fileNameLooksLikeAanmeld,
+  isAanmeldDocumentType,
+} from '@/lib/intake/sources';
 import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
 import {
   describeIntakePlainText,
@@ -298,7 +303,7 @@ async function processDocumentsSeparately(
 
   advance(); // Documenten voorbereiden…
   const results: Record<string, unknown> = {};
-  let referent: Record<string, unknown> = {};
+  let intakeReferent: Record<string, unknown> = {};
   let intakeProcessed = false;
   let checkboxText:
     | {
@@ -310,6 +315,9 @@ async function processDocumentsSeparately(
     | undefined;
   const processedDocs: string[] = [];
 
+  const isAanmeldDoc = (d: DocRow) =>
+    isAanmeldDocumentType(d.type) || fileNameLooksLikeAanmeld(d.name);
+
   const intakeDoc = docs.find((d) => (d.type || '').toLowerCase().includes('intake'));
 
   if (intakeDoc) {
@@ -317,24 +325,25 @@ async function processDocumentsSeparately(
     console.log('📄 Processing intake form (priority 1)...');
     const intakeResult = await processIntakeForm(intakeDoc);
     Object.assign(results, intakeResult.mapped);
-    referent = intakeResult.referent;
+    intakeReferent = intakeResult.referent;
     checkboxText = intakeResult.checkboxText;
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
   }
 
-  if (shouldSkipSecondaryDocsForWorkerProfile(intakeProcessed, results)) {
+  const skipWorkerProfileSecondary = shouldSkipSecondaryDocsForWorkerProfile(
+    intakeProcessed,
+    results
+  );
+  if (skipWorkerProfileSecondary) {
     console.log(
-      '📋 Intake present — skipping AD/FML/extra for worker-profile autofill'
+      '📋 Intake present — skipping AD/FML/extra for worker-profile fields; still gap-filling referent'
     );
-    console.log(
-      `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
-    );
-    advance('samenvoegen');
-    advance('Profiel');
-    return { results, referent, intakeProcessed, checkboxText };
   }
+
+  const aanmeldReferents: Record<string, unknown>[] = [];
+  const secondaryReferents: Record<string, unknown>[] = [];
 
   const adDoc = docs.find((d) => {
     const type = (d.type || '').toLowerCase();
@@ -343,27 +352,31 @@ async function processDocumentsSeparately(
 
   if (adDoc) {
     advance('AD-rapport');
-    console.log('📄 Processing AD report (priority 2)...');
+    console.log(
+      skipWorkerProfileSecondary
+        ? '📄 Processing AD report (referent gap-fill only)...'
+        : '📄 Processing AD report (priority 2)...'
+    );
     const adResult = await processADReport(adDoc);
-    Object.keys(adResult.mapped).forEach((key) => {
-      const adValue = adResult.mapped[key];
-      if (isIntakeLockedTransportField(intakeProcessed, key)) {
-        return;
-      }
-      if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
-        return;
-      }
-      if (AD_FIRST_FIELDS.includes(key)) {
-        if (isFilled(adValue)) results[key] = adValue;
-      } else if (!isFilled(results[key])) {
-        results[key] = adValue;
-      }
-    });
-    if (!intakeProcessed) {
-      referent = mergeReferentFields(referent, adResult.referent);
-      if (Object.keys(adResult.referent).length > 0) {
-        console.log('✅ AD report: referent contact extracted');
-      }
+    if (!skipWorkerProfileSecondary) {
+      Object.keys(adResult.mapped).forEach((key) => {
+        const adValue = adResult.mapped[key];
+        if (isIntakeLockedTransportField(intakeProcessed, key)) {
+          return;
+        }
+        if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
+          return;
+        }
+        if (AD_FIRST_FIELDS.includes(key)) {
+          if (isFilled(adValue)) results[key] = adValue;
+        } else if (!isFilled(results[key])) {
+          results[key] = adValue;
+        }
+      });
+    }
+    if (Object.keys(adResult.referent).length > 0) {
+      secondaryReferents.push(adResult.referent);
+      console.log('✅ AD report: referent contact extracted');
     }
     processedDocs.push('ad_rapport');
     console.log(`✅ AD report: ${Object.keys(adResult.mapped).length} fields extracted`);
@@ -373,14 +386,20 @@ async function processDocumentsSeparately(
 
   if (fmlDoc) {
     advance('FML');
-    console.log('📄 Processing FML/IZP (priority 3)...');
+    console.log(
+      skipWorkerProfileSecondary
+        ? '📄 Processing FML/IZP (referent gap-fill only)...'
+        : '📄 Processing FML/IZP (priority 3)...'
+    );
     const fmlResult = await processFMLIZP(fmlDoc);
-    Object.keys(fmlResult.mapped).forEach((key) => {
-      if (isIntakeLockedTransportField(intakeProcessed, key)) return;
-      if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
-    });
-    if (!intakeProcessed) {
-      referent = mergeReferentFields(referent, fmlResult.referent);
+    if (!skipWorkerProfileSecondary) {
+      Object.keys(fmlResult.mapped).forEach((key) => {
+        if (isIntakeLockedTransportField(intakeProcessed, key)) return;
+        if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
+      });
+    }
+    if (Object.keys(fmlResult.referent).length > 0) {
+      secondaryReferents.push(fmlResult.referent);
     }
     processedDocs.push('fml/izp');
     console.log(`✅ FML/IZP: ${Object.keys(fmlResult.mapped).length} fields extracted`);
@@ -403,20 +422,42 @@ async function processDocumentsSeparately(
 
   if (extraDocs.length > 0) {
     advance('Overige');
-    console.log(`📄 Processing ${extraDocs.length} extra document(s) (priority 4)...`);
+    console.log(
+      `📄 Processing ${extraDocs.length} extra document(s) (${
+        skipWorkerProfileSecondary ? 'referent gap-fill' : 'priority 4'
+      })...`
+    );
     for (const extraDoc of extraDocs) {
       const extraResult = await processExtraDoc(extraDoc);
-      Object.keys(extraResult.mapped).forEach((key) => {
-        if (isIntakeLockedTransportField(intakeProcessed, key)) return;
-        if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
-      });
-      if (!intakeProcessed) {
-        referent = mergeReferentFields(referent, extraResult.referent);
+      if (!skipWorkerProfileSecondary) {
+        Object.keys(extraResult.mapped).forEach((key) => {
+          if (isIntakeLockedTransportField(intakeProcessed, key)) return;
+          if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
+        });
+      }
+      if (Object.keys(extraResult.referent).length > 0) {
+        if (isAanmeldDoc(extraDoc)) {
+          aanmeldReferents.push(extraResult.referent);
+        } else {
+          secondaryReferents.push(extraResult.referent);
+        }
       }
     }
     processedDocs.push('extra');
     console.log('✅ Extra documents: processed');
   }
+
+  // Collapse multiple aanmeld extracts (first non-empty wins within that tier).
+  let aanmeldMerged: Record<string, unknown> = {};
+  for (const a of aanmeldReferents) {
+    aanmeldMerged = mergeReferentFields(aanmeldMerged, a);
+  }
+
+  const referent = composeReferentByPriority({
+    aanmeld: aanmeldMerged,
+    intake: intakeReferent,
+    secondary: secondaryReferents,
+  });
 
   advance('samenvoegen');
   console.log(

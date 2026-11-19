@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
+  mergeReferentFields,
+  composeReferentByPriority,
   splitContactPersonName,
 } from '../nullSafeDetails';
 
@@ -149,6 +151,60 @@ describe('extractReferentFromRaw', () => {
       referent_function: 'Arbeidsdeskundige',
     });
     assert.deepEqual(ref, {});
+  });
+});
+
+describe('composeReferentByPriority', () => {
+  it('fills name from AD when aanmeld only has phone and email', () => {
+    const merged = composeReferentByPriority({
+      aanmeld: {
+        referent_phone: '06 - 12 34 56 78',
+        referent_email: 'hr@werkgever.nl',
+      },
+      intake: { referent_function: 'HR adviseur' },
+      secondary: [
+        {
+          referent_first_name: 'Herleen',
+          referent_last_name: 'Brama',
+          referent_phone: '06 - 99 99 99 99',
+        },
+      ],
+    });
+    assert.equal(merged.referent_phone, '06 - 12 34 56 78');
+    assert.equal(merged.referent_email, 'hr@werkgever.nl');
+    assert.equal(merged.referent_function, 'HR adviseur');
+    assert.equal(merged.referent_first_name, 'Herleen');
+    assert.equal(merged.referent_last_name, 'Brama');
+  });
+
+  it('does not let AD overwrite aanmeld name', () => {
+    const merged = composeReferentByPriority({
+      aanmeld: {
+        referent_first_name: 'Sara',
+        referent_last_name: 'Jansen',
+        referent_email: 'sara@werkgever.nl',
+      },
+      secondary: [
+        {
+          referent_first_name: 'Piet',
+          referent_last_name: 'De Vries',
+          referent_function: 'Manager',
+        },
+      ],
+    });
+    assert.equal(merged.referent_first_name, 'Sara');
+    assert.equal(merged.referent_last_name, 'Jansen');
+    assert.equal(merged.referent_function, 'Manager');
+    assert.equal(merged.referent_email, 'sara@werkgever.nl');
+  });
+
+  it('mergeReferentFields still fills gaps without overwriting', () => {
+    const merged = mergeReferentFields(
+      { referent_first_name: 'Jan' },
+      { referent_first_name: 'Piet', referent_last_name: 'Jansen' }
+    );
+    assert.equal(merged.referent_first_name, 'Jan');
+    assert.equal(merged.referent_last_name, 'Jansen');
   });
 });
 
