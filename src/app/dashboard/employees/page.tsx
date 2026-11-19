@@ -406,15 +406,15 @@ export default function EmployeesPage() {
         
       if (!error) {
         setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
-        const removeStatus = (prev: Map<string, TpStatus | CvStatus>) => {
+        const removeStatus = <T,>(prev: Map<string, T>) => {
           const next = new Map(prev);
           next.delete(selectedEmployeeId);
           return next;
         };
-        setIntakeStatusByEmployee((prev) => removeStatus(prev) as Map<string, IntakeStatus>);
-        setTpStatusByEmployee((prev) => removeStatus(prev) as Map<string, TpStatus>);
-        setVgrStatusByEmployee((prev) => removeStatus(prev) as Map<string, TpStatus>);
-        setCvStatusByEmployee((prev) => removeStatus(prev) as Map<string, CvStatus>);
+        setIntakeStatusByEmployee(removeStatus);
+        setTpStatusByEmployee(removeStatus);
+        setVgrStatusByEmployee(removeStatus);
+        setCvStatusByEmployee(removeStatus);
         setShowDeleteModal(false);
         setSelectedEmployeeId(null);
         showSuccess('Werknemer succesvol verwijderd!');
