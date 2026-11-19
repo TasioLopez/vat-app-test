@@ -8,14 +8,19 @@ export const EMPLOYEE_CHATLIKE_PROMPT = `Je bent een expert die Nederlandse werk
 
 DOCUMENTEN:
 - Alle bijgevoegde PDF's horen bij dezelfde werknemer.
+- Er kan ook "Inline brontekst" staan (bijv. gespreksverslag.txt) — behandel die als volwaardige bron, niet als bijlage-PDF.
 - Er kan ook een blok "Intake PDF-tekst" in het bericht staan met ☒/☐ — gebruik dat voor checkboxes.
 
 BRONPRIORITEIT:
 1. Intakeformulier (tekst + PDF) — primaire bron voor het werknemersprofiel.
 2. AD-rapport — alleen gaten vullen / bevestigen.
-3. Spreekuurrapportage, FML/IZP, CV, overig — alleen aanvullen waar intake niets geeft.
+3. Spreekuurrapportage, FML/IZP, CV, gespreksverslag, overig — alleen aanvullen waar intake niets geeft.
 
 Conflict: wat het intake duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV) wint.
+
+TAAL / RIJBEWIJS:
+- Als de bron zegt dat de werknemer Nederlands spreekt én schrijft, en lezen niet zwakker vermeldt, zet dutch_speaking, dutch_writing én dutch_reading op hetzelfde niveau (meestal "Goed").
+- "Eigen auto" / vervoer Auto is GEEN bewijs van rijbewijs — vul drivers_license_type alleen bij expliciet rijbewijs (type).
 
 ${INTAKE_LAYOUT_V75_HINT}
 

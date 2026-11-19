@@ -128,6 +128,8 @@ export function composeMultiFileUserMessage(
 export type ChatlikeMultiFileExtractionOptions = {
   openai: OpenAI;
   files: MultiFilePdfInput[];
+  /** Plain-text sources (e.g. gespreksverslag.txt) sent in the user message, not as PDF uploads. */
+  inlineTexts?: InlineTextInput[];
   instructions: string;
   userMessage: string;
   model?: string;
@@ -502,7 +504,8 @@ export async function runStructuredMultiFileExtraction<T>(
 }
 
 /**
- * ChatGPT-style multi-PDF call: vision files + freeform text output (NO json_schema).
+ * ChatGPT-style multi-doc call: vision PDFs + optional inline plain text (NO json_schema).
+ * Soft-skips individual PDF upload failures; fails only when nothing usable remains.
  */
 export async function runChatlikeMultiFileExtraction(
   options: ChatlikeMultiFileExtractionOptions
@@ -510,6 +513,7 @@ export async function runChatlikeMultiFileExtraction(
   const {
     openai,
     files,
+    inlineTexts = [],
     instructions,
     userMessage,
     model = getDocumentExtractionModel(),
@@ -517,21 +521,36 @@ export async function runChatlikeMultiFileExtraction(
     logLabel,
   } = options;
 
-  if (!files.length) {
-    throw new Error('runChatlikeMultiFileExtraction requires at least one PDF');
+  const usableInline = inlineTexts.filter((item) => item.text.trim());
+  if (!files.length && !usableInline.length) {
+    throw new Error('runChatlikeMultiFileExtraction requires at least one PDF or inline text');
   }
 
   const fileIds: string[] = [];
+  const uploadedFiles: MultiFilePdfInput[] = [];
 
   try {
     for (const file of files) {
-      const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
-      fileIds.push(id);
+      try {
+        const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
+        fileIds.push(id);
+        uploadedFiles.push(file);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.warn(
+          `⚠️ Chatlike: skipping PDF upload ${file.analysisFilename || file.label || 'document'}: ${message}`
+        );
+      }
     }
 
+    if (!fileIds.length && !usableInline.length) {
+      throw new Error('runChatlikeMultiFileExtraction: no usable PDFs or inline text after upload');
+    }
+
+    const composedMessage = composeMultiFileUserMessage(userMessage, uploadedFiles, usableInline);
     const inputFiles = fileIds.map((fileId) => buildPdfInputFileContent(fileId, usePdfVision));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
-      { type: 'input_text', text: userMessage },
+      { type: 'input_text', text: composedMessage },
       ...inputFiles,
     ];
 
@@ -549,7 +568,9 @@ export async function runChatlikeMultiFileExtraction(
     }
 
     if (logLabel) {
-      console.log(`✅ ${logLabel} (${files.length} files, freeform, len=${outputText.length})`);
+      console.log(
+        `✅ ${logLabel} (${uploadedFiles.length} files, ${usableInline.length} inline, freeform, len=${outputText.length})`
+      );
     }
     return outputText;
   } finally {
