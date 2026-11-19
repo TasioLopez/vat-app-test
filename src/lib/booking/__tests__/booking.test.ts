@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildBookingMessage } from '@/lib/booking/email';
+import { compareLocations } from '@/lib/booking/types';
 import {
   amsterdamWallTimeToUtc,
   formatBookingWhen,
@@ -18,6 +19,15 @@ import {
 
 const morning = amsterdamWallTimeToUtc(2026, 11, 12, 9, 0);
 const lateMorning = amsterdamWallTimeToUtc(2026, 11, 12, 10, 0);
+
+describe('location order', () => {
+  it('puts Rotterdam first and keeps the other offices alphabetical', () => {
+    const names = ['Amsterdam', '!Rotterdam', 'Den Haag', 'Utrecht'].sort((a, b) =>
+      compareLocations({ name: a }, { name: b })
+    );
+    assert.deepEqual(names, ['!Rotterdam', 'Amsterdam', 'Den Haag', 'Utrecht']);
+  });
+});
 
 describe('Amsterdam time', () => {
   it('converts winter and summer wall time to UTC', () => {

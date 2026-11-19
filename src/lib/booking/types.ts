@@ -48,3 +48,11 @@ export function spaceKindPlural(kind: SpaceKind): string {
 export function isSpaceKind(value: string): value is SpaceKind {
   return value === 'room' || value === 'parking';
 }
+
+/** Rotterdam is the office people book most, so it leads the location list. */
+export function compareLocations(a: { name: string }, b: { name: string }): number {
+  const rank = (name: string) => (/rotterdam/i.test(name) ? 0 : 1);
+  const byPreference = rank(a.name) - rank(b.name);
+  if (byPreference !== 0) return byPreference;
+  return a.name.localeCompare(b.name, 'nl', { sensitivity: 'base' });
+}
