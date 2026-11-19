@@ -7,6 +7,7 @@ import {
   mapAndValidateEmployeeDetails,
   type EmployeeChatlikeExtractionResult,
 } from '@/lib/document-analysis';
+import { inferDriversLicenseFromOwnCar } from '@/lib/document-analysis/inferLicenseFromOwnCar';
 import { stripAssistantArtifactsFromRecord } from '@/lib/document-analysis/stripAssistantArtifacts';
 import { serviceRoleSupabase } from '@/lib/supabase/service-role';
 
@@ -127,6 +128,8 @@ export async function extractWorkerFactsFromDocuments(
   const cleaned = stripAssistantArtifactsFromRecord(extraction.raw);
   const mapped = mapAndValidateEmployeeDetails(cleaned);
   applyIntakeCheckboxTextOverrides(mapped, extraction.intakePlainText);
+  // After checkbox text: eigen auto / vervoer Auto with no typed license ⇒ B.
+  inferDriversLicenseFromOwnCar(mapped);
 
   return {
     details: mapped as Record<string, unknown>,

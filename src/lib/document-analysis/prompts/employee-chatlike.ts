@@ -20,7 +20,7 @@ Conflict: wat het intake duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV) wi
 
 TAAL / RIJBEWIJS:
 - Als de bron zegt dat de werknemer Nederlands spreekt én schrijft, en lezen niet zwakker vermeldt, zet dutch_speaking, dutch_writing én dutch_reading op hetzelfde niveau (meestal "Goed").
-- "Eigen auto" / vervoer Auto is GEEN bewijs van rijbewijs — vul drivers_license_type alleen bij expliciet rijbewijs (type).
+- Eigen auto / vervoer Auto zonder ander genoemd rijbewijs-type: zet drivers_license true en drivers_license_type ["B"] (standaard personenauto). Alleen een ander type zetten als dat expliciet genoemd is (BE, C, …).
 
 ${INTAKE_LAYOUT_V75_HINT}
 

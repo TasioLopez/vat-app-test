@@ -62,6 +62,7 @@ export {
   applyIntakeCheckboxTextOverrides,
   filterAllowedDriversLicenseTypes,
 } from './intakeCheckboxText';
+export { inferDriversLicenseFromOwnCar } from './inferLicenseFromOwnCar';
 export {
   bufferToPlainText,
   detectDocumentKind,
