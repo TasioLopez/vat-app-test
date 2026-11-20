@@ -91,6 +91,25 @@ describe('visie LA functie draft', () => {
     assert.equal(parseDraft({ version: 99 }).suggestions.length, 0);
   });
 
+  it('parseDraft preserves trailing spaces while editing', () => {
+    const parsed = parseDraft({
+      version: 1,
+      suggestions: [
+        {
+          id: 's1',
+          naam: 'Studiebegeleider ',
+          toelichting: 'Past bij begeleidende taken ',
+          status: 'kept',
+          batchId: 'b1',
+        },
+      ],
+      generationRound: 1,
+    });
+    assert.equal(parsed.suggestions.length, 1);
+    assert.equal(parsed.suggestions[0].naam, 'Studiebegeleider ');
+    assert.equal(parsed.suggestions[0].toelichting, 'Past bij begeleidende taken ');
+  });
+
   it('markDraftFinalized sets finalizedAt', () => {
     const d = markDraftFinalized(createEmptyDraft());
     assert.ok(typeof d.finalizedAt === 'string' && d.finalizedAt.length > 0);

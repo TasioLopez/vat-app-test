@@ -45,8 +45,10 @@ export function parseDraft(raw: unknown): VisieLaFunctieDraft {
     for (const item of o.suggestions) {
       if (!item || typeof item !== 'object') continue;
       const s = item as Record<string, unknown>;
-      const naam = String(s.naam ?? '').trim();
-      if (!naam) continue;
+      // Do not trim naam/toelichting here — parseDraft runs on every keystroke
+      // while editing, and trimming would swallow trailing spaces.
+      const naam = String(s.naam ?? '');
+      if (!naam.trim()) continue;
       const statusRaw = String(s.status ?? 'pending');
       const status: FunctieSuggestionStatus =
         statusRaw === 'kept' || statusRaw === 'rejected' || statusRaw === 'pending'
@@ -55,7 +57,7 @@ export function parseDraft(raw: unknown): VisieLaFunctieDraft {
       suggestions.push({
         id: String(s.id ?? newId()),
         naam,
-        toelichting: String(s.toelichting ?? '').trim(),
+        toelichting: String(s.toelichting ?? ''),
         status,
         batchId: String(s.batchId ?? 'legacy'),
       });
