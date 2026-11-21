@@ -5,8 +5,10 @@ import { supabase } from '@/lib/supabase/client';
 import {
   buildCvStatusMap,
   resolveBuilderDocStatus,
+  resolveIntakeDocStatus,
   summarizeGeneratedDocs,
   type CvStatus,
+  type IntakeStatus,
   type TpStatus,
 } from '@/lib/employee/doc-status';
 
@@ -16,28 +18,37 @@ export type BuilderDocState = {
   lastExportAt: string | null;
 };
 
+export type IntakeDocState = {
+  /** `null` while loading or when the lookup failed. */
+  status: IntakeStatus | null;
+  lastExportAt: string | null;
+};
+
 export type EmployeeDocStatuses = {
   loading: boolean;
   tp: BuilderDocState;
-  intake: BuilderDocState;
+  intake: IntakeDocState;
   vgr: BuilderDocState;
   cv: { status: CvStatus | null };
 };
 
 type InstanceLookup = {
   hasTp: boolean | null;
-  hasIntake: boolean | null;
+  intake: { hasInstance: boolean; validatedAt: string | null } | null;
   vgr: { hasInstance: boolean; hasFinal: boolean } | null;
   cv: CvStatus | null;
 };
 
-type ExistsResult = { data: { id: string }[] | null; error: unknown };
+type IntakeQueryResult = {
+  data: Array<{ id: string; validated_at: string | null }> | null;
+  error: unknown;
+};
 
 /** `intake_instances` is not in the generated Supabase types yet. */
 type IntakeInstancesClient = {
   from: (table: 'intake_instances') => {
     select: (columns: string) => {
-      eq: (column: string, value: string) => { limit: (count: number) => PromiseLike<ExistsResult> };
+      eq: (column: string, value: string) => PromiseLike<IntakeQueryResult>;
     };
   };
 };
@@ -45,6 +56,7 @@ type IntakeInstancesClient = {
 /**
  * Status of the four builder documents for one employee.
  * Drafts come from the instance tables; "completed" comes from the exported PDFs in `documents`.
+ * Intake also uses `validated_at` → Gevalideerd.
  */
 export function useEmployeeDocStatuses(
   employeeId: string,
@@ -61,9 +73,8 @@ export function useEmployeeDocStatuses(
         supabase.from('tp_instances').select('id').eq('employee_id', employeeId).limit(1),
         (supabase as unknown as IntakeInstancesClient)
           .from('intake_instances')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .limit(1),
+          .select('id, validated_at')
+          .eq('employee_id', employeeId),
         supabase.from('vgr_instances').select('id, status').eq('employee_id', employeeId),
         supabase
           .from('cv_documents')
@@ -83,9 +94,18 @@ export function useEmployeeDocStatuses(
       if (cvRes.error) console.error('Error fetching cv_documents:', cvRes.error);
       if (shareRes.error) console.error('Error fetching cv_share_links:', shareRes.error);
 
+      const intakeRows = intakeRes.error ? null : (intakeRes.data ?? []);
+      const validatedAt =
+        intakeRows?.find((row) => typeof row.validated_at === 'string')?.validated_at ?? null;
+
       setLookup({
         hasTp: tpRes.error ? null : (tpRes.data ?? []).length > 0,
-        hasIntake: intakeRes.error ? null : (intakeRes.data ?? []).length > 0,
+        intake: intakeRows
+          ? {
+              hasInstance: intakeRows.length > 0,
+              validatedAt: typeof validatedAt === 'string' ? validatedAt : null,
+            }
+          : null,
         vgr: vgrRes.error
           ? null
           : {
@@ -122,10 +142,22 @@ export function useEmployeeDocStatuses(
       lastExportAt: summary.lastExportAt,
     });
 
+    const intakeLookup = lookup?.intake;
+
     return {
       loading: lookup === null,
       tp: builder(lookup?.hasTp, exports.tp),
-      intake: builder(lookup?.hasIntake, exports.intake),
+      intake: {
+        status:
+          intakeLookup == null
+            ? null
+            : resolveIntakeDocStatus({
+                hasInstance: intakeLookup.hasInstance,
+                exportCount: exports.intake.exportCount,
+                validatedAt: intakeLookup.validatedAt,
+              }),
+        lastExportAt: exports.intake.lastExportAt,
+      },
       vgr: builder(lookup?.vgr?.hasInstance, exports.vgr, lookup?.vgr?.hasFinal ?? false),
       cv: { status: lookup?.cv ?? null },
     };

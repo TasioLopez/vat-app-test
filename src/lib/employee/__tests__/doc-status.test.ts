@@ -13,6 +13,7 @@ import {
   maxIntakeStatus,
   maxTpStatus,
   resolveBuilderDocStatus,
+  resolveIntakeDocStatus,
   summarizeGeneratedDocs,
   tpStatusRank,
 } from '@/lib/employee/doc-status';
@@ -156,6 +157,27 @@ describe('doc-status helpers', () => {
     assert.equal(resolveBuilderDocStatus({ hasInstance: false, exportCount: 1 }), 'completed');
     assert.equal(
       resolveBuilderDocStatus({ hasInstance: true, exportCount: 0, hasFinalInstance: true }),
+      'completed'
+    );
+  });
+
+  it('resolves intake status with validated_at before export', () => {
+    assert.equal(resolveIntakeDocStatus({ hasInstance: false, exportCount: 0 }), 'none');
+    assert.equal(resolveIntakeDocStatus({ hasInstance: true, exportCount: 0 }), 'draft');
+    assert.equal(
+      resolveIntakeDocStatus({
+        hasInstance: true,
+        exportCount: 0,
+        validatedAt: '2026-11-21T00:00:00.000Z',
+      }),
+      'validated'
+    );
+    assert.equal(
+      resolveIntakeDocStatus({
+        hasInstance: true,
+        exportCount: 1,
+        validatedAt: '2026-11-21T00:00:00.000Z',
+      }),
       'completed'
     );
   });

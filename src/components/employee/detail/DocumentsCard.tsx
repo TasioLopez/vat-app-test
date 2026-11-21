@@ -3,7 +3,7 @@
 import { ChevronRight, Compass, FileText, IdCard, Loader2, Map, type LucideIcon } from 'lucide-react';
 import { DocStatusPill } from '@/components/employee/DocStatusPill';
 import type { EmployeeDocStatuses } from '@/hooks/useEmployeeDocStatuses';
-import type { CvStatus, GeneratedDocKind, TpStatus } from '@/lib/employee/doc-status';
+import type { CvStatus, GeneratedDocKind, IntakeStatus, TpStatus } from '@/lib/employee/doc-status';
 import { cn } from '@/lib/utils';
 import { CARD_CLASS, CARD_TITLE_CLASS, formatShortDate } from '@/components/employee/detail/shared';
 
@@ -33,8 +33,12 @@ export function DocumentsCard({ statuses, opening, onOpen }: Props) {
       </h2>
       <ul className="divide-y divide-gray-100">
         {ROWS.map(({ kind, label, Icon }) => {
-          const status: TpStatus | CvStatus | null =
-            kind === 'cv' ? statuses.cv.status : statuses[kind].status;
+          const status: TpStatus | IntakeStatus | CvStatus | null =
+            kind === 'cv'
+              ? statuses.cv.status
+              : kind === 'intake'
+                ? statuses.intake.status
+                : statuses[kind].status;
           const lastExportAt = kind === 'cv' ? null : statuses[kind].lastExportAt;
           const exportDate = formatShortDate(lastExportAt);
           const isOpening = Boolean(opening[kind]);

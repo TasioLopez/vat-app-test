@@ -167,6 +167,20 @@ export function resolveBuilderDocStatus(input: {
   return input.hasInstance ? 'draft' : 'none';
 }
 
+/**
+ * Intake status for one employee: export → completed (Afgerond/Klaar),
+ * validated_at → validated (Gevalideerd), instance → draft (Concept).
+ */
+export function resolveIntakeDocStatus(input: {
+  hasInstance: boolean;
+  exportCount: number;
+  validatedAt?: string | null;
+}): IntakeStatus {
+  if (input.exportCount > 0) return 'completed';
+  if (input.validatedAt) return 'validated';
+  return input.hasInstance ? 'draft' : 'none';
+}
+
 export function buildCvStatusMap(
   parentCvs: Array<{ employee_id: string }>,
   shares: Array<{
