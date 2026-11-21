@@ -1,6 +1,14 @@
 'use client';
 
-import { ChevronRight, Compass, FileText, IdCard, Loader2, Map, type LucideIcon } from 'lucide-react';
+import {
+  ChevronRight,
+  ClipboardList,
+  FileUser,
+  Loader2,
+  Route,
+  Target,
+  type LucideIcon,
+} from 'lucide-react';
 import { DocStatusPill } from '@/components/employee/DocStatusPill';
 import type { EmployeeDocStatuses } from '@/hooks/useEmployeeDocStatuses';
 import type { CvStatus, GeneratedDocKind, IntakeStatus, TpStatus } from '@/lib/employee/doc-status';
@@ -17,10 +25,10 @@ type Props = {
 };
 
 const ROWS: Array<{ kind: DocKind; label: string; Icon: LucideIcon }> = [
-  { kind: 'intake', label: 'Intake', Icon: FileText },
-  { kind: 'tp', label: 'Trajectplan', Icon: Map },
-  { kind: 'vgr', label: 'VGR', Icon: Compass },
-  { kind: 'cv', label: 'CV', Icon: IdCard },
+  { kind: 'intake', label: 'Intake', Icon: ClipboardList },
+  { kind: 'tp', label: 'Trajectplan', Icon: Route },
+  { kind: 'vgr', label: 'VGR', Icon: Target },
+  { kind: 'cv', label: 'CV', Icon: FileUser },
 ];
 
 export function DocumentsCard({ statuses, opening, onOpen }: Props) {

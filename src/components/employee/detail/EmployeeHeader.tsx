@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Cake, Mail, Pencil, Phone, UserRound, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Mail, Pencil, Phone, UserRound, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { EmployeeDetailFieldKey } from '@/lib/employee/field-review';
 import type { EmployeeProfileView, ProfileHeaderFactId } from '@/lib/employee/profile-view';
@@ -8,7 +8,7 @@ import { QUIET_BUTTON_CLASS, ReviewSlot } from '@/components/employee/detail/sha
 
 const FACT_ICONS: Record<ProfileHeaderFactId, LucideIcon> = {
   gender: UserRound,
-  date_of_birth: Cake,
+  date_of_birth: CalendarDays,
   phone: Phone,
   email: Mail,
 };

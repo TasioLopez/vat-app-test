@@ -61,6 +61,8 @@ type Props = {
   autofillProgress: AutofillProgressState | null;
   onAutofill: () => void;
   onCancelAutofill: () => void;
+  /** Werkgever / Contact / Eigenaar strip under the title bar. */
+  dossier: ReactNode;
 };
 
 const DRIVERS_LICENSE_OPTIONS = [
@@ -238,6 +240,7 @@ export function ProfileForm({
   autofillProgress,
   onAutofill,
   onCancelAutofill,
+  dossier,
 }: Props) {
   const [contractHoursText, setContractHoursText] = useState<string | null>(null);
   const [customTransportDraft, setCustomTransportDraft] = useState('');
@@ -306,6 +309,8 @@ export function ProfileForm({
           {aiLoading ? 'AI bezig…' : 'Invullen met AI'}
         </Button>
       </div>
+
+      {dossier}
 
       <FormSection title="Persoonsgegevens">
         <div className={FIELD_GRID_CLASS}>

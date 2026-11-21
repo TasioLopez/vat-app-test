@@ -52,7 +52,7 @@ import { ProfileView } from '@/components/employee/detail/ProfileView';
 import { ProfileForm } from '@/components/employee/detail/ProfileForm';
 import { DocumentsCard } from '@/components/employee/detail/DocumentsCard';
 import { SourcesCard } from '@/components/employee/detail/SourcesCard';
-import { DossierCard } from '@/components/employee/detail/DossierCard';
+import { DossierStrip } from '@/components/employee/detail/DossierStrip';
 import { EditBar } from '@/components/employee/detail/EditBar';
 import { EmployeeNotFound, EmployeePageSkeleton } from '@/components/employee/detail/PageStates';
 
@@ -1343,43 +1343,77 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
                         <div className="grid items-start gap-5 @4xl/page:grid-cols-[minmax(0,1fr)_340px]">
                             <div className="min-w-0">
-                                {editing ? (
-                                    <ProfileForm
-                                        employee={employee}
-                                        onEmployeeChange={(patch) =>
-                                            setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
-                                        }
-                                        details={employeeDetails}
-                                        onDetailChange={handleDetailChange}
-                                        getStatus={getFieldDisplayStatus}
-                                        onValidate={validateField}
-                                        clientName={employerName}
-                                        aiLoading={aiLoading}
-                                        aiCancelling={aiCancelling}
-                                        autofillProgress={autofillProgress}
-                                        onAutofill={() => void autofillWithAI()}
-                                        onCancelAutofill={cancelAiAutofill}
-                                    />
-                                ) : (
-                                    <ProfileView
-                                        view={profileView}
-                                        loadFailed={detailsLoad === 'failed'}
-                                        onRetryLoad={() => {
-                                            setDetailsLoad('loading');
-                                            void fetchEmployeeDetails();
-                                        }}
-                                        busy={aiLoading}
-                                        saveStatus={autosaveStatus}
-                                        onRetrySave={() => void retryFailedSave()}
-                                        onValidate={validateFields}
-                                        onValidateAll={validateAllPendingFields}
-                                        onEdit={() => void startEditing()}
-                                    />
-                                )}
+                                {(() => {
+                                    const dossierStrip = (
+                                        <DossierStrip
+                                            clients={clients}
+                                            clientId={employee.client_id}
+                                            onClientChange={(clientId) => void handleClientChange(clientId)}
+                                            referents={referents}
+                                            referentId={employee.referent_id}
+                                            onReferentChange={(refId) => void handleReferentChange(refId)}
+                                            onEditReferent={() => {
+                                                setReferentDialogMode('edit');
+                                                setReferentDialogOpen(true);
+                                            }}
+                                            onNewReferent={() => {
+                                                setReferentDialogMode('create');
+                                                setReferentDialogOpen(true);
+                                            }}
+                                            ownerId={employee.owner_id}
+                                            currentUserId={currentUserId}
+                                            onOwnerChange={(ownerId) => void handleOwnerChange(ownerId)}
+                                            suggestedReferentName={suggestedReferentName}
+                                            suggestedReferentExists={referentExists}
+                                            onApplySuggestedReferent={() =>
+                                                void (referentExists
+                                                    ? applySuggestedReferentSet()
+                                                    : applySuggestedReferentCreate())
+                                            }
+                                            busy={updating}
+                                        />
+                                    );
+
+                                    return editing ? (
+                                        <ProfileForm
+                                            employee={employee}
+                                            onEmployeeChange={(patch) =>
+                                                setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
+                                            }
+                                            details={employeeDetails}
+                                            onDetailChange={handleDetailChange}
+                                            getStatus={getFieldDisplayStatus}
+                                            onValidate={validateField}
+                                            clientName={employerName}
+                                            aiLoading={aiLoading}
+                                            aiCancelling={aiCancelling}
+                                            autofillProgress={autofillProgress}
+                                            onAutofill={() => void autofillWithAI()}
+                                            onCancelAutofill={cancelAiAutofill}
+                                            dossier={dossierStrip}
+                                        />
+                                    ) : (
+                                        <ProfileView
+                                            view={profileView}
+                                            loadFailed={detailsLoad === 'failed'}
+                                            onRetryLoad={() => {
+                                                setDetailsLoad('loading');
+                                                void fetchEmployeeDetails();
+                                            }}
+                                            busy={aiLoading}
+                                            saveStatus={autosaveStatus}
+                                            onRetrySave={() => void retryFailedSave()}
+                                            onValidate={validateFields}
+                                            onValidateAll={validateAllPendingFields}
+                                            onEdit={() => void startEditing()}
+                                            dossier={dossierStrip}
+                                        />
+                                    );
+                                })()}
                             </div>
 
                             <aside
-                                aria-label="Documenten, bronnen en dossier"
+                                aria-label="Documenten en bronnen"
                                 className={cn(
                                     'min-w-0 space-y-5',
                                     // Sticky only when the whole rail fits the viewport; otherwise its last card would be cut off.
@@ -1401,33 +1435,6 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                     }
                                     onDelete={(doc) => setSourceToDelete(doc)}
                                     onOpenGesprek={() => setGesprekOpen(true)}
-                                />
-                                <DossierCard
-                                    clients={clients}
-                                    clientId={employee.client_id}
-                                    onClientChange={(clientId) => void handleClientChange(clientId)}
-                                    referents={referents}
-                                    referentId={employee.referent_id}
-                                    onReferentChange={(refId) => void handleReferentChange(refId)}
-                                    onEditReferent={() => {
-                                        setReferentDialogMode('edit');
-                                        setReferentDialogOpen(true);
-                                    }}
-                                    onNewReferent={() => {
-                                        setReferentDialogMode('create');
-                                        setReferentDialogOpen(true);
-                                    }}
-                                    ownerId={employee.owner_id}
-                                    currentUserId={currentUserId}
-                                    onOwnerChange={(ownerId) => void handleOwnerChange(ownerId)}
-                                    suggestedReferentName={suggestedReferentName}
-                                    suggestedReferentExists={referentExists}
-                                    onApplySuggestedReferent={() =>
-                                        void (referentExists
-                                            ? applySuggestedReferentSet()
-                                            : applySuggestedReferentCreate())
-                                    }
-                                    busy={updating}
                                 />
                             </aside>
                         </div>

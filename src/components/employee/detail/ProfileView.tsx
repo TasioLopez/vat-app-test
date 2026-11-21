@@ -1,10 +1,20 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, UserRoundSearch } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  AlertCircle,
+  Briefcase,
+  Car,
+  CheckCircle2,
+  GraduationCap,
+  Languages,
+  UserRoundSearch,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { AutosaveStatus } from '@/hooks/useDebouncedAutosave';
 import type { EmployeeDetailFieldKey } from '@/lib/employee/field-review';
-import type { EmployeeProfileView, ProfileRow } from '@/lib/employee/profile-view';
+import type { EmployeeProfileView, ProfileGroupId, ProfileRow } from '@/lib/employee/profile-view';
 import { cn } from '@/lib/utils';
 import {
   CARD_CLASS,
@@ -13,6 +23,13 @@ import {
   ReviewSlot,
   SECTION_LABEL_CLASS,
 } from '@/components/employee/detail/shared';
+
+const GROUP_ICONS: Record<ProfileGroupId, LucideIcon> = {
+  werk: Briefcase,
+  opleiding: GraduationCap,
+  mobiliteit: Car,
+  taal_digitaal: Languages,
+};
 
 type Props = {
   view: EmployeeProfileView;
@@ -26,6 +43,8 @@ type Props = {
   onValidate: (fields: EmployeeDetailFieldKey[]) => void;
   onValidateAll: () => void;
   onEdit: () => void;
+  /** Werkgever / Contact / Eigenaar strip under the title bar. */
+  dossier: ReactNode;
 };
 
 function FactRow({
@@ -81,6 +100,7 @@ export function ProfileView({
   onValidate,
   onValidateAll,
   onEdit,
+  dossier,
 }: Props) {
   const showEmptyState = !loadFailed && !view.hasProfileFacts;
   const emptyCount = view.emptyLabels.length;
@@ -144,6 +164,8 @@ export function ProfileView({
         ) : null}
       </div>
 
+      <div className="border-b border-gray-100">{dossier}</div>
+
       {loadFailed ? (
         <div className="flex flex-col items-center px-6 py-10 text-center">
           <AlertCircle className="h-6 w-6 text-red-500" aria-hidden />
@@ -178,16 +200,22 @@ export function ProfileView({
       ) : (
         <>
           <div className="grid gap-x-10 gap-y-5 px-5 py-4 @2xl:grid-cols-2">
-            {view.groups.map((group) => (
-              <section key={group.id} aria-label={group.label} className="min-w-0">
-                <h3 className={cn(SECTION_LABEL_CLASS, 'mb-1')}>{group.label}</h3>
-                <dl>
-                  {group.rows.map((row) => (
-                    <FactRow key={row.id} row={row} busy={busy} onValidate={onValidate} />
-                  ))}
-                </dl>
-              </section>
-            ))}
+            {view.groups.map((group) => {
+              const Icon = GROUP_ICONS[group.id];
+              return (
+                <section key={group.id} aria-label={group.label} className="min-w-0">
+                  <h3 className={cn(SECTION_LABEL_CLASS, 'mb-1 inline-flex items-center gap-1.5')}>
+                    <Icon className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+                    {group.label}
+                  </h3>
+                  <dl>
+                    {group.rows.map((row) => (
+                      <FactRow key={row.id} row={row} busy={busy} onValidate={onValidate} />
+                    ))}
+                  </dl>
+                </section>
+              );
+            })}
           </div>
 
           {emptyCount > 0 ? (
