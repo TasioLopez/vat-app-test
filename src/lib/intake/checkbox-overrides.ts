@@ -42,16 +42,10 @@ export function applyIntakeCheckboxOverridesFromText(
   if (exWerknemerFromText !== null) {
     console.log(`📋 ${logPrefix} Ex-werknemer checkbox from text: ${exWerknemerFromText}`);
   } else if (intakeTextHasExWerknemerLabel(plainText)) {
-    console.log(`📋 ${logPrefix} Ex-werknemer label without glyph → false`);
+    // Label without clear glyph: keep vision/model value (do not force false).
+    console.log(`📋 ${logPrefix} Ex-werknemer label without glyph → keep model`);
   }
-  next.is_ex_werknemer = applyExWerknemerFromText(
-    next.is_ex_werknemer,
-    exWerknemerFromText !== null
-      ? exWerknemerFromText
-      : intakeTextHasExWerknemerLabel(plainText)
-        ? false
-        : null
-  );
+  next.is_ex_werknemer = applyExWerknemerFromText(next.is_ex_werknemer, exWerknemerFromText);
 
   return next;
 }

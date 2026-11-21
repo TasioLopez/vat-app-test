@@ -170,11 +170,20 @@ export function cleanDoctorOrgRaw(raw: string): string {
   cleaned = stripDoctorCourtesyTitles(cleaned);
   cleaned = normalizeDoctorSignature(cleaned);
 
-  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
+  // Strip trailing punctuation first so "bedrijfsarts." still matches the role strip below.
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
+  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\.?\s*$/i, '');
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  cleaned = cleaned.replace(/[,\-]\s*$/, '').trim();
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
   return cleaned;
+}
+
+/** Soft omission when arts name is unknown — keeps intro templates grammatical. */
+export const UNKNOWN_ARTS_PHRASE = 'de bedrijfsarts';
+
+function stripTrailingPhrasePunctuation(value: string): string {
+  return value.replace(/[.,;:\-]+\s*$/, '').trim();
 }
 
 function formatSupervisiePart(part: string): string {
@@ -191,25 +200,24 @@ function formatSupervisiePart(part: string): string {
 export function buildArtsPhrase(occupational_doctor_org: string | null | undefined): string {
   const raw = cleanDoctorOrgRaw(occupational_doctor_org || '');
   if (!raw) {
-    return 'Arts [naam] werkend onder supervisie van Arts [supervisor]';
+    return UNKNOWN_ARTS_PHRASE;
   }
 
+  let phrase: string;
   const commaMatch = raw.match(/^(.+?)\s*,\s*werkend onder supervisie van\s*:?\s*(.+)$/i);
   if (commaMatch) {
     const primary = formatSupervisiePart(commaMatch[1].trim());
     const supervisor = formatSupervisiePart(commaMatch[2].trim());
-    return cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
+    phrase = cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
+  } else if (/werkend onder supervisie van/i.test(raw)) {
+    phrase = raw;
+  } else if (hasDoctorRolePrefix(raw)) {
+    phrase = raw;
+  } else {
+    phrase = `Arts ${raw}`;
   }
 
-  if (/werkend onder supervisie van/i.test(raw)) {
-    return raw;
-  }
-
-  if (hasDoctorRolePrefix(raw)) {
-    return raw;
-  }
-
-  return `Arts ${raw}`;
+  return stripTrailingPhrasePunctuation(phrase) || UNKNOWN_ARTS_PHRASE;
 }
 
 function extractPrimaryDoctorName(value: string): string {

@@ -94,7 +94,10 @@ export function buildPara1Closing(
     closing = template.replace('[datum]', datumVoluit);
   }
   const suffix = buildActualisatieSuffix(actualisaties ?? []);
-  return `${closing}${suffix}`.trim();
+  if (!suffix) return closing.trim();
+  // Closing templates already end with "."; strip before suffix so we never get "2026. en geactualiseerd".
+  const base = closing.replace(/\.+\s*$/, '').trim();
+  return `${base}${suffix}.`.trim();
 }
 
 export function buildInsufficientZoekprofielFields(): ZoekprofielFields {

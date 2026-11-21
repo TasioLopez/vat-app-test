@@ -181,32 +181,72 @@ function buildFunctieomschrijving(ctx: InleidingBuildContext, body: string): str
   return `**Functieomschrijving**\n${trimmed}`;
 }
 
+function normalizePersonKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/^(?:de\s+heer|mevrouw|meneer|dhr\.?|mevr\.?)\s+/i, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function isDistinctExtraAanmelder(
+  extra: NonNullable<InleidingContentResult['extra_aanmelder']>,
+  ref: ReferentRow | null
+): boolean {
+  const extraName = normalizePersonKey(extra.naam || '');
+  if (!extraName) return false;
+  if (!ref) return true;
+  const refName = normalizePersonKey(
+    `${coerceText(ref.first_name)} ${coerceText(ref.last_name)}`.trim()
+  );
+  if (!refName) return true;
+  if (extraName === refName) return false;
+  const refLast = normalizePersonKey(coerceText(ref.last_name));
+  if (refLast && (extraName === refLast || extraName.endsWith(` ${refLast}`))) {
+    const extraFirst = extraName.replace(new RegExp(`\\s*${refLast}$`), '').trim();
+    const refFirst = normalizePersonKey(coerceText(ref.first_name));
+    if (!extraFirst || !refFirst) return false;
+    if (extraFirst[0] === refFirst[0]) return false;
+  }
+  return true;
+}
+
 function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentResult): string {
   const companyName = coerceText(ctx.client.name, '[organisatie]');
   const ref = ctx.referent;
   const refInitials = getInitials(ref?.first_name);
   const refLastName = coerceText(ref?.last_name, '[naam aanmelder]');
-  const refFunction = coerceText(ref?.referent_function, 'contactpersoon');
+  // Never invent the literal role "contactpersoon" — omit role when unknown.
+  const refFunction = coerceText(ref?.referent_function);
   const referentTitle = refTitle(ref?.gender);
+  const referentShort = formatPersonShortName(`${refInitials} ${refLastName}`.trim());
 
   const suffix =
     ' aangemeld met het verzoek een 2e spoor re-integratietraject op te starten in het kader van de Wet Verbetering Poortwachter.';
 
-  if (content.extra_aanmelder) {
-    const extra = content.extra_aanmelder;
+  const extra = content.extra_aanmelder;
+  if (extra && isDistinctExtraAanmelder(extra, ref)) {
     const extraNaam = withOptionalTitle(
       refTitle(extra.gender),
       formatPersonShortName(extra.naam)
     );
-    const referentNaam = withOptionalTitle(
-      referentTitle,
-      formatPersonShortName(`${refInitials} ${refLastName}`.trim())
-    );
-    return `Werknemer is door ${extraNaam}, ${extra.functie} bij ${extra.organisatie} In opdracht van: ${referentNaam}, ${refFunction} ${companyName}${suffix}`;
+    const referentNaam = withOptionalTitle(referentTitle, referentShort);
+    const extraFunctie = coerceText(extra.functie);
+    const extraOrg = coerceText(extra.organisatie, companyName);
+    const extraLead = [extraNaam, extraFunctie, extraOrg ? `bij ${extraOrg}` : '']
+      .filter(Boolean)
+      .join(', ')
+      .replace(/, bij /, ' bij ')
+      .replace(/[.\s]+$/, '');
+    const opdrachtRoleOrg = [refFunction, companyName].filter(Boolean).join(' ');
+    const opdracht = opdrachtRoleOrg
+      ? `${referentNaam}, ${opdrachtRoleOrg}`
+      : referentNaam;
+    return `Werknemer is door ${extraLead}. In opdracht van: ${opdracht}${suffix}`;
   }
 
   const refName = ref
-    ? `${refFunction} ${formatPersonShortName(`${refInitials} ${refLastName}`.trim())}`.trim()
+    ? [refFunction, referentShort].filter(Boolean).join(' ').trim()
     : refLastName;
   return `Werknemer is door ${refName} namens ${companyName}${suffix}`;
 }

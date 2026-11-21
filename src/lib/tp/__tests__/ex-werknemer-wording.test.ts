@@ -27,17 +27,22 @@ describe('detectExWerknemerFromText', () => {
     assert.equal(detectExWerknemerFromText('☒ Ex-werknemer'), true);
     assert.equal(detectExWerknemerFromText('Ex-werknemer ☑'), true);
     assert.equal(detectExWerknemerFromText('[x] Ex-werknemer'), true);
+    assert.equal(detectExWerknemerFromText('■ Ex-werknemer'), true);
+    assert.equal(detectExWerknemerFromText('x Ex-werknemer'), true);
+    assert.equal(detectExWerknemerFromText('Ex-werknemer: ja'), true);
   });
 
   it('detects unchecked Ex-werknemer checkbox', () => {
     assert.equal(detectExWerknemerFromText('☐ Ex-werknemer'), false);
     assert.equal(detectExWerknemerFromText('Ex-werknemer ☐'), false);
     assert.equal(detectExWerknemerFromText('[ ] Ex-werknemer'), false);
+    assert.equal(detectExWerknemerFromText('Ex-werknemer: nee'), false);
   });
 
   it('returns null when label or glyph state is unclear', () => {
     assert.equal(detectExWerknemerFromText(''), null);
     assert.equal(detectExWerknemerFromText('Geen ex-werknemer info'), null);
+    assert.equal(detectExWerknemerFromText('Ex-werknemer'), null);
   });
 });
 

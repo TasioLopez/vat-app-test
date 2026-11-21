@@ -369,6 +369,8 @@ const BASIS_EX_WORDING_KEYS = new Set([
   'pow-toelichting',
   // pow-inschaling: wording applied to parsed cells in PowInschalingTable (JSON quotes would skip it)
   'prog',
+  'blem',
+  'ad',
 ]);
 
 function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {

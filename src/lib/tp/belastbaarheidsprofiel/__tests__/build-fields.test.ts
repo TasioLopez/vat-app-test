@@ -323,9 +323,9 @@ describe('mergeBelastbaarheidsprofielContent', () => {
     'Werktijden',
   ];
 
-  it('prefers intake rubrieken over spreekuur and main (Habib regression)', () => {
+  it('prefers later spreekuur rubrieken over fuller intake/FML (Cecilea narrowing)', () => {
     const main: BelastbaarheidsprofielContentResult = {
-      rubrieken: ['Persoonlijk functioneren'],
+      rubrieken: ['Persoonlijk functioneren', 'Sociaal functioneren', 'Dynamische handelingen'],
       prognose_citaat: KELLY_INTAKE_QUOTE,
       spreekuur_meta: null,
     };
@@ -333,23 +333,23 @@ describe('mergeBelastbaarheidsprofielContent', () => {
     const merged = mergeBelastbaarheidsprofielContent(
       main,
       {
-        datum: '2026-08-07',
-        arts_org: 'K. Blommestein',
-        rubrieken: ['Werktijden'],
+        datum: '2026-09-22',
+        arts_org: 'S. de Beaufort',
+        rubrieken: ['Aanpassing aan fysieke omgevingseisen'],
       },
       true,
       habibIntakeRubrieken
     );
 
-    assert.deepEqual(merged.rubrieken, habibIntakeRubrieken);
+    assert.deepEqual(merged.rubrieken, ['Aanpassing aan fysieke omgevingseisen']);
     assert.equal(merged.prognose_citaat, KELLY_INTAKE_QUOTE);
     assert.deepEqual(merged.spreekuur_meta, {
-      datum: '2026-08-07',
-      arts_org: 'K. Blommestein',
+      datum: '2026-09-22',
+      arts_org: 'S. de Beaufort',
     });
   });
 
-  it('uses main FML rubrieken when intake empty but spreekuur has incomplete list', () => {
+  it('uses intake rubrieken when spreekuur has meta but empty rubrieken list', () => {
     const main: BelastbaarheidsprofielContentResult = {
       rubrieken: ['Persoonlijk functioneren', 'Dynamische handelingen'],
       prognose_citaat: KELLY_INTAKE_QUOTE,
@@ -361,7 +361,29 @@ describe('mergeBelastbaarheidsprofielContent', () => {
       {
         datum: '2026-12-05',
         arts_org: 'C.J. de Bode',
-        rubrieken: ['Werktijden', 'Statische houdingen'],
+        rubrieken: [],
+      },
+      true,
+      habibIntakeRubrieken
+    );
+
+    assert.deepEqual(merged.rubrieken, habibIntakeRubrieken);
+    assert.equal(merged.prognose_citaat, KELLY_INTAKE_QUOTE);
+  });
+
+  it('uses main FML rubrieken when intake empty and spreekuur rubrieken empty', () => {
+    const main: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Persoonlijk functioneren', 'Dynamische handelingen'],
+      prognose_citaat: KELLY_INTAKE_QUOTE,
+      spreekuur_meta: null,
+    };
+
+    const merged = mergeBelastbaarheidsprofielContent(
+      main,
+      {
+        datum: '2026-12-05',
+        arts_org: 'C.J. de Bode',
+        rubrieken: [],
       },
       true,
       []

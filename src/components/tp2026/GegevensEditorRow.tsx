@@ -111,6 +111,15 @@ export function GegevensEditorRow({
                 if (key === 'ad_report_concept' && v === true) {
                   updateField('has_ad_report', false);
                 }
+                if (key === 'ad_report_date') {
+                  if (hasFilledAdReportDate(v)) {
+                    if (!isAdReportConcept(data)) {
+                      updateField('has_ad_report', true);
+                    }
+                  } else if (data.has_ad_report === true) {
+                    updateField('has_ad_report', false);
+                  }
+                }
                 if (key === 'is_ex_werknemer' && v === true) {
                   const spoor2 = materializeSpoor2ForExWerknemer(data.tp3_activities, true);
                   if (spoor2) updateField('tp3_activities', spoor2);

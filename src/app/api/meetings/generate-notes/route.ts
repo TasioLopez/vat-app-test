@@ -9,6 +9,7 @@ import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import { generateNotesDecision } from '@/lib/meetings/audio';
 import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import {
+  applyCanonicalEmployerSpelling,
   buildGesprekDossierContext,
   GESPREKSVERSLAG_SYSTEM_PROMPT,
   GESPREKSVERSLAG_USER_MESSAGE,
@@ -89,8 +90,9 @@ export async function POST(req: NextRequest) {
     ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
   });
 
-  const notes = (response.output_text || '').trim();
-  if (!notes) return NextResponse.json({ error: 'Leeg gespreksverslag' }, { status: 502 });
+  const rawNotes = (response.output_text || '').trim();
+  if (!rawNotes) return NextResponse.json({ error: 'Leeg gespreksverslag' }, { status: 502 });
+  const notes = applyCanonicalEmployerSpelling(rawNotes, employerName);
 
   const updated = await updateMeetingCapture(access.supabase, employeeId, captureId, {
     notes_text: notes,

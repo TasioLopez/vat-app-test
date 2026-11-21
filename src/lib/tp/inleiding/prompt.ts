@@ -51,9 +51,11 @@ ad_quote
 - Null wanneer geen AD-inhoud in documenten en geen concept-flag.
 
 extra_aanmelder
-- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw; formaat \"I. Achternaam\"), organisatie en gender ("Man" of "Vrouw") indien bekend.
+- Alleen invullen wanneer intake sectie 4 (of aanmeldformulier) EXPLICIET een tweede, andere persoon noemt naast de primaire contactpersoon/referent (extra_referent_name / extra contact).
+- Vul functie, naam (zonder meneer/mevrouw; formaat \"I. Achternaam\"), organisatie en gender ("Man" of "Vrouw") indien bekend.
 - gender null wanneer geslacht niet vast te stellen is.
-- Anders null voor het hele object.
+- NOOIT een extra_aanmelder verzinnen uit AD-rapport, e-mailhandtekening of opleidingsmanager die niet als extra contact in intake s4 staat.
+- Als er geen tweede persoon is, of die persoon is dezelfde als de primaire referent: null voor het hele object.
 `.trim();
 
 export function buildInleidingContextMessage(context: Record<string, unknown>): string {

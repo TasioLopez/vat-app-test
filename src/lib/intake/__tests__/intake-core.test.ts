@@ -306,6 +306,14 @@ describe('applyIntakeCheckboxOverridesFromText', () => {
     );
     assert.equal(out.ad_report_concept, true);
   });
+
+  it('keeps model Ex-werknemer true when label has no checkbox glyph', () => {
+    const out = applyIntakeCheckboxOverridesFromText(
+      { is_ex_werknemer: true },
+      'Sectie 6\nEx-werknemer\nNaam Arts: P. Mort'
+    );
+    assert.equal(out.is_ex_werknemer, true);
+  });
 });
 
 describe('mergeIntakeFillBlanks', () => {

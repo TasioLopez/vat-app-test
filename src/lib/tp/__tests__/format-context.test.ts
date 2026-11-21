@@ -63,10 +63,21 @@ describe('buildArtsPhrase', () => {
     assert.equal(buildArtsPhrase('Ankersmit'), 'Arts Ankersmit');
   });
 
-  it('returns placeholder when empty', () => {
+  it('returns soft omission when empty (no Arts [naam] placeholders)', () => {
+    assert.equal(buildArtsPhrase(''), 'de bedrijfsarts');
+    assert.equal(buildArtsPhrase(null), 'de bedrijfsarts');
+  });
+
+  it('strips trailing period so template comma does not yield bedrijfsarts.,', () => {
     assert.equal(
-      buildArtsPhrase(''),
-      'Arts [naam] werkend onder supervisie van Arts [supervisor]'
+      buildArtsPhrase(
+        'Arts S. de Beaufort werkend onder supervisie van Bedrijfsarts Y.J. Houwers.'
+      ),
+      'Arts S. de Beaufort werkend onder supervisie van Bedrijfsarts Y.J. Houwers'
+    );
+    assert.doesNotMatch(
+      buildArtsPhrase('Bedrijfsarts M. Montagne.'),
+      /\.$/
     );
   });
 
@@ -117,6 +128,14 @@ describe('cleanDoctorOrgRaw', () => {
     assert.equal(
       cleanDoctorOrgRaw('Bedrijfsarts E. Visser - Bedrijfsarts'),
       'Bedrijfsarts E. Visser'
+    );
+  });
+
+  it('strips trailing period before role cleanup', () => {
+    assert.equal(cleanDoctorOrgRaw('Bedrijfsarts M. Montagne.'), 'Bedrijfsarts M. Montagne');
+    assert.equal(
+      cleanDoctorOrgRaw('Y.J. Houwers, bedrijfsarts.'),
+      'Bedrijfsarts Y.J. Houwers'
     );
   });
 });

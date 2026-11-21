@@ -4,6 +4,7 @@ import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options'
 import type { IntakeSectie3Content } from '@/lib/tp/intake-sectie3/schema';
 import type { IntakeSectie5Content } from '@/lib/tp/intake-sectie5/schema';
 import type { IntakeSectie7Content } from '@/lib/tp/intake-sectie7/schema';
+import { isAbsentText } from '@/lib/utils';
 
 const SOURCE_PREAMBLE =
   'INTAKEFORMULIER (gedigitaliseerd en gevalideerd). Gebruik deze tekst als het intakeformulier.';
@@ -184,6 +185,31 @@ export function intakeTextForPersoonlijkProfiel(intake: IntakeData): string {
   return joinSections(profileSections(intake));
 }
 
+/** Structured s17 facts for persoonlijk-profiel generation (only present values). */
+export function intakeFactsForPersoonlijkProfiel(intake: IntakeData): Record<string, unknown> {
+  const s17 = intake.s17;
+  const facts: Record<string, unknown> = {};
+  const put = (key: string, value: unknown) => {
+    if (value == null) return;
+    if (typeof value === 'string' && (!value.trim() || isAbsentText(value))) return;
+    if (Array.isArray(value) && value.length === 0) return;
+    facts[key] = value;
+  };
+
+  put('rijbewijs', s17.drivers_license_types);
+  put('vervoer', s17.transport_types);
+  put('has_pc', s17.has_pc);
+  put('has_smartphone', s17.has_smartphone);
+  put('computervaardigheden', formatComputerSkillsOption(s17.computer_skills));
+  put('computervaardigheden_toelichting', s17.computer_skills_extra);
+  put('typvaardigheid', s17.typing_skills);
+  put('nederlands_spreken', s17.dutch_speaking);
+  put('nederlands_schrijven', s17.dutch_writing);
+  put('nederlands_lezen', s17.dutch_reading);
+  put('andere_talen', s17.other_languages);
+  return facts;
+}
+
 export function intakeTextForPowMeter(intake: IntakeData): string {
   return joinSections([
     reintegratieSection(intake),
@@ -225,7 +251,10 @@ export function intakeTextForZoekprofiel(intake: IntakeData): string {
 }
 
 export function intakePraktischeBelemmeringen(intake: IntakeData): string {
-  return intake.s17.praktische_belemmeringen.trim();
+  const raw = intake.s17.praktische_belemmeringen.trim();
+  // Meta labels like "niet benoemd" must not become a TP quote.
+  if (isAbsentText(raw)) return '';
+  return raw;
 }
 
 export function intakeToSectie3Content(intake: IntakeData): IntakeSectie3Content | null {

@@ -6,6 +6,7 @@ import {
   mergeReferentFields,
   composeReferentByPriority,
   splitContactPersonName,
+  deriveContactNameFromEmail,
 } from '../nullSafeDetails';
 
 describe('mapAndValidateEmployeeDetails', () => {
@@ -151,6 +152,34 @@ describe('extractReferentFromRaw', () => {
       referent_function: 'Arbeidsdeskundige',
     });
     assert.deepEqual(ref, {});
+  });
+
+  it('derives name from email local-part when name is empty (Melissa)', () => {
+    const ref = extractReferentFromRaw({
+      referent_email: 'Maaike.boudewijn@ihub.nl',
+      referent_phone: '0636472177',
+    });
+    assert.equal(ref.referent_first_name, 'Maaike');
+    assert.equal(ref.referent_last_name, 'Boudewijn');
+    assert.equal(ref.referent_email, 'Maaike.boudewijn@ihub.nl');
+  });
+});
+
+describe('deriveContactNameFromEmail', () => {
+  it('parses voornaam.achternaam locals', () => {
+    assert.deepEqual(deriveContactNameFromEmail('maaike.boudewijn@ihub.nl'), {
+      first_name: 'Maaike',
+      last_name: 'Boudewijn',
+    });
+    assert.deepEqual(deriveContactNameFromEmail('p.deuschle@rocva.nl'), {
+      first_name: 'P',
+      last_name: 'Deuschle',
+    });
+  });
+
+  it('returns null for role-like or single-token locals', () => {
+    assert.equal(deriveContactNameFromEmail('info@ihub.nl'), null);
+    assert.equal(deriveContactNameFromEmail('hr@company.nl'), null);
   });
 });
 

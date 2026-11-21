@@ -57,12 +57,12 @@ Een bron met label aanmeldformulier (ook als het bestandstype "extra" was maar d
 Als die bron aanwezig is, vul s4 primair vanuit het blok contactpersoon op dat formulier (aanmeld wint per veld):
 - Telefoonnr. contactpersoon → referent_phone
 - Mailadres contactpersoon → referent_email
-- Naam contactpersoon → referent_name (expliciet op het formulier; verzin geen naam uit het e-mailadres)
+- Naam contactpersoon → referent_name (expliciet op het formulier; als naam leeg is maar e-mail is voornaam.achternaam@… mag die naam worden afgeleid)
 - Functie contactpersoon → referent_function wanneer aanwezig
 Telefoon/e-mail alleen is niet voldoende wanneer naam en/of functie ook op het formulier staan — vul alle aanwezige contactvelden.
 Als na het aanmeldformulier nog s4-velden leeg zijn (bijv. alleen e-mail/telefoon op aanmeld), vul die gaten uit AD-rapport of overige documenten wanneer daar duidelijk dezelfde werkgever-contactpersoon / opdrachtgever-contact staat.
 Gebruik NOOIT de leidinggevende, de budgethouder, het facturatiecontact, de bedrijfsarts of de arbeidsdeskundige als contactpersoon.
-Laat extra_referent_name en extra_referent_function leeg, tenzij het aanmeldformulier expliciet een tweede contactpersoon noemt.
+Vul extra_referent_name en extra_referent_function wanneer het aanmeldformulier (of een afwijkend aanmeldmail) een tweede, duidelijk andere contactpersoon noemt (naam + functie indien aanwezig). Laat ze leeg als er geen tweede contact is.
 
 GESPREKSVERSLAG
 Een bron met label gespreksverslag is het verslag van wat de werknemer zelf heeft verteld.

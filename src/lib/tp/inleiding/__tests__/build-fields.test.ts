@@ -191,7 +191,10 @@ describe('buildInleidingFields', () => {
       },
     };
     const { inleiding } = buildInleidingFields(baseCtx, content);
-    assert.match(inleiding, /door P\. de Vries, Casemanager bij UWV In opdracht van: meneer J\. Jansen/);
+    assert.match(
+      inleiding,
+      /door P\. de Vries, Casemanager bij UWV\. In opdracht van: meneer J\. Jansen, HR adviseur Cordaan/
+    );
   });
 
   it('does not apply referent gender title to extra aanmelder', () => {
@@ -217,6 +220,7 @@ describe('buildInleidingFields', () => {
     const { inleiding } = buildInleidingFields(ctx, content);
     assert.match(inleiding, /door H\. Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
     assert.match(inleiding, /In opdracht van: mevrouw E\. Bosma, Casemanager Cordaan/);
+    assert.doesNotMatch(inleiding, /B\.V\.\./);
   });
 
   it('uses extra aanmelder gender when provided', () => {
@@ -299,6 +303,37 @@ describe('buildInleidingFields', () => {
     };
     const { inleiding } = buildInleidingFields(baseCtx, content);
     assert.match(inleiding, /door mevrouw N\. van Mierlo, HR Manager bij Axxicom/);
+  });
+
+  it('uses referent functie and never invents literal contactpersoon', () => {
+    const { inleiding } = buildInleidingFields(baseCtx, baseContent);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /contactpersoon/);
+  });
+
+  it('omits role when referent_function is empty', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      referent: { ...baseCtx.referent!, referent_function: null },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    assert.match(inleiding, /door J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /contactpersoon/);
+  });
+
+  it('ignores extra_aanmelder that duplicates the primary referent', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'HR adviseur',
+        naam: 'J. Jansen',
+        organisatie: 'Cordaan',
+        gender: 'Man' as const,
+      },
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
   });
 
   it('falls back to advies_ad_passende_arbeid for AD quote when model quote empty', () => {

@@ -1,7 +1,10 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IntakeData } from '@/lib/intake/schema';
-import { intakeTextForPersoonlijkProfiel } from '@/lib/intake/tp-source';
+import {
+  intakeFactsForPersoonlijkProfiel,
+  intakeTextForPersoonlijkProfiel,
+} from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import {
@@ -88,12 +91,16 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
   await Promise.all(fileIds.map((id) => openai.files.delete(id).catch(() => {})));
 }
 
-function buildApiContext(ctx: PersoonlijkProfielBuildContext): Record<string, unknown> {
+function buildApiContext(
+  ctx: PersoonlijkProfielBuildContext,
+  intake?: IntakeData | null
+): Record<string, unknown> {
   return {
     details: {
       gender: ctx.details.gender,
       leeftijd: calculateAge(ctx.details.date_of_birth),
     },
+    profile_facts: intake ? intakeFactsForPersoonlijkProfiel(intake) : {},
   };
 }
 
@@ -112,7 +119,7 @@ export async function generatePersoonlijkProfielContent(
   }
 
   try {
-    const contextMessage = buildPersoonlijkProfielContextMessage(buildApiContext(ctx));
+    const contextMessage = buildPersoonlijkProfielContextMessage(buildApiContext(ctx, intake));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
       ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),

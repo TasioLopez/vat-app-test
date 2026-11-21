@@ -79,11 +79,15 @@ Na openingszin: compacte opleiding/scholing (feitelijk), eventueel aanvullende a
 - Vaardigheden alleen indien expliciet als vaardigheid benoemd (niet in alinea 2 thuishorend)
 
 ALINEA 2 (volgorde verplicht)
-1. Mobiliteit (rijbewijs, auto, fiets, OV, afhankelijkheid vervoer) — alleen indien in intake
+Gebruik context.profile_facts wanneer aanwezig: elk INGEVULD feit uit rijbewijs/vervoer, Nederlands, andere talen, computer/typvaardigheden MOET in alinea_2 terugkomen (niet weglaten).
+1. Mobiliteit (rijbewijs, auto, fiets, OV, afhankelijkheid vervoer) — alleen indien in intake/profile_facts
 2. Talenkennis — alleen indien in intake:
    - Zelfde niveau over talen: één gecomprimeerde zin (bijv. "De Nederlandse, Engelse en Turkse taal beheerst werknemer goed in spreken, lezen en schrijven.")
    - Verschillende niveaus: groepeer gelijke niveaus in één zin; lagere/andere niveaus in aparte zin(nen)
-3. Digitale vaardigheden inclusief typvaardigheden en benoemde systemen (bijv. SAP, WMS) — alleen indien in intake
+3. Digitale vaardigheden: bij voorkeur ÉÉN gecombineerde zin in de stijl
+   "Werknemer beschikt over een pc of laptop, heeft [niveau] computervaardigheden met Word en Excel en beschikt over goede typvaardigheden."
+   — alleen feiten die in intake/profile_facts staan; typvaardigheid alleen noemen indien aanwezig
+   — NOOIT onnatuurlijk: "typvaardigheid die als goed genoeg is aangeduid" of vergelijkbare meta-formuleringen
 Apparaten:
 - Noem pc of laptop wanneer in intake vermeld
 - Noem smartphone NIET wanneer ook pc/laptop aanwezig is
@@ -103,5 +107,5 @@ ${EX_WERKNEMER_GENERATION_RULE}
 `.trim();
 
 export function buildPersoonlijkProfielContextMessage(context: Record<string, unknown>): string {
-  return `Context (gebruik leeftijd en geslacht voor de openingszin; genereer geen andere data uit context):\n${JSON.stringify(context, null, 2)}`;
+  return `Context (leeftijd/geslacht voor openingszin; profile_facts zijn verplichte feiten voor alinea_2 wanneer aanwezig — geen andere data verzinnen):\n${JSON.stringify(context, null, 2)}`;
 }

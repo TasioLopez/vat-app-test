@@ -6,7 +6,10 @@ import {
   restoreTranscriptText,
   transcribeReplaceDecision,
 } from '@/lib/meetings/audio';
-import { buildGesprekDossierContext } from '@/lib/meetings/prompts';
+import {
+  applyCanonicalEmployerSpelling,
+  buildGesprekDossierContext,
+} from '@/lib/meetings/prompts';
 import {
   looksLikeTranscript,
   meetingImportKind,
@@ -136,6 +139,21 @@ describe('buildGesprekDossierContext', () => {
       buildGesprekDossierContext({ employeeName: ' ', employerName: null, currentJob: '' }),
       ''
     );
+  });
+});
+
+describe('applyCanonicalEmployerSpelling', () => {
+  it('rewrites eHub/Ihub variants to dossier iHub', () => {
+    const notes =
+      'Werknemer werkt bij eHub. Ihub heeft een vestiging in Amsterdam. Andere org Acme blijft.';
+    assert.equal(
+      applyCanonicalEmployerSpelling(notes, 'iHub'),
+      'Werknemer werkt bij iHub. iHub heeft een vestiging in Amsterdam. Andere org Acme blijft.'
+    );
+  });
+
+  it('leaves text unchanged when employer is empty', () => {
+    assert.equal(applyCanonicalEmployerSpelling('Werkt bij eHub', null), 'Werkt bij eHub');
   });
 });
 

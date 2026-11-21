@@ -5,7 +5,7 @@ import { getIntakeContextForTp } from "@/lib/document-analysis";
 import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
 import { intakePraktischeBelemmeringen } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
-import { PRACTISCHE_BELEMMERINGEN_DEFAULT } from "@/lib/tp2026/mapping";
+import { resolvePraktischeBelemmeringenValue } from "@/lib/tp2026/mapping";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -22,8 +22,19 @@ function stripCitations(text: string): string {
 const INTAKE_BELEMMERINGEN_FOCUS = `
 Extraheer UITSLUITEND de ingevulde tekst uit sectie 17 "Bijzonderheden", subveld "Praktische belemmeringen:" (Juni V5 intakeformulier).
 Neem NIET op: de algemene vraag "Zijn er bijzonderheden waar ik rekening mee moet houden", het blok "Algemene informatie", opleidingen, vervoer, rijbewijs, talen, of andere secties.
-Als het subveld ontbreekt (oud formulier zonder sectie 17) of leeg is: geef een lege string.
+Als het subveld ontbreekt (oud formulier zonder sectie 17), leeg is, of "niet benoemd"/"geen" zegt: geef een lege string.
 `.trim();
+
+async function upsertBelemmeringen(employeeId: string, value: string) {
+  await supabase.from("tp_meta").upsert(
+    { employee_id: employeeId, praktische_belemmeringen: value } as any,
+    { onConflict: "employee_id" }
+  );
+  return NextResponse.json({
+    details: { praktische_belemmeringen: value },
+    autofilled_fields: ["praktische_belemmeringen"],
+  });
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,16 +43,10 @@ export async function GET(req: NextRequest) {
     const { employeeId } = access;
 
     const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
-    const verbatim = validated ? intakePraktischeBelemmeringen(validated.data) : '';
-    if (verbatim) {
-      await supabase.from("tp_meta").upsert(
-        { employee_id: employeeId, praktische_belemmeringen: verbatim } as any,
-        { onConflict: "employee_id" }
-      );
-      return NextResponse.json({
-        details: { praktische_belemmeringen: verbatim },
-        autofilled_fields: ["praktische_belemmeringen"],
-      });
+    if (validated) {
+      // Validated intake exists: use field value or default — never fail with "geen intake".
+      const verbatim = intakePraktischeBelemmeringen(validated.data);
+      return upsertBelemmeringen(employeeId, resolvePraktischeBelemmeringenValue(verbatim));
     }
 
     const INTAKE = await getIntakeContextForTp(
@@ -51,13 +56,15 @@ export async function GET(req: NextRequest) {
       INTAKE_BELEMMERINGEN_FOCUS
     );
 
-    if (!INTAKE) return NextResponse.json({ error: "Geen intakeformulier gevonden" }, { status: 200 });
+    if (!INTAKE) {
+      return NextResponse.json({ error: "Geen intakeformulier gevonden" }, { status: 200 });
+    }
 
     const system = `
 Extraheer uitsluitend de tekst onder "Praktische belemmeringen:" in sectie 17 "Bijzonderheden" van het intakeformulier.
 Kopieer de tekst letterlijk over — geen herschrijven, samenvatten of nieuwe opsommingen tenzij die al in het formulier staan.
 Neem GEEN tekst op uit "Zijn er bijzonderheden waar ik rekening mee moet houden", "Algemene informatie", of andere secties.
-Als het veld ontbreekt (oudere intakeformulieren) of leeg is: geef een lege string.
+Als het veld ontbreekt, leeg is, of meta-tekst zoals "niet benoemd"/"geen" bevat: geef een lege string.
 Lever via function-call: { praktische_belemmeringen: string }.
 `.trim();
 
@@ -86,14 +93,7 @@ Lever via function-call: { praktische_belemmeringen: string }.
     const call = completion.choices[0]?.message?.tool_calls?.[0];
     const parsed = JSON.parse(call?.function?.arguments || "{}");
     const extracted = stripCitations((parsed?.praktische_belemmeringen || "").trim());
-    const praktische_belemmeringen = extracted || PRACTISCHE_BELEMMERINGEN_DEFAULT;
-
-    await supabase.from("tp_meta").upsert(
-      { employee_id: employeeId, praktische_belemmeringen } as any,
-      { onConflict: "employee_id" }
-    );
-
-    return NextResponse.json({ details: { praktische_belemmeringen }, autofilled_fields: ["praktische_belemmeringen"] });
+    return upsertBelemmeringen(employeeId, resolvePraktischeBelemmeringenValue(extracted));
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("❌ belemmeringen error", e);

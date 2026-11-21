@@ -14,7 +14,7 @@ export function isExWerknemer(meta?: { is_ex_werknemer?: boolean | null }): bool
 
 /**
  * Deterministic Ex-werknemer checkbox detection from intake plain text (Juni V6).
- * Only returns true/false when a checkbox glyph/mark is adjacent to "Ex-werknemer".
+ * Returns true/false when a checkbox glyph/mark or clear ja/nee cue is adjacent.
  * Returns null when no clear checkbox state is found (caller may fall back to model).
  */
 export function detectExWerknemerFromText(text: string | null | undefined): boolean | null {
@@ -22,27 +22,32 @@ export function detectExWerknemerFromText(text: string | null | undefined): bool
   const normalized = text.replace(/\u00a0/g, ' ');
 
   const label = EX_WERKNEMER_LABEL.replace('-', '[-\\s]?');
+  const checkedGlyph = '[☒☑✓✔■●◆▪]';
+  const uncheckedGlyph = '[☐□○◻]';
 
-  // Checked: ☒ Ex-werknemer / Ex-werknemer ☒ / [x] Ex-werknemer
+  // Checked: ☒ Ex-werknemer / Ex-werknemer ☒ / [x] / x Ex-werknemer / Ex-werknemer: ja
   if (
-    new RegExp(`[☒☑✓✔]\\s*${label}\\b`, 'i').test(normalized) ||
-    new RegExp(`\\b${label}\\s*[☒☑✓✔]`, 'i').test(normalized) ||
+    new RegExp(`${checkedGlyph}\\s*${label}\\b`, 'i').test(normalized) ||
+    new RegExp(`\\b${label}\\s*${checkedGlyph}`, 'i').test(normalized) ||
     new RegExp(`\\[[xX]\\]\\s*${label}\\b`, 'i').test(normalized) ||
     new RegExp(`\\b${label}\\s*\\[[xX]\\]`, 'i').test(normalized) ||
     new RegExp(`\\([xX]\\)\\s*${label}\\b`, 'i').test(normalized) ||
-    new RegExp(`\\b${label}\\s*\\([xX]\\)`, 'i').test(normalized)
+    new RegExp(`\\b${label}\\s*\\([xX]\\)`, 'i').test(normalized) ||
+    new RegExp(`(?:^|\\s)[xX]\\s+${label}\\b`, 'i').test(normalized) ||
+    new RegExp(`\\b${label}\\s*[:=]?\\s*(?:ja|yes)\\b`, 'i').test(normalized)
   ) {
     return true;
   }
 
-  // Unchecked: ☐ Ex-werknemer / Ex-werknemer ☐
+  // Unchecked: ☐ Ex-werknemer / Ex-werknemer ☐ / Ex-werknemer: nee
   if (
-    new RegExp(`[☐□]\\s*${label}\\b`, 'i').test(normalized) ||
-    new RegExp(`\\b${label}\\s*[☐□]`, 'i').test(normalized) ||
+    new RegExp(`${uncheckedGlyph}\\s*${label}\\b`, 'i').test(normalized) ||
+    new RegExp(`\\b${label}\\s*${uncheckedGlyph}`, 'i').test(normalized) ||
     new RegExp(`\\[\\s*\\]\\s*${label}\\b`, 'i').test(normalized) ||
     new RegExp(`\\b${label}\\s*\\[\\s*\\]`, 'i').test(normalized) ||
     new RegExp(`\\(\\s*\\)\\s*${label}\\b`, 'i').test(normalized) ||
-    new RegExp(`\\b${label}\\s*\\(\\s*\\)`, 'i').test(normalized)
+    new RegExp(`\\b${label}\\s*\\(\\s*\\)`, 'i').test(normalized) ||
+    new RegExp(`\\b${label}\\s*[:=]?\\s*(?:nee|no)\\b`, 'i').test(normalized)
   ) {
     return false;
   }

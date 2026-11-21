@@ -23,7 +23,7 @@ VELDEN (exacte JSON keys):
 - city: woonplaats (sectie 2)
 - phone: telefoonnummer WERKNEMER sectie 2 — NIET sectie 4 contactpersoon
 - email: email WERKNEMER sectie 2
-- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; null indien leeg, "Nee", "Geen" of n.v.t. — NOOIT "Nee"/"Geen" als waarde opslaan; alleen echte werkgeversnamen
+- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; null indien leeg, "Nee", "Geen", n.v.t., "geen tweede dienstverband" of niet van toepassing — NOOIT negatieve zinnen of "Nee"/"Geen" als waarde opslaan; alleen echte werkgeversnamen
 
 SECTIE 4 — AANMELDING (ENIGE BRON referent_*):
 - "Naam contactpersoon:" → referent_first_name + referent_last_name (laatste woord = achternaam)

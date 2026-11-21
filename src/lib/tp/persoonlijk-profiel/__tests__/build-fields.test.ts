@@ -213,6 +213,14 @@ describe('sanitizeFragment', () => {
     assert.doesNotMatch(result, /niet opgenomen/i);
     assert.match(result, /supervisor/i);
   });
+
+  it('strips unnatural typvaardigheid goed genoeg phrasing', () => {
+    const result = sanitizeFragment(
+      'Werknemer beschikt over een typvaardigheid die als goed genoeg is aangeduid.'
+    );
+    assert.doesNotMatch(result, /goed genoeg/i);
+    assert.doesNotMatch(result, /typvaardigheid die als/i);
+  });
 });
 
 describe('hasValidOpening', () => {

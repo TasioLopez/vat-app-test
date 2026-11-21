@@ -161,6 +161,9 @@ describe('buildPara1Closing', () => {
     ]);
     assert.match(text, /Functionele Mogelijkheden Lijst van 14 april 2026/);
     assert.match(text, /geactualiseerd in de spreekuurrapportage van 2 mei 2026/);
+    assert.doesNotMatch(text, /\.\s+en geactualiseerd/);
+    assert.match(text, /14 april 2026 en geactualiseerd/);
+    assert.match(text, /2 mei 2026\.$/);
   });
 });
 

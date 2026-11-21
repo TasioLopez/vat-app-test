@@ -48,7 +48,9 @@ function fillTemplate(
   template: string,
   vars: { datum: string; artsPhrase: string }
 ): string {
-  return template.replace('{datum}', vars.datum).replace('{artsPhrase}', vars.artsPhrase);
+  // Defensive: trailing punctuation on artsPhrase must not collide with template comma.
+  const artsPhrase = vars.artsPhrase.replace(/[.,;:\-]+\s*$/, '').trim() || vars.artsPhrase;
+  return template.replace('{datum}', vars.datum).replace('{artsPhrase}', artsPhrase);
 }
 
 function resolveIntroTemplate(kind: string | null | undefined): string {

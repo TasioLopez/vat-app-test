@@ -87,6 +87,34 @@ export function splitContactPersonName(fullName: string): { first_name: string; 
   };
 }
 
+function titleCaseToken(token: string): string {
+  const t = token.trim();
+  if (!t) return '';
+  if (t.length === 1) return t.toUpperCase();
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+/**
+ * Derive contact first/last from email local-part when name is missing.
+ * Accepts voornaam.achternaam / voornaam_achternaam / voornaam-achternaam (2+ tokens).
+ */
+export function deriveContactNameFromEmail(
+  email: string | null | undefined
+): { first_name: string; last_name: string } | null {
+  if (!email || typeof email !== 'string') return null;
+  const local = email.trim().split('@')[0] || '';
+  if (!local || !/^[a-zA-Z0-9._-]+$/.test(local)) return null;
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  // Skip pure numeric / role-like locals (info, hr, admin)
+  const roleLike = /^(info|hr|admin|contact|noreply|no-reply|secretariaat)$/i;
+  if (parts.every((p) => roleLike.test(p))) return null;
+  const last_name = titleCaseToken(parts[parts.length - 1]);
+  const first_name = parts.slice(0, -1).map(titleCaseToken).join(' ');
+  if (!first_name || !last_name) return null;
+  return { first_name, last_name };
+}
+
 function normalizeReferentPhone(value: unknown): string | undefined {
   if (!isPresent(value)) return undefined;
   return formatDutchPhoneDisplay(String(value));
@@ -299,6 +327,14 @@ export function extractReferentFromRaw(
         if (split.last_name) out.referent_last_name = split.last_name;
         break;
       }
+    }
+  }
+
+  if (!out.referent_first_name && !out.referent_last_name && out.referent_email) {
+    const fromEmail = deriveContactNameFromEmail(String(out.referent_email));
+    if (fromEmail) {
+      out.referent_first_name = fromEmail.first_name;
+      out.referent_last_name = fromEmail.last_name;
     }
   }
 

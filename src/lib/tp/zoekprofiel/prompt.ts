@@ -131,13 +131,15 @@ Genereer NIET de afsluitende zin over belastbaarheidsdocumenten — die wordt do
 Genereer NIET actualisatie-clausules — lever die via het veld actualisaties (type + datum_voluit, chronologisch).
 
 ACTUALISATIES (veld actualisaties)
-Wanneer spreekuurrapportage of artsenverduidelijking de leidende belastbaarheid actualiseert, vul actualisaties met type en datum voluit. Alleen wanneer inhoudelijk relevant voor het zoekprofiel.
+Vul actualisaties ALLEEN wanneer spreekuurrapportage of artsenverduidelijking de leidende belastbaarheid INHOUDELIJK wijzigt (beperkingen/voorwaarden toevoegt of weghaalt).
+Wanneer de latere rapportage alleen bevestigt wat al in FML/IZP staat, of alleen nog resteert zonder wijziging t.o.v. het zoekprofiel: actualisaties = null (geen "geactualiseerd"-clausule).
 
 TWEEDE ALINEA (alinea_2) — VERTALING GRENZEN
-Vertaal alle arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete bijzondere voorwaarden uit de leidende belastbaarheidsbron naar concrete kenmerken van passend werk:
-- has_belastbaarheids_doc true → leidend FML/IZP/LAB
+Vertaal alle arbeidskundig relevante, afwijkend gescoorde beperkingen en expliciete bijzondere voorwaarden naar concrete kenmerken van passend werk:
+- has_belastbaarheids_doc true → leidend FML/IZP/LAB als documenttype
+- Wanneer een latere spreekuurrapportage de beperkingen heeft vernauwd (minder rubrieken resteren): vertaal die effectieve, actuele set — niet de oudere bredere FML-lijst
 - has_belastbaarheids_doc false → expliciete beperkingen/voorwaarden in het AD-rapport (en zo nodig intake)
-Verwerk uitsluitend wat daadwerkelijk in die bron staat.
+Verwerk uitsluitend wat daadwerkelijk in die bron(nen) staat.
 
 Controleer de volgende rubrieken:
 ${BELASTBAARHEID_RUBRICS.map((r) => `- ${r}`).join('\n')}

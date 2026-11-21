@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createEmptyIntakeData } from '@/lib/intake/schema';
 import {
+  intakeFactsForPersoonlijkProfiel,
   intakePraktischeBelemmeringen,
   intakeTextForInleiding,
   intakeTextForPersoonlijkProfiel,
@@ -103,6 +104,19 @@ describe('validated intake TP source', () => {
     assert.doesNotMatch(text, /Lezen/);
   });
 
+  it('exports structured profile facts for persoonlijk profiel', () => {
+    const data = createEmptyIntakeData();
+    data.s17.drivers_license_types = ['B'];
+    data.s17.dutch_speaking = 'Goed';
+    data.s17.typing_skills = 'goed';
+    data.s17.has_pc = true;
+    const facts = intakeFactsForPersoonlijkProfiel(data);
+    assert.deepEqual(facts.rijbewijs, ['B']);
+    assert.equal(facts.nederlands_spreken, 'Goed');
+    assert.equal(facts.typvaardigheid, 'goed');
+    assert.equal(facts.has_pc, true);
+  });
+
   it('includes hours and daily activity for the POW-meter', () => {
     const data = createEmptyIntakeData();
     data.s6.uren_werkzaam = '12 uur';
@@ -176,6 +190,12 @@ describe('validated intake TP source', () => {
     const data = createEmptyIntakeData();
     data.s17.praktische_belemmeringen = 'Geen rijbewijs en beperkt ov.';
     assert.equal(intakePraktischeBelemmeringen(data), 'Geen rijbewijs en beperkt ov.');
+  });
+
+  it('treats niet benoemd as empty practical barriers', () => {
+    const data = createEmptyIntakeData();
+    data.s17.praktische_belemmeringen = 'niet benoemd';
+    assert.equal(intakePraktischeBelemmeringen(data), '');
   });
 
   it('drops intake PDFs and keeps AD and FML documents', () => {

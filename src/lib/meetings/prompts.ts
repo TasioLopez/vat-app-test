@@ -2,6 +2,7 @@ export const GESPREKSVERSLAG_SYSTEM_PROMPT = `Je schrijft een gespreksverslag va
 
 Schrijf alleen wat in het transcript staat. Verzin geen feiten, data, beperkingen of citaten.
 Een dossierblok mag alleen de schrijfwijze van de naam van deze werknemer en deze werkgever corrigeren. Andere organisaties en alle overige feiten blijven zoals in het transcript.
+Voor DEZE werkgever: gebruik altijd de canonieke spelling uit het dossier, ook bij kleine transcriptfouten (bijv. eHub / Ihub / IHUB → iHub wanneer Werkgever: iHub).
 Onderscheid vragen van de loopbaanadviseur en antwoorden van de werknemer wanneer dat uit de tekst blijkt. Als onduidelijk is wie iets zei, formuleer neutraal en ken het niet toe.
 Geen medische conclusie die de werknemer of adviseur niet zelf heeft uitgesproken.
 
@@ -34,7 +35,30 @@ export function buildGesprekDossierContext(input: GesprekDossierContext): string
   if (employer) lines.push(`Werkgever: ${employer}`);
   if (job) lines.push(`Huidige functie: ${job}`);
   lines.push(
-    'Gebruik deze schrijfwijze voor de naam van deze werknemer en deze werkgever als het transcript een duidelijke verschrijving heeft. Andere organisaties blijven zoals ze in het transcript staan. De functie is context voor wie de werknemer is; verzin geen taken die het transcript niet noemt.'
+    'Gebruik deze schrijfwijze voor de naam van deze werknemer en deze werkgever als het transcript een duidelijke verschrijving heeft (inclusief eHub↔iHub-achtige homofonen van DEZE werkgever). Andere organisaties blijven zoals ze in het transcript staan. De functie is context voor wie de werknemer is; verzin geen taken die het transcript niet noemt.'
   );
   return lines.join('\n');
+}
+
+/**
+ * Deterministic post-pass: replace near-homophone spellings of THIS employer with the canonical form.
+ * Allows case differences and a leading i/e swap (eHub ↔ iHub). Does not touch other organizations.
+ */
+export function applyCanonicalEmployerSpelling(
+  text: string,
+  employerName: string | null | undefined
+): string {
+  const canonical = employerName?.trim();
+  if (!canonical || !text) return text;
+
+  const canonLower = canonical.toLowerCase();
+  const variants = new Set<string>([canonLower]);
+  const first = canonLower[0];
+  if (first === 'i') variants.add(`e${canonLower.slice(1)}`);
+  if (first === 'e') variants.add(`i${canonLower.slice(1)}`);
+
+  return text.replace(/\b[\w.-]+\b/g, (word) => {
+    if (variants.has(word.toLowerCase())) return canonical;
+    return word;
+  });
 }
