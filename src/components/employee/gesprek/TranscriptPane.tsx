@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useGesprekFileDrop } from '@/components/employee/gesprek/file-drop';
 import { FileUp, Mic, MoreHorizontal, Pencil, RotateCcw, Square, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,6 +85,7 @@ export function TranscriptPane({
   const empty = !transcript.trim() && !recording && !forceEditor;
   const chip = sourceLabel(transcriptSource);
   const order = useMemo(() => (turns ? speakerOrder(turns) : []), [turns]);
+  const drop = useGesprekFileDrop(busy, (file) => onUploadFile(file));
 
   const actions = !empty && !recording ? (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100">
@@ -156,7 +158,13 @@ export function TranscriptPane({
   ) : null;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+    <section
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4',
+        !empty && drop.active && 'border-purple-400 bg-purple-50/50'
+      )}
+      {...(empty ? {} : drop.dropProps)}
+    >
       <div className="flex min-h-8 flex-nowrap items-center justify-between gap-x-3">
         <h3
           className="shrink-0 text-sm font-semibold text-gray-900"
@@ -208,12 +216,19 @@ export function TranscriptPane({
             </Button>
           </div>
 
-          <label className={cn(CHOICE_CLASS, busy && 'pointer-events-none opacity-50')}>
+          <label
+            className={cn(
+              CHOICE_CLASS,
+              busy && 'pointer-events-none opacity-50',
+              drop.active && 'border-purple-400 bg-purple-50'
+            )}
+            {...drop.dropProps}
+          >
             <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
               <FileUp className="h-4 w-4 text-purple-600" aria-hidden />
               Bestand uploaden
             </span>
-            <span className="text-xs text-gray-500">.txt, .md of .docx</span>
+            <span className="text-xs text-gray-500">.txt, .md of .docx, of sleep het hierheen</span>
             <input
               type="file"
               accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

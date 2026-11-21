@@ -8,7 +8,11 @@ import {
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import { generateNotesDecision } from '@/lib/meetings/audio';
 import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
-import { GESPREKSVERSLAG_SYSTEM_PROMPT, GESPREKSVERSLAG_USER_MESSAGE } from '@/lib/meetings/prompts';
+import {
+  buildGesprekDossierContext,
+  GESPREKSVERSLAG_SYSTEM_PROMPT,
+  GESPREKSVERSLAG_USER_MESSAGE,
+} from '@/lib/meetings/prompts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +45,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const { data: employee } = await access.supabase
+    .from('employees')
+    .select('first_name, last_name, client_id')
+    .eq('id', employeeId)
+    .maybeSingle();
+  let employerName: string | null = null;
+  if (employee?.client_id) {
+    const { data: client } = await access.supabase
+      .from('clients')
+      .select('name')
+      .eq('id', employee.client_id)
+      .maybeSingle();
+    employerName = client?.name ?? null;
+  }
+  const { data: details } = await access.supabase
+    .from('employee_details')
+    .select('current_job')
+    .eq('employee_id', employeeId)
+    .maybeSingle();
+  const dossier = buildGesprekDossierContext({
+    employeeName: [employee?.first_name, employee?.last_name].filter(Boolean).join(' '),
+    employerName,
+    currentJob: details?.current_job,
+  });
+
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const reasoningEffort = getDocumentExtractionReasoningEffort();
   const response = await openai.responses.create({
@@ -52,7 +81,7 @@ export async function POST(req: NextRequest) {
         content: [
           {
             type: 'input_text',
-            text: `${GESPREKSVERSLAG_USER_MESSAGE}\n\n${transcript}`,
+            text: [GESPREKSVERSLAG_USER_MESSAGE, dossier, transcript].filter(Boolean).join('\n\n'),
           },
         ],
       },

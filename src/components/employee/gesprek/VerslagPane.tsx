@@ -12,6 +12,7 @@ import {
 import type { NotesOrigin } from '@/lib/meetings/audio';
 import { cn } from '@/lib/utils';
 import { originLabel } from '@/components/employee/gesprek/labels';
+import { useGesprekFileDrop } from '@/components/employee/gesprek/file-drop';
 
 const VerslagEditor = dynamic(
   () =>
@@ -60,6 +61,7 @@ export function VerslagPane({
 }: Props) {
   const empty = !notes.trim() && !writing;
   const chip = originLabel(notesOrigin);
+  const drop = useGesprekFileDrop(busy || recording, (file) => onUploadFile(file));
 
   const moreMenu = (
     <DropdownMenu modal={false}>
@@ -156,7 +158,13 @@ export function VerslagPane({
     ) : null;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+    <section
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4',
+        !empty && drop.active && 'border-emerald-500 bg-emerald-100/70'
+      )}
+      {...(empty ? {} : drop.dropProps)}
+    >
       {empty ? (
         <>
           <h3
@@ -182,12 +190,19 @@ export function VerslagPane({
               </span>
             </button>
 
-            <label className={cn(CHOICE_CLASS, (busy || recording) && 'pointer-events-none opacity-50')}>
+            <label
+              className={cn(
+                CHOICE_CLASS,
+                (busy || recording) && 'pointer-events-none opacity-50',
+                drop.active && 'border-emerald-500 bg-emerald-50'
+              )}
+              {...drop.dropProps}
+            >
               <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
                 <FileUp className="h-4 w-4 text-emerald-700" aria-hidden />
                 Bestand uploaden
               </span>
-              <span className="text-xs text-gray-500">Bestaand verslag (.txt, .md, .docx)</span>
+              <span className="text-xs text-gray-500">.txt, .md of .docx, of sleep het hierheen</span>
               <input
                 type="file"
                 accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

@@ -6,6 +6,7 @@ import {
   restoreTranscriptText,
   transcribeReplaceDecision,
 } from '@/lib/meetings/audio';
+import { buildGesprekDossierContext } from '@/lib/meetings/prompts';
 import {
   looksLikeTranscript,
   meetingImportKind,
@@ -115,6 +116,26 @@ describe('transcribeReplaceDecision', () => {
     assert.equal(transcribeReplaceDecision('al een transcript', false), 'needs-replace');
     assert.equal(transcribeReplaceDecision('al een transcript', true), 'ok');
     assert.equal(transcribeReplaceDecision('  ', false), 'ok');
+  });
+});
+
+describe('buildGesprekDossierContext', () => {
+  it('includes the worker and employer and leaves out an empty job', () => {
+    const text = buildGesprekDossierContext({
+      employeeName: '  Jesse Habib  ',
+      employerName: 'iHub',
+      currentJob: '   ',
+    });
+    assert.match(text, /Werknemer: Jesse Habib/);
+    assert.match(text, /Werkgever: iHub/);
+    assert.doesNotMatch(text, /Huidige functie/);
+  });
+
+  it('returns nothing when the dossier has no spelling to offer', () => {
+    assert.equal(
+      buildGesprekDossierContext({ employeeName: ' ', employerName: null, currentJob: '' }),
+      ''
+    );
   });
 });
 

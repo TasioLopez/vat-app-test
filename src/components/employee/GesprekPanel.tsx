@@ -337,12 +337,56 @@ export default function GesprekPanel({
       setForcePlain(false);
       setEditingTranscript(false);
       setForceTranscriptEditor(false);
-      await persistTranscript(text, 'upload');
+      const saved = await persistTranscript(text, 'upload');
+      setBusy('Gespreksverslag maken…');
+      const outcome = await requestGeneratedNotes(saved.id, false);
+      if (outcome === 'needs-replace') {
+        askConfirm({
+          title: 'Verslag vervangen?',
+          description:
+            'Dit verslag is zelf aangeleverd. Het wordt vervangen door een verslag uit het transcript.',
+          confirmLabel: 'Vervangen',
+          variant: 'destructive',
+          onConfirm: async () => {
+            setBusy('Gespreksverslag maken…');
+            setError(null);
+            try {
+              const replaced = await requestGeneratedNotes(saved.id, true);
+              if (replaced === 'needs-replace') {
+                setNeedsGenerateReplace(true);
+                setError('Dit verslag is zelf aangeleverd.');
+              }
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Verslag maken mislukt');
+            } finally {
+              setBusy(null);
+            }
+          },
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload mislukt');
     } finally {
       setBusy(null);
     }
+  }
+
+  async function requestGeneratedNotes(
+    captureId: string,
+    replace: boolean
+  ): Promise<'ok' | 'needs-replace'> {
+    const res = await fetch('/api/meetings/generate-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId, captureId, replace }),
+    });
+    const json = await readJson(res);
+    if (res.status === 409 && json.needsReplace === true) return 'needs-replace';
+    if (!res.ok) throw new Error(String(json.error || 'Verslag maken mislukt'));
+    adoptNotes(json.capture as MeetingCapture);
+    setNeedsGenerateReplace(false);
+    setPane('verslag');
+    return 'ok';
   }
 
   function uploadTranscriptFile(file: File | null) {
@@ -590,24 +634,11 @@ export default function GesprekPanel({
       try {
         if (!transcript.trim()) throw new Error('Er is nog geen transcript.');
         const saved = await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
-        const res = await fetch('/api/meetings/generate-notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            employeeId,
-            captureId: saved.id,
-            replace: replace || handWritten,
-          }),
-        });
-        const json = await readJson(res);
-        if (res.status === 409 && json.needsReplace === true) {
+        const outcome = await requestGeneratedNotes(saved.id, replace || handWritten);
+        if (outcome === 'needs-replace') {
           setNeedsGenerateReplace(true);
-          setError(String(json.error || 'Dit verslag is zelf aangeleverd.'));
-          return;
+          setError('Dit verslag is zelf aangeleverd.');
         }
-        if (!res.ok) throw new Error(String(json.error || 'Verslag maken mislukt'));
-        adoptNotes(json.capture as MeetingCapture);
-        setPane('verslag');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Verslag maken mislukt');
       } finally {
