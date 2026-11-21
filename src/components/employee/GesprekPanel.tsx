@@ -261,7 +261,8 @@ export default function GesprekPanel({
 
   async function persistTranscript(next: string, source?: TranscriptSource): Promise<MeetingCapture> {
     const text = next.trim();
-    if (!text) throw new Error('Het transcript is leeg.');
+    const captureId = captureIdRef.current;
+    if (!text && !captureId) throw new Error('Het transcript is leeg.');
     const payload: Record<string, unknown> = {
       employeeId,
       transcriptText: text,
@@ -269,7 +270,6 @@ export default function GesprekPanel({
       purpose,
     };
     if (source) payload.transcriptSource = source;
-    const captureId = captureIdRef.current;
     const res = await fetch(captureId ? `/api/meetings/captures/${captureId}` : '/api/meetings/captures', {
       method: captureId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -284,8 +284,9 @@ export default function GesprekPanel({
 
   async function persistNotes(next: string, origin: NotesOrigin): Promise<MeetingCapture> {
     const text = next.trim();
-    if (!text) throw new Error('Het verslag is leeg.');
     const captureId = captureIdRef.current;
+    if (!text && !captureId) throw new Error('Het verslag is leeg.');
+    const wasAccepted = activeCaptureRef.current?.status === 'accepted';
     const res = await fetch(captureId ? `/api/meetings/captures/${captureId}` : '/api/meetings/captures', {
       method: captureId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -301,6 +302,9 @@ export default function GesprekPanel({
     if (!res.ok) throw new Error(String(json.error || 'Verslag opslaan mislukt'));
     const capture = json.capture as MeetingCapture;
     adoptNotes(capture);
+    if (wasAccepted && capture.status !== 'accepted') {
+      onDocumentsChanged();
+    }
     return capture;
   }
 
@@ -441,11 +445,9 @@ export default function GesprekPanel({
     setError(null);
     try {
       if (transcript !== savedTranscript) {
-        if (!transcript.trim()) throw new Error('Het transcript is leeg.');
         await persistTranscript(transcript, transcriptSource ? undefined : 'paste');
       }
       if (notes !== savedNotes) {
-        if (!notes.trim()) throw new Error('Het verslag is leeg.');
         await persistNotes(notes, notesOrigin ?? 'pasted');
       }
     } catch (e) {

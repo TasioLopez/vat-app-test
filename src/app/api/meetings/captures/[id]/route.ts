@@ -57,9 +57,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
   if (typeof body?.notesText === 'string') {
     const notesText = body.notesText.trim();
-    patch.notes_text = notesText;
-    if (isNotesOrigin(body?.notesOrigin)) patch.notes_origin = body.notesOrigin;
-    else if (!existing.data.notes_origin && notesText) patch.notes_origin = 'pasted';
+    patch.notes_text = notesText || null;
+    if (!notesText) {
+      patch.notes_origin = null;
+    } else if (isNotesOrigin(body?.notesOrigin)) {
+      patch.notes_origin = body.notesOrigin;
+    } else if (!existing.data.notes_origin) {
+      patch.notes_origin = 'pasted';
+    }
     patch.status = 'notes_draft';
     if (existing.data.status === 'accepted') patch.notes_document_id = null;
   }

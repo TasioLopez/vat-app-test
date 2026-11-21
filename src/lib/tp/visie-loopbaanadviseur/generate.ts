@@ -1,11 +1,13 @@
 import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import type { IntakeData } from '@/lib/intake/schema';
 import { intakeTextForVisieLoopbaanadviseur, omitIntakePdfDocs } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
 import { isAdviesNbNoReport } from '@/lib/tp/ad-advies/constants';
 import { hasDefinitiveAdReport, isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import {
   buildVisieLoopbaanadviseurFields,
   type VisieLoopbaanadviseurBuildContext,
@@ -64,7 +66,8 @@ export function getVisieLoopbaanadviseurDocCategory(
     t.includes('lab') ||
     t.includes('functiemogelijkhedenlijst') ||
     t.includes('inzetbaarheidsprofiel') ||
-    t.includes('lijst arbeidsmogelijkheden')
+    t.includes('lijst arbeidsmogelijkheden') ||
+    isSpreekReportageDocType(type)
   ) {
     return 'belastbaarheid';
   }
@@ -75,6 +78,14 @@ export function getVisieLoopbaanadviseurDocCategory(
     return 'intake';
   }
   return null;
+}
+
+/** True when TP already has a real belastbaarheidsprofiel (not the unavailable placeholder). */
+export function hasMeaningfulPrognose(prognose: string | null | undefined): boolean {
+  const raw = String(prognose ?? '').trim();
+  if (!raw) return false;
+  if (raw === BELASTBAARHEID_GEEN_PROFIEL.trim()) return false;
+  return true;
 }
 
 export function filterVisieLoopbaanadviseurDocs(
@@ -130,7 +141,8 @@ export function detectDocumentScenario(
     extractAdExclusionPhrases(meta?.advies_ad_passende_arbeid).length > 0;
   const hasDefinitiveAd = hasDefinitiveAdReport(meta ?? undefined);
   const hasAdviesNarrative = hasMeaningfulAdAdvies(meta?.advies_ad_passende_arbeid);
-  const hasBelastbaarheid = categories.has('belastbaarheid');
+  const hasBelastbaarheid =
+    categories.has('belastbaarheid') || hasMeaningfulPrognose(meta?.prognose_bedrijfsarts);
 
   if (isConcept) {
     return hasFuncties ? 'concept_ad_with_functies' : 'concept_ad_no_functies';

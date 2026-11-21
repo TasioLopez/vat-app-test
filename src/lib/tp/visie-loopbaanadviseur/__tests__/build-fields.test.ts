@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
+import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import {
   buildFunctiesIntro,
   buildVisieLoopbaanadviseurBlock,
@@ -23,6 +24,7 @@ import {
   detectDocumentScenario,
   filterVisieLoopbaanadviseurDocs,
   getVisieLoopbaanadviseurDocCategory,
+  hasMeaningfulPrognose,
 } from '../generate';
 import { parseFunctieLine } from '../parse-functie-line';
 import type { VisieLoopbaanadviseurContentResult } from '../schema';
@@ -187,6 +189,48 @@ describe('detectDocumentScenario', () => {
     assert.equal(detectDocumentScenario(docs, { has_ad_report: false }), 'belastbaarheid_only');
   });
 
+  it('returns belastbaarheid_only for intake + spreekuur without AD (Mulkiye)', () => {
+    const docs = [
+      { type: 'intakeformulier', url: 'a' },
+      { type: 'spreek_reportage', url: 'b' },
+    ];
+    assert.equal(detectDocumentScenario(docs, { has_ad_report: false }), 'belastbaarheid_only');
+  });
+
+  it('returns belastbaarheid_only when meaningful prognose exists without FML/spreekuur', () => {
+    const docs = [{ type: 'intakeformulier', url: 'a' }];
+    assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: false,
+        prognose_bedrijfsarts:
+          'Conform de FML van 18 november 2026 gelden beperkingen in dynamische handelingen.',
+      }),
+      'belastbaarheid_only'
+    );
+  });
+
+  it('keeps intake_only when prognose is the unavailable placeholder', () => {
+    const docs = [{ type: 'intakeformulier', url: 'a' }];
+    assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: false,
+        prognose_bedrijfsarts: BELASTBAARHEID_GEEN_PROFIEL,
+      }),
+      'intake_only'
+    );
+  });
+
+  it('keeps intake_only when only zoekprofiel is filled', () => {
+    const docs = [{ type: 'intakeformulier', url: 'a' }];
+    assert.equal(
+      detectDocumentScenario(docs, {
+        has_ad_report: false,
+        zoekprofiel: 'Zoekprofiel tekst zonder belastbaarheidsprofiel.',
+      }),
+      'intake_only'
+    );
+  });
+
   it('returns intake_only when only intake is present', () => {
     const docs = [{ type: 'intakeformulier', url: 'a' }];
     assert.equal(detectDocumentScenario(docs), 'intake_only');
@@ -200,6 +244,18 @@ describe('detectDocumentScenario', () => {
     const filtered = filterVisieLoopbaanadviseurDocs(docs, { excludeAd: true });
     assert.equal(filtered.length, 1);
     assert.equal(getVisieLoopbaanadviseurDocCategory(filtered[0].type), 'intake');
+  });
+});
+
+describe('hasMeaningfulPrognose', () => {
+  it('rejects empty and unavailable placeholder', () => {
+    assert.equal(hasMeaningfulPrognose(''), false);
+    assert.equal(hasMeaningfulPrognose(null), false);
+    assert.equal(hasMeaningfulPrognose(BELASTBAARHEID_GEEN_PROFIEL), false);
+  });
+
+  it('accepts real prognose text', () => {
+    assert.equal(hasMeaningfulPrognose('Beperkingen in werktijden.'), true);
   });
 });
 
@@ -338,6 +394,8 @@ describe('buildVisieLoopbaanadviseurFields V10', () => {
 describe('filterVisieLoopbaanadviseurDocs', () => {
   it('filters and prioritizes belastbaarheid, ad, intake', () => {
     assert.equal(getVisieLoopbaanadviseurDocCategory('fml_izp'), 'belastbaarheid');
+    assert.equal(getVisieLoopbaanadviseurDocCategory('spreek_reportage'), 'belastbaarheid');
+    assert.equal(getVisieLoopbaanadviseurDocCategory('spreekuurrapportage'), 'belastbaarheid');
     assert.equal(getVisieLoopbaanadviseurDocCategory('ad_rapportage'), 'ad');
     assert.equal(getVisieLoopbaanadviseurDocCategory('intakeformulier'), 'intake');
 
@@ -345,11 +403,12 @@ describe('filterVisieLoopbaanadviseurDocs', () => {
       { type: 'intakeformulier', url: 'a' },
       { type: 'ad_rapportage', url: 'b' },
       { type: 'fml_izp', url: 'c' },
+      { type: 'spreek_reportage', url: 'e' },
       { type: 'extra', url: 'd' },
     ]);
     assert.deepEqual(
       filtered.map((d) => d.type),
-      ['fml_izp', 'ad_rapportage', 'intakeformulier']
+      ['fml_izp', 'spreek_reportage', 'ad_rapportage', 'intakeformulier']
     );
   });
 });
