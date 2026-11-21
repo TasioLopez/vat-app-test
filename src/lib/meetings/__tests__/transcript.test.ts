@@ -158,10 +158,10 @@ describe('applyCanonicalEmployerSpelling', () => {
 });
 
 describe('meetingImportKind', () => {
-  it('accepts text and docx names only', () => {
+  it('accepts text, docx, and pdf names', () => {
     assert.equal(meetingImportKind('Verslag.DOCX'), 'docx');
     assert.equal(meetingImportKind('notities.md'), 'text');
     assert.equal(meetingImportKind('gesprek.txt'), 'text');
-    assert.equal(meetingImportKind('scan.pdf'), null);
+    assert.equal(meetingImportKind('scan.pdf'), 'pdf');
   });
 });

@@ -42,7 +42,10 @@ type Props = {
 };
 
 const CHOICE_CLASS =
-  'flex min-h-[5.5rem] flex-col items-start justify-center gap-1 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:opacity-50';
+  'flex min-h-[8.5rem] flex-col items-start justify-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-5 py-4 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:opacity-50';
+
+const FILE_ACCEPT =
+  '.txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 export function VerslagPane({
   notes,
@@ -88,7 +91,7 @@ export function VerslagPane({
             Vervangen door bestand
             <input
               type="file"
-              accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept={FILE_ACCEPT}
               className="sr-only"
               disabled={busy || recording}
               onChange={(event) => {
@@ -161,70 +164,81 @@ export function VerslagPane({
     <section
       className={cn(
         'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 p-4',
-        !empty && drop.active && 'border-emerald-500 bg-emerald-100/70'
+        drop.active && 'border-emerald-500 bg-emerald-100/70 ring-2 ring-emerald-300/60'
       )}
-      {...(empty ? {} : drop.dropProps)}
+      {...drop.dropProps}
     >
       {empty ? (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col">
           <h3
-            className="text-sm font-semibold text-gray-900"
+            className="shrink-0 text-sm font-semibold text-gray-900"
             title="Samenvatting van het gesprek. Dit leest de intake."
           >
             Verslag
           </h3>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <button
-              type="button"
-              className={CHOICE_CLASS}
-              onClick={() => onGenerate(false)}
-              disabled={busy || recording || !hasTranscript}
-              title={hasTranscript ? undefined : 'Er is nog geen transcript'}
-            >
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-                <Sparkles className="h-4 w-4 text-emerald-700" aria-hidden />
-                Maak verslag uit transcript
-              </span>
-              <span className="text-xs text-gray-500">
-                {hasTranscript ? 'AI schrijft de samenvatting' : 'Eerst een transcript nodig'}
-              </span>
-            </button>
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-6">
+            {drop.active ? (
+              <p className="text-sm font-medium text-emerald-900">Sleep het bestand hierheen</p>
+            ) : (
+              <p className="text-sm text-gray-500">Kies een optie of sleep een bestand naar dit venster</p>
+            )}
+            <div className="grid w-full max-w-3xl gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                className={CHOICE_CLASS}
+                onClick={() => onGenerate(false)}
+                disabled={busy || recording || !hasTranscript}
+                title={hasTranscript ? undefined : 'Er is nog geen transcript'}
+              >
+                <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                  <Sparkles className="h-5 w-5 text-emerald-700" aria-hidden />
+                  Maak verslag uit transcript
+                </span>
+                <span className="text-xs text-gray-500">
+                  {hasTranscript ? 'AI schrijft de samenvatting' : 'Eerst een transcript nodig'}
+                </span>
+              </button>
 
-            <label
-              className={cn(
-                CHOICE_CLASS,
-                (busy || recording) && 'pointer-events-none opacity-50',
-                drop.active && 'border-emerald-500 bg-emerald-50'
-              )}
-              {...drop.dropProps}
-            >
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-                <FileUp className="h-4 w-4 text-emerald-700" aria-hidden />
-                Bestand uploaden
-              </span>
-              <span className="text-xs text-gray-500">.txt, .md of .docx, of sleep het hierheen</span>
-              <input
-                type="file"
-                accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="sr-only"
+              <label
+                className={cn(
+                  CHOICE_CLASS,
+                  'cursor-pointer',
+                  (busy || recording) && 'pointer-events-none opacity-50'
+                )}
+              >
+                <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                  <FileUp className="h-5 w-5 text-emerald-700" aria-hidden />
+                  Bestand uploaden
+                </span>
+                <span className="text-xs text-gray-500">.txt, .md, .docx of .pdf</span>
+                <input
+                  type="file"
+                  accept={FILE_ACCEPT}
+                  className="sr-only"
+                  disabled={busy || recording}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    event.target.value = '';
+                    onUploadFile(file);
+                  }}
+                />
+              </label>
+
+              <button
+                type="button"
+                className={CHOICE_CLASS}
+                onClick={onStartWriting}
                 disabled={busy || recording}
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  event.target.value = '';
-                  onUploadFile(file);
-                }}
-              />
-            </label>
-
-            <button type="button" className={CHOICE_CLASS} onClick={onStartWriting} disabled={busy || recording}>
-              <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-                <Type className="h-4 w-4 text-emerald-700" aria-hidden />
-                Zelf schrijven
-              </span>
-              <span className="text-xs text-gray-500">Open de teksteditor</span>
-            </button>
+              >
+                <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                  <Type className="h-5 w-5 text-emerald-700" aria-hidden />
+                  Zelf schrijven
+                </span>
+                <span className="text-xs text-gray-500">Open de teksteditor</span>
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       ) : (
         <>
           {warningChip}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError } from '@/lib/auth/api-auth';
 import { assertStagingOnly } from '@/lib/auth/staging-only';
+import { extractPdfPlainTextWithGlyphFallback } from '@/lib/document-analysis/documentPlainText';
 import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
 import { meetingImportKind } from '@/lib/meetings/transcript';
 import { parseDocx } from '@/lib/parse-docx';
@@ -25,7 +26,10 @@ export async function POST(req: NextRequest) {
   }
   const kind = meetingImportKind(file.name);
   if (!kind) {
-    return NextResponse.json({ error: 'Upload een .txt, .md of .docx bestand.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Upload een .txt, .md, .docx of .pdf bestand.' },
+      { status: 400 }
+    );
   }
   if (file.size <= 0 || file.size > IMPORT_MAX_BYTES) {
     return NextResponse.json({ error: 'Bestand is leeg of te groot (max 8 MB).' }, { status: 400 });
@@ -34,7 +38,13 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   let text = '';
   try {
-    text = kind === 'docx' ? await parseDocx(buffer) : buffer.toString('utf8');
+    if (kind === 'docx') {
+      text = await parseDocx(buffer);
+    } else if (kind === 'pdf') {
+      text = await extractPdfPlainTextWithGlyphFallback(buffer);
+    } else {
+      text = buffer.toString('utf8');
+    }
   } catch {
     return NextResponse.json({ error: 'Bestand lezen mislukt.' }, { status: 400 });
   }

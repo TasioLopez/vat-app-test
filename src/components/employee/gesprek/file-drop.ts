@@ -10,7 +10,7 @@ type DropHandlers = {
   onDrop: (event: DragEvent) => void;
 };
 
-/** Highlight a zone and pass the first .txt, .md, or .docx to the existing upload handler. */
+/** Highlight a zone and pass the first .txt, .md, .docx, or .pdf to the existing upload handler. */
 export function useGesprekFileDrop(disabled: boolean, onFile: (file: File) => void): {
   active: boolean;
   dropProps: DropHandlers;

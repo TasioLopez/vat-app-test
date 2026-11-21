@@ -45,7 +45,10 @@ type Props = {
 };
 
 const CHOICE_CLASS =
-  'flex min-h-[5.5rem] flex-col items-start justify-center gap-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 disabled:opacity-50';
+  'flex min-h-[8.5rem] flex-col items-start justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-5 py-4 text-left transition-colors hover:border-purple-300 hover:bg-purple-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 disabled:opacity-50';
+
+const FILE_ACCEPT =
+  '.txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 const BUBBLE_MAX = 'w-fit max-w-[min(85%,36rem)]';
 
@@ -127,7 +130,7 @@ export function TranscriptPane({
               Vervangen door bestand
               <input
                 type="file"
-                accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept={FILE_ACCEPT}
                 className="sr-only"
                 disabled={busy}
                 onChange={(event) => {
@@ -161,9 +164,9 @@ export function TranscriptPane({
     <section
       className={cn(
         'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/70 p-4',
-        !empty && drop.active && 'border-purple-400 bg-purple-50/50'
+        drop.active && 'border-purple-400 bg-purple-50/50 ring-2 ring-purple-300/60'
       )}
-      {...(empty ? {} : drop.dropProps)}
+      {...drop.dropProps}
     >
       <div className="flex min-h-8 flex-nowrap items-center justify-between gap-x-3">
         <h3
@@ -189,66 +192,68 @@ export function TranscriptPane({
       ) : null}
 
       {empty ? (
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className={cn(CHOICE_CLASS, 'cursor-default hover:border-gray-200 hover:bg-white')}>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <Mic className="h-4 w-4 text-purple-600" aria-hidden />
-              Opnemen
-            </span>
-            <label className="mt-1 flex items-start gap-2 text-xs text-gray-600">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={consent}
-                onChange={(event) => onConsentChange(event.target.checked)}
-                disabled={busy}
-              />
-              <span>De werknemer weet dat dit gesprek wordt opgenomen.</span>
-            </label>
-            <Button
-              type="button"
-              size="sm"
-              className="mt-2"
-              onClick={onStartRecording}
-              disabled={busy || !consent}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-2 py-6">
+          {drop.active ? (
+            <p className="text-sm font-medium text-purple-800">Sleep het bestand hierheen</p>
+          ) : (
+            <p className="text-sm text-gray-500">Kies een optie of sleep een bestand naar dit venster</p>
+          )}
+          <div className="grid w-full max-w-3xl gap-3 sm:grid-cols-3">
+            <div className={cn(CHOICE_CLASS, 'cursor-default hover:border-gray-200 hover:bg-white')}>
+              <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                <Mic className="h-5 w-5 text-purple-600" aria-hidden />
+                Opnemen
+              </span>
+              <label className="mt-1 flex items-start gap-2 text-xs text-gray-600">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={consent}
+                  onChange={(event) => onConsentChange(event.target.checked)}
+                  disabled={busy}
+                />
+                <span>De werknemer weet dat dit gesprek wordt opgenomen.</span>
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-2"
+                onClick={onStartRecording}
+                disabled={busy || !consent}
+              >
+                Start opname
+              </Button>
+            </div>
+
+            <label
+              className={cn(CHOICE_CLASS, 'cursor-pointer', busy && 'pointer-events-none opacity-50')}
             >
-              Start opname
-            </Button>
+              <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                <FileUp className="h-5 w-5 text-purple-600" aria-hidden />
+                Bestand uploaden
+              </span>
+              <span className="text-xs text-gray-500">.txt, .md, .docx of .pdf</span>
+              <input
+                type="file"
+                accept={FILE_ACCEPT}
+                className="sr-only"
+                disabled={busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  event.target.value = '';
+                  onUploadFile(file);
+                }}
+              />
+            </label>
+
+            <button type="button" className={CHOICE_CLASS} onClick={onStartPaste} disabled={busy}>
+              <span className="inline-flex items-center gap-2 text-base font-medium text-gray-900">
+                <Type className="h-5 w-5 text-purple-600" aria-hidden />
+                Tekst plakken
+              </span>
+              <span className="text-xs text-gray-500">Open een leeg tekstveld</span>
+            </button>
           </div>
-
-          <label
-            className={cn(
-              CHOICE_CLASS,
-              busy && 'pointer-events-none opacity-50',
-              drop.active && 'border-purple-400 bg-purple-50'
-            )}
-            {...drop.dropProps}
-          >
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <FileUp className="h-4 w-4 text-purple-600" aria-hidden />
-              Bestand uploaden
-            </span>
-            <span className="text-xs text-gray-500">.txt, .md of .docx, of sleep het hierheen</span>
-            <input
-              type="file"
-              accept=".txt,.md,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="sr-only"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                event.target.value = '';
-                onUploadFile(file);
-              }}
-            />
-          </label>
-
-          <button type="button" className={CHOICE_CLASS} onClick={onStartPaste} disabled={busy}>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-gray-900">
-              <Type className="h-4 w-4 text-purple-600" aria-hidden />
-              Tekst plakken
-            </span>
-            <span className="text-xs text-gray-500">Open een leeg tekstveld</span>
-          </button>
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">

@@ -77,9 +77,10 @@ export function looksLikeTranscript(text: string): boolean {
   return speakerLines.length >= 4 && speakerLines.length * 2 >= lines.length;
 }
 
-export function meetingImportKind(filename: string): 'text' | 'docx' | null {
+export function meetingImportKind(filename: string): 'text' | 'docx' | 'pdf' | null {
   const name = filename.toLowerCase().trim();
   if (name.endsWith('.docx')) return 'docx';
+  if (name.endsWith('.pdf')) return 'pdf';
   if (name.endsWith('.txt') || name.endsWith('.md')) return 'text';
   return null;
 }
