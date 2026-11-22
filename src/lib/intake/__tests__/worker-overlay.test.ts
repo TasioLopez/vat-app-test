@@ -46,6 +46,27 @@ describe('intake worker overlay', () => {
     assert.equal(intakeSharedFacts(stored).education_level, null);
   });
 
+  it('promotes BA name+role into occupational_doctor_org for WorkerFacts', () => {
+    const facts = intakeSharedFacts({
+      s6: {
+        doctor_role: 'BA',
+        occupational_doctor_name: 'B. Droogleever',
+        occupational_doctor_ad_name: 'I. Beewen',
+      },
+    });
+    assert.equal(facts.occupational_doctor_org, 'Bedrijfsarts B. Droogleever');
+    // AD name maps separately; must not replace BA org.
+    assert.equal(facts.occupational_doctor_name, 'I. Beewen');
+  });
+
+  it('leaves occupational_doctor_org null when BA name and role are empty', () => {
+    const facts = intakeSharedFacts({
+      s6: { occupational_doctor_ad_name: 'Only AD' },
+    });
+    assert.equal(facts.occupational_doctor_org, null);
+    assert.equal(facts.occupational_doctor_name, 'Only AD');
+  });
+
   it('seeds known worker facts without blanking extracted gaps', () => {
     const seeded = seedIntakeFromWorkerFacts(
       {

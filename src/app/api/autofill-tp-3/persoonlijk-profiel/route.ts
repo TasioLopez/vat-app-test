@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { serviceRoleSupabase as supabase } from '@/lib/supabase/service-role';
+import { loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 import { getValidatedIntakeForEmployee } from '@/lib/intake/tp-hydrate';
 import { intakeTextForPersoonlijkProfiel } from '@/lib/intake/tp-source';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
@@ -27,7 +28,9 @@ export async function GET(req: NextRequest) {
 
     const { data: details } = await supabase
       .from("employee_details")
-      .select("gender, date_of_birth")
+      .select(
+        "gender, date_of_birth, drivers_license_type, transport_type, dutch_speaking, dutch_writing, dutch_reading, computer_skills, computer_skills_description, has_computer"
+      )
       .eq("employee_id", employeeId)
       .single();
 
@@ -41,6 +44,11 @@ export async function GET(req: NextRequest) {
     const validated = await getValidatedIntakeForEmployee(supabase, employeeId);
     const intake = validated?.data ?? null;
     const intakeText = intake ? intakeTextForPersoonlijkProfiel(intake) : '';
+    const loadedFacts = await loadWorkerFacts(supabase, employeeId);
+    const workerFacts = {
+      ...(details ?? {}),
+      ...(loadedFacts?.values ?? {}),
+    };
     if (intakeDocs.length === 0 && !intakeText) {
       return NextResponse.json(
         { error: "Geen intakeformulier gevonden", details: {} },
@@ -56,7 +64,14 @@ export async function GET(req: NextRequest) {
     let persoonlijk_profiel: string;
 
     try {
-      const result = await generatePersoonlijkProfiel(openai, supabase, ctx, intakeDocs, intake);
+      const result = await generatePersoonlijkProfiel(
+        openai,
+        supabase,
+        ctx,
+        intakeDocs,
+        intake,
+        workerFacts
+      );
       persoonlijk_profiel = result.persoonlijk_profiel;
       if (!persoonlijk_profiel.trim()) {
         return NextResponse.json(

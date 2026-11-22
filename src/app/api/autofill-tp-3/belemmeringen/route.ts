@@ -57,7 +57,8 @@ export async function GET(req: NextRequest) {
     );
 
     if (!INTAKE) {
-      return NextResponse.json({ error: "Geen intakeformulier gevonden" }, { status: 200 });
+      // Concept / no PDF: soft-default so Gegevens is never left empty with an error-only response.
+      return upsertBelemmeringen(employeeId, resolvePraktischeBelemmeringenValue(''));
     }
 
     const system = `

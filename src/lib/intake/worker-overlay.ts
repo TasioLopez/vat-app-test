@@ -1,5 +1,6 @@
 import { parseContractHours } from '@/lib/employee/contract-hours';
 import { isEmptyGegevensField } from '@/lib/tp2026/gegevens-autofill';
+import { buildDoctorOrg } from '@/lib/intake/project';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 
 /** Shared facts that round-trip between the intake form and the worker record. */
@@ -53,6 +54,8 @@ export function intakeSharedFacts(raw: unknown): Record<string, unknown> {
     has_computer: data.s17.has_pc || Boolean(data.s17.computer_skills),
     ad_report_concept: data.s6.ad_report_concept,
     fml_izp_lab_kind: data.s6.fml_izp_lab_kind || null,
+    // BA/VA Gegevens string (not AD — AD maps via occupational_doctor_ad_name below).
+    occupational_doctor_org: buildDoctorOrg(data) || null,
   };
   for (const path of STRING_PATHS) {
     const section = data[path.section] as unknown as Record<string, unknown>;

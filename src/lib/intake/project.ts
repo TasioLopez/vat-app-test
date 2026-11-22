@@ -10,7 +10,8 @@ function splitReferentName(full: string): { first: string; last: string } {
   return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
 }
 
-function buildDoctorOrg(data: IntakeData): string {
+/** Format intake BA/VA + OSV into TP Gegevens `occupational_doctor_org`. */
+export function buildDoctorOrg(data: IntakeData): string {
   const role = data.s6.doctor_role.trim();
   const name = data.s6.occupational_doctor_name.trim();
   const osvRole = data.s6.osv_doctor_role.trim();

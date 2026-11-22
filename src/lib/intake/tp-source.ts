@@ -185,29 +185,90 @@ export function intakeTextForPersoonlijkProfiel(intake: IntakeData): string {
   return joinSections(profileSections(intake));
 }
 
+function putPersoonlijkFact(
+  facts: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (value == null) return;
+  if (typeof value === 'string' && (!value.trim() || isAbsentText(value))) return;
+  if (Array.isArray(value) && value.length === 0) return;
+  facts[key] = value;
+}
+
 /** Structured s17 facts for persoonlijk-profiel generation (only present values). */
 export function intakeFactsForPersoonlijkProfiel(intake: IntakeData): Record<string, unknown> {
   const s17 = intake.s17;
   const facts: Record<string, unknown> = {};
-  const put = (key: string, value: unknown) => {
-    if (value == null) return;
-    if (typeof value === 'string' && (!value.trim() || isAbsentText(value))) return;
-    if (Array.isArray(value) && value.length === 0) return;
-    facts[key] = value;
-  };
 
-  put('rijbewijs', s17.drivers_license_types);
-  put('vervoer', s17.transport_types);
-  put('has_pc', s17.has_pc);
-  put('has_smartphone', s17.has_smartphone);
-  put('computervaardigheden', formatComputerSkillsOption(s17.computer_skills));
-  put('computervaardigheden_toelichting', s17.computer_skills_extra);
-  put('typvaardigheid', s17.typing_skills);
-  put('nederlands_spreken', s17.dutch_speaking);
-  put('nederlands_schrijven', s17.dutch_writing);
-  put('nederlands_lezen', s17.dutch_reading);
-  put('andere_talen', s17.other_languages);
+  putPersoonlijkFact(facts, 'rijbewijs', s17.drivers_license_types);
+  putPersoonlijkFact(facts, 'vervoer', s17.transport_types);
+  putPersoonlijkFact(facts, 'has_pc', s17.has_pc);
+  putPersoonlijkFact(facts, 'has_smartphone', s17.has_smartphone);
+  putPersoonlijkFact(facts, 'computervaardigheden', formatComputerSkillsOption(s17.computer_skills));
+  putPersoonlijkFact(facts, 'computervaardigheden_toelichting', s17.computer_skills_extra);
+  putPersoonlijkFact(facts, 'typvaardigheid', s17.typing_skills);
+  putPersoonlijkFact(facts, 'nederlands_spreken', s17.dutch_speaking);
+  putPersoonlijkFact(facts, 'nederlands_schrijven', s17.dutch_writing);
+  putPersoonlijkFact(facts, 'nederlands_lezen', s17.dutch_reading);
+  putPersoonlijkFact(facts, 'andere_talen', s17.other_languages);
   return facts;
+}
+
+/**
+ * Map WorkerFacts / employee_details into the same profile_facts shape.
+ * Used when intake s17 was blanked after validate.
+ */
+export function workerFactsForPersoonlijkProfiel(
+  workerFacts: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  if (!workerFacts) return {};
+  const facts: Record<string, unknown> = {};
+  const licenses = workerFacts.drivers_license_type;
+  const transport = workerFacts.transport_type;
+  const hasComputer =
+    workerFacts.has_computer === true ||
+    (typeof workerFacts.computer_skills === 'string' && Boolean(workerFacts.computer_skills.trim()));
+
+  putPersoonlijkFact(facts, 'rijbewijs', licenses);
+  putPersoonlijkFact(facts, 'vervoer', transport);
+  if (hasComputer) putPersoonlijkFact(facts, 'has_pc', true);
+  putPersoonlijkFact(
+    facts,
+    'computervaardigheden',
+    formatComputerSkillsOption(
+      typeof workerFacts.computer_skills === 'string' ? workerFacts.computer_skills : ''
+    )
+  );
+  putPersoonlijkFact(facts, 'computervaardigheden_toelichting', workerFacts.computer_skills_description);
+  putPersoonlijkFact(facts, 'nederlands_spreken', workerFacts.dutch_speaking);
+  putPersoonlijkFact(facts, 'nederlands_schrijven', workerFacts.dutch_writing);
+  putPersoonlijkFact(facts, 'nederlands_lezen', workerFacts.dutch_reading);
+  return facts;
+}
+
+/** Intake facts first; WorkerFacts fill blanks (WorkerFacts win only when intake key absent). */
+export function mergePersoonlijkProfileFacts(
+  intakeFacts: Record<string, unknown>,
+  workerFacts: Record<string, unknown>
+): Record<string, unknown> {
+  const merged = { ...intakeFacts };
+  for (const [key, value] of Object.entries(workerFacts)) {
+    if (merged[key] == null || merged[key] === '' || (Array.isArray(merged[key]) && (merged[key] as unknown[]).length === 0)) {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+/** Prefer intake s17 when present; otherwise WorkerFacts / employee_details. */
+export function resolvePersoonlijkProfileFacts(
+  intake: IntakeData | null | undefined,
+  workerFacts?: Record<string, unknown> | null
+): Record<string, unknown> {
+  const fromIntake = intake ? intakeFactsForPersoonlijkProfiel(intake) : {};
+  const fromWorker = workerFactsForPersoonlijkProfiel(workerFacts);
+  return mergePersoonlijkProfileFacts(fromIntake, fromWorker);
 }
 
 export function intakeTextForPowMeter(intake: IntakeData): string {

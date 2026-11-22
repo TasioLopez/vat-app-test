@@ -12,7 +12,11 @@ import {
   FML_TP2_DATE_USER_MESSAGE,
   GotenbergConversionError,
 } from '@/lib/document-analysis';
-import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import {
+  isAdDocumentType,
+  isFmlDocumentType,
+  isSpreekDocumentType,
+} from '@/lib/document-analysis/doc-type-matchers';
 import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import {
@@ -31,6 +35,7 @@ import { docsIncludeAdReport, resolveTp2HasAdReport } from '@/lib/tp/intake-ad-p
 import {
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
+import { extractArtsOrgFromPlainText } from '@/lib/tp/extract-arts-from-plain-text';
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
 
@@ -112,25 +117,54 @@ async function extractFromDocument<T extends Record<string, unknown>>(
   }
 }
 
-async function loadIntakePlainText(intakeDoc: DocRow): Promise<string | null> {
-  const downloaded = await downloadDocumentBuffer(intakeDoc);
+async function loadDocPlainText(doc: DocRow, logLabel: string): Promise<string | null> {
+  const downloaded = await downloadDocumentBuffer(doc);
   if (!downloaded) return null;
 
   try {
-    const fallbackName = intakeDoc.name || `${intakeDoc.type || 'document'}`;
+    const fallbackName = doc.name || `${doc.type || 'document'}`;
     const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
       downloaded.buffer,
       fallbackName || downloaded.path
     );
     if (wasConverted) {
-      console.log(`✅ TP2 intake normalized to PDF for checkbox text (${analysisFilename})`);
+      console.log(`✅ TP2 ${logLabel} normalized to PDF for plain text (${analysisFilename})`);
     }
 
     return extractPdfPlainTextWithGlyphFallback(pdfBuffer);
   } catch (error) {
-    console.warn('⚠️ TP2 intake checkbox text extraction failed', error);
+    console.warn(`⚠️ TP2 ${logLabel} plain text extraction failed`, error);
     return null;
   }
+}
+
+async function loadIntakePlainText(intakeDoc: DocRow): Promise<string | null> {
+  return loadDocPlainText(intakeDoc, 'intake');
+}
+
+/** When intake left arts org empty: FML plain text, then spreekuur. */
+async function resolveArtsOrgFromFmlOrSpreek(docs: DocRow[]): Promise<string | null> {
+  const fmlDoc = docs.find((d) => isFmlDocumentType(d.type));
+  if (fmlDoc) {
+    const text = await loadDocPlainText(fmlDoc, 'FML arts');
+    const org = extractArtsOrgFromPlainText(text);
+    if (org) {
+      console.log('📋 TP2 arts fallback: FML plain text →', org);
+      return org;
+    }
+  }
+
+  const spreekDoc = docs.find((d) => isSpreekDocumentType(d.type));
+  if (spreekDoc) {
+    const text = await loadDocPlainText(spreekDoc, 'spreekuur arts');
+    const org = extractArtsOrgFromPlainText(text);
+    if (org) {
+      console.log('📋 TP2 arts fallback: spreekuur plain text →', org);
+      return org;
+    }
+  }
+
+  return null;
 }
 
 async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unknown>> {
@@ -185,6 +219,13 @@ async function processTp2Documents(docs: DocRow[]): Promise<Record<string, unkno
     }
     if (!isFilled(merged.fml_izp_lab_kind) && isFilled(fmlParsed.fml_izp_lab_kind)) {
       merged.fml_izp_lab_kind = fmlParsed.fml_izp_lab_kind;
+    }
+  }
+
+  if (!isFilled(merged.occupational_doctor_org)) {
+    const artsOrg = await resolveArtsOrgFromFmlOrSpreek(docs);
+    if (artsOrg) {
+      merged.occupational_doctor_org = artsOrg;
     }
   }
 

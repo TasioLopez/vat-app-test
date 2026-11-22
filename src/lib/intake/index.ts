@@ -13,7 +13,11 @@ export type {
   IntakeSectionIcon,
 } from '@/lib/intake/schema';
 export { persistIntakeDraft } from '@/lib/intake/persist-draft';
-export { intakeToGegevensFields, intakeToTpNarrativeFields } from '@/lib/intake/project';
+export {
+  buildDoctorOrg,
+  intakeToGegevensFields,
+  intakeToTpNarrativeFields,
+} from '@/lib/intake/project';
 export {
   getValidatedIntakeForEmployee,
   gegevensFromWorkerFacts,

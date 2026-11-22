@@ -2,8 +2,8 @@ import type OpenAI from 'openai';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IntakeData } from '@/lib/intake/schema';
 import {
-  intakeFactsForPersoonlijkProfiel,
   intakeTextForPersoonlijkProfiel,
+  resolvePersoonlijkProfileFacts,
 } from '@/lib/intake/tp-source';
 import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { buildOpenAIFile } from '@/lib/openai-file-upload';
@@ -93,14 +93,15 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
 
 function buildApiContext(
   ctx: PersoonlijkProfielBuildContext,
-  intake?: IntakeData | null
+  intake?: IntakeData | null,
+  workerFacts?: Record<string, unknown> | null
 ): Record<string, unknown> {
   return {
     details: {
       gender: ctx.details.gender,
       leeftijd: calculateAge(ctx.details.date_of_birth),
     },
-    profile_facts: intake ? intakeFactsForPersoonlijkProfiel(intake) : {},
+    profile_facts: resolvePersoonlijkProfileFacts(intake, workerFacts),
   };
 }
 
@@ -109,7 +110,8 @@ export async function generatePersoonlijkProfielContent(
   supabase: SupabaseClient,
   ctx: PersoonlijkProfielBuildContext,
   docs: EmployeeDoc[],
-  intake?: IntakeData | null
+  intake?: IntakeData | null,
+  workerFacts?: Record<string, unknown> | null
 ): Promise<PersoonlijkProfielContentResult> {
   const intakeText = intake ? intakeTextForPersoonlijkProfiel(intake) : '';
   const fileIds = intakeText ? [] : await uploadIntakeDocs(openai, supabase, docs);
@@ -119,7 +121,9 @@ export async function generatePersoonlijkProfielContent(
   }
 
   try {
-    const contextMessage = buildPersoonlijkProfielContextMessage(buildApiContext(ctx, intake));
+    const contextMessage = buildPersoonlijkProfielContextMessage(
+      buildApiContext(ctx, intake, workerFacts)
+    );
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
       ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
@@ -164,11 +168,23 @@ export async function generatePersoonlijkProfiel(
   supabase: SupabaseClient,
   ctx: PersoonlijkProfielBuildContext,
   docs: EmployeeDoc[],
-  intake?: IntakeData | null
+  intake?: IntakeData | null,
+  workerFacts?: Record<string, unknown> | null
 ): Promise<PersoonlijkProfielFields> {
-  const content = await generatePersoonlijkProfielContent(openai, supabase, ctx, docs, intake);
-  const profileFacts = intake ? intakeFactsForPersoonlijkProfiel(intake) : null;
-  return buildPersoonlijkProfielFields(ctx, content, profileFacts);
+  const content = await generatePersoonlijkProfielContent(
+    openai,
+    supabase,
+    ctx,
+    docs,
+    intake,
+    workerFacts
+  );
+  const profileFacts = resolvePersoonlijkProfileFacts(intake, workerFacts);
+  return buildPersoonlijkProfielFields(
+    ctx,
+    content,
+    Object.keys(profileFacts).length > 0 ? profileFacts : null
+  );
 }
 
 export type { PersoonlijkProfielBuildContext, PersoonlijkProfielFields };
