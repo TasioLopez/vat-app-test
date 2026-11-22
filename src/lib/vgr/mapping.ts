@@ -272,6 +272,8 @@ export function normalizeVgrMeta(v: unknown): VGRMeta {
     source_document_ids: strArr(o.source_document_ids),
     dismissed_warnings: dismissed,
     approved_at: str(o.approved_at) || null,
+    zoekprofiel_changed_at: str(o.zoekprofiel_changed_at) || null,
+    zoekprofiel_change_note: str(o.zoekprofiel_change_note),
   };
 }
 

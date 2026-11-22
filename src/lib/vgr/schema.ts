@@ -37,6 +37,10 @@ export type VGRMeta = {
   dismissed_warnings: Record<string, string>;
   /** ISO timestamp set when adviser approves for export. */
   approved_at: string | null;
+  /** ISO timestamp when zoekprofiel was changed via confirmed AI apply. */
+  zoekprofiel_changed_at?: string | null;
+  /** Short note for the zoekprofiel change (coach confirmation). */
+  zoekprofiel_change_note?: string;
 };
 
 /* ------------------------------------------------------------------ */

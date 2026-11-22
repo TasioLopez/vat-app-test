@@ -83,6 +83,7 @@ describe('fase activatie layout', () => {
     }
     const first = markup(byId.get('ia-wekelijks_solliciteren-std-0'));
     assert.match(first, /primaire verantwoordelijkheid/);
+    assert.match(first, /text-\[9\.5pt\]/);
     assert.doesNotMatch(first, /text-\[#660066\]/);
     const bijlage = markup(byId.get('ia-wekelijks_solliciteren-std-1'));
     assert.match(bijlage, /zie bijlage 2/);

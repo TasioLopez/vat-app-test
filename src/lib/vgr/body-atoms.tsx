@@ -109,6 +109,9 @@ export type VGRBodyAtom = {
 
 export const VGR_BODY_TEXT_CLASS = 'text-[10.5pt] leading-[1.42] text-neutral-900';
 
+/** Smaller font for ValentineZ standaardzinnen inside interventie blocks. */
+export const VGR_STD_TEXT_CLASS = 'text-[9.5pt] leading-[1.42] text-neutral-900';
+
 /** 10pt bold purple label inside a shaded panel (Prognose, Toelichting, doelstelling date). */
 const VGR_PANEL_LABEL_CLASS = 'text-[10pt] font-bold leading-[1.42] text-[#782A90]';
 
@@ -449,7 +452,7 @@ function interventionBlocks(
           });
           return;
         }
-        prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, '', panel);
+        prose(ctx, `${idPrefix}-${opt.id}-std-${i}`, p, VGR_STD_TEXT_CLASS, panel);
       });
     }
     if (extra) extra(opt, ctx, panel);

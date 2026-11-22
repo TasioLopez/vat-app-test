@@ -34,6 +34,22 @@ describe('hydrateVgrFromTp2026', () => {
     const next = hydrateVgrFromTp2026(draft, { persoonlijk_profiel: 'Uit TP.' });
     assert.equal(next.body.persoonlijk_profiel.tekst, 'Handmatig.');
   });
+
+  it('strips AD advies delimiter and does not seed BA name as AD author', () => {
+    const draft = ensureVGRShape({ vgr_meta: { report_date: '2026-10-28' } });
+    const next = hydrateVgrFromTp2026(draft, {
+      advies_ad_passende_arbeid:
+        'Intro tekst\n<<<ADVIES>>>\nVoorlopige conclusie: passend werk mogelijk.',
+      occupational_doctor_name: 'B. Droogleever',
+      ad_report_date: '2026-05-31',
+    });
+    assert.equal(next.body.visie_plaatsbaarheid.ad.citaat, 'Voorlopige conclusie: passend werk mogelijk.');
+    assert.equal(next.body.visie_plaatsbaarheid.ad.bron_naam, '');
+    assert.equal(next.body.visie_plaatsbaarheid.ad.bron_datum, '2026-05-31');
+    assert.equal(next.body.doelstelling_traject.history.length, 1);
+    assert.equal(next.body.doelstelling_traject.history[0].date, '2026-10-28');
+    assert.equal(next.body.doelstelling_traject.history[0].changed, false);
+  });
 });
 
 describe('hydrateVgrFromPriorReport', () => {

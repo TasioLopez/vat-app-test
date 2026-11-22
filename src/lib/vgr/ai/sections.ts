@@ -67,13 +67,17 @@ const VGR_FML_RUBRIEKEN_HINT = VGR_FML_RUBRIEKEN.join(', ');
 function interventionFields(section: keyof VGRBody, options: VGRInterventionOption[]) {
   return (data: VGRData): VGRAiFieldDef[] => {
     const sec = data.body[section] as VGRBody['interventies_motivatie'];
-    const selected = sec.selected.length ? sec.selected : [];
+    // When nothing is checked yet, still expose fields for all non-nvt options so the
+    // model can propose selected_interventies + matching toelichtingen in one pass.
+    const selected = sec.selected.length
+      ? sec.selected
+      : options.filter((o) => o.id !== 'nvt').map((o) => o.id);
     return selected
       .map((id) => options.find((o) => o.id === id))
       .filter((o): o is VGRInterventionOption => Boolean(o))
       .map((o) => ({
         key: `toelichting__${o.id}`,
-        description: `Persoonlijke toelichting bij "${o.heading}". ${o.instruction ?? ''} Beschrijf concreet wat in de rapportageperiode is gedaan en wat het heeft opgeleverd; 2–6 zinnen.`,
+        description: `Persoonlijke toelichting bij "${o.heading}". ${o.instruction ?? ''} Beschrijf concreet wat in de rapportageperiode is gedaan en wat het heeft opgeleverd; 2–6 zinnen. Leeg laten als deze interventie niet aantoonbaar is uitgevoerd of niet relevant is.`,
       }));
   };
 }
@@ -96,6 +100,23 @@ const VERVOLG_FIELD: VGRAiFieldDef = {
   description:
     'Alleen vullen als uit het dossier blijkt dat activiteiten uit deze fase niet (volledig) zijn uitgevoerd en in de volgende fase terugkomen; anders leeg laten.',
 };
+
+function selectedInterventiesSuggestion(options: VGRInterventionOption[]): VGRAiFieldDef {
+  const ids = options
+    .filter((o) => o.id !== 'nvt')
+    .map((o) => o.id)
+    .join(', ');
+  return {
+    key: 'selected_interventies',
+    description: `Komma-gescheiden option-ids die in deze rapportageperiode aantoonbaar relevant zijn (alleen uit: ${ids}). Leeg laten als niets uit het dossier volgt. Als de adviseur al opties heeft aangevinkt: herhaal die ids of verfijn ze; verzin geen activiteiten.`,
+  };
+}
+
+/** Whether Generate-all / AI button should run for this section. */
+export function vgrAiSectionCanGenerate(def: VGRAiSectionDef, data: VGRData): boolean {
+  if (def.fields(data).length > 0) return true;
+  return Boolean(def.suggestions?.some((s) => s.key === 'selected_interventies'));
+}
 
 export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
   benutbare_mogelijkheden: {
@@ -242,8 +263,9 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'interventies_motivatie',
     label: 'Interventies motivatie',
     preferredDocTypes: ['spreek_reportage', 'intakeformulier'],
-    instructions: `Schrijf per aangevinkte interventie een persoonlijke toelichting: wat is besproken/gedaan, hoe reageerde werknemer, wat is het effect op motivatie en welke vervolgstap volgt. Alleen aangevinkte interventies krijgen tekst.`,
+    instructions: `Schrijf per aangevinkte interventie een persoonlijke toelichting: wat is besproken/gedaan, hoe reageerde werknemer, wat is het effect op motivatie en welke vervolgstap volgt. Alleen aangevinkte interventies krijgen tekst. Als nog niets is aangevinkt: vul selected_interventies in suggesties en schrijf alleen toelichtingen voor die ids (gebruik keys toelichting__{id}).`,
     fields: interventionFields('interventies_motivatie', VGR_MOTIVATIE_OPTIONS),
+    suggestions: [selectedInterventiesSuggestion(VGR_MOTIVATIE_OPTIONS)],
     toPatch: interventionPatch('interventies_motivatie'),
   },
 
@@ -251,7 +273,7 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'kwaliteiten_onderzoek',
     label: 'Kwaliteiten en vaardigheden onderzoek',
     preferredDocTypes: ['extra', 'cv', 'intakeformulier'],
-    instructions: `Schrijf per aangevinkt onderdeel een toelichting op basis van de aangeleverde testrapporten en het CV. Testresultaten alleen uit daadwerkelijk aangeleverde testen; percentages exact; nooit beroepen of kenmerken verzinnen. Voor de beroepenconclusie: onderbouw waarom beroepen uit de testen al dan niet passend zijn gelet op belastbaarheid, opleiding, ervaring en zoekprofiel. Als geen testrapport is aangeleverd: velden over testen leeg laten en dit melden.`,
+    instructions: `Schrijf per aangevinkt onderdeel een toelichting op basis van de aangeleverde testrapporten en het CV. Testresultaten alleen uit daadwerkelijk aangeleverde testen; percentages exact; nooit beroepen of kenmerken verzinnen. Voor de beroepenconclusie: onderbouw waarom beroepen uit de testen al dan niet passend zijn gelet op belastbaarheid, opleiding, ervaring en zoekprofiel. Als geen testrapport is aangeleverd: velden over testen leeg laten en dit melden. Als nog niets is aangevinkt: vul selected_interventies en schrijf toelichting__{id} alleen voor die ids.`,
     fields: (data) => [
       ...interventionFields('kwaliteiten_onderzoek', VGR_KWALITEITEN_OPTIONS)(data),
       ...(data.body.kwaliteiten_onderzoek.selected.includes('beroepen_arbeidsmarkt')
@@ -267,6 +289,7 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
           ])
         : []),
     ],
+    suggestions: [selectedInterventiesSuggestion(VGR_KWALITEITEN_OPTIONS)],
     toPatch: (f, data) => {
       const base = interventionPatch('kwaliteiten_onderzoek')(f, data).kwaliteiten_onderzoek ?? {};
       const cur = data.body.kwaliteiten_onderzoek;
@@ -302,8 +325,9 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'scholing',
     label: 'Scholingsmogelijkheden',
     preferredDocTypes: ['intakeformulier', 'cv', 'spreek_reportage'],
-    instructions: `Schrijf per aangevinkt onderdeel een toelichting: welke scholing/cursus/taaltraining is onderzocht of gestart, waarom dit past bij het zoekprofiel en de belastbaarheid, en wat de stand van zaken is. Geen opleidingen noemen die niet uit het dossier blijken.`,
+    instructions: `Schrijf per aangevinkt onderdeel een toelichting: welke scholing/cursus/taaltraining is onderzocht of gestart, waarom dit past bij het zoekprofiel en de belastbaarheid, en wat de stand van zaken is. Geen opleidingen noemen die niet uit het dossier blijken. Als nog niets is aangevinkt: vul selected_interventies en schrijf toelichting__{id} alleen voor die ids.`,
     fields: interventionFields('scholing', VGR_SCHOLING_OPTIONS),
+    suggestions: [selectedInterventiesSuggestion(VGR_SCHOLING_OPTIONS)],
     toPatch: interventionPatch('scholing'),
   },
 
@@ -311,8 +335,9 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'sollicitatie_vaardigheden',
     label: 'Sollicitatie vaardigheden',
     preferredDocTypes: ['spreek_reportage', 'cv'],
-    instructions: `Schrijf per aangevinkt onderdeel wat concreet is gedaan (CV, brief, LinkedIn, netwerkgesprekken, webinars, gesprekstraining) en het resultaat. Benoem benodigde ondersteuning (taal, digitale vaardigheden) feitelijk. Gebruik de sollicitatielijst in de context; verzin geen sollicitaties.`,
+    instructions: `Schrijf per aangevinkt onderdeel wat concreet is gedaan (CV, brief, LinkedIn, netwerkgesprekken, webinars, gesprekstraining) en het resultaat. Benoem benodigde ondersteuning (taal, digitale vaardigheden) feitelijk. Gebruik de sollicitatielijst in de context; verzin geen sollicitaties. Als nog niets is aangevinkt: vul selected_interventies en schrijf toelichting__{id} alleen voor die ids.`,
     fields: (data) => [...interventionFields('sollicitatie_vaardigheden', VGR_SOLLICITATIE_OPTIONS)(data), VERVOLG_FIELD],
+    suggestions: [selectedInterventiesSuggestion(VGR_SOLLICITATIE_OPTIONS)],
     toPatch: (f, data) => {
       const base = interventionPatch('sollicitatie_vaardigheden')(f, data).sollicitatie_vaardigheden ?? {};
       return { sollicitatie_vaardigheden: { ...base, ...(f.vervolg_activiteiten?.trim() ? { vervolg_activiteiten: f.vervolg_activiteiten.trim() } : {}) } };
@@ -323,8 +348,9 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'interventies_activatie',
     label: 'Interventies activatie en arbeidsbemiddeling',
     preferredDocTypes: ['spreek_reportage', 'ad_rapportage'],
-    instructions: `Schrijf per aangevinkt onderdeel een toelichting. Beschrijf spoor 1 en spoor 2 in samenhang (welke werkzaamheden bij eigen werkgever, urenopbouw, welke spoor-2-activiteiten). Activering als middel (arbeidsritme, toetsen belastbaarheid, structuur). Jobhunting/wekelijks solliciteren alleen beschrijven op basis van de sollicitatielijst in de context. Als een onderdeel beperkt is uitgevoerd: geef de inhoudelijke verklaring.`,
+    instructions: `Schrijf per aangevinkt onderdeel een toelichting. Beschrijf spoor 1 en spoor 2 in samenhang (welke werkzaamheden bij eigen werkgever, urenopbouw, welke spoor-2-activiteiten). Activering als middel (arbeidsritme, toetsen belastbaarheid, structuur). Jobhunting/wekelijks solliciteren alleen beschrijven op basis van de sollicitatielijst in de context. Als een onderdeel beperkt is uitgevoerd: geef de inhoudelijke verklaring. Als nog niets is aangevinkt: vul selected_interventies en schrijf toelichting__{id} alleen voor die ids.`,
     fields: (data) => [...interventionFields('interventies_activatie', VGR_ACTIVATIE_OPTIONS)(data), VERVOLG_FIELD],
+    suggestions: [selectedInterventiesSuggestion(VGR_ACTIVATIE_OPTIONS)],
     toPatch: (f, data) => {
       const base = interventionPatch('interventies_activatie')(f, data).interventies_activatie ?? {};
       return { interventies_activatie: { ...base, ...(f.vervolg_activiteiten?.trim() ? { vervolg_activiteiten: f.vervolg_activiteiten.trim() } : {}) } };
@@ -381,11 +407,17 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
       const cur = data.body.visie_plaatsbaarheid;
       const patch: Record<string, unknown> = {};
       if (f.ad_citaat || f.ad_bron_naam || f.ad_bron_datum) {
+        let citaat = f.ad_citaat || cur.ad.citaat;
+        if (citaat.includes('<<<ADVIES>>>')) {
+          const idx = citaat.indexOf('<<<ADVIES>>>');
+          citaat = citaat.slice(idx + '<<<ADVIES>>>'.length).trim();
+        }
         patch.ad = {
           ...cur.ad,
-          citaat: f.ad_citaat || cur.ad.citaat,
+          citaat,
           bron_naam: f.ad_bron_naam || cur.ad.bron_naam,
           bron_datum: f.ad_bron_datum || cur.ad.bron_datum,
+          bron_type: cur.ad.bron_type || 'AD-rapport',
         };
       }
       if (f.functies?.trim()) {
