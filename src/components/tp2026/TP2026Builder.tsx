@@ -12,6 +12,7 @@ import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { TPDocumentRenderProvider } from '@/context/TPDocumentRenderContext';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { cn } from '@/lib/utils';
+import DocumentEditorShell from '@/components/document-editor/DocumentEditorShell';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
   buildAutofillSteps,
@@ -580,8 +581,99 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     guardedRouter.push(`/dashboard/employees/${employeeId}`);
   };
 
+  const stepPills = [
+    { key: 'voorblad', label: 'Voorblad' },
+    { key: 'gegevens', label: 'Gegevens' },
+    { key: 'basisdocument', label: 'Basisdocument' },
+    { key: 'bijlage1', label: 'Bijlage 1' },
+  ].map((step, index) => ({
+    ...step,
+    active: currentStep === index + 1,
+    onSelect: () => setCurrentStep(index + 1),
+  }));
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
+    <DocumentEditorShell
+      className="bg-gradient-to-br from-gray-50 to-indigo-50/20"
+      title="Trajectplan"
+      subtitle={`Stap ${currentStep} van ${totalSteps}`}
+      steps={stepPills}
+      actions={
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={goBack}
+            aria-label={backLabel}
+            title={backLabel}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
+            disabled={currentStep === totalSteps}
+            aria-label="Volgende stap"
+            title="Volgende stap"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn('h-8 w-8', textJustified && 'border-[#702A90] bg-[#702A90]/10 text-[#702A90]')}
+            onClick={() => updateField('text_justified', !textJustified)}
+            aria-pressed={textJustified}
+            aria-label={
+              textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'
+            }
+            title={textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'}
+          >
+            {textJustified ? (
+              <AlignJustify className="h-4 w-4" aria-hidden />
+            ) : (
+              <AlignLeft className="h-4 w-4" aria-hidden />
+            )}
+          </Button>
+          <ExportButton
+            employeeId={employeeId}
+            tpInstanceId={tpInstanceId}
+            layoutKey="tp_2026"
+            variant="icon"
+            onBeforeExport={async () => {
+              if (!isDirty) return;
+              await persistForGuard();
+            }}
+          />
+          <AutofillScopeDropdown
+            variant="icon"
+            loading={autofilling}
+            currentStepDisabled={!currentStepAutofillAvailable}
+            onRunAll={() => void runAutofill('all')}
+            onRunCurrentStep={() => void runAutofill('current_step')}
+          />
+          <Button
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={persist}
+            disabled={saving || !isDirty}
+            aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+            title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : isDirty ? (
+              <Save className="h-4 w-4" aria-hidden />
+            ) : (
+              <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+            )}
+          </Button>
+        </>
+      }
+    >
       <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
       <ValidatedFactsDialog
         conflicts={pendingFacts?.conflicts ?? null}
@@ -589,92 +681,6 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         onDismiss={() => setPendingFacts(null)}
         onAccept={() => void acceptValidatedFacts()}
       />
-      <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
-            <span className="shrink-0 text-sm text-gray-400" aria-hidden>
-              ·
-            </span>
-            <p className="shrink-0 text-sm text-gray-600">
-              Stap {currentStep} van {totalSteps}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={goBack}
-              aria-label={backLabel}
-              title={backLabel}
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
-              disabled={currentStep === totalSteps}
-              aria-label="Volgende stap"
-              title="Volgende stap"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={cn('h-8 w-8', textJustified && 'border-[#702A90] bg-[#702A90]/10 text-[#702A90]')}
-              onClick={() => updateField('text_justified', !textJustified)}
-              aria-pressed={textJustified}
-              aria-label={
-                textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'
-              }
-              title={textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'}
-            >
-              {textJustified ? (
-                <AlignJustify className="h-4 w-4" aria-hidden />
-              ) : (
-                <AlignLeft className="h-4 w-4" aria-hidden />
-              )}
-            </Button>
-            <ExportButton
-              employeeId={employeeId}
-              tpInstanceId={tpInstanceId}
-              layoutKey="tp_2026"
-              variant="icon"
-              onBeforeExport={async () => {
-                if (!isDirty) return;
-                await persistForGuard();
-              }}
-            />
-            <AutofillScopeDropdown
-              variant="icon"
-              loading={autofilling}
-              currentStepDisabled={!currentStepAutofillAvailable}
-              onRunAll={() => void runAutofill('all')}
-              onRunCurrentStep={() => void runAutofill('current_step')}
-            />
-            <Button
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={persist}
-              disabled={saving || !isDirty}
-              aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-              title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : isDirty ? (
-                <Save className="h-4 w-4" aria-hidden />
-              ) : (
-                <Check className="h-4 w-4 text-emerald-600" aria-hidden />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
 
       <div className="flex-1 overflow-hidden min-h-0">
         <div className="relative h-full min-h-0 px-6 pt-6 pb-2">
@@ -704,7 +710,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           {currentStep >= 4 ? <HiddenBasisPageMeasure data={tpData} /> : null}
         </div>
       </div>
-    </div>
+    </DocumentEditorShell>
   );
 }
 

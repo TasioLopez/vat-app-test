@@ -93,7 +93,7 @@ export default function NewTicketPage() {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+    <div className="min-h-full bg-gray-50 p-6 md:p-10">
       <CreateFormLeaveGuard values={{ categoryId, subject, description }} onSave={submitTicket} />
       <div className="max-w-3xl mx-auto space-y-6">
         <GuardedLink href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
@@ -117,7 +117,7 @@ export default function NewTicketPage() {
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
               disabled={loadingCategories || categories.length === 0}
-              className="w-full rounded-lg border border-purple-200 px-3 py-2 disabled:bg-gray-50 disabled:text-gray-400"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 disabled:bg-gray-50 disabled:text-gray-400"
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -136,7 +136,7 @@ export default function NewTicketPage() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Korte samenvatting van je vraag"
-              className="w-full rounded-lg border border-purple-200 px-3 py-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2"
               maxLength={500}
             />
           </div>
@@ -150,7 +150,7 @@ export default function NewTicketPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Wat gebeurt er precies, en welke stap probeerde je uit te voeren?"
-              className="w-full rounded-lg border border-purple-200 px-3 py-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2"
               rows={7}
             />
           </div>
@@ -163,7 +163,7 @@ export default function NewTicketPage() {
               disabled={
                 submitting || loadingCategories || !categoryId || !subject.trim() || !description.trim()
               }
-              className="px-4 py-2 rounded-lg bg-purple-700 text-white font-semibold disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-[var(--color-primary-500)] text-white font-semibold disabled:opacity-50"
             >
               {submitting ? "Versturen..." : "Ticket aanmaken"}
             </button>

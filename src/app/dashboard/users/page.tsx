@@ -30,11 +30,11 @@ export default function UsersPage() {
   const showInvite = role != null && canInviteUsers(role);
 
   return (
-    <div className="p-8 space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30">
+    <div className="space-y-6 bg-gray-50 p-6 md:p-8">
       <div className="flex justify-between items-center">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Gebruikers beheren</h1>
-          <p className="text-lg text-gray-600">Beheer gebruikers en hun toegangsrechten</p>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Gebruikers</h1>
+          <p className="mt-1 text-sm text-gray-600">Beheer gebruikers en hun toegangsrechten</p>
         </div>
         {showInvite ? (
           <Button onClick={() => setOpen(true)} size="lg">

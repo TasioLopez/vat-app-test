@@ -58,7 +58,7 @@ export function AutofillProgressOverlay({
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-gray-200">
               <div
-                className="h-full bg-purple-600 transition-all duration-300"
+                className="h-full bg-[var(--color-primary-500)] transition-all duration-300"
                 style={{ width: `${pct}%` }}
               />
             </div>

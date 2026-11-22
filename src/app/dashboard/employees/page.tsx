@@ -534,7 +534,7 @@ export default function EmployeesPage() {
 
   const groupedByClient = useMemo(() => {
     return filteredAndSortedEmployees.reduce<Record<string, Employee[]>>((acc, emp) => {
-    const clientName = emp.clients?.name || 'Unassigned';
+    const clientName = emp.clients?.name || 'Niet toegewezen';
     if (!acc[clientName]) acc[clientName] = [];
     acc[clientName].push(emp);
     return acc;
@@ -542,12 +542,12 @@ export default function EmployeesPage() {
   }, [filteredAndSortedEmployees]);
 
   return (
-    <div className="p-8 space-y-6 bg-gradient-to-br from-gray-50 to-purple-50/30">
+    <div className="space-y-6 bg-gray-50 p-6 md:p-8">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Werknemers</h1>
-          <p className="text-lg text-gray-600">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Werknemers</h1>
+          <p className="mt-1 text-sm text-gray-600">
             Beheer werknemers en hun gegevens ({filteredAndSortedEmployees.length} {filteredAndSortedEmployees.length === 1 ? 'werknemer' : 'werknemers'})
           </p>
         </div>
@@ -623,7 +623,7 @@ export default function EmployeesPage() {
 
         {/* View Toggle — back office is table-only */}
         {!isBackOfficeUser && (
-          <div className="flex gap-2 border-2 border-purple-200 rounded-lg p-1">
+          <div className="flex gap-2 border border-gray-200 rounded-lg p-1 bg-white">
             <Button
               variant={viewMode === 'table' ? 'default' : 'ghost'}
               size="sm"
@@ -661,19 +661,19 @@ export default function EmployeesPage() {
           <TableHeader>
             <TableRow>
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
                 Naam <SortIcon field="name" />
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('client')}
               >
                 Werkgever <SortIcon field="client" />
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('owner')}
               >
                 Dossier-eigenaar <SortIcon field="owner" />
@@ -681,7 +681,7 @@ export default function EmployeesPage() {
               {DOC_STATUS_CELLS.map((col) => (
                 <TableHead
                   key={col.kind}
-                  className="w-14 cursor-pointer hover:bg-purple-100/50"
+                  className="w-14 cursor-pointer hover:bg-gray-100"
                   title={col.title}
                   onClick={() => handleSort(col.sortField)}
                 >
@@ -689,7 +689,7 @@ export default function EmployeesPage() {
                 </TableHead>
               ))}
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('created_at')}
               >
                 Toegevoegd <SortIcon field="created_at" />
@@ -777,14 +777,14 @@ export default function EmployeesPage() {
         <div className="space-y-8">
           {Object.entries(groupedByClient).map(([clientName, group]) => (
             <div key={clientName} className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-purple-200 pb-3">
+              <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">
                 {clientName} ({group.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.map((employee) => (
                   <Card
                     key={employee.id}
-                    className="cursor-pointer hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-200"
+                    className="cursor-pointer transition-colors hover:border-gray-300"
                     onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                     hover
                   >

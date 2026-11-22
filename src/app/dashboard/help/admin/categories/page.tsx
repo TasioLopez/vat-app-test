@@ -96,7 +96,7 @@ function SortableCategoryRow({
     >
       <button
         type="button"
-        className="cursor-grab active:cursor-grabbing touch-none text-purple-400 hover:text-purple-600 px-1 flex-shrink-0"
+        className="cursor-grab active:cursor-grabbing touch-none text-gray-400 hover:text-purple-600 px-1 flex-shrink-0"
         aria-label="Verslepen"
         {...attributes}
         {...listeners}
@@ -490,7 +490,7 @@ export default function AdminCategoriesPage() {
           )}
           <DragOverlay dropAnimation={null}>
             {activeCategory ? (
-              <div className="rounded-lg border border-purple-200 bg-white p-3 shadow-lg opacity-95">
+              <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg opacity-95">
                 <div className="font-medium">{activeCategory.title}</div>
                 <div className="text-sm text-gray-500">{activeCategory.slug}</div>
               </div>

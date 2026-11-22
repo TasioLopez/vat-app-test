@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Opdrachtgevers",
+  title: "Werkgevers",
 };
 
 export default function ClientsLayout({ children }: { children: ReactNode }) {

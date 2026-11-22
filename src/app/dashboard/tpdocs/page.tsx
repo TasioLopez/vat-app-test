@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { cookies as nextCookies } from "next/headers";
 
 export const metadata: Metadata = {
-  title: "TP-documenten",
+  title: "Trajectplannen",
 };
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
@@ -53,9 +53,9 @@ export default async function TPDocsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">TP Documents</h1>
-        <p className="mt-4 text-sm text-muted-foreground">You must be signed in to view this page.</p>
+      <div className="space-y-6 bg-gray-50 p-6 md:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Trajectplannen</h1>
+        <p className="text-sm text-muted-foreground">Je moet ingelogd zijn om deze pagina te bekijken.</p>
       </div>
     );
   }
@@ -95,9 +95,9 @@ export default async function TPDocsPage() {
 
   if (docsErr || !tpDocs || tpDocs.length === 0) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">TP Documents</h1>
-        <p className="mt-4 text-sm">No TP documents found.</p>
+      <div className="space-y-6 bg-gray-50 p-6 md:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Trajectplannen</h1>
+        <p className="text-sm text-muted-foreground">Geen trajectplannen gevonden.</p>
       </div>
     );
   }
@@ -126,15 +126,15 @@ export default async function TPDocsPage() {
     });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 bg-gray-50 p-6 md:p-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">TP Documents</h1>
-        <p className="text-muted-foreground mt-2">Beheer en bekijk trajectplan documenten</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Trajectplannen</h1>
+        <p className="mt-1 text-sm text-gray-600">Beheer en bekijk trajectplan-documenten</p>
       </div>
 
       <TPDocsClient rows={rows} />
 
-      <p className="text-sm text-muted-foreground">Showing {rows.length} document(s).</p>
+      <p className="text-sm text-muted-foreground">{rows.length} documenten</p>
     </div>
   );
 }

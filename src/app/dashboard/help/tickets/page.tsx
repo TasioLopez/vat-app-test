@@ -58,7 +58,7 @@ export default function MyTicketsPage() {
   }, [tickets, unreadSet]);
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+    <div className="min-h-full bg-gray-50 p-6 md:p-10">
       <div className="max-w-3xl mx-auto space-y-6">
         <Link href="/dashboard/help" className="text-purple-700 font-medium inline-flex items-center gap-2">
           <FaArrowLeft /> Help
@@ -67,7 +67,7 @@ export default function MyTicketsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Mijn tickets</h1>
           <Link
             href="/dashboard/help/tickets/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-700 text-white font-semibold"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--color-primary-500)] text-white font-semibold"
           >
             <FaPlus /> Nieuw ticket
           </Link>
@@ -86,7 +86,7 @@ export default function MyTicketsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-semibold text-gray-900">{t.subject}</div>
                     {isUnread ? (
-                      <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-purple-900">
+                      <span className="shrink-0 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-[var(--color-primary-900)]">
                         Nieuw
                       </span>
                     ) : null}

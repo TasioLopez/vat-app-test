@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Download, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 type ExportLayoutKey = 'tp_2026' | 'vgr';
@@ -56,7 +57,7 @@ export function ExportButton({
 
       if (!res.ok || !data?.signedUrl) {
         console.error('PDF build failed:', data);
-        alert('PDF build failed. Check console/network.');
+        toast.error('PDF genereren mislukt. Probeer het opnieuw.');
         return;
       }
 
@@ -83,10 +84,10 @@ export function ExportButton({
         setTimeout(() => iframe.remove(), 60_000);
       }
 
-      setSavedMsg('PDF generated and saved to Documents.');
+      setSavedMsg('PDF gegenereerd en opgeslagen bij Documenten.');
     } catch (e) {
       console.error(e);
-      alert('Something went wrong while exporting the PDF.');
+      toast.error('Er ging iets mis bij het exporteren van de PDF.');
     } finally {
       setBusy(false);
       setTimeout(() => setSavedMsg(null), 5000);

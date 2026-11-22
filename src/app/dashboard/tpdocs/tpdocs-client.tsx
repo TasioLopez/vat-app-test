@@ -123,9 +123,9 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
           <TableHeader>
             <TableRow>
               <TableHead>TP</TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>Employer</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>Werknemer</TableHead>
+              <TableHead>Werkgever</TableHead>
+              <TableHead>Aangemaakt</TableHead>
               <TableHead className="w-24"></TableHead>
             </TableRow>
           </TableHeader>
@@ -189,7 +189,7 @@ export default function TPDocsClient({ rows }: { rows?: Row[] }) {
               {!active?.url && <div className="p-6 text-sm text-error-600">Geen bestandspad op deze rij.</div>}
               {active?.url && loading && (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Loading preview…
+                  Voorbeeld laden…
                 </div>
               )}
               {active?.url && !loading && err && (

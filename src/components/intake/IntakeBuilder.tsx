@@ -409,7 +409,7 @@ function IntakeBuilderInner({
         message={noIntakeMessage}
       />
 
-      <div className="sticky top-0 z-20 shrink-0 border-b border-border bg-white px-6 py-3 shadow-sm">
+      <div className="sticky top-0 z-20 shrink-0 border-b border-gray-200 bg-white px-6 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="truncate text-xl font-bold text-gray-900">Intakeformulier</h1>
@@ -526,13 +526,13 @@ function IntakeBuilderInner({
                     type="button"
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
                       active
-                        ? 'bg-indigo-100 font-medium text-indigo-900'
+                        ? 'bg-[var(--color-primary-50)] font-medium text-[var(--color-primary-900)]'
                         : 'text-gray-700 hover:bg-white'
                     }`}
                     onClick={() => scrollToSection(s.key)}
                   >
                     <Icon
-                      className={`h-4 w-4 shrink-0 ${active ? 'text-indigo-700' : 'text-gray-500'}`}
+                      className={`h-4 w-4 shrink-0 ${active ? 'text-[var(--color-primary-500)]' : 'text-gray-500'}`}
                     />
                     <span className="truncate">{s.title}</span>
                   </button>
