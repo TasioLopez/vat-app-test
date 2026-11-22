@@ -84,7 +84,15 @@ function parseKansen(raw: string): VGRBody['visie_plaatsbaarheid']['kansen'] | u
   return undefined;
 }
 
-const SECTION_SELECTED_KEY: Partial<Record<VGRAiSectionId, keyof VGRBody>> = {
+/** Body keys that carry a `selected: string[]` intervention list. */
+type InterventionSelectedKey =
+  | 'interventies_motivatie'
+  | 'kwaliteiten_onderzoek'
+  | 'scholing'
+  | 'sollicitatie_vaardigheden'
+  | 'interventies_activatie';
+
+const SECTION_SELECTED_KEY: Partial<Record<VGRAiSectionId, InterventionSelectedKey>> = {
   interventies_motivatie: 'interventies_motivatie',
   kwaliteiten_onderzoek: 'kwaliteiten_onderzoek',
   scholing: 'scholing',
@@ -162,7 +170,7 @@ export function applyVgrAiSuggesties(
   if (selectedKey) {
     const ids = parseSelectedInterventiesSuggestie(get('selected_interventies'));
     if (ids.length) {
-      patch[selectedKey] = { selected: ids } as Partial<VGRBody[typeof selectedKey]>;
+      patch[selectedKey] = { selected: ids };
     }
   }
 
