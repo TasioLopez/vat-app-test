@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const loadedFacts = await loadWorkerFacts(supabase, employeeId);
     const workerFacts = {
       ...(details ?? {}),
-      ...(loadedFacts?.values ?? {}),
+      ...(loadedFacts.snapshot?.values ?? {}),
     };
     if (intakeDocs.length === 0 && !intakeText) {
       return NextResponse.json(
