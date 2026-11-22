@@ -6,6 +6,43 @@ export type TotpFactor = {
   status: string;
 };
 
+/**
+ * Comma-separated emails that may skip MFA enrollment/challenge.
+ * Server: MFA_OPTIONAL_EMAILS. Client login also needs NEXT_PUBLIC_MFA_OPTIONAL_EMAILS.
+ */
+export function parseMfaOptionalEmails(
+  env: NodeJS.ProcessEnv = process.env
+): Set<string> {
+  const raw = [env.MFA_OPTIONAL_EMAILS, env.NEXT_PUBLIC_MFA_OPTIONAL_EMAILS]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(',');
+  const emails = new Set<string>();
+  for (const part of raw.split(',')) {
+    const normalized = part.trim().toLowerCase();
+    if (normalized) emails.add(normalized);
+  }
+  return emails;
+}
+
+export function isMfaOptionalEmail(
+  email: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  const normalized = String(email ?? '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) return false;
+  return parseMfaOptionalEmails(env).has(normalized);
+}
+
+/** Allowlisted accounts skip MFA enroll and AAL2 challenge entirely. */
+export function maySkipMfaEnrollment(
+  email: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  return isMfaOptionalEmail(email, env);
+}
+
 export async function listVerifiedTotpFactors(
   supabase: SupabaseClient
 ): Promise<TotpFactor[]> {

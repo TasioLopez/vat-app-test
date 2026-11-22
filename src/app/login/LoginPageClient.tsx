@@ -7,7 +7,7 @@ const Logo = "/branding/vat-app-logo.svg";
 import { validateForm, authValidation } from "@/lib/validation";
 import { getConfiguredClientAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
 import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
-import { listVerifiedTotpFactors } from "@/lib/auth/mfa";
+import { isMfaOptionalEmail, listVerifiedTotpFactors } from "@/lib/auth/mfa";
 import { markSessionAuthenticated } from "@/lib/auth/session-client";
 
 export default function LoginPageClient() {
@@ -81,6 +81,12 @@ export default function LoginPageClient() {
     if (userRecord.status !== "confirmed") {
       alert("Account not confirmed. Contact admin.");
       await supabase.auth.signOut();
+      return;
+    }
+
+    // Staging/test bots listed in MFA_OPTIONAL_EMAILS skip enroll + TOTP challenge.
+    if (isMfaOptionalEmail(authData.session.user.email)) {
+      await finishLoginRedirect();
       return;
     }
 

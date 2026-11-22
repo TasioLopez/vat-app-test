@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { tryCreateBrowserSupabase } from '@/lib/supabase/browser';
-import { hasVerifiedTotp } from '@/lib/auth/mfa';
+import { hasVerifiedTotp, isMfaOptionalEmail } from '@/lib/auth/mfa';
 import { markSessionAuthenticated } from '@/lib/auth/session-client';
 
 export default function MfaSetupPage() {
@@ -32,7 +32,7 @@ export default function MfaSetupPage() {
         router.replace('/login');
         return;
       }
-      if (await hasVerifiedTotp(supabase)) {
+      if (isMfaOptionalEmail(user.email) || (await hasVerifiedTotp(supabase))) {
         router.replace('/dashboard');
         return;
       }

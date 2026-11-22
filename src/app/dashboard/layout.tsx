@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import ClientLayout from '@/app/dashboard/ClientLayout';
-import { hasVerifiedTotp, needsMfaChallenge } from '@/lib/auth/mfa';
+import { hasVerifiedTotp, isMfaOptionalEmail, needsMfaChallenge } from '@/lib/auth/mfa';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await getSupabaseServerClient();
@@ -19,10 +19,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (error) redirect('/login');
 
-  if (!(await hasVerifiedTotp(supabase))) {
+  const skipMfa = isMfaOptionalEmail(user.email);
+  if (!skipMfa && !(await hasVerifiedTotp(supabase))) {
     redirect('/mfa/setup');
   }
-  if (await needsMfaChallenge(supabase)) {
+  if (!skipMfa && (await needsMfaChallenge(supabase))) {
     redirect('/login?reason=session_expired');
   }
 
