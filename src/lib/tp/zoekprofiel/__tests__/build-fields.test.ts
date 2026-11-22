@@ -165,6 +165,21 @@ describe('buildPara1Closing', () => {
     assert.match(text, /14 april 2026 en geactualiseerd/);
     assert.match(text, /2 mei 2026\.$/);
   });
+
+  it('drops actualisatie on the same calendar day as the leading datum (Mourad)', () => {
+    const text = buildPara1Closing('fml', '19 januari 2026', [
+      { type: 'spreekuurrapportage', datum_voluit: '19 januari 2026' },
+    ]);
+    assert.match(text, /Functionele Mogelijkheden Lijst van 19 januari 2026/);
+    assert.doesNotMatch(text, /geactualiseerd/);
+  });
+
+  it('keeps actualisatie on a later calendar day', () => {
+    const text = buildPara1Closing('fml', '19 januari 2026', [
+      { type: 'spreekuurrapportage', datum_voluit: '20 januari 2026' },
+    ]);
+    assert.match(text, /geactualiseerd in de spreekuurrapportage van 20 januari 2026/);
+  });
 });
 
 describe('buildInsufficientZoekprofielFields', () => {

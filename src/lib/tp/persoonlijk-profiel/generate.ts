@@ -167,7 +167,8 @@ export async function generatePersoonlijkProfiel(
   intake?: IntakeData | null
 ): Promise<PersoonlijkProfielFields> {
   const content = await generatePersoonlijkProfielContent(openai, supabase, ctx, docs, intake);
-  return buildPersoonlijkProfielFields(ctx, content);
+  const profileFacts = intake ? intakeFactsForPersoonlijkProfiel(intake) : null;
+  return buildPersoonlijkProfielFields(ctx, content, profileFacts);
 }
 
 export type { PersoonlijkProfielBuildContext, PersoonlijkProfielFields };

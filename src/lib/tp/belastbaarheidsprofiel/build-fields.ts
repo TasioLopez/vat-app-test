@@ -1,4 +1,9 @@
-import { buildArtsPhrase, enrichArtsOrgFromMeta, nlDate } from '@/lib/tp/format-context';
+import {
+  buildArtsPhrase,
+  enrichArtsOrgFromMeta,
+  isUnknownArtsPhrase,
+  nlDate,
+} from '@/lib/tp/format-context';
 import { normalizeFmlIzpLabKind } from '@/lib/document-analysis/schemas/tp2-date-schema';
 import {
   BELASTBAARHEID_GEEN_PROFIEL,
@@ -49,7 +54,16 @@ function fillTemplate(
   vars: { datum: string; artsPhrase: string }
 ): string {
   // Defensive: trailing punctuation on artsPhrase must not collide with template comma.
-  const artsPhrase = vars.artsPhrase.replace(/[.,;:\-]+\s*$/, '').trim() || vars.artsPhrase;
+  const artsPhrase = vars.artsPhrase.replace(/[.,;:\-]+\s*$/, '').trim();
+  if (isUnknownArtsPhrase(artsPhrase)) {
+    return template
+      .replace(', opgesteld door {artsPhrase}', '')
+      .replace(', opgesteld op {datum} door {artsPhrase}', ' van {datum}')
+      .replace('{datum}', vars.datum)
+      .replace('{artsPhrase}', '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
   return template.replace('{datum}', vars.datum).replace('{artsPhrase}', artsPhrase);
 }
 

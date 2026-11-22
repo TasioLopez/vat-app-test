@@ -1,5 +1,6 @@
 import {
   buildActualisatieSuffix,
+  filterActualisatiesNotSameDayAsLeading,
   OPENING_PATTERN,
   PARA1_CLOSING_TEMPLATES,
   SECTION_HEADING_PATTERN,
@@ -8,6 +9,7 @@ import {
 } from './constants';
 import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import type { ZoekprofielContentResult } from './schema';
+import { parseDutchOrIsoDate } from './resolve-leading-belastbaarheidsdoc';
 import {
   formatValidationIssues,
   validateZoekprofielOutput,
@@ -93,7 +95,12 @@ export function buildPara1Closing(
   } else {
     closing = template.replace('[datum]', datumVoluit);
   }
-  const suffix = buildActualisatieSuffix(actualisaties ?? []);
+  const filtered = filterActualisatiesNotSameDayAsLeading(
+    actualisaties ?? [],
+    datumVoluit,
+    parseDutchOrIsoDate
+  );
+  const suffix = buildActualisatieSuffix(filtered);
   if (!suffix) return closing.trim();
   // Closing templates already end with "."; strip before suffix so we never get "2026. en geactualiseerd".
   const base = closing.replace(/\.+\s*$/, '').trim();

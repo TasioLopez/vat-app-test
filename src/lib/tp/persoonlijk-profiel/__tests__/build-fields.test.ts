@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  assembleAlinea2FromProfileFacts,
   buildPersoonlijkProfielFields,
   calculateAge,
   hasValidOpening,
@@ -202,6 +203,42 @@ describe('stripSourceReferenceSentences', () => {
     assert.doesNotMatch(result, /intakeformulier/i);
     assert.match(result, /34-jarige vrouw/);
     assert.match(result, /mbo afgerond/);
+  });
+});
+
+describe('assembleAlinea2FromProfileFacts', () => {
+  it('includes rijbewijs, Nederlands and computer from full profile_facts', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      rijbewijs: ['B'],
+      nederlands_spreken: 'Goed',
+      nederlands_lezen: 'Goed',
+      nederlands_schrijven: 'Goed',
+      computervaardigheden: 'basis',
+      typvaardigheid: 'goed',
+    });
+    assert.match(text, /rijbewijs B/);
+    assert.match(text, /Nederlandse taal/i);
+    assert.match(text, /computer/i);
+    assert.match(text, /goede typvaardigheden/i);
+    assert.doesNotMatch(text, /typvaardigheid die als/i);
+  });
+});
+
+describe('buildPersoonlijkProfielFields with profile_facts', () => {
+  it('prefers deterministic facts over incomplete model alinea_2', () => {
+    const content: PersoonlijkProfielContentResult = {
+      alinea_1: 'Werknemer is een 40-jarige man met tien jaar werkervaring als monteur.',
+      alinea_2: 'Werknemer is gemotiveerd.',
+      alinea_3: null,
+    };
+    const { persoonlijk_profiel } = buildPersoonlijkProfielFields(baseCtx, content, {
+      rijbewijs: ['B'],
+      nederlands_spreken: 'Goed',
+      computervaardigheden: 'goed',
+    });
+    assert.match(persoonlijk_profiel, /rijbewijs B/);
+    assert.match(persoonlijk_profiel, /Nederlandse taal/i);
+    assert.match(persoonlijk_profiel, /computer/i);
   });
 });
 

@@ -19,7 +19,12 @@ import {
   type BasisSectionDisplayStatus,
 } from '@/lib/tp2026/basis-section-review';
 import { BASIS_SECTION_INFO } from '@/lib/tp2026/basis-section-info';
-import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
+import {
+  applyExWerknemerWording,
+  displayInleidingText,
+  EDITOR_EX_WORDING_FIELD_KEYS,
+  stripExWerknemerDisplayWording,
+} from '@/lib/tp/ex-werknemer-wording';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
@@ -393,6 +398,17 @@ function BasisFieldEditorRow({
   }
 
   const inleidingSub = field.key === 'inleiding' ? String(data.inleiding_sub ?? '').trim() : '';
+  const isEx = data.is_ex_werknemer === true;
+  const rawField = String(data[field.key] ?? '');
+  const displayField =
+    EDITOR_EX_WORDING_FIELD_KEYS.has(field.key) && isEx
+      ? field.key === 'inleiding'
+        ? displayInleidingText(rawField, true)
+        : applyExWerknemerWording(rawField, true)
+      : rawField;
+  const persistField = (md: string) => {
+    updateField(field.key, isEx ? stripExWerknemerDisplayWording(md) : md);
+  };
 
   return (
     <div>
@@ -412,48 +428,50 @@ function BasisFieldEditorRow({
       ) : null}
       {field.key === 'pow_meter' ? (
         <PowInschalingEditor
-          raw={String(data[field.key] ?? '')}
-          onChange={(md) => updateField(field.key, md)}
+          raw={displayField}
+          onChange={persistField}
         />
       ) : field.key === 'advies_ad_passende_arbeid' ? (
         <AdviesPassendeArbeidEditor
-          raw={String(data[field.key] ?? '')}
+          raw={displayField}
           hasAdReport={data.has_ad_report}
-          onChange={(md) => updateField(field.key, md)}
+          onChange={persistField}
         />
       ) : field.key === 'zoekprofiel' ? (
         <ZoekprofielEditor
-          raw={String(data[field.key] ?? '')}
+          raw={displayField}
           draft={data.zoekprofiel_clarification_draft}
           employeeId={employeeId}
-          onChange={(md) => updateField(field.key, md)}
+          onChange={persistField}
           onDraftChange={(next) => updateField('zoekprofiel_clarification_draft', next)}
         />
       ) : field.key === 'visie_loopbaanadviseur' ? (
         <VisieLoopbaanadviseurEditor
-          raw={String(data[field.key] ?? '')}
+          raw={displayField}
           draft={data.visie_la_functie_draft}
           employeeId={employeeId}
-          onChange={(md) => updateField(field.key, md)}
+          onChange={persistField}
           onDraftChange={(next) => updateField('visie_la_functie_draft', next)}
         />
       ) : field.key === 'prognose_bedrijfsarts' ? (
         <BelastbaarheidsprofielEditor
-          raw={String(data[field.key] ?? '')}
-          onChange={(md) => updateField(field.key, md)}
+          raw={displayField}
+          onChange={persistField}
         />
       ) : (
         <Basis2026MarkdownFieldEditor
-          markdown={String(data[field.key] ?? '')}
-          onChange={(md) => updateField(field.key, md)}
+          markdown={displayField}
+          onChange={persistField}
           placeholder={field.placeholder}
         />
       )}
       {inleidingSub ? (
         <InleidingSubEditor
-          raw={inleidingSub}
+          raw={isEx ? applyExWerknemerWording(inleidingSub, true) : inleidingSub}
           adReportConcept={isAdReportConcept(data)}
-          onChange={(v) => updateField('inleiding_sub', v)}
+          onChange={(v) =>
+            updateField('inleiding_sub', isEx ? stripExWerknemerDisplayWording(v) : v)
+          }
         />
       ) : null}
       {field.key === 'prognose_bedrijfsarts' && String(data[field.key] ?? '').trim() ? (

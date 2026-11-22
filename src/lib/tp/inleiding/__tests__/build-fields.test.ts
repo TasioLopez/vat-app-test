@@ -74,15 +74,16 @@ describe('buildInleidingFields', () => {
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
-  it('names the person ex-werknemer in the opening sentences when flagged', () => {
+  it('stores normal werknemer wording when ex-flagged (display transform is separate)', () => {
     const ctx: InleidingBuildContext = {
       ...baseCtx,
       meta: { ...baseCtx.meta, is_ex_werknemer: true },
     };
     const { inleiding } = buildInleidingFields(ctx, baseContent);
     const parts = inleiding.split('\n\n');
-    assert.match(parts[0], /mevrouw Baaijens, hierna ex-werknemer te noemen/);
-    assert.match(parts[1], /^Ex-werknemer is een /);
+    assert.match(parts[0], /mevrouw Baaijens, hierna werknemer te noemen/);
+    assert.match(parts[1], /^Werknemer is een /);
+    assert.doesNotMatch(inleiding, /\bex-werknemer\b/i);
     assert.doesNotMatch(inleiding, /uit dienst bij/);
     assert.doesNotMatch(inleiding, /Omwille van leesbaarheid/);
   });

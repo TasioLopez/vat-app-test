@@ -241,12 +241,59 @@ async function runEmployeeAutofillStep(
   }
 }
 
+/** When WorkerFacts exist but bedrijfsarts/AD meta are still blank, TP2 must still run. */
+export function tp2MetaGapsNeedExtraction(data: Record<string, unknown>): boolean {
+  const org = String(data.occupational_doctor_org ?? '').trim();
+  if (!org) return true;
+  if (data.ad_report_concept === true) return false;
+  if (data.has_ad_report !== true && data.has_ad_report !== false) return true;
+  return false;
+}
+
+function finalizeTp2Data(next: Record<string, unknown>): Record<string, unknown> {
+  let data = next;
+  if (data.is_ex_werknemer === true) {
+    const spoor2 = materializeSpoor2ForExWerknemer(data.tp3_activities, true);
+    if (spoor2) data = { ...data, tp3_activities: spoor2 };
+  }
+  const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(data));
+  if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
+    shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
+      shaped.bijlage1_phases as TP2026Bijlage1Phase[],
+      true
+    );
+  }
+  return shaped;
+}
+
+async function fetchTp2Details(
+  ctx: AutofillRunContext
+): Promise<{ details: Record<string, unknown> | null; error?: string }> {
+  const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
+    signal: ctx.signal,
+  });
+  const parsed = await readAutofillResponse(res);
+  if (!parsed.ok) return { details: null, error: parsed.error };
+  const json = parsed.json;
+  if (!json.success) {
+    return {
+      details: null,
+      error: (typeof json.error === 'string' && json.error) || 'Gegevens traject autofill mislukt',
+    };
+  }
+  const { details } = getAutofillDetailsPayload(json);
+  if (!details || Object.keys(details).length === 0) {
+    return { details: null, error: 'Geen trajectgegevens gevonden in documenten' };
+  }
+  return { details };
+}
+
 async function runTp2AutofillStep(
   ctx: AutofillRunContext,
   currentData: Record<string, unknown>
 ): Promise<AutofillStepRunResult> {
   try {
-    // TP stap-2 shared keys hydrate from WorkerFacts only (intake JSON blanks them).
+    // TP stap-2 shared keys hydrate from WorkerFacts first (intake JSON blanks them).
     const fromWorker = await gegevensFromWorkerFacts(ctx.supabase, ctx.employeeId);
     if (fromWorker.error) return { data: currentData, error: fromWorker.error };
 
@@ -255,56 +302,45 @@ async function runTp2AutofillStep(
       const preview = await previewFactProposal(ctx, currentData, details);
       if (preview.error) return { data: currentData, error: preview.error };
       let next = preview.data;
-      if (next.is_ex_werknemer === true) {
-        const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
-        if (spoor2) next.tp3_activities = spoor2;
+
+      // Still extract bedrijfsarts / AD from documents when meta gaps remain.
+      if (tp2MetaGapsNeedExtraction(next)) {
+        const tp2 = await fetchTp2Details(ctx);
+        if (tp2.details) {
+          const gapPreview = await previewFactProposal(ctx, next, tp2.details);
+          if (!gapPreview.error) {
+            next = gapPreview.data;
+            return {
+              data: finalizeTp2Data(next),
+              factProposal: { ...details, ...tp2.details },
+              skippedValidated: [
+                ...(preview.skippedValidated ?? []),
+                ...(gapPreview.skippedValidated ?? []),
+              ],
+            };
+          }
+        }
+        // Soft: keep WorkerFacts result if TP2 fails; do not fail the whole stap-2.
       }
-      const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(next));
-      if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
-        shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
-          shaped.bijlage1_phases as TP2026Bijlage1Phase[],
-          true
-        );
-      }
-      return { data: shaped, factProposal: details, skippedValidated: preview.skippedValidated };
+
+      return {
+        data: finalizeTp2Data(next),
+        factProposal: details,
+        skippedValidated: preview.skippedValidated,
+      };
     }
 
-    const res = await fetch(`/api/autofill-tp-2?employeeId=${ctx.employeeId}`, {
-      signal: ctx.signal,
-    });
-    const parsed = await readAutofillResponse(res);
-    if (!parsed.ok) {
-      return {
-        data: currentData,
-        error: parsed.error,
-      };
+    const tp2 = await fetchTp2Details(ctx);
+    if (tp2.error || !tp2.details) {
+      return { data: currentData, error: tp2.error || 'Geen trajectgegevens gevonden in documenten' };
     }
-    const json = parsed.json;
-    if (!json.success) {
-      return {
-        data: currentData,
-        error: (typeof json.error === 'string' && json.error) || 'Gegevens traject autofill mislukt',
-      };
-    }
-    const { details } = getAutofillDetailsPayload(json);
-    if (!details || Object.keys(details).length === 0) {
-      return { data: currentData, error: 'Geen trajectgegevens gevonden in documenten' };
-    }
-    const preview = await previewFactProposal(ctx, currentData, details);
+    const preview = await previewFactProposal(ctx, currentData, tp2.details);
     if (preview.error) return { data: currentData, error: preview.error };
-    let next = preview.data;
-    if (next.is_ex_werknemer === true) {
-      const spoor2 = materializeSpoor2ForExWerknemer(next.tp3_activities, true);
-      if (spoor2) next.tp3_activities = spoor2;
-    }
-    const shaped = ensureTP2026Shape(applyTrajectoryDateDerivations(next));
-    if (shaped.is_ex_werknemer === true && Array.isArray(shaped.bijlage1_phases)) {
-      shaped.bijlage1_phases = applyExWerknemerBijlage1Rule(
-        shaped.bijlage1_phases as TP2026Bijlage1Phase[],
-        true
-      );
-    }
-    return { data: shaped, factProposal: details, skippedValidated: preview.skippedValidated };
+    return {
+      data: finalizeTp2Data(preview.data),
+      factProposal: tp2.details,
+      skippedValidated: preview.skippedValidated,
+    };
   } catch (e) {
     if (isAutofillAbortError(e) || ctx.signal?.aborted) throw e;
     return {

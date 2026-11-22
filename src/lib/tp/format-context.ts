@@ -196,11 +196,13 @@ function formatSupervisiePart(part: string): string {
 /**
  * Phrase for FML / medisch spreekuur intros.
  * Preserves Verzekeringsarts/Bedrijfsarts/Arts role prefixes from tp_meta.
+ * Returns empty string when unknown — callers omit "opgesteld door …" rather than
+ * printing the soft placeholder "de bedrijfsarts".
  */
 export function buildArtsPhrase(occupational_doctor_org: string | null | undefined): string {
   const raw = cleanDoctorOrgRaw(occupational_doctor_org || '');
   if (!raw) {
-    return UNKNOWN_ARTS_PHRASE;
+    return '';
   }
 
   let phrase: string;
@@ -217,7 +219,14 @@ export function buildArtsPhrase(occupational_doctor_org: string | null | undefin
     phrase = `Arts ${raw}`;
   }
 
-  return stripTrailingPhrasePunctuation(phrase) || UNKNOWN_ARTS_PHRASE;
+  return stripTrailingPhrasePunctuation(phrase);
+}
+
+/** True when artsPhrase should be omitted from intro templates. */
+export function isUnknownArtsPhrase(artsPhrase: string | null | undefined): boolean {
+  const raw = String(artsPhrase ?? '').trim();
+  if (!raw) return true;
+  return raw.toLowerCase() === UNKNOWN_ARTS_PHRASE.toLowerCase();
 }
 
 function extractPrimaryDoctorName(value: string): string {

@@ -72,9 +72,12 @@ export function intakeTextHasExWerknemerLabel(text: string | null | undefined): 
   return /\bEx[-\s]?werknemer\b/i.test(text.replace(/\u00a0/g, ' '));
 }
 
-/** Instruction appended to generated-section prompts when the person is an ex-werknemer. */
+/**
+ * Instruction appended to generated-section prompts when the person is an ex-werknemer.
+ * Store normal "werknemer"/"werkgever" forms; the UI applies Ex- wording on render.
+ */
 export const EX_WERKNEMER_GENERATION_RULE =
-  'Wanneer context.is_ex_werknemer true is: noem deze persoon "ex-werknemer" en deze opdrachtgever "ex-werkgever". Schrijf geen leesbaarheidsdisclaimer over die termen. Laat citaten tussen aanhalingstekens letterlijk.';
+  'Wanneer context.is_ex_werknemer true is: schrijf toch gewoon "werknemer" en "werkgever" (niet "ex-werknemer"/"ex-werkgever") — de weergave past dat later aan. Schrijf geen leesbaarheidsdisclaimer over die termen. Laat citaten tussen aanhalingstekens letterlijk.';
 
 const PROTECTED_PHRASES = [
   'werknemersvaardigheden',
@@ -131,6 +134,39 @@ function matchCaseOf(source: string, replacement: string): string {
 function toExForm(word: string): string {
   const prefix = word[0] !== word[0].toLowerCase() ? 'Ex-' : 'ex-';
   return prefix + word.toLowerCase();
+}
+
+/** TP basis field keys that get Ex- wording in both A4 preview and the Basis editor body. */
+export const EDITOR_EX_WORDING_FIELD_KEYS = new Set([
+  'inleiding',
+  'wettelijke_kaders',
+  'persoonlijk_profiel',
+  'zoekprofiel',
+  'visie_loopbaanadviseur',
+  'visie_werknemer',
+  'prognose_bedrijfsarts',
+  'praktische_belemmeringen',
+  'advies_ad_passende_arbeid',
+  'pow_meter',
+]);
+
+/**
+ * Reverse display Ex- wording back to normal forms for storage.
+ * Used when the editor shows transformed text but must persist "werknemer".
+ */
+export function stripExWerknemerDisplayWording(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\bEx-werknemers\b/g, 'Werknemers')
+    .replace(/\bex-werknemers\b/g, 'werknemers')
+    .replace(/\bEx-werknemer\b/g, 'Werknemer')
+    .replace(/\bex-werknemer\b/g, 'werknemer')
+    .replace(/\bEx-werkgevers\b/g, 'Werkgevers')
+    .replace(/\bex-werkgevers\b/g, 'werkgevers')
+    .replace(/\bEx-werkgever\b/g, 'Werkgever')
+    .replace(/\bex-werkgever\b/g, 'werkgever')
+    .replace(/\b\(ex\)werknemers\b/gi, 'werknemers')
+    .replace(/\b\(ex\)werknemer\b/gi, 'werknemer');
 }
 
 /**

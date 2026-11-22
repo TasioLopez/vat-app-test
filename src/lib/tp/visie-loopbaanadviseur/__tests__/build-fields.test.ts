@@ -545,6 +545,14 @@ describe('lowercaseDutchAfterColon', () => {
     assert.equal(lowercaseDutchAfterColon('HBO-opleiding biedt een basis.'), 'HBO-opleiding biedt een basis.');
     assert.equal(lowercaseDutchAfterColon('de hbo-opleiding'), 'de hbo-opleiding');
   });
+
+  it('capitalizes sentence starts after a period in multi-sentence toelichting', () => {
+    assert.equal(
+      lowercaseDutchAfterColon('Past bij X. en past bij Y.'),
+      'past bij X. En past bij Y.'
+    );
+    assert.doesNotMatch(lowercaseDutchAfterColon('Past bij X. en past bij Y.'), /\.\s+[a-z]/);
+  });
 });
 
 describe('parseFunctieLine', () => {

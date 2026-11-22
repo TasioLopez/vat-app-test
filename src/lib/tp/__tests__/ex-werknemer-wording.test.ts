@@ -6,9 +6,11 @@ import {
   applyExWerknemerWordingBeforeMarker,
   detectExWerknemerFromText,
   displayInleidingText,
+  EX_WERKNEMER_GENERATION_RULE,
   intakeTextHasExWerknemerLabel,
   isExWerknemer,
   normalizeExWerknemer,
+  stripExWerknemerDisplayWording,
 } from '../ex-werknemer-wording';
 
 describe('normalizeExWerknemer', () => {
@@ -182,5 +184,22 @@ describe('intakeTextHasExWerknemerLabel', () => {
   it('detects Ex-werknemer label in plain text', () => {
     assert.equal(intakeTextHasExWerknemerLabel('☐ Ex-werknemer'), true);
     assert.equal(intakeTextHasExWerknemerLabel('no label here'), false);
+  });
+});
+
+describe('store-normal Ex wording', () => {
+  it('generation rule tells the model to store werknemer not ex-', () => {
+    assert.match(EX_WERKNEMER_GENERATION_RULE, /schrijf toch gewoon "werknemer"/i);
+    assert.doesNotMatch(EX_WERKNEMER_GENERATION_RULE, /schrijf "ex-werknemer"/i);
+  });
+
+  it('editor display equals preview transform for the same stored paragraph', () => {
+    const stored = 'Werknemer is een 40-jarige vrouw. De werkgever begeleidt de werknemer.';
+    const preview = applyExWerknemerWording(stored, true);
+    const editor = displayInleidingText(stored, true);
+    assert.equal(editor, preview);
+    assert.match(preview, /Ex-werknemer/);
+    assert.equal(applyExWerknemerWording(stored, false), stored);
+    assert.doesNotMatch(stripExWerknemerDisplayWording(preview), /\bex-/i);
   });
 });

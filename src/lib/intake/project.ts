@@ -1,6 +1,7 @@
 import type { IntakeData } from '@/lib/intake/schema';
 import { ensureIntakeShape } from '@/lib/intake/schema';
 import { parseContractHours } from '@/lib/employee/contract-hours';
+import { resolvePraktischeBelemmeringenValue } from '@/lib/tp2026/mapping';
 
 function splitReferentName(full: string): { first: string; last: string } {
   const parts = full.trim().split(/\s+/).filter(Boolean);
@@ -90,7 +91,9 @@ export function intakeToGegevensFields(raw: unknown): Record<string, unknown> {
     referent_phone: data.s4.referent_phone || null,
     referent_email: data.s4.referent_email || null,
 
-    praktische_belemmeringen: data.s17.praktische_belemmeringen || null,
+    praktische_belemmeringen: resolvePraktischeBelemmeringenValue(
+      data.s17.praktische_belemmeringen
+    ),
   };
 }
 
@@ -105,7 +108,9 @@ export function intakeToTpNarrativeFields(raw: unknown): Record<string, unknown>
     functie_categorien: data.s7.functie_categorien,
     ad_auteur: data.s7.ad_auteur || null,
     bijzonderheden: data.s17.bijzonderheden || null,
-    praktische_belemmeringen: data.s17.praktische_belemmeringen || null,
+    praktische_belemmeringen: resolvePraktischeBelemmeringenValue(
+      data.s17.praktische_belemmeringen
+    ),
     // Social / visie raw answers for synthesis fallback
     s8: data.s8,
     s9: data.s9,

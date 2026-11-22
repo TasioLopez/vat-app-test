@@ -189,6 +189,20 @@ export function GesprekHeader({
               ))}
             </select>
           </label>
+
+          {activeId ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={busy || recording}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 text-sm text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-50"
+              aria-label="Dit gesprek verwijderen"
+              title="Dit gesprek verwijderen"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden sm:inline">Verwijderen</span>
+            </button>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">

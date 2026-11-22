@@ -7,6 +7,7 @@ import {
   enrichArtsOrgFromMeta,
   expandDoctorRoleAbbreviations,
   formatDoctorWithRole,
+  isUnknownArtsPhrase,
   resolveOccupationalDoctorLabel,
   stripLeadingDoctorRolePrefix,
 } from '../format-context';
@@ -64,8 +65,16 @@ describe('buildArtsPhrase', () => {
   });
 
   it('returns soft omission when empty (no Arts [naam] placeholders)', () => {
-    assert.equal(buildArtsPhrase(''), 'de bedrijfsarts');
-    assert.equal(buildArtsPhrase(null), 'de bedrijfsarts');
+    assert.equal(buildArtsPhrase(''), '');
+    assert.equal(buildArtsPhrase(null), '');
+  });
+
+  it('never emits soft placeholder de bedrijfsarts', () => {
+    assert.equal(buildArtsPhrase(''), '');
+    assert.doesNotMatch(buildArtsPhrase(''), /de bedrijfsarts/i);
+    assert.equal(isUnknownArtsPhrase(''), true);
+    assert.equal(isUnknownArtsPhrase('de bedrijfsarts'), true);
+    assert.equal(isUnknownArtsPhrase('Bedrijfsarts M. Montagne'), false);
   });
 
   it('strips trailing period so template comma does not yield bedrijfsarts.,', () => {

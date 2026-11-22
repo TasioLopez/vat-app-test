@@ -35,6 +35,10 @@ export type InleidingBuildContext = {
     is_ex_werknemer?: boolean | null;
     occupational_doctor_name?: string | null;
     advies_ad_passende_arbeid?: string | null;
+    /** Fallback when referents.referent_function is empty (TP Gegevens). */
+    client_referent_function?: string | null;
+    /** Fallback from validated intake s4. */
+    intake_referent_function?: string | null;
   };
   client: { name?: string | null };
   referent: ReferentRow | null;
@@ -154,8 +158,8 @@ function applyGenderToMedischeText(text: string, gender?: string | null): string
   return text.replace(/zijn\/haar/g, poss);
 }
 
-function personNoun(ctx: InleidingBuildContext, capitalized: boolean): string {
-  if (ctx.meta.is_ex_werknemer === true) return capitalized ? 'Ex-werknemer' : 'ex-werknemer';
+function personNoun(_ctx: InleidingBuildContext, capitalized: boolean): string {
+  // Always store normal form; Ex- wording is applied on preview/editor render.
   return capitalized ? 'Werknemer' : 'werknemer';
 }
 
@@ -216,8 +220,12 @@ function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentRe
   const ref = ctx.referent;
   const refInitials = getInitials(ref?.first_name);
   const refLastName = coerceText(ref?.last_name, '[naam aanmelder]');
-  // Never invent the literal role "contactpersoon" — omit role when unknown.
-  const refFunction = coerceText(ref?.referent_function);
+  // Prefer referent row, then intake s4, then TP Gegevens — never invent "contactpersoon".
+  const refFunction = coerceText(
+    ref?.referent_function ||
+      ctx.meta.intake_referent_function ||
+      ctx.meta.client_referent_function
+  );
   const referentTitle = refTitle(ref?.gender);
   const referentShort = formatPersonShortName(`${refInitials} ${refLastName}`.trim());
 

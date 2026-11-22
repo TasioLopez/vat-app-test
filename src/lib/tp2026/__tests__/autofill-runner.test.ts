@@ -4,6 +4,7 @@ import {
   isAutofillAbortError,
   resolveTp3AutofillJson,
   runAutofillSteps,
+  tp2MetaGapsNeedExtraction,
   type AutofillRunStep,
 } from '../autofill-runner';
 
@@ -17,6 +18,37 @@ describe('isAutofillAbortError', () => {
     assert.equal(isAutofillAbortError(new DOMException('aborted', 'AbortError')), true);
     assert.equal(isAutofillAbortError(Object.assign(new Error('aborted'), { name: 'AbortError' })), true);
     assert.equal(isAutofillAbortError(new Error('other')), false);
+  });
+});
+
+describe('tp2MetaGapsNeedExtraction', () => {
+  it('still needs TP2 when facts exist but occupational_doctor_org is empty', () => {
+    assert.equal(tp2MetaGapsNeedExtraction({ first_name: 'A', has_ad_report: true }), true);
+    assert.equal(tp2MetaGapsNeedExtraction({ occupational_doctor_org: '  ' }), true);
+  });
+
+  it('needs TP2 when AD presence is unresolved', () => {
+    assert.equal(
+      tp2MetaGapsNeedExtraction({ occupational_doctor_org: 'Bedrijfsarts X' }),
+      true
+    );
+  });
+
+  it('skips TP2 gap extraction when org and AD are resolved', () => {
+    assert.equal(
+      tp2MetaGapsNeedExtraction({
+        occupational_doctor_org: 'Bedrijfsarts X',
+        has_ad_report: false,
+      }),
+      false
+    );
+    assert.equal(
+      tp2MetaGapsNeedExtraction({
+        occupational_doctor_org: 'Bedrijfsarts X',
+        ad_report_concept: true,
+      }),
+      false
+    );
   });
 });
 
