@@ -2,9 +2,10 @@
 slug: tp-stap-eindcontrole
 title: Stap 5: Eindecontrole
 excerpt: Controleren en afronden van het trajectplan.
-category_slug: tp-part-5
+category_slug: tp-part-4
 translation_group_id: 99c06522-3dc0-4b9e-8a33-5c395095da28
 locale: nl
+published: false
 ---
 
 # Stap 5: Eindecontrole
