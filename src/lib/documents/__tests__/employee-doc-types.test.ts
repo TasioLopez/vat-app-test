@@ -24,7 +24,7 @@ describe('isSpreekReportageDocType', () => {
 });
 
 describe('isGespreksverslagDocType', () => {
-  it('matches the staging slug', () => {
+  it('matches the intake gesprek slug', () => {
     assert.equal(isGespreksverslagDocType('gespreksverslag'), true);
   });
 
@@ -37,10 +37,10 @@ describe('isGespreksverslagDocType', () => {
 });
 
 describe('visibleEmployeeDocTypes', () => {
-  it('hides gesprek slots outside staging and shows them on staging', () => {
+  it('shows intake Gesprek on production and staging; Gesprek VGR only on staging', () => {
     const prev = process.env.NEXT_PUBLIC_APP_ENV;
     process.env.NEXT_PUBLIC_APP_ENV = 'production';
-    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), false);
+    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), false);
     process.env.NEXT_PUBLIC_APP_ENV = 'staging';
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);

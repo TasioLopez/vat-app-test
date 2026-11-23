@@ -5,7 +5,7 @@ import {
   getDocumentExtractionModel,
   getDocumentExtractionReasoningEffort,
 } from '@/lib/document-analysis/constants';
-import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import { requireMeetingEmployeeAccess } from '@/lib/meetings/access';
 import { generateNotesDecision } from '@/lib/meetings/audio';
 import { getMeetingCapture, updateMeetingCapture } from '@/lib/meetings/captures';
 import {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const employeeId = (body?.employeeId ?? '').toString();
   const captureId = (body?.captureId ?? '').toString();
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
   if (!isUuid(captureId)) return NextResponse.json({ error: 'Ongeldig gesprek' }, { status: 400 });
 
