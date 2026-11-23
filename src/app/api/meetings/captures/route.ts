@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError } from '@/lib/auth/api-auth';
-import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import {
+  assertMeetingPurposeAllowed,
+  requireMeetingEmployeeAccess,
+} from '@/lib/meetings/access';
 import { isMeetingPurpose, isNotesOrigin, isTranscriptSource } from '@/lib/meetings/audio';
 import { insertMeetingCapture, listMeetingCaptures } from '@/lib/meetings/captures';
 
@@ -9,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const employeeId = req.nextUrl.searchParams.get('employeeId') ?? '';
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
 
   const { data, error } = await listMeetingCaptures(access.supabase, employeeId);
@@ -20,7 +23,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const employeeId = (body?.employeeId ?? '').toString();
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
 
   const transcript = typeof body?.transcriptText === 'string' ? body.transcriptText.trim() : '';
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest) {
       : null;
   const notesOrigin = isNotesOrigin(body?.notesOrigin) ? body.notesOrigin : notes ? 'pasted' : null;
   const purpose = isMeetingPurpose(body?.purpose) ? body.purpose : 'intake';
+  const purposeBlocked = assertMeetingPurposeAllowed(purpose);
+  if (purposeBlocked) return purposeBlocked;
 
   const { data, error } = await insertMeetingCapture(access.supabase, {
     employee_id: employeeId,
