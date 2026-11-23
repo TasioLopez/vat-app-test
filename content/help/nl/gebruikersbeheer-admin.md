@@ -31,5 +31,5 @@ Standaardgebruikers zien alleen toegewezen of zelf aangemaakte werknemers.
 
 ## Zie ook
 
-- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [Admin, gebruiker en back office](/dashboard/help/a/admin-vs-standaard-gebruiker)
 - [Werknemer toewijzen](/dashboard/help/a/werknemer-koppelen-aan-gebruiker)
