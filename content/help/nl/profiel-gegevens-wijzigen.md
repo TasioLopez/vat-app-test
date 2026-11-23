@@ -9,32 +9,35 @@ locale: nl
 
 # Profielgegevens wijzigen
 
-Open de tab Profiel Informatie onder Instellingen. Wijzig de toegestane velden en sla op.
+Op de tab **Profiel Informatie** onder Instellingen past u uw **voornaam** en **achternaam** aan. Het **e-mailadres** ziet u wel, maar kunt u hier niet wijzigen.
 
-Sommige velden kunnen alleen door een beheerder worden aangepast.
+Sommige accountgegevens (zoals rol of e-mail) wijzigt alleen een beheerder via gebruikersbeheer.
 
 ## Waar in de app
 
-Route: /dashboard/settings, tab Profiel Informatie.
+Route: `/dashboard/settings`, tab **Profiel Informatie**.
 
 ## Stap voor stap
 
-1. Open [Instellingen: overzicht](/dashboard/help/a/instellingen-tab-overzicht) en ga naar de pagina in het menu.
-2. Klik Profiel Informatie.
-3. Pas velden aan en sla op.
+1. Open [Instellingen: overzicht](/dashboard/help/a/instellingen-tab-overzicht).
+2. Klik **Profiel Informatie**.
+3. Pas **Voornaam** en/of **Achternaam** aan.
+4. Klik **Profiel opslaan**.
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: Profiel Informatie-formulier (geanonimiseerd).  
-> **Bestandsnaam:** instellingen-profiel.png
+> **Schermafbeelding (nog toe te voegen)**
+>
+> Toon: Profiel Informatie-formulier (geanonimiseerd e-mailadres).
+>
+> **Bestandsnaam:** `instellingen-profiel.png`
 
 ## Veelvoorkomende problemen
 
-- Opslaan mislukt: controleer verplichte velden.
+- Opslaan mislukt: controleer verplichte velden (voornaam en achternaam).
 - Wijziging niet overal zichtbaar: ververs andere schermen of log opnieuw in.
+- E-mail wijzigen: vraag een beheerder; dit veld is op dit scherm vergrendeld.
 
 ## Zie ook
 
 - [Instellingen: overzicht](/dashboard/help/a/instellingen-tab-overzicht)
 - [Wachtwoord wijzigen](/dashboard/help/a/wachtwoord-wijzigen)
 - [Gebruikersbeheer](/dashboard/help/a/gebruikersbeheer-admin)
-
