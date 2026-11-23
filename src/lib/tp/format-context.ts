@@ -1,6 +1,7 @@
 /** Shared date and doctor formatting for TP section builders. */
 
 export const DOCTOR_ROLE_PREFIXES = [
+  'Arts Bedrijfsgeneeskunde',
   'Verzekeringsarts',
   'Bedrijfsarts',
   'Arts',
@@ -70,6 +71,7 @@ export function nlDate(iso?: string | null): string {
 
 export function hasDoctorRolePrefix(value: string): boolean {
   const trimmed = value.trim();
+  // Longest prefixes first (Arts Bedrijfsgeneeskunde before Arts).
   return DOCTOR_ROLE_PREFIXES.some((prefix) =>
     trimmed.toLowerCase().startsWith(`${prefix.toLowerCase()} `)
   );
@@ -109,54 +111,105 @@ export function stripLeadingDoctorRolePrefix(value: string): string {
   return expanded.slice(prefix.length).trim();
 }
 
-/** Longest title first so Bedrijfsarts/Verzekeringsarts are not read as Arts. */
-const SIGNATURE_ROLE_PATTERN = 'Verzekeringsarts|Bedrijfsarts|Anios|Aios|Arts';
+/** Longest title first so Bedrijfsarts/Verzekeringsarts/Arts Bedrijfsgeneeskunde are not read as Arts. */
+const SIGNATURE_ROLE_PATTERN =
+  'Arts\\s+Bedrijfsgeneeskunde|AIOS\\s+bedrijfsgeneeskunde|Verzekeringsarts|Bedrijfsarts|Anios|Aios|Arts';
 
 function canonicalDoctorRole(role: string): string {
+  const normalized = role.replace(/\s+/g, ' ').trim();
+  if (/^aios\s+bedrijfsgeneeskunde$/i.test(normalized)) return 'Arts Bedrijfsgeneeskunde';
+  if (/^arts\s+bedrijfsgeneeskunde$/i.test(normalized)) return 'Arts Bedrijfsgeneeskunde';
   const found = DOCTOR_ROLE_PREFIXES.find(
-    (prefix) => prefix.toLowerCase() === role.toLowerCase()
+    (prefix) => prefix.toLowerCase() === normalized.toLowerCase()
   );
-  return found ?? role;
+  return found ?? normalized;
 }
 
 function stripDoctorCourtesyTitles(value: string): string {
   return value.replace(/\b(?:de heer|mevrouw)\s+/gi, '').replace(/\s+/g, ' ').trim();
 }
 
+function hasExtendedDoctorRolePrefix(value: string): boolean {
+  const trimmed = value.trim();
+  if (/^arts\s+bedrijfsgeneeskunde\s+/i.test(trimmed)) return true;
+  return hasDoctorRolePrefix(trimmed);
+}
+
+/**
+ * Prefer the more specific "Arts Bedrijfsgeneeskunde" title over a leading Aios/Anios/Arts.
+ * "Aios S. de Beaufort, Arts Bedrijfsgeneeskunde" → "Arts Bedrijfsgeneeskunde S. de Beaufort"
+ */
+function promoteArtsBedrijfsgeneeskunde(primary: string): string {
+  const match = primary.match(
+    new RegExp(
+      `^(.+?)(?:,\\s*|\\s+)(${SIGNATURE_ROLE_PATTERN})\\.?$`,
+      'i'
+    )
+  );
+  if (!match) return primary;
+  const trailingRole = canonicalDoctorRole(match[2]);
+  if (trailingRole !== 'Arts Bedrijfsgeneeskunde') {
+    // Generic trailing title move (E. van Wijk, Arts).
+    let name = match[1].replace(/[\s,-]+$/g, '').trim();
+    if (!name) return primary;
+    if (hasExtendedDoctorRolePrefix(name)) return name;
+    return `${trailingRole} ${name}`;
+  }
+
+  let name = match[1].replace(/[\s,-]+$/g, '').trim();
+  // Drop redundant short trainee titles when the long title is present.
+  name = name.replace(/^(Aios|Anios|Arts)\s+/i, '').trim();
+  if (!name) return primary;
+  return `Arts Bedrijfsgeneeskunde ${name}`;
+}
+
+function formatSupervisorPhrase(supervisor: string): string {
+  let cleaned = supervisor.replace(/\s+/g, ' ').trim();
+  // "E. Visser, bedrijfsarts" → title first
+  const trailing = cleaned.match(
+    new RegExp(`^(.+?),\\s*(${SIGNATURE_ROLE_PATTERN})\\.?$`, 'i')
+  );
+  if (trailing) {
+    const name = trailing[1].replace(/[\s,-]+$/g, '').trim();
+    const role = canonicalDoctorRole(trailing[2]);
+    if (name) cleaned = `${role} ${name}`;
+  }
+  if (hasExtendedDoctorRolePrefix(cleaned) || hasDoctorRolePrefix(cleaned)) {
+    return cleaned;
+  }
+  // Bare supervisor names default to Bedrijfsarts (OSV).
+  return `Bedrijfsarts ${cleaned}`;
+}
+
 /**
  * Dutch report signatures put the title after the name:
  * "E. van Wijk, Arts. Werkend onder supervisie van …".
  * Move that title to the front, or drop it when a leading title is already present.
- * Supervisor text is left as written.
+ * Also normalizes "Arts Bedrijfsgeneeskunde" and bare supervisors.
  */
 function normalizeDoctorSignature(value: string): string {
-  const supervisie = value.match(
+  // Unify sentence breaks / standalone "Onder supervisie" footers into one clause.
+  // Do not rewrite the "onder" inside an existing "werkend onder supervisie" phrase.
+  let normalized = value
+    .replace(/\.\s*Werkend onder supervisie van\s+/gi, ' werkend onder supervisie van ')
+    .replace(/(?<!werkend\s)\bOnder supervisie van\s+/gi, 'werkend onder supervisie van ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const supervisie = normalized.match(
     new RegExp(
-      `^(.+?)(?:,\\s*|\\s+)(${SIGNATURE_ROLE_PATTERN})\\.?\\s+werkend onder supervisie van\\s+(.+)$`,
+      `^(.+?)\\s+werkend onder supervisie van\\s+(.+)$`,
       'i'
     )
   );
   if (supervisie) {
-    const name = supervisie[1].replace(/[\s,-]+$/, '').trim();
-    const supervisor = supervisie[3].trim();
-    if (!name || !supervisor) return value;
-    if (hasDoctorRolePrefix(name)) {
-      return `${name} werkend onder supervisie van ${supervisor}`;
-    }
-    return `${canonicalDoctorRole(supervisie[2])} ${name} werkend onder supervisie van ${supervisor}`;
+    const primary = promoteArtsBedrijfsgeneeskunde(supervisie[1].replace(/[\s,-]+$/g, '').trim());
+    const supervisor = formatSupervisorPhrase(supervisie[2].trim());
+    if (!primary || !supervisor) return normalized;
+    return `${primary} werkend onder supervisie van ${supervisor}`;
   }
 
-  // "Onder supervisie van …, bedrijfsarts" is a different footer; leave it for the trailing strip.
-  if (/supervisie/i.test(value)) return value;
-
-  const trailing = value.match(
-    new RegExp(`^(.+?),\\s*(${SIGNATURE_ROLE_PATTERN})\\.?$`, 'i')
-  );
-  if (!trailing) return value;
-  const name = trailing[1].replace(/[\s,-]+$/, '').trim();
-  if (!name) return value;
-  if (hasDoctorRolePrefix(name)) return name;
-  return `${canonicalDoctorRole(trailing[2])} ${name}`;
+  return promoteArtsBedrijfsgeneeskunde(normalized);
 }
 
 export function cleanDoctorOrgRaw(raw: string): string {
@@ -172,7 +225,12 @@ export function cleanDoctorOrgRaw(raw: string): string {
 
   // Strip trailing punctuation first so "bedrijfsarts." still matches the role strip below.
   cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
-  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\.?\s*$/i, '');
+  // Only strip a dangling duplicate "Bedrijfsarts" footer when the value already has a
+  // leading role (e.g. "Bedrijfsarts E. Visser - Bedrijfsarts"). Never strip when the
+  // only title is trailing, and never strip inside a supervisie clause.
+  if (!/supervisie/i.test(cleaned) && hasDoctorRolePrefix(cleaned)) {
+    cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\.?\s*$/i, '');
+  }
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
@@ -186,11 +244,11 @@ function stripTrailingPhrasePunctuation(value: string): string {
   return value.replace(/[.,;:\-]+\s*$/, '').trim();
 }
 
-function formatSupervisiePart(part: string): string {
+function formatSupervisiePart(part: string, { supervisor = false } = {}): string {
   const trimmed = expandDoctorRoleAbbreviations(part.trim()).replace(/\s+/g, ' ').trim();
   if (!trimmed) return trimmed;
-  if (hasDoctorRolePrefix(trimmed)) return trimmed;
-  return `Arts ${trimmed}`;
+  if (hasExtendedDoctorRolePrefix(trimmed) || hasDoctorRolePrefix(trimmed)) return trimmed;
+  return supervisor ? `Bedrijfsarts ${trimmed}` : `Arts ${trimmed}`;
 }
 
 /**
@@ -209,11 +267,12 @@ export function buildArtsPhrase(occupational_doctor_org: string | null | undefin
   const commaMatch = raw.match(/^(.+?)\s*,\s*werkend onder supervisie van\s*:?\s*(.+)$/i);
   if (commaMatch) {
     const primary = formatSupervisiePart(commaMatch[1].trim());
-    const supervisor = formatSupervisiePart(commaMatch[2].trim());
+    const supervisor = formatSupervisiePart(commaMatch[2].trim(), { supervisor: true });
     phrase = cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
   } else if (/werkend onder supervisie van/i.test(raw)) {
+    // cleanDoctorOrgRaw already normalized titles / bare supervisors.
     phrase = raw;
-  } else if (hasDoctorRolePrefix(raw)) {
+  } else if (hasExtendedDoctorRolePrefix(raw) || hasDoctorRolePrefix(raw)) {
     phrase = raw;
   } else {
     phrase = `Arts ${raw}`;

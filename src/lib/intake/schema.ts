@@ -1,5 +1,7 @@
 /** Intake document layout key and empty/shaped data_json for sections 1–17. */
 
+import { normalizeStringArrayField } from '@/lib/utils';
+
 export const INTAKE_LAYOUT_KEY = 'intake_v1' as const;
 export type IntakeLayoutKey = typeof INTAKE_LAYOUT_KEY;
 
@@ -434,8 +436,11 @@ function normalizeFunctieCategorien(raw: unknown): IntakeFunctieCategorie[] {
 }
 
 function normalizeStringArray(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((v) => str(v).trim()).filter(Boolean);
+  // Flatten JSON-ish tokens (e.g. '["B"]' / ['["B"]']) so checkboxes bind to codes.
+  if (typeof raw === 'string' || Array.isArray(raw)) {
+    return normalizeStringArrayField(raw);
+  }
+  return [];
 }
 
 function normalizeFmlKind(raw: unknown): 'fml' | 'izp' | '' {

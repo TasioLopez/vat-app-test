@@ -71,7 +71,23 @@ function resolveIntroTemplate(kind: string | null | undefined): string {
   return normalizeFmlIzpLabKind(kind) === 'izp' ? IZP_INTRO_TEMPLATE : FML_INTRO_TEMPLATE;
 }
 
-function resolveIntroVars(
+/** FML/IZP intro always comes from dossier meta — never from spreekuur extract. */
+function resolveProfileIntroVars(
+  ctx: BelastbaarheidsprofielBuildContext
+): { datum: string; artsPhrase: string } {
+  const kind = normalizeFmlIzpLabKind(ctx.meta.fml_izp_lab_kind);
+  const datumFallback = kind === 'izp' ? '[datum IZP]' : '[datum FML]';
+  return {
+    datum: nlDate(ctx.meta.fml_izp_lab_date) || datumFallback,
+    artsPhrase: buildArtsPhrase(ctx.meta.occupational_doctor_org),
+  };
+}
+
+/**
+ * Spreekuur intro uses the spreekuur extract (enriched with meta role/supervisie when
+ * the primary doctor matches). Falls back to profile meta when no spreekuur extract.
+ */
+function resolveSpreekuurIntroVars(
   ctx: BelastbaarheidsprofielBuildContext,
   content: BelastbaarheidsprofielContentResult
 ): { datum: string; artsPhrase: string } {
@@ -86,13 +102,7 @@ function resolveIntroVars(
       artsPhrase: buildArtsPhrase(enrichedArtsOrg),
     };
   }
-
-  const kind = normalizeFmlIzpLabKind(ctx.meta.fml_izp_lab_kind);
-  const datumFallback = kind === 'izp' ? '[datum IZP]' : '[datum FML]';
-  return {
-    datum: nlDate(ctx.meta.fml_izp_lab_date) || datumFallback,
-    artsPhrase: buildArtsPhrase(ctx.meta.occupational_doctor_org),
-  };
+  return resolveProfileIntroVars(ctx);
 }
 
 export function buildBelastbaarheidsprofielGeenProfielFields(): BelastbaarheidsprofielFields {
@@ -103,10 +113,14 @@ export function buildBelastbaarheidsprofielFields(
   ctx: BelastbaarheidsprofielBuildContext,
   content: BelastbaarheidsprofielContentResult
 ): BelastbaarheidsprofielFields {
-  const introVars = resolveIntroVars(ctx, content);
+  const profileIntroVars = resolveProfileIntroVars(ctx);
+  const spreekuurIntroVars = resolveSpreekuurIntroVars(ctx, content);
 
-  const limitationsIntro = fillTemplate(resolveIntroTemplate(ctx.meta.fml_izp_lab_kind), introVars);
-  const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, introVars);
+  const limitationsIntro = fillTemplate(
+    resolveIntroTemplate(ctx.meta.fml_izp_lab_kind),
+    profileIntroVars
+  );
+  const spreekuurIntro = fillTemplate(MEDISCH_SPREEKUUR_INTRO_TEMPLATE, spreekuurIntroVars);
   const rubrieken = normalizeRubrieken(content.rubrieken);
   const rubriekenLines = rubrieken.map((r) => `• ${r}`).join('\n');
 

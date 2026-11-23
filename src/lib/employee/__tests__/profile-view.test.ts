@@ -142,6 +142,33 @@ describe('employee profile view', () => {
     assert.equal(rowsOf(untyped, 'mobiliteit')[0].text, 'Ja');
   });
 
+  it('unwraps stringified rijbewijs JSON so chips show B not ["B"]', () => {
+    const fromString = buildEmployeeProfileView({
+      details: { drivers_license: true, drivers_license_type: '["B"]' as unknown as string[] },
+    });
+    assert.deepEqual(rowsOf(fromString, 'mobiliteit')[0].chips, ['B']);
+
+    const nested = buildEmployeeProfileView({
+      details: { drivers_license: true, drivers_license_type: ['["B"]'] },
+    });
+    assert.deepEqual(rowsOf(nested, 'mobiliteit')[0].chips, ['B']);
+
+    const doubled = buildEmployeeProfileView({
+      details: { drivers_license: true, drivers_license_type: ['B', '["B"]'] },
+    });
+    assert.deepEqual(rowsOf(doubled, 'mobiliteit')[0].chips, ['B']);
+  });
+
+  it('ignores meta computer descriptions like Computervaardigheden aanwezig', () => {
+    const view = buildEmployeeProfileView({
+      details: {
+        computer_skills: '2',
+        computer_skills_description: 'Computervaardigheden aanwezig',
+      },
+    });
+    assert.equal(rowsOf(view, 'taal_digitaal')[0].text, 'Basis (e-mail, browsen)');
+  });
+
   it('describes computer skills and computer ownership separately', () => {
     const view = buildEmployeeProfileView({
       details: { computer_skills: '3', has_computer: true },
