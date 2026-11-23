@@ -1,4 +1,5 @@
 import { getComputerSkillsLabel } from '@/lib/tp2026/gegevens-field-options';
+import { isComputerSkillsMetaDescription, normalizeStringArrayField } from '@/lib/utils';
 import {
   BANNED_PHRASES,
   CHRONOLOGY_SENTENCE_PATTERN,
@@ -130,11 +131,7 @@ function joinNl(items: string[]): string {
 }
 
 function listFromFact(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v).trim()).filter(Boolean);
-  }
-  if (typeof value === 'string' && value.trim()) return [value.trim()];
-  return [];
+  return normalizeStringArrayField(value);
 }
 
 function transportPhrase(raw: string): string {
@@ -286,7 +283,8 @@ function otherLanguageSentences(raw: string): string[] {
 
 function computerSentence(facts: PersoonlijkProfileFacts): string | null {
   const computer = String(facts.computervaardigheden ?? '').trim();
-  const extra = String(facts.computervaardigheden_toelichting ?? '').trim();
+  const extraRaw = String(facts.computervaardigheden_toelichting ?? '').trim();
+  const extra = isComputerSkillsMetaDescription(extraRaw) ? '' : extraRaw;
   const level = computerLevelAdjective(computer);
   const programs = programPhrase(extra);
   let skillCore = '';

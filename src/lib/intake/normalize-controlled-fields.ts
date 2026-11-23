@@ -8,6 +8,7 @@ import {
   normalizeEducationLevel,
 } from '@/lib/tp2026/gegevens-field-options';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import { isComputerSkillsMetaDescription, normalizeStringArrayField } from '@/lib/utils';
 
 function normalizeComputerLevel(raw: string): string {
   const trimmed = raw.trim();
@@ -33,8 +34,8 @@ function mentionsWordOrExcel(...parts: string[]): boolean {
   return /\bword\b/.test(blob) || /\bexcel\b/.test(blob);
 }
 
-function canonicalizeDriversLicenseTypes(values: string[]): string[] {
-  const mapped = values.map((raw) => {
+function canonicalizeDriversLicenseTypes(values: unknown): string[] {
+  const mapped = normalizeStringArrayField(values).map((raw) => {
     const trimmed = String(raw).trim();
     if (!trimmed) return trimmed;
     const hit = DRIVERS_LICENSE_TYPE_VALUES.find((v) => v.toLowerCase() === trimmed.toLowerCase());
@@ -47,7 +48,7 @@ function normalizeComputerFields(
   levelRaw: string,
   extraRaw: string
 ): { computer_skills: string; computer_skills_extra: string } {
-  let extra = extraRaw.trim();
+  let extra = isComputerSkillsMetaDescription(extraRaw) ? '' : extraRaw.trim();
   const levelCanonical = normalizeComputerLevel(levelRaw);
 
   if (levelCanonical) {
@@ -56,7 +57,7 @@ function normalizeComputerFields(
 
   const prose = levelRaw.trim();
   const looksLikeProse = Boolean(prose) && !/^[1-5]$/.test(prose);
-  if (looksLikeProse && !extra) {
+  if (looksLikeProse && !extra && !isComputerSkillsMetaDescription(prose)) {
     extra = prose;
   }
 
@@ -131,20 +132,16 @@ export function normalizeWorkerFactValues(facts: Record<string, unknown>): Recor
     }
   }
 
-  if (Array.isArray(out.drivers_license_type)) {
-    out.drivers_license_type = canonicalizeDriversLicenseTypes(
-      out.drivers_license_type.map((v) => String(v))
-    );
-  } else if (Array.isArray(out.drivers_license_types)) {
-    out.drivers_license_types = canonicalizeDriversLicenseTypes(
-      out.drivers_license_types.map((v) => String(v))
-    );
+  if (out.drivers_license_type != null) {
+    out.drivers_license_type = canonicalizeDriversLicenseTypes(out.drivers_license_type);
+  } else if (out.drivers_license_types != null) {
+    out.drivers_license_types = canonicalizeDriversLicenseTypes(out.drivers_license_types);
   }
 
-  if (Array.isArray(out.transport_type)) {
-    out.transport_type = filterAllowedTransportTypes(out.transport_type.map((v) => String(v)));
-  } else if (Array.isArray(out.transport_types)) {
-    out.transport_types = filterAllowedTransportTypes(out.transport_types.map((v) => String(v)));
+  if (out.transport_type != null) {
+    out.transport_type = filterAllowedTransportTypes(normalizeStringArrayField(out.transport_type));
+  } else if (out.transport_types != null) {
+    out.transport_types = filterAllowedTransportTypes(normalizeStringArrayField(out.transport_types));
   }
 
   return out;

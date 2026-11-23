@@ -2,6 +2,7 @@ import { parseContractHours } from '@/lib/employee/contract-hours';
 import { isEmptyGegevensField } from '@/lib/tp2026/gegevens-autofill';
 import { buildDoctorOrg } from '@/lib/intake/project';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import { normalizeStringArrayField } from '@/lib/utils';
 
 /** Shared facts that round-trip between the intake form and the worker record. */
 const STRING_PATHS: { section: 's1' | 's2' | 's5' | 's6' | 's17'; field: string; key: string }[] = [
@@ -35,8 +36,8 @@ function asString(value: unknown): string {
 }
 
 function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  // Shared with employee_details: parse JSON-ish strings and unwrap nested tokens.
+  return normalizeStringArrayField(value);
 }
 
 /** Flat shared facts currently shown on the intake form. */

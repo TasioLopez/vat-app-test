@@ -1,5 +1,5 @@
 import { formatDutchPhoneDisplay } from '@/lib/phone/format-dutch-display';
-import { isAbsentText, normalizePersonName } from '@/lib/utils';
+import { isAbsentText, normalizePersonName, normalizeStringArrayField } from '@/lib/utils';
 import {
   filterAllowedTransportTypes,
   normalizeEducationLevel,
@@ -186,13 +186,9 @@ export function mapAndValidateEmployeeDetails(
     }
 
     if (mappedKey === 'drivers_license_type') {
-      if (Array.isArray(rawValue) && rawValue.length > 0) {
-        const filtered = filterAllowedDriversLicenseTypes(rawValue);
-        if (filtered.length > 0) mappedData[mappedKey] = filtered;
-      } else if (typeof rawValue === 'string' && rawValue.trim().length > 0) {
-        const filtered = filterAllowedDriversLicenseTypes(
-          rawValue.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
-        );
+      const normalized = normalizeStringArrayField(rawValue);
+      if (normalized.length > 0) {
+        const filtered = filterAllowedDriversLicenseTypes(normalized);
         if (filtered.length > 0) mappedData[mappedKey] = filtered;
       }
       continue;
