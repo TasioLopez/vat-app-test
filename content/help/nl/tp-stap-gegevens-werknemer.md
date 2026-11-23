@@ -1,70 +1,59 @@
 ---
 slug: tp-stap-gegevens-werknemer
-title: Stap 2: Gegevens werknemer
-excerpt: Persoons- en adresgegevens voor het plan.
+title: Stap 2: Gegevens
+excerpt: Gegevens controleren en AI-voorstellen beoordelen.
 category_slug: tp-part-2
 translation_group_id: 78798091-db3f-40e6-b251-0da038213fa2
 locale: nl
 ---
 
-# Stap 2: Gegevens werknemer
+# Stap 2: Gegevens
 
-In deze stap vult u de persoonlijke en arbeidsgerelateerde gegevens van de werknemer in die in het trajectplan worden opgenomen. Gebruik waar beschikbaar automatische invulling vanuit de werknemerkaart.
+In de tab **Gegevens** controleert u de persoons-, traject- en opdrachtgevergegevens die in het trajectplan komen. Dankzij een gevalideerde intake zijn veel velden al gevuld.
 
 ## Wat is dit en waarom
 
-Consistente gegevens zijn nodig voor een correcte TP-tekst en voetregels op pagina's. Fouten in e-mail of adres leiden tot problemen bij communicatie en documenten.
+Consistente gegevens voorkomen fouten in tekst, inleiding en voetregels. Wijzigingen hier zijn voor **dit document**; niet alles schrijft terug naar het werknemersdossier.
 
 ## Voor wie
 
-Gebruikers met bewerkrechten op het trajectplan van deze werknemer.
+Gebruikers met bewerkrechten op dit trajectplan.
 
 ## Waar in de app
 
-Trajectplan Bouwer, stap 2 van 5 (`/dashboard/tp/{werknemer-id}`). De sectie heet Gegevens werknemer.
+Trajectplan Bouwer, **Stap 2 van 4**, tab **Gegevens**.
 
 ## Stap voor stap
 
-1. Scroll door het formulier; het kan meerdere schermen beslaan.
-2. Vul verplichte velden in volgens uw richtlijnen.
-3. Gebruik autofill als die wordt aangeboden; lees de terugkoppeling.
-4. Sla tussentijds op via Opslaan voor deze stap.
-5. Controleer datums op logische volgorde.
-6. Bekijk de voorvertoning waar beschikbaar.
-7. Klik Volgende naar stap 3 (TP deel 3 / TP Part 3).
+1. Loop de secties na (identiteit, contact, datums, opleiding, werk, mobiliteit, taal, …).
+2. Gebruik AI-invullen indien nodig; kies **alleen huidige stap** of **alle stappen**.
+3. Verschijnt de pop-up **Gevalideerde velden behouden**? Vergelijk **Huidig** en **Voorstel**, kies **Behouden** of **Voorstel overnemen**.
+4. Controleer de **loopbaanadviseur** (of **Gebruik mijn gegevens**).
+5. Bekijk de A4-preview.
+6. Ga door naar **Basisdocument**.
 
 > **Schermafbeelding (nog toe te voegen)**  
-> Toon: deel van het formulier met tabelvelden (geanonimiseerd).  
+> Toon: tab Gegevens met formulier en preview (geanonimiseerd).  
 > **Bestandsnaam:** `tp-stap2-gegevens-werknemer.png`
 
 > **Schermafbeelding (nog toe te voegen)**  
-> Toon: A4-preview van werknemergegevens (geanonimiseerd).  
-> **Bestandsnaam:** `tp-stap2-preview-werknemer.png`
+> Toon: pop-up gevalideerde velden behouden / voorstel (geanonimiseerd).  
+> **Bestandsnaam:** `tp-stap2-gevalideerde-velden.png`
 
 ## Belangrijke velden
 
-- Identiteit en contact (e-mail, adres).
-- Datums (geboorte, ziekmelding, intake, registratie, traject).
-- Opleiding, werkervaring, rijbewijs, vervoer, computervaardigheden.
-- **Loopbaanadviseur**: kies een collega of klik **Gebruik mijn gegevens**. Naam, telefoon en e-mail verschijnen op het trajectplan. Handmatig overschrijven kan voor uitzonderingen.
+- Identiteit en contact.
+- Trajectdatums en belastbaarheidsinformatie waar van toepassing.
+- Opleiding, werkervaring, rijbewijs, vervoer, taal & digitaal.
+- Loopbaanadviseur op het document (los van dossier-eigenaar).
 
 ## Veelvoorkomende problemen
 
-- Autofill vult niet alles: vul handmatig aan.
-- Validatiefout bij datum: gebruik de datumkiezer.
-- Wijzigingen weg: sla op voor navigatie.
-- Verkeerde adviseur op het document: wijzig de Loopbaanadviseur-sectie in Gegevens (zelfde document, geen kopie nodig).
-
-## Tips
-
-> Werk de werknemerkaart eerst bij buiten de bouwer om dubbel werk te voorkomen.
->
-> De dossier-eigenaar van de werknemer en de loopbaanadviseur op het TP zijn apart: de eigenaar filtert de lijst; de adviseur staat op het document.
+- AI vult niet alles: vul handmatig aan en controleer altijd zelf.
+- Verkeerde adviseur op het PDF: pas de adviseursectie in Gegevens aan.
 
 ## Zie ook
 
-- [Werknemer aanmaken en bewerken](/dashboard/help/a/werknemer-aanmaken-en-bewerken)
 - [Stap 1: Voorblad](/dashboard/help/a/tp-stap-voorblad)
-- [Stap 3: TP deel 3](/dashboard/help/a/tp-stap-deel-drie)
+- [Stap 3: Basisdocument](/dashboard/help/a/tp-stap-deel-drie)
 - [Trajectplan Bouwer: werkwijze](/dashboard/help/a/trajectplan-bouwer-werkwijze)
-

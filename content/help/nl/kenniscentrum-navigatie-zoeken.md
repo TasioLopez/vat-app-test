@@ -40,7 +40,8 @@ Dit artikel beschrijft hoe u de help-startpagina gebruikt: **navigeren via categ
 
 ### Categorieën en artikelen
 
-- **Hoofdcategorieën** zijn de eerste niveaus (bijvoorbeeld *Trajectplan Bouwer*, *Werknemers*).
+- **Hoofdcategorieën** zijn de eerste niveaus (bijvoorbeeld *Werknemers*, *Trajectplan Bouwer*, *Reserveren*, *Documenten*).
+- Onder *Trajectplan Bouwer* staan de vier substappen **Voorblad**, **Gegevens**, **Basisdocument** en **Bijlage 1**.
 - Onder een hoofdcategorie kunnen **subcategorieën** of direct **artikelen** staan, afhankelijk van de inrichting.
 - Klik op een **categorienaam** om onderliggende items te tonen of te verbergen (indien de interface dat ondersteunt).
 - Klik op een **artikeltitel** om naar de volledige tekst te gaan.

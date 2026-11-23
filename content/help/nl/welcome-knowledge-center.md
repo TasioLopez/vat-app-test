@@ -9,7 +9,7 @@ locale: nl
 
 # Welkom bij het kenniscentrum
 
-Dit kenniscentrum helpt u om snel te vinden hoe de applicatie werkt: van inloggen en rollen tot werknemers, de Trajectplan Bouwer, TP-documenten en ondersteuning. Gebruik de onderstaande manieren om antwoorden te vinden of hulp te vragen.
+Dit kenniscentrum helpt u om snel te vinden hoe de applicatie werkt: van **inloggen (inclusief tweestapsverificatie)** en **rollen** tot **werknemers**, **Reserveren**, de **Trajectplan Bouwer** (vier stappen), **Documenten** en ondersteuning.
 
 ## Wat is het kenniscentrum?
 
@@ -18,7 +18,7 @@ Het kenniscentrum is een **verzameling artikelen** (tekst met koppen, lijsten en
 ## Voor wie is dit bedoeld?
 
 - **Alle ingelogde gebruikers** kunnen artikelen lezen, zoeken en (waar ingeschakeld) de helpchat gebruiken.
-- **Beheerders** zien extra onderwerpen over gebruikersbeheer en helpbeheer.
+- **Beheerders** zien extra onderwerpen over gebruikersbeheer en **Helpbeheer** (onder Help in het menu).
 
 ## Waar vind ik het?
 
