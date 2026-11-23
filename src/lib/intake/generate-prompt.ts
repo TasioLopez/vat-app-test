@@ -51,6 +51,7 @@ Gecontroleerde waarden (exact, anders leeg):
 - dutch_speaking / dutch_writing / dutch_reading: alleen Goed | Voldoende | Matig | Geen; onbekend → leeg (niet raden)
 - drivers_license_types: alleen toegestane codes (AM, A1, A2, A, B, BE, B+, C1, C1E, C, CE, D1, D1E, D, DE, T, Code 95). Alleen bij expliciete vermelding in het dossier. NOOIT afleiden uit vervoer Auto alleen
 - transport_types: alleen Auto | Fiets | OV | Lopend
+- praktische_belemmeringen: alleen aantoonbare praktische (niet-medische) belemmeringen die de werknemer noemde. Zijn er geen of niet benoemd: laat het veld LEGE STRING (geen standaardzin of boilerplate verzinnen; TP vult de standaardzin later).
 
 AANMELDFORMULIER (sectie 4 contactpersoon)
 Een bron met label aanmeldformulier (ook als het bestandstype "extra" was maar de bestandsnaam "aanmeld" bevat) is het aanmeldformulier van de opdrachtgever.

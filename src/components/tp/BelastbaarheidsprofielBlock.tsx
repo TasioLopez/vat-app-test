@@ -2,38 +2,46 @@
 
 import React from 'react';
 import { PROGNOSE_DELIMITER } from '@/lib/tp/belastbaarheidsprofiel/constants';
+import {
+  splitAfterRubrieken,
+  splitBeforeRubrieken,
+} from '@/lib/tp/belastbaarheidsprofiel/list-markers';
 import { renderTextWithLogoBullets } from '@/components/tp2026/BasisLegacyText';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { TP_BASIS_TOELICHTING_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { useTPDocumentRender } from '@/context/TPDocumentRenderContext';
 import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
-function splitBeforeRubrieken(text: string): { intro: string; rest: string } {
-  const bulletIdx = text.search(/\n•\s/);
-  if (bulletIdx === -1) return { intro: text.trim(), rest: '' };
-  return {
-    intro: text.slice(0, bulletIdx).trim(),
-    rest: text.slice(bulletIdx).trim(),
-  };
-}
+function LimitationsWithLogoBullets({
+  limitations,
+  className = '',
+  forDocument,
+}: {
+  limitations: string;
+  className?: string;
+  forDocument: boolean;
+}) {
+  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
+  const { intro, rest } = splitBeforeRubrieken(limitations.trim());
+  const { bullets, spreekuurIntro } = splitAfterRubrieken(rest);
 
-function splitAfterRubrieken(rest: string): { bullets: string; spreekuurIntro: string } {
-  const parts = rest.split(/\n\n+/);
-  const bulletParts: string[] = [];
-  const textParts: string[] = [];
-
-  for (const part of parts) {
-    if (part.trim().startsWith('•')) {
-      bulletParts.push(part);
-    } else {
-      textParts.push(part);
-    }
+  if (!bullets) {
+    return (
+      <div className={className}>
+        <Basis2026MarkdownBody markdown={limitations} />
+      </div>
+    );
   }
 
-  return {
-    bullets: bulletParts.join('\n\n'),
-    spreekuurIntro: textParts.join('\n\n').trim(),
-  };
+  return (
+    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
+      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{doc(intro)}</p> : null}
+      <div className="my-3">{renderTextWithLogoBullets(bullets, false, true, forDocument)}</div>
+      {spreekuurIntro ? (
+        <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{doc(spreekuurIntro)}</p>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -47,32 +55,28 @@ export function BelastbaarheidsprofielBlock({
   className?: string;
 }) {
   const forDocument = useTPDocumentRender();
-  const doc = (s: string) => (forDocument ? protectDutchDatesInText(s) : s);
 
   if (!text?.trim()) return null;
 
   if (!text.includes(PROGNOSE_DELIMITER)) {
     return (
-      <div className={className}>
-        <Basis2026MarkdownBody markdown={text} />
-      </div>
+      <LimitationsWithLogoBullets
+        limitations={text}
+        className={className}
+        forDocument={forDocument}
+      />
     );
   }
 
   const [limitationsBlock, prognoseBlock] = text.split(PROGNOSE_DELIMITER);
-  const { intro, rest } = splitBeforeRubrieken(limitationsBlock.trim());
-  const { bullets, spreekuurIntro } = splitAfterRubrieken(rest);
   const quote = prognoseBlock.trim();
 
   return (
-    <div className={`tp-body-prose text-[12px] leading-relaxed text-neutral-900 ${className}`}>
-      {intro ? <p className={TP_BASIS_TOELICHTING_CLASS}>{doc(intro)}</p> : null}
-      {bullets ? (
-        <div className="my-3">{renderTextWithLogoBullets(bullets, false, true, forDocument)}</div>
-      ) : null}
-      {spreekuurIntro ? (
-        <p className={`${TP_BASIS_TOELICHTING_CLASS} mt-3`}>{doc(spreekuurIntro)}</p>
-      ) : null}
+    <div className={className}>
+      <LimitationsWithLogoBullets
+        limitations={limitationsBlock}
+        forDocument={forDocument}
+      />
       {quote ? (
         <div className="mt-2 italic">
           <Basis2026MarkdownBody markdown={quote} withInlineQuotes />

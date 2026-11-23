@@ -24,10 +24,33 @@ import { TOELICHTING_POW_DELIMITER } from '@/lib/tp/pow-meter/constants';
 export const PRACTISCHE_BELEMMERINGEN_DEFAULT =
   'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
 
+/**
+ * Known empty-state boilerplate (legacy AI / old forms) that must not stay as a TP quote.
+ * Real barrier prose (e.g. "Geen rijbewijs…") must not match.
+ */
+const EMPTY_PRAKTISCHE_BELEMMERINGEN_BOILERPLATE: RegExp[] = [
+  /^er zijn geen praktische belemmeringen ten aanzien van werk( en\/of re-integratie)?\.?$/i,
+  /^er zijn,? voor zover bekend,? geen praktische belemmeringen die mogelijk van invloed (kunnen )?zijn op het verloop van het tweede spoortraject\.?$/i,
+  /^voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject\.?$/i,
+  /^geen praktische belemmeringen( bekend| van toepassing)?\.?$/i,
+  /^er zijn geen praktische belemmeringen( bekend)?\.?$/i,
+];
+
+export function isEmptyPraktischeBelemmeringenBoilerplate(raw: string): boolean {
+  const normalized = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  if (!normalized) return true;
+  return EMPTY_PRAKTISCHE_BELEMMERINGEN_BOILERPLATE.some((re) => re.test(normalized));
+}
+
 /** Absent/meta intake text must not become a TP quote — use the default sentence. */
 export function resolvePraktischeBelemmeringenValue(raw: string | null | undefined): string {
   const text = String(raw ?? '').trim();
-  if (!text || isAbsentText(text)) return PRACTISCHE_BELEMMERINGEN_DEFAULT;
+  if (!text || isAbsentText(text) || isEmptyPraktischeBelemmeringenBoilerplate(text)) {
+    return PRACTISCHE_BELEMMERINGEN_DEFAULT;
+  }
   return text;
 }
 
