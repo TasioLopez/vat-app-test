@@ -24,11 +24,7 @@ Dit artikel beschrijft hoe u de help-startpagina gebruikt: **navigeren via categ
 2. Klik in het **linker zijmenu** op **Help**.
 3. De browser toont het pad **`/dashboard/help`**.
 
-> **Schermafbeelding (nog toe te voegen)**
->
-> Toon: volledige help-hub met **zoekbalk bovenaan** en daaronder de **boom van categorieën** (eventueel ingeklapt/uitgeklapt).
->
-> **Bestandsnaam:** `help-hub-overzicht.png`
+![volledige help-hub met **zoekbalk bovenaan** en daaronder de **boom van categorieën** (eventueel ingeklapt/uitgeklapt).](fe872bb3-29cb-4b33-b6af-5ba48157c7b1/1795439290071-help-hub-overzicht.png)
 
 ## De help-startpagina in onderdelen
 
@@ -40,7 +36,8 @@ Dit artikel beschrijft hoe u de help-startpagina gebruikt: **navigeren via categ
 
 ### Categorieën en artikelen
 
-- **Hoofdcategorieën** zijn de eerste niveaus (bijvoorbeeld *Trajectplan Bouwer*, *Werknemers*).
+- **Hoofdcategorieën** zijn de eerste niveaus (bijvoorbeeld *Werknemers*, *Trajectplan Bouwer*, *Reserveren*, *Documenten*).
+- Onder *Trajectplan Bouwer* staan de vier substappen **Voorblad**, **Gegevens**, **Basisdocument** en **Bijlage 1**.
 - Onder een hoofdcategorie kunnen **subcategorieën** of direct **artikelen** staan, afhankelijk van de inrichting.
 - Klik op een **categorienaam** om onderliggende items te tonen of te verbergen (indien de interface dat ondersteunt).
 - Klik op een **artikeltitel** om naar de volledige tekst te gaan.

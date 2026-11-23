@@ -9,28 +9,31 @@ locale: nl
 
 # Ticket opvolgen: status en berichten
 
-Na het indienen van een **supportticket** volgt u het dossier via **status**, **berichten** en soms **toegewezen personen** aan de kant van de organisatie. Dit artikel beschrijft wat gangbare statussen betekenen en hoe u **effectief** communiceert met support.
+Na het indienen van een **supportticket** volgt u het dossier via **status** en **berichten**. Dit artikel beschrijft wat de statussen betekenen en hoe u met support communiceert.
 
 ## Waar vind ik mijn tickets?
 
 1. Ga naar **Help** in het zijmenu.
-2. Open **Tickets** (of “Mijn tickets”) om uw eigen tickets te zien.
+2. Klik op **Mijn tickets** (route: `/dashboard/help/tickets`).
+3. Open een regel om het ticketdetail te zien.
+
+Nieuw ticket: **Nieuw ticket** op dezelfde pagina of op de Help-hub — zie [Supportticket indienen](/dashboard/help/a/support-ticket-indienen).
 
 > **Schermafbeelding (nog toe te voegen)**
 >
-> Toon: overzicht **mijn tickets** met kolommen status, onderwerp, datum.
+> Toon: overzicht **Mijn tickets** met kolommen status, onderwerp, datum.
 >
 > **Bestandsnaam:** `support-tickets-overzicht.png`
 
-## Statussen (algemeen)
+## Statussen
 
-De exacte labels kunnen per inrichting gelijk blijven aan deze lijst:
+De labels in de interface zijn:
 
 | Status | Betekenis voor u |
 |--------|------------------|
 | **Open** | Ticket is ingediend; wacht op opname door support. |
 | **In behandeling** | Iemand werkt eraan of wacht op interne actie. |
-| **Wacht op klant** | Support heeft een **vraag aan u** gesteld; antwoord nodig. |
+| **Wacht op reactie klant** | Support heeft een **vraag aan u** gesteld; antwoord nodig. |
 | **Opgelost** | Probleem naar verwachting opgelost; controleer en bevestig. |
 | **Gesloten** | Afgerond; geen verdere actie verwacht tenzij u heropent (indien mogelijk). |
 
@@ -39,7 +42,7 @@ De exacte labels kunnen per inrichting gelijk blijven aan deze lijst:
 ## Berichten lezen en beantwoorden
 
 1. Open het **ticket** uit de lijst.
-2. Lees de **tijdlijn** van onder naar boven (of omgekeerd, afhankelijk van de UI).
+2. Lees de **tijdlijn** van berichten.
 3. Als support om **extra info** vraagt, typ uw antwoord in het **reactieveld** en verstuur.
 4. Voeg waar mogelijk een **schermafdruk** toe (zonder gevoelige gegevens).
 
@@ -57,7 +60,7 @@ De exacte labels kunnen per inrichting gelijk blijven aan deze lijst:
 
 ## Wat u kunt doen om sneller geholpen te worden
 
-- Reageer **binnen redelijke termijn** als de status “wacht op klant” is.
+- Reageer **binnen redelijke termijn** als de status **Wacht op reactie klant** is.
 - **Herhaal** niet het hele verhaal: verwijs naar eerdere berichten in hetzelfde ticket.
 - Maak **geen dubbele tickets** voor hetzelfde probleem; gebruik het bestaande draadje.
 
@@ -67,10 +70,10 @@ De exacte labels kunnen per inrichting gelijk blijven aan deze lijst:
 Ververs de pagina; controleer of u het juiste ticket heeft geopend.
 
 **Ik wil het ticket heropenen.**  
-Als de interface dat toestaat, gebruik “heropenen”; anders nieuw ticket met verwijzing naar oud nummer.
+Als de interface dat toestaat, gebruik heropenen; anders een nieuw ticket met verwijzing naar het oude nummer.
 
-**Ik ben het niet eens met “opgelost”.**  
-Plaats een **vervolgbericht** met wat nog misgaat; vraag om herbewoording van de status.
+**Ik ben het niet eens met “Opgelost”.**  
+Plaats een **vervolgbericht** met wat nog misgaat; vraag om herbeoordeling van de status.
 
 ## Zie ook
 
