@@ -225,12 +225,13 @@ function mobilitySentence(facts: PersoonlijkProfileFacts): string[] {
 }
 
 function dutchSentence(facts: PersoonlijkProfileFacts): string[] {
-  const skills: { name: string; level: string }[] = [
-    ['spreken', facts.nederlands_spreken],
-    ['lezen', facts.nederlands_lezen],
-    ['schrijven', facts.nederlands_schrijven],
-  ]
-    .map(([name, value]) => ({ name, level: String(value ?? '').trim().toLowerCase() }))
+  const rows: { name: string; value: unknown }[] = [
+    { name: 'spreken', value: facts.nederlands_spreken },
+    { name: 'lezen', value: facts.nederlands_lezen },
+    { name: 'schrijven', value: facts.nederlands_schrijven },
+  ];
+  const skills = rows
+    .map((row) => ({ name: row.name, level: String(row.value ?? '').trim().toLowerCase() }))
     .filter((skill) => skill.level);
 
   const rated = skills.filter((skill) => skill.level !== 'geen');
