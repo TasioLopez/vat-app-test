@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyIntakeExtraAanmelder,
   buildAdSubBlock,
   buildInleidingFields,
   buildInleidingSubBlock,
@@ -320,6 +321,106 @@ describe('buildInleidingFields', () => {
     const { inleiding } = buildInleidingFields(ctx, baseContent);
     assert.match(inleiding, /door J\. Jansen namens Cordaan/);
     assert.doesNotMatch(inleiding, /contactpersoon/);
+  });
+
+  it('drops a model extra aanmelder when intake extra contactpersoon is empty', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      client: { name: 'Ihub' },
+      referent: {
+        ...baseCtx.referent!,
+        first_name: 'M.',
+        last_name: 'Yilmaz',
+        referent_function: 'Casemanager Arbo & Vitaliteit',
+        gender: null,
+      },
+    };
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'leidinggevende',
+        naam: 'V. Bloem',
+        organisatie: 'Ihub',
+        gender: null,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: '', extra_referent_function: '' } },
+      ctx.referent,
+      'Ihub'
+    );
+    const { inleiding } = buildInleidingFields(ctx, gated);
+    assert.match(
+      inleiding,
+      /door Casemanager Arbo & Vitaliteit M\. Yilmaz namens Ihub/
+    );
+    assert.doesNotMatch(inleiding, /Bloem/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
+  });
+
+  it('uses the intake extra contact when the model names someone else', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'leidinggevende',
+        naam: 'V. Bloem',
+        organisatie: 'Ihub',
+        gender: 'Man' as const,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'Hans Nooijen', extra_referent_function: 'Casemanager' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door H\. Nooijen, Casemanager bij Cordaan/);
+    assert.match(inleiding, /In opdracht van: meneer J\. Jansen, HR adviseur Cordaan/);
+    assert.doesNotMatch(inleiding, /Bloem/);
+  });
+
+  it('keeps model organisation when the model names the intake extra contact', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'Casemanager',
+        naam: 'P. de Vries',
+        organisatie: 'UWV',
+        gender: null,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'P. de Vries', extra_referent_function: 'Casemanager' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door P\. de Vries, Casemanager bij UWV/);
+    assert.match(inleiding, /In opdracht van: meneer J\. Jansen/);
+  });
+
+  it('drops an extra contact that is the same person as the primary referent', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'HR adviseur',
+        naam: 'Jan Jansen',
+        organisatie: 'Cordaan',
+        gender: 'Man' as const,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'Jan Jansen', extra_referent_function: 'HR adviseur' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
   });
 
   it('ignores extra_aanmelder that duplicates the primary referent', () => {

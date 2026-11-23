@@ -1,3 +1,4 @@
+import { getComputerSkillsLabel } from '@/lib/tp2026/gegevens-field-options';
 import {
   BANNED_PHRASES,
   CHRONOLOGY_SENTENCE_PATTERN,
@@ -122,88 +123,211 @@ export function rewriteTypvaardigheidPhrasing(text: string): string {
     .trim();
 }
 
-/**
- * Deterministic alinea_2 sentences from structured intake profile_facts.
- * Only emits clauses for facts that are present.
- */
-export function assembleAlinea2FromProfileFacts(facts: PersoonlijkProfileFacts): string {
+function joinNl(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  if (items.length === 2) return `${items[0]} en ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} en ${items[items.length - 1]}`;
+}
+
+function listFromFact(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
+
+function transportPhrase(raw: string): string {
+  const key = raw.trim().toLowerCase();
+  if (key === 'auto') return 'de auto';
+  if (key === 'fiets') return 'de fiets';
+  if (key === 'ov') return 'het openbaar vervoer';
+  if (key === 'lopend') return 'te voet';
+  return raw.trim();
+}
+
+const LEVEL_ADJECTIVES: Record<string, string> = {
+  geen: '',
+  basis: 'basis',
+  gemiddeld: 'gemiddelde',
+  geavanceerd: 'geavanceerde',
+  expert: 'expert',
+  goed: 'goede',
+  'goed genoeg': 'goede',
+  matig: 'matige',
+  redelijk: 'redelijke',
+  uitstekend: 'uitstekende',
+  'zeer goed': 'uitstekende',
+  voldoende: 'voldoende',
+};
+
+function levelAdjective(raw: string): { recognized: boolean; adjective: string } {
+  const text = raw.trim();
+  if (!text) return { recognized: false, adjective: '' };
+  const numberKey = text.split(' - ')[0]?.trim() ?? '';
+  const fromOption = getComputerSkillsLabel(numberKey) || getComputerSkillsLabel(text);
+  const label = (
+    fromOption || (text.includes(' - ') ? text.split(' - ').slice(1).join(' - ') : text)
+  )
+    .trim()
+    .toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(LEVEL_ADJECTIVES, label)) {
+    return { recognized: true, adjective: LEVEL_ADJECTIVES[label] };
+  }
+  return { recognized: false, adjective: '' };
+}
+
+function typingAdjective(raw: string): string {
+  const text = raw.trim();
+  if (!text) return '';
+  const known = levelAdjective(text);
+  if (known.recognized) return known.adjective;
+  if (!text.includes(' ')) return text.toLowerCase();
+  return text.toLowerCase();
+}
+
+function programPhrase(raw: string): string {
+  const parts = raw
+    .split(/\s*,\s*|\s+en\s+/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return joinNl(parts);
+}
+
+function mobilitySentence(facts: PersoonlijkProfileFacts): string[] {
+  const licenses = listFromFact(facts.rijbewijs);
+  const transport = listFromFact(facts.vervoer).map(transportPhrase);
   const sentences: string[] = [];
 
-  const licenses = Array.isArray(facts.rijbewijs)
-    ? (facts.rijbewijs as unknown[]).map((v) => String(v).trim()).filter(Boolean)
-    : typeof facts.rijbewijs === 'string' && facts.rijbewijs.trim()
-      ? [facts.rijbewijs.trim()]
-      : [];
-  const transport = Array.isArray(facts.vervoer)
-    ? (facts.vervoer as unknown[]).map((v) => String(v).trim()).filter(Boolean)
-    : typeof facts.vervoer === 'string' && facts.vervoer.trim()
-      ? [facts.vervoer.trim()]
-      : [];
-
+  if (licenses.length > 0 && transport.length > 0) {
+    sentences.push(
+      `Werknemer beschikt over rijbewijs ${licenses.join(', ')} en verplaatst zich met ${joinNl(transport)}.`
+    );
+    return sentences;
+  }
   if (licenses.length > 0) {
     sentences.push(`Werknemer beschikt over rijbewijs ${licenses.join(', ')}.`);
-  } else if (licenses.length === 0 && facts.rijbewijs === false) {
+  } else if (facts.rijbewijs === false) {
     sentences.push('Werknemer beschikt niet over een rijbewijs.');
   }
-
   if (transport.length > 0) {
-    const joined =
-      transport.length === 1
-        ? transport[0]
-        : `${transport.slice(0, -1).join(', ')} en ${transport[transport.length - 1]}`;
-    sentences.push(`Werknemer verplaatst zich met ${joined}.`);
+    sentences.push(`Werknemer verplaatst zich met ${joinNl(transport)}.`);
+  }
+  return sentences;
+}
+
+function dutchSentence(facts: PersoonlijkProfileFacts): string[] {
+  const skills: { name: string; level: string }[] = [
+    ['spreken', facts.nederlands_spreken],
+    ['lezen', facts.nederlands_lezen],
+    ['schrijven', facts.nederlands_schrijven],
+  ]
+    .map(([name, value]) => ({ name, level: String(value ?? '').trim().toLowerCase() }))
+    .filter((skill) => skill.level);
+
+  const rated = skills.filter((skill) => skill.level !== 'geen');
+  const absent = skills.filter((skill) => skill.level === 'geen');
+  const sentences: string[] = [];
+
+  if (rated.length > 0) {
+    const groups: { level: string; names: string[] }[] = [];
+    for (const skill of rated) {
+      const group = groups.find((item) => item.level === skill.level);
+      if (group) group.names.push(skill.name);
+      else groups.push({ level: skill.level, names: [skill.name] });
+    }
+    const clauses = groups.map((group) => `${group.level} in ${joinNl(group.names)}`);
+    sentences.push(`De Nederlandse taal beheerst werknemer ${clauses.join(' en ')}.`);
   }
 
-  const nlParts: string[] = [];
-  const spreken = String(facts.nederlands_spreken ?? '').trim();
-  const schrijven = String(facts.nederlands_schrijven ?? '').trim();
-  const lezen = String(facts.nederlands_lezen ?? '').trim();
-  if (spreken) nlParts.push(`spreken ${spreken.toLowerCase()}`);
-  if (lezen) nlParts.push(`lezen ${lezen.toLowerCase()}`);
-  if (schrijven) nlParts.push(`schrijven ${schrijven.toLowerCase()}`);
-  if (nlParts.length > 0) {
-    sentences.push(
-      `De Nederlandse taal beheerst werknemer ${nlParts.join(', ').replace(/, ([^,]*)$/, ' en $1')}.`
-    );
+  for (const skill of absent) {
+    const label = skill.name.charAt(0).toUpperCase() + skill.name.slice(1);
+    sentences.push(`${label} beheerst werknemer niet.`);
   }
+  return sentences;
+}
 
-  const otherLang = String(facts.andere_talen ?? '').trim();
-  if (otherLang) {
-    sentences.push(`Andere talen: ${otherLang}.`);
-  }
+const OTHER_LANGUAGE_SUBJECT: Record<string, string> = {
+  berbers: 'De Berberse taal',
+  engels: 'Het Engels',
+  arabisch: 'Het Arabisch',
+  turks: 'De Turkse taal',
+  duits: 'De Duitse taal',
+  frans: 'De Franse taal',
+  spaans: 'De Spaanse taal',
+};
 
+function otherLanguageSentences(raw: string): string[] {
+  return raw
+    .split(/\s*;\s*|\n+/)
+    .map((part) => part.trim().replace(/\.$/, ''))
+    .filter(Boolean)
+    .map((chunk) => {
+      const match = chunk.match(/^(\S+)\s+(.+)$/);
+      if (!match) {
+        const sentence = chunk.endsWith('.') ? chunk : `${chunk}.`;
+        return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+      }
+      const name = match[1];
+      const level = joinNl(match[2].split(/\s*,\s*/).map((part) => part.trim()).filter(Boolean));
+      const subject = OTHER_LANGUAGE_SUBJECT[name.toLowerCase()] ?? `Het ${name}`;
+      return `${subject} beheerst werknemer ${level}.`;
+    });
+}
+
+function computerSentence(facts: PersoonlijkProfileFacts): string | null {
   const computer = String(facts.computervaardigheden ?? '').trim();
-  const computerExtra = String(facts.computervaardigheden_toelichting ?? '').trim();
-  if (computer || computerExtra) {
-    const skill = computerExtra || computer;
-    sentences.push(
-      `Werknemer beschikt over ${skill.toLowerCase().includes('computer') ? skill : `computervaardigheden (${skill})`}.`
-    );
+  const extra = String(facts.computervaardigheden_toelichting ?? '').trim();
+  const level = levelAdjective(computer);
+  const programs = programPhrase(extra);
+  let skillCore = '';
+  if (level.recognized && level.adjective && programs) {
+    skillCore = `${level.adjective} computervaardigheden met ${programs}`;
+  } else if (level.recognized && level.adjective) {
+    skillCore = `${level.adjective} computervaardigheden`;
+  } else if (programs) {
+    skillCore = `computervaardigheden met ${programs}`;
+  } else if (!level.recognized && computer) {
+    skillCore = computer.toLowerCase().includes('computer')
+      ? computer
+      : `computervaardigheden (${computer})`;
   }
 
-  if (facts.has_pc === true) {
-    sentences.push('Werknemer beschikt over een pc of laptop.');
-  }
+  const typing = typingAdjective(String(facts.typvaardigheid ?? ''));
+  const pc = facts.has_pc === true;
+  const typingClause = typing ? `${typing} typvaardigheden` : '';
 
-  const typing = String(facts.typvaardigheid ?? '').trim();
-  if (typing) {
-    const lower = typing.toLowerCase();
-    const adjective =
-      lower === 'goed'
-        ? 'goede'
-        : lower === 'matig'
-          ? 'matige'
-          : lower === 'redelijk'
-            ? 'redelijke'
-            : lower === 'uitstekend'
-              ? 'uitstekende'
-              : /goed|matig|redelijk|uitstekend/i.test(typing)
-                ? `${lower}e`
-                : 'goede';
-    sentences.push(`Werknemer beschikt over ${adjective} typvaardigheden.`);
+  if (pc && skillCore && typingClause) {
+    return `Werknemer beschikt over een pc of laptop, heeft ${skillCore} en beschikt over ${typingClause}.`;
   }
+  if (pc && skillCore) {
+    return `Werknemer beschikt over een pc of laptop en heeft ${skillCore}.`;
+  }
+  if (pc && typingClause) {
+    return `Werknemer beschikt over een pc of laptop en over ${typingClause}.`;
+  }
+  if (pc) return 'Werknemer beschikt over een pc of laptop.';
+  if (skillCore && typingClause) {
+    return `Werknemer beschikt over ${skillCore} en over ${typingClause}.`;
+  }
+  if (skillCore) return `Werknemer beschikt over ${skillCore}.`;
+  if (typingClause) return `Werknemer beschikt over ${typingClause}.`;
+  return null;
+}
 
-  return joinSentences(sentences);
+/**
+ * Deterministic alinea_2 sentences from structured intake profile_facts.
+ * Only emits clauses for facts that are present, written as report sentences.
+ */
+export function assembleAlinea2FromProfileFacts(facts: PersoonlijkProfileFacts): string {
+  const otherLang = String(facts.andere_talen ?? '').trim();
+  const computer = computerSentence(facts);
+  return joinSentences([
+    ...mobilitySentence(facts),
+    ...dutchSentence(facts),
+    ...(otherLang ? otherLanguageSentences(otherLang) : []),
+    ...(computer ? [computer] : []),
+  ]);
 }
 
 export function sanitizeFragment(text: string): string {

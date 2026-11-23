@@ -8,7 +8,9 @@ import type { ReferentRow } from '@/lib/referents';
 import { generateIntakeSectie3Content } from '@/lib/tp/intake-sectie3';
 import { stripLeadingIntakeQuoteLabels } from '@/lib/tp/strip-intake-quote-labels';
 import {
+  applyIntakeExtraAanmelder,
   buildInleidingFields,
+  coerceText,
   stripCitations,
   type InleidingBuildContext,
   type InleidingFields,
@@ -100,8 +102,13 @@ async function deleteUploadedFiles(openai: OpenAI, fileIds: string[]): Promise<v
   await Promise.all(fileIds.map((id) => openai.files.delete(id).catch(() => {})));
 }
 
-function buildApiContext(ctx: InleidingBuildContext): Record<string, unknown> {
+function buildApiContext(
+  ctx: InleidingBuildContext,
+  intake?: IntakeData | null
+): Record<string, unknown> {
   const ref = ctx.referent;
+  const extraName = coerceText(intake?.s4?.extra_referent_name);
+  const extraFunction = coerceText(intake?.s4?.extra_referent_function);
   return {
     has_ad_report: ctx.meta.has_ad_report ?? false,
     ad_report_concept: ctx.meta.ad_report_concept ?? false,
@@ -130,6 +137,9 @@ function buildApiContext(ctx: InleidingBuildContext): Record<string, unknown> {
           gender: ref.gender,
         }
       : null,
+    extra_referent: extraName
+      ? { name: extraName, function: extraFunction || null }
+      : null,
   };
 }
 
@@ -149,7 +159,7 @@ export async function generateInleidingContent(
   }
 
   try {
-    const contextMessage = buildInleidingContextMessage(buildApiContext(ctx));
+    const contextMessage = buildInleidingContextMessage(buildApiContext(ctx, intake));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
       { type: 'input_text', text: contextMessage },
       ...(intakeText ? [{ type: 'input_text' as const, text: intakeText }] : []),
@@ -227,7 +237,13 @@ export async function generateInleiding(
     content.reintegratie_uren = intakeUren;
   }
 
-  return buildInleidingFields(ctx, content);
+  const gated = applyIntakeExtraAanmelder(
+    content,
+    intake,
+    ctx.referent,
+    coerceText(ctx.client.name)
+  );
+  return buildInleidingFields(ctx, gated);
 }
 
 export type { InleidingBuildContext, InleidingFields, ReferentRow };

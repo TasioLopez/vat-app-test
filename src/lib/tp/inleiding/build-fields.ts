@@ -1,3 +1,4 @@
+import type { IntakeData } from '@/lib/intake/schema';
 import type { ReferentRow } from '@/lib/referents';
 import { formatPersonShortName } from '@/lib/utils';
 import {
@@ -16,7 +17,7 @@ import {
   VALENTINEZ_DOEL_AFSLUITING,
   VALENTINEZ_DOEL_BASE,
 } from './constants';
-import type { InleidingContentResult } from './schema';
+import type { ExtraAanmelder, InleidingContentResult } from './schema';
 
 export type InleidingBuildContext = {
   employee: { first_name?: string | null; last_name?: string | null };
@@ -194,8 +195,8 @@ function normalizePersonKey(value: string): string {
 }
 
 function isDistinctExtraAanmelder(
-  extra: NonNullable<InleidingContentResult['extra_aanmelder']>,
-  ref: ReferentRow | null
+  extra: { naam?: string | null },
+  ref: { first_name?: string | null; last_name?: string | null } | null
 ): boolean {
   const extraName = normalizePersonKey(extra.naam || '');
   if (!extraName) return false;
@@ -213,6 +214,64 @@ function isDistinctExtraAanmelder(
     if (extraFirst[0] === refFirst[0]) return false;
   }
   return true;
+}
+
+function splitPersonName(name: string): { first_name: string; last_name: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first_name: '', last_name: '' };
+  if (parts.length === 1) return { first_name: '', last_name: parts[0] };
+  return { first_name: parts.slice(0, -1).join(' '), last_name: parts[parts.length - 1] };
+}
+
+export type IntakeExtraReferentSource = {
+  s4?: {
+    extra_referent_name?: string | null;
+    extra_referent_function?: string | null;
+  } | null;
+} | null;
+
+/**
+ * Intake sectie 4 is the only source for a second aanmelder.
+ * An empty extra contactpersoon drops whatever the model copied from FML/AD.
+ * When the extra contact is filled, that name and function win. Organisation and
+ * gender stay from the model only when it named the same person.
+ */
+export function applyIntakeExtraAanmelder(
+  content: InleidingContentResult,
+  intake: IntakeExtraReferentSource | null | undefined,
+  referent: ReferentRow | null,
+  clientName: string
+): InleidingContentResult {
+  const extraName = coerceText(intake?.s4?.extra_referent_name);
+  const extraFunction = coerceText(intake?.s4?.extra_referent_function);
+  if (!extraName) {
+    return { ...content, extra_aanmelder: null };
+  }
+
+  const fromIntake = {
+    functie: extraFunction,
+    naam: extraName,
+    organisatie: coerceText(clientName),
+    gender: null as 'Man' | 'Vrouw' | null,
+  };
+  if (!isDistinctExtraAanmelder(fromIntake, referent)) {
+    return { ...content, extra_aanmelder: null };
+  }
+
+  const model = content.extra_aanmelder;
+  const modelMatches = Boolean(
+    model?.naam && !isDistinctExtraAanmelder(model, splitPersonName(extraName))
+  );
+
+  return {
+    ...content,
+    extra_aanmelder: {
+      functie: extraFunction,
+      naam: extraName,
+      organisatie: modelMatches ? coerceText(model?.organisatie, clientName) : coerceText(clientName),
+      gender: modelMatches ? model?.gender ?? null : null,
+    },
+  };
 }
 
 function buildAanmelding(ctx: InleidingBuildContext, content: InleidingContentResult): string {

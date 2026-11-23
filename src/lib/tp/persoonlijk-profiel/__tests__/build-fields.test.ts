@@ -218,9 +218,58 @@ describe('assembleAlinea2FromProfileFacts', () => {
     });
     assert.match(text, /rijbewijs B/);
     assert.match(text, /Nederlandse taal/i);
+    assert.match(text, /goed in spreken, lezen en schrijven/);
     assert.match(text, /computer/i);
     assert.match(text, /goede typvaardigheden/i);
     assert.doesNotMatch(text, /typvaardigheid die als/i);
+    assert.doesNotMatch(text, /spreken goed/);
+  });
+
+  it('writes the Ihub profile facts as fluent sentences', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      rijbewijs: ['B'],
+      vervoer: ['Auto'],
+      nederlands_spreken: 'Goed',
+      nederlands_lezen: 'Goed',
+      nederlands_schrijven: 'Goed',
+      andere_talen:
+        'Berbers goed; Engels verstaanbaar, schriftelijk minder goed; Arabisch matig',
+      computervaardigheden_toelichting: 'Word, Excel',
+      typvaardigheid: 'goed genoeg',
+    });
+    assert.equal(
+      text,
+      'Werknemer beschikt over rijbewijs B en verplaatst zich met de auto. De Nederlandse taal beheerst werknemer goed in spreken, lezen en schrijven. De Berberse taal beheerst werknemer goed. Het Engels beheerst werknemer verstaanbaar en schriftelijk minder goed. Het Arabisch beheerst werknemer matig. Werknemer beschikt over computervaardigheden met Word en Excel en over goede typvaardigheden.'
+    );
+    assert.doesNotMatch(text, /spreken goed, lezen goed/);
+    assert.doesNotMatch(text, /Andere talen:/);
+    assert.doesNotMatch(text, /met Auto/);
+    assert.doesNotMatch(text, /goed genoeg/);
+  });
+
+  it('groups unequal Dutch levels and names a missing skill on its own', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      nederlands_spreken: 'Goed',
+      nederlands_lezen: 'Goed',
+      nederlands_schrijven: 'Geen',
+      vervoer: ['Auto', 'Fiets'],
+    });
+    assert.match(text, /verplaatst zich met de auto en de fiets/);
+    assert.match(text, /goed in spreken en lezen/);
+    assert.match(text, /Schrijven beheerst werknemer niet/);
+  });
+
+  it('combines pc, computer level and typing in one sentence', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      has_pc: true,
+      computervaardigheden: '4 - Geavanceerd',
+      computervaardigheden_toelichting: 'Word, Excel',
+      typvaardigheid: 'goed',
+    });
+    assert.equal(
+      text,
+      'Werknemer beschikt over een pc of laptop, heeft geavanceerde computervaardigheden met Word en Excel en beschikt over goede typvaardigheden.'
+    );
   });
 });
 
