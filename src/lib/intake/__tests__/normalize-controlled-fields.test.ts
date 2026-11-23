@@ -59,6 +59,22 @@ describe('normalizeIntakeControlledFields', () => {
     assert.deepEqual(out.s17.transport_types, ['Auto']);
   });
 
+  it('unwraps stringified rijbewijs tokens so B binds to checkboxes', () => {
+    const data = createEmptyIntakeData();
+    data.s17.drivers_license_types = ['["B"]'] as unknown as string[];
+    const out = normalizeIntakeControlledFields(data);
+    assert.deepEqual(out.s17.drivers_license_types, ['B']);
+  });
+
+  it('clears meta computer descriptions like Computervaardigheden aanwezig', () => {
+    const data = createEmptyIntakeData();
+    data.s17.computer_skills = '2';
+    data.s17.computer_skills_extra = 'Computervaardigheden aanwezig';
+    const out = normalizeIntakeControlledFields(data);
+    assert.equal(out.s17.computer_skills, '2');
+    assert.equal(out.s17.computer_skills_extra, '');
+  });
+
   it('does not invent rijbewijs B from Auto alone', () => {
     const data = createEmptyIntakeData();
     data.s17.transport_types = ['Auto'];
@@ -92,5 +108,12 @@ describe('normalizeWorkerFactValues', () => {
       drivers_license_type: [],
     });
     assert.deepEqual(out.drivers_license_type, []);
+  });
+
+  it('unwraps stringified drivers_license_type on flat facts', () => {
+    const out = normalizeWorkerFactValues({
+      drivers_license_type: '["B"]',
+    });
+    assert.deepEqual(out.drivers_license_type, ['B']);
   });
 });

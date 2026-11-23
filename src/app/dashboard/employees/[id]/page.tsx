@@ -8,7 +8,13 @@ import DocumentModal from '@/components/DocumentModal';
 import { DocumentPreviewDialog } from '@/components/DocumentPreviewDialog';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useToastHelpers } from '@/components/ui/Toast';
-import { parseWorkExperience, cn, isAbsentText, normalizePersonName } from '@/lib/utils';
+import {
+    parseWorkExperience,
+    cn,
+    isAbsentText,
+    normalizePersonName,
+    normalizeStringArrayField,
+} from '@/lib/utils';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
     nextComputerSkillsDescriptionOnLevelChange,
@@ -161,17 +167,8 @@ const EDITABLE_EMPLOYEE_FIELD_KEYS: (keyof EditableEmployeePayload)[] = [
 ];
 
 function normalizeStringArray(value: unknown): string[] | null {
-    if (!value) return null;
-    if (Array.isArray(value)) {
-        const clean = value
-            .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-            .map((item) => item.trim());
-        return clean.length > 0 ? [...clean].sort() : null;
-    }
-    if (typeof value === 'string' && value.trim()) {
-        return [value.trim()];
-    }
-    return null;
+    const parts = normalizeStringArrayField(value);
+    return parts.length > 0 ? [...parts].sort() : null;
 }
 
 function toEditableEmployeePayload(employee: Employee): EditableEmployeePayload {

@@ -56,7 +56,7 @@ describe('buildArtsPhrase', () => {
   it('rebuilds comma-supervisie with role prefixes', () => {
     assert.equal(
       buildArtsPhrase('Arts L. Bollen, werkend onder supervisie van: T. de Haas'),
-      'Arts L. Bollen werkend onder supervisie van Arts T. de Haas'
+      'Arts L. Bollen werkend onder supervisie van Bedrijfsarts T. de Haas'
     );
   });
 
@@ -114,7 +114,16 @@ describe('buildArtsPhrase', () => {
       buildArtsPhrase(
         'de heer E. van Wijk, Arts. Werkend onder supervisie van H.F.P. Terpstra'
       ),
-      'Arts E. van Wijk werkend onder supervisie van H.F.P. Terpstra'
+      'Arts E. van Wijk werkend onder supervisie van Bedrijfsarts H.F.P. Terpstra'
+    );
+  });
+
+  it('formats Arts Bedrijfsgeneeskunde before the name and prefixes bare supervisors (Cecilea)', () => {
+    assert.equal(
+      buildArtsPhrase(
+        'Aios S. de Beaufort, Arts Bedrijfsgeneeskunde. Werkend onder supervisie van Y.J. Houwers'
+      ),
+      'Arts Bedrijfsgeneeskunde S. de Beaufort werkend onder supervisie van Bedrijfsarts Y.J. Houwers'
     );
   });
 });
@@ -316,7 +325,7 @@ describe('enrichArtsOrgFromMeta', () => {
         'de heer E. van Wijk, Arts. Werkend onder supervisie van H.F.P. Terpstra',
         'Arts E. van Wijk'
       ),
-      'Arts E. van Wijk werkend onder supervisie van H.F.P. Terpstra'
+      'Arts E. van Wijk werkend onder supervisie van Bedrijfsarts H.F.P. Terpstra'
     );
   });
 });

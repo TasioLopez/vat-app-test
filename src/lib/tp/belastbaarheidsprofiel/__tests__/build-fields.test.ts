@@ -77,7 +77,7 @@ describe('buildBelastbaarheidsprofielFields', () => {
     assert.match(prognose_bedrijfsarts, /medisch spreekuur/);
   });
 
-  it('uses spreekuur meta for both intro paragraphs when present', () => {
+  it('keeps FML/IZP arts from meta and uses spreekuur arts only in the spreekuur intro', () => {
     const content: BelastbaarheidsprofielContentResult = {
       ...baseContent,
       rubrieken: ['Statische houdingen'],
@@ -90,12 +90,47 @@ describe('buildBelastbaarheidsprofielFields', () => {
 
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(nikkiCtx, content);
 
-    assert.match(prognose_bedrijfsarts, /Functionele Mogelijkheden Lijst \(FML\) van 5 december 2026/);
-    assert.match(prognose_bedrijfsarts, /Arts C\.J\. de Bode, beperkingen/);
-    assert.match(prognose_bedrijfsarts, /door Arts C\.J\. de Bode, staat onderstaande/);
+    // FML/IZP intro stays on dossier meta (not overwritten by spreekuur).
+    assert.match(prognose_bedrijfsarts, /Functionele Mogelijkheden Lijst \(FML\) van 23 januari 2026/);
+    assert.match(prognose_bedrijfsarts, /Arts L\. Bollen werkend onder supervisie van arts T\. de Haas, beperkingen/);
+    // Spreekuur intro uses the spreekuur extract.
+    assert.match(prognose_bedrijfsarts, /opgesteld op 5 december 2026 door Arts C\.J\. de Bode, staat onderstaande/);
     assert.match(prognose_bedrijfsarts, /• Statische houdingen/);
-    assert.doesNotMatch(prognose_bedrijfsarts, /23 januari 2026/);
-    assert.doesNotMatch(prognose_bedrijfsarts, /L\. Bollen/);
+  });
+
+  it('Cecilea: IZP uses van Oers/Valk while spreekuur uses formatted de Beaufort/Houwers', () => {
+    const ctx = {
+      meta: {
+        fml_izp_lab_date: '2026-04-21',
+        fml_izp_lab_kind: 'izp',
+        occupational_doctor_org:
+          'Aios C.J.E. van Oers werkend onder supervisie van Bedrijfsarts J. Valk',
+      },
+    };
+    const content: BelastbaarheidsprofielContentResult = {
+      rubrieken: ['Aanpassing aan fysieke omgevingseisen'],
+      prognose_citaat: null,
+      spreekuur_meta: {
+        datum: '2026-09-22',
+        arts_org:
+          'Aios S. de Beaufort, Arts Bedrijfsgeneeskunde. Werkend onder supervisie van Y.J. Houwers',
+      },
+    };
+
+    const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(ctx, content);
+
+    assert.match(prognose_bedrijfsarts, /Inzetbaarheidsprofiel \(IZP\) van 21 april 2026/);
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld door Aios C\.J\.E\. van Oers werkend onder supervisie van Bedrijfsarts J\. Valk, beperkingen/
+    );
+    const izpParagraph = prognose_bedrijfsarts.split('\n\n')[0] ?? '';
+    assert.doesNotMatch(izpParagraph, /de Beaufort|Houwers/);
+    assert.match(
+      prognose_bedrijfsarts,
+      /opgesteld op 22 september 2026 door Arts Bedrijfsgeneeskunde S\. de Beaufort werkend onder supervisie van Bedrijfsarts Y\.J\. Houwers/
+    );
+    assert.doesNotMatch(prognose_bedrijfsarts, /Aios S\. de Beaufort,\s*Arts Bedrijfsgeneeskunde/);
   });
 
   it('preserves Verzekeringsarts in both intro paragraphs', () => {
@@ -209,13 +244,12 @@ describe('buildBelastbaarheidsprofielFields', () => {
     };
 
     const { prognose_bedrijfsarts } = buildBelastbaarheidsprofielFields(ctx, content);
+    // FML/IZP intro stays on meta (no spreekuur supervisor).
+    assert.match(prognose_bedrijfsarts, /opgesteld door Arts E\. van Wijk, beperkingen/);
+    // Spreekuur intro formats the signature and prefixes bare supervisors.
     assert.match(
       prognose_bedrijfsarts,
-      /opgesteld door Arts E\. van Wijk werkend onder supervisie van H\.F\.P\. Terpstra, beperkingen/
-    );
-    assert.match(
-      prognose_bedrijfsarts,
-      /door Arts E\. van Wijk werkend onder supervisie van H\.F\.P\. Terpstra, staat onderstaande/
+      /door Arts E\. van Wijk werkend onder supervisie van Bedrijfsarts H\.F\.P\. Terpstra, staat onderstaande/
     );
     assert.doesNotMatch(prognose_bedrijfsarts, /Arts de heer/);
     assert.doesNotMatch(prognose_bedrijfsarts, /,\s*Arts/);

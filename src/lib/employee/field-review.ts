@@ -1,6 +1,7 @@
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { parseContractHours } from '@/lib/employee/contract-hours';
+import { normalizeStringArrayField } from '@/lib/utils';
 
 export type EmployeeFieldReviewStatus = 'review' | 'validated';
 export type EmployeeFieldDisplayStatus = 'empty' | EmployeeFieldReviewStatus;
@@ -107,17 +108,8 @@ export function normalizeEmployeeFieldContentHash(
 }
 
 function normalizeStringArray(value: unknown): string[] | null {
-  if (!value) return null;
-  if (Array.isArray(value)) {
-    const clean = value
-      .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-      .map((item) => item.trim());
-    return clean.length > 0 ? [...clean].sort() : null;
-  }
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-  return null;
+  const parts = normalizeStringArrayField(value);
+  return parts.length > 0 ? [...parts].sort() : null;
 }
 
 function normalizeFieldValue(

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
-import { isAbsentText } from '@/lib/utils';
+import { isAbsentText, normalizeStringArrayField } from '@/lib/utils';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { parseContractHours } from '@/lib/employee/contract-hours';
 import {
@@ -62,36 +62,19 @@ export type EmployeeDetailsPersist = {
 };
 
 function normalizeStringArray(value: unknown): string[] | null {
-  if (!value) return null;
-  if (Array.isArray(value)) {
-    const clean = value
-      .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-      .map((item) => item.trim());
-    return clean.length > 0 ? [...clean].sort() : null;
-  }
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-  return null;
+  const parts = normalizeStringArrayField(value);
+  return parts.length > 0 ? [...parts].sort() : null;
 }
 
 export function processEmployeeAutofillRawDetails(
   rawDetails: Record<string, unknown>
 ): Record<string, unknown> {
   const processed: Record<string, unknown> = { ...rawDetails };
-  if (processed.transport_type) {
-    if (!Array.isArray(processed.transport_type)) {
-      processed.transport_type =
-        typeof processed.transport_type === 'string' ? [processed.transport_type] : [];
-    }
+  if (processed.transport_type != null) {
+    processed.transport_type = normalizeStringArrayField(processed.transport_type);
   }
-  if (processed.drivers_license_type) {
-    if (!Array.isArray(processed.drivers_license_type)) {
-      processed.drivers_license_type =
-        typeof processed.drivers_license_type === 'string'
-          ? [processed.drivers_license_type]
-          : null;
-    }
+  if (processed.drivers_license_type != null) {
+    processed.drivers_license_type = normalizeStringArrayField(processed.drivers_license_type);
   }
   if (isAbsentText(processed.other_employers)) {
     delete processed.other_employers;
