@@ -1,65 +1,60 @@
 ---
 slug: tp-stap-deel-drie
-title: Stap 3: TP deel 3
-excerpt: Hoofddeel van het trajectplan invullen.
+title: Stap 3: Basisdocument
+excerpt: Inhoud van het trajectplan controleren en AI-genereren.
 category_slug: tp-part-3
 translation_group_id: b75af4bf-a66e-4a37-8781-187fb1a87352
 locale: nl
 ---
 
-# Stap 3: TP deel 3
+# Stap 3: Basisdocument
 
-TP deel 3 is het omvangrijkste deel van het trajectplan: inleiding, kaders, visie, overeenkomstteksten en aanbodversterkende activiteiten. In de bouwer heet deze stap technisch TP Part 3.
+**Basisdocument** is het inhoudelijke deel van het trajectplan (inleiding, profielen, visies, advies, activiteiten, …). In oudere teksten heette dit soms “TP deel 3”; in de live app is de tab **Basisdocument**.
 
 ## Wat is dit en waarom
 
-Hier wordt de inhoud vastgelegd die het traject beschrijft. Dit bepaalt grotendeels wat in export en PDF terugkomt.
+Hier staat de tekst die het traject beschrijft. Dit bepaalt grotendeels wat in de PDF terugkomt.
 
 ## Voor wie
 
-Redacteuren met schrijftoegang tot de werknemer.
+Gebruikers met schrijftoegang tot dit trajectplan.
 
 ## Waar in de app
 
-Trajectplan Bouwer, stap 3 van 5. Navigeer met Terug en Volgende.
+Trajectplan Bouwer, **Stap 3 van 4**, tab **Basisdocument**.
 
 ## Stap voor stap
 
-1. Controleer vaste blokken (inleiding, kaders, visie) en pas alleen aan waar uw proces dat toestaat.
-2. Doorloop activiteiten: selecteer wat van toepassing is en vul toelichtingen in.
-3. Gebruik sectie-editors of modals voor langere teksten.
-4. Controleer akkoord- en privacyteksten met uw juridische kaders.
-5. Sla tussentijds op.
-6. Vergelijk met de preview op dit scherm.
-7. Klik Volgende naar stap 4 Bijlage 1.
+1. Open de onderdelen één voor één.
+2. Gebruik waar passend **AI-generatie** (huidige stap of alle stappen) en controleer elk voorstel.
+3. Let op statussen als **Leeg** of **Te controleren**.
+4. Pas tekst aan tot de inhoud klopt; bij **ex-werknemer** controleer dat detacheren niet als onderdeel in het plan staat.
+5. Vergelijk met de preview.
+6. Ga door naar **Bijlage 1**.
 
 > **Schermafbeelding (nog toe te voegen)**  
-> Toon: bovenkant TP deel 3 met inleiding of activiteiten (geanonimiseerd).  
-> **Bestandsnaam:** `tp-stap3-deel3-boven.png`
+> Toon: tab Basisdocument met onderdelenlijst (geanonimiseerd).  
+> **Bestandsnaam:** `tp-stap3-basisdocument.png`
 
 > **Schermafbeelding (nog toe te voegen)**  
-> Toon: activiteitenselectie of editor-modal (geanonimiseerd).  
+> Toon: detail van een tekstblok of activiteiten (geanonimiseerd).  
 > **Bestandsnaam:** `tp-stap3-activiteiten.png`
 
 ## Belangrijke onderdelen
 
-- Vaste template-teksten en instelbare secties.
+- Inleiding en kaders.
+- Profiel- en visieteksten.
+- Advies / passende arbeid en gerelateerde blokken.
 - Aanbodversterkende activiteiten.
-- Preview voor A4-layout.
+- Live A4-preview.
 
 ## Veelvoorkomende problemen
 
-- Tekst over pagina's: layout herberekent na opslaan; controleer preview opnieuw.
-- Activiteit ontbreekt: controleer selectie en subvelden.
-
-## Tips
-
-> Werk vaste blokken eerst af, daarna activiteiten.
+- Tekst loopt over pagina’s: controleer de preview na opslaan opnieuw.
+- Onderdeel blijft “leeg”: vul handmatig of vraag opnieuw AI, daarna valideren/controleren.
 
 ## Zie ook
 
-- [Stap 2: Gegevens werknemer](/dashboard/help/a/tp-stap-gegevens-werknemer)
+- [Stap 2: Gegevens](/dashboard/help/a/tp-stap-gegevens-werknemer)
 - [Stap 4: Bijlage 1](/dashboard/help/a/tp-stap-bijlage-een)
-- [TP-documenten: wat zijn dit?](/dashboard/help/a/tp-documenten-wat-zijn-dit)
 - [Trajectplan Bouwer: werkwijze](/dashboard/help/a/trajectplan-bouwer-werkwijze)
-
