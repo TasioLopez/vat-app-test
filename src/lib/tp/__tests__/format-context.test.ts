@@ -7,6 +7,7 @@ import {
   enrichArtsOrgFromMeta,
   expandDoctorRoleAbbreviations,
   formatDoctorWithRole,
+  isUnknownArtsPhrase,
   resolveOccupationalDoctorLabel,
   stripLeadingDoctorRolePrefix,
 } from '../format-context';
@@ -63,10 +64,29 @@ describe('buildArtsPhrase', () => {
     assert.equal(buildArtsPhrase('Ankersmit'), 'Arts Ankersmit');
   });
 
-  it('returns placeholder when empty', () => {
+  it('returns soft omission when empty (no Arts [naam] placeholders)', () => {
+    assert.equal(buildArtsPhrase(''), '');
+    assert.equal(buildArtsPhrase(null), '');
+  });
+
+  it('never emits soft placeholder de bedrijfsarts', () => {
+    assert.equal(buildArtsPhrase(''), '');
+    assert.doesNotMatch(buildArtsPhrase(''), /de bedrijfsarts/i);
+    assert.equal(isUnknownArtsPhrase(''), true);
+    assert.equal(isUnknownArtsPhrase('de bedrijfsarts'), true);
+    assert.equal(isUnknownArtsPhrase('Bedrijfsarts M. Montagne'), false);
+  });
+
+  it('strips trailing period so template comma does not yield bedrijfsarts.,', () => {
     assert.equal(
-      buildArtsPhrase(''),
-      'Arts [naam] werkend onder supervisie van Arts [supervisor]'
+      buildArtsPhrase(
+        'Arts S. de Beaufort werkend onder supervisie van Bedrijfsarts Y.J. Houwers.'
+      ),
+      'Arts S. de Beaufort werkend onder supervisie van Bedrijfsarts Y.J. Houwers'
+    );
+    assert.doesNotMatch(
+      buildArtsPhrase('Bedrijfsarts M. Montagne.'),
+      /\.$/
     );
   });
 
@@ -88,6 +108,15 @@ describe('buildArtsPhrase', () => {
     assert.doesNotMatch(phrase, /\(\s*\)/);
     assert.match(phrase, /Arts L\. Bollen werkend onder supervisie van arts T\. de Haas/);
   });
+
+  it('moves a trailing signature title and drops de heer (van Wijk)', () => {
+    assert.equal(
+      buildArtsPhrase(
+        'de heer E. van Wijk, Arts. Werkend onder supervisie van H.F.P. Terpstra'
+      ),
+      'Arts E. van Wijk werkend onder supervisie van H.F.P. Terpstra'
+    );
+  });
 });
 
 describe('cleanDoctorOrgRaw', () => {
@@ -97,6 +126,26 @@ describe('cleanDoctorOrgRaw', () => {
       'Bedrijfsarts E. Visser'
     );
     assert.equal(cleanDoctorOrgRaw('Arts X ()'), 'Arts X');
+  });
+
+  it('moves a trailing signature title to the front', () => {
+    assert.equal(cleanDoctorOrgRaw('E. van Wijk, Arts'), 'Arts E. van Wijk');
+  });
+
+  it('drops a repeated trailing title when the name already starts with one', () => {
+    assert.equal(cleanDoctorOrgRaw('Arts E. van Wijk, Arts'), 'Arts E. van Wijk');
+    assert.equal(
+      cleanDoctorOrgRaw('Bedrijfsarts E. Visser - Bedrijfsarts'),
+      'Bedrijfsarts E. Visser'
+    );
+  });
+
+  it('strips trailing period before role cleanup', () => {
+    assert.equal(cleanDoctorOrgRaw('Bedrijfsarts M. Montagne.'), 'Bedrijfsarts M. Montagne');
+    assert.equal(
+      cleanDoctorOrgRaw('Y.J. Houwers, bedrijfsarts.'),
+      'Bedrijfsarts Y.J. Houwers'
+    );
   });
 });
 
@@ -258,6 +307,16 @@ describe('enrichArtsOrgFromMeta', () => {
         'VA P. Mort werkend onder supervisie van BA K. Julien'
       ),
       'Verzekeringsarts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien'
+    );
+  });
+
+  it('does not prefix Arts twice for a signature-style spreekuur extract', () => {
+    assert.equal(
+      enrichArtsOrgFromMeta(
+        'de heer E. van Wijk, Arts. Werkend onder supervisie van H.F.P. Terpstra',
+        'Arts E. van Wijk'
+      ),
+      'Arts E. van Wijk werkend onder supervisie van H.F.P. Terpstra'
     );
   });
 });

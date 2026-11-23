@@ -1,4 +1,5 @@
 import type OpenAI from 'openai';
+import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { isIntakeDocumentType } from './storage';
 import { normalizeForAnalysis } from './normalizeForAnalysis';
 import {
@@ -6,7 +7,10 @@ import {
   EMPLOYEE_CHATLIKE_PROMPT,
   EMPLOYEE_CHATLIKE_USER_MESSAGE,
 } from './prompts/employee-chatlike';
-import { runChatlikeMultiFileExtraction } from './runStructuredExtraction';
+import {
+  runChatlikeMultiFileExtraction,
+  type InlineTextInput,
+} from './runStructuredExtraction';
 import { extractPdfPlainTextWithGlyphFallback } from './documentPlainText';
 import {
   flattenExtractionPayload,
@@ -49,6 +53,33 @@ function labelForDoc(doc: ChatlikeDocInput, index: number): string {
 function isIntakeDoc(docType: string | null | undefined): boolean {
   const t = docType || '';
   return isIntakeDocumentType(t) || t.toLowerCase().includes('intake');
+}
+
+/** Split chatlike inputs: plain TXT stays inline; binaries go through PDF normalize. */
+export function partitionChatlikeDocInputs(docs: ChatlikeDocInput[]): {
+  binaryDocs: ChatlikeDocInput[];
+  inlineTexts: InlineTextInput[];
+  documentLabels: string[];
+} {
+  const binaryDocs: ChatlikeDocInput[] = [];
+  const inlineTexts: InlineTextInput[] = [];
+  const documentLabels: string[] = [];
+
+  docs.forEach((doc, index) => {
+    const fallbackName = doc.filename || `${doc.docType || 'document'}.pdf`;
+    const label = labelForDoc(doc, index);
+    if (classifyDossierFileName(fallbackName) === 'inline-text') {
+      const text = doc.buffer.toString('utf8').trim();
+      if (!text) return;
+      inlineTexts.push({ label, text });
+      documentLabels.push(label);
+      return;
+    }
+    binaryDocs.push(doc);
+    documentLabels.push(label);
+  });
+
+  return { binaryDocs, inlineTexts, documentLabels };
 }
 
 /**
@@ -156,6 +187,8 @@ export async function extractEmployeeDetailsChatlike(
     (a, b) => docSortKey(a.docType) - docSortKey(b.docType)
   );
 
+  const partitioned = partitionChatlikeDocInputs(sorted);
+  const inlineTexts = partitioned.inlineTexts;
   const files: {
     pdfBuffer: Buffer;
     analysisFilename: string;
@@ -164,22 +197,41 @@ export async function extractEmployeeDetailsChatlike(
   const documentLabels: string[] = [];
   let intakePdfBuffer: Buffer | null = null;
 
-  for (let i = 0; i < sorted.length; i++) {
-    const doc = sorted[i]!;
+  for (let i = 0; i < partitioned.binaryDocs.length; i++) {
+    const doc = partitioned.binaryDocs[i]!;
     const fallbackName = doc.filename || `${doc.docType || 'document'}.pdf`;
-    const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
-      doc.buffer,
-      fallbackName
-    );
-    const label = labelForDoc({ ...doc, filename: analysisFilename }, i);
-    if (wasConverted) {
-      console.log(`✅ Chatlike normalized to PDF: ${label}`);
+    const label = labelForDoc(doc, i);
+    try {
+      const { pdfBuffer, analysisFilename, wasConverted } = await normalizeForAnalysis(
+        doc.buffer,
+        fallbackName
+      );
+      const pdfLabel = labelForDoc({ ...doc, filename: analysisFilename }, i);
+      if (wasConverted) {
+        console.log(`✅ Chatlike normalized to PDF: ${pdfLabel}`);
+      }
+      files.push({ pdfBuffer, analysisFilename, label: pdfLabel });
+      documentLabels.push(pdfLabel);
+      if (!intakePdfBuffer && isIntakeDoc(doc.docType)) {
+        intakePdfBuffer = pdfBuffer;
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.warn(`⚠️ Chatlike: skipping document normalize (${label}): ${message}`);
     }
-    files.push({ pdfBuffer, analysisFilename, label });
-    documentLabels.push(label);
-    if (!intakePdfBuffer && isIntakeDoc(doc.docType)) {
-      intakePdfBuffer = pdfBuffer;
-    }
+  }
+  for (const item of inlineTexts) documentLabels.push(item.label);
+
+  if (!files.length && !inlineTexts.length) {
+    return {
+      raw: {},
+      referentFields: {},
+      documentCount: 0,
+      documentLabels: [],
+      mode: 'freeform',
+      intakeTextLen: 0,
+      intakePlainText: '',
+    };
   }
 
   let intakeTextLen = 0;
@@ -195,19 +247,19 @@ export async function extractEmployeeDetailsChatlike(
     );
   }
 
-  const labels = documentLabels.join(', ');
-  let userMessage = `${EMPLOYEE_CHATLIKE_USER_MESSAGE}\n\nGeüploade documenten (${files.length}): ${labels}`;
+  let userMessage = EMPLOYEE_CHATLIKE_USER_MESSAGE;
   if (intakeExcerpt) {
     userMessage += `\n\n--- Intake PDF-tekst (checkboxes / sectie 17 e.d.) ---\n${intakeExcerpt}\n--- Einde intake PDF-tekst ---`;
   }
 
   console.log(
-    `📋 Chatlike freeform extract: ${files.length} file(s) — ${labels}`
+    `📋 Chatlike freeform extract: ${files.length} file(s), ${inlineTexts.length} inline — ${documentLabels.join(', ')}`
   );
 
   const outputText = await runChatlikeMultiFileExtraction({
     openai,
     files,
+    inlineTexts,
     instructions: EMPLOYEE_CHATLIKE_PROMPT,
     userMessage,
     usePdfVision: true,
@@ -217,14 +269,15 @@ export async function extractEmployeeDetailsChatlike(
   const parsed = parseChatlikeEmployeeOutput(outputText);
   const { detailsRaw, referentFields } = buildChatlikeEmployeeDetailsFromRaw(parsed);
 
+  const documentCount = files.length + inlineTexts.length;
   console.log(
-    `✅ Chatlike freeform fields: ${Object.keys(detailsRaw).length} (docs=${files.length}, intakeTextLen=${intakeTextLen})`
+    `✅ Chatlike freeform fields: ${Object.keys(detailsRaw).length} (docs=${documentCount}, intakeTextLen=${intakeTextLen})`
   );
 
   return {
     raw: detailsRaw,
     referentFields,
-    documentCount: files.length,
+    documentCount,
     documentLabels,
     mode: 'freeform',
     intakeTextLen,

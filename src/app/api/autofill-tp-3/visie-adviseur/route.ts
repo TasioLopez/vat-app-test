@@ -35,7 +35,7 @@ async function loadCtxAndDocs(employeeId: string) {
   const { data: meta } = await supabase
     .from('tp_meta')
     .select(
-      'fml_izp_lab_date, intake_date, occupational_doctor_org, advies_ad_passende_arbeid, zoekprofiel, persoonlijk_profiel, has_ad_report, ad_report_concept'
+      'fml_izp_lab_date, intake_date, occupational_doctor_org, advies_ad_passende_arbeid, zoekprofiel, persoonlijk_profiel, prognose_bedrijfsarts, has_ad_report, ad_report_concept'
     )
     .eq('employee_id', employeeId)
     .single();

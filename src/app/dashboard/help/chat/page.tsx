@@ -144,7 +144,7 @@ export default function HelpChatPage() {
   };
 
   return (
-    <div className="min-h-full flex flex-col bg-gradient-to-br from-gray-50 to-purple-50/30">
+    <div className="min-h-full flex flex-col bg-gray-50">
       <CreateFormLeaveGuard values={{ input, ticketSubject: escalateOpen ? ticketSubject : '' }} onSave={async () => { if (input.trim()) await send(); }} />
       <div className="border-b border-purple-100 bg-white/90 px-6 py-4 flex flex-wrap items-center gap-4 justify-between">
         <GuardedLink href="/dashboard/help" className="text-purple-700 font-medium inline-flex items-center gap-2">
@@ -153,7 +153,7 @@ export default function HelpChatPage() {
         <button
           type="button"
           onClick={openEscalate}
-          className="px-4 py-2 rounded-xl bg-purple-100 text-purple-900 text-sm font-semibold"
+          className="px-4 py-2 rounded-xl bg-purple-100 text-[var(--color-primary-900)] text-sm font-semibold"
         >
           Ticket met chatgesprek
         </button>
@@ -170,7 +170,7 @@ export default function HelpChatPage() {
             key={i}
             className={`rounded-2xl px-4 py-3 max-w-[90%] ${
               m.role === "user"
-                ? "bg-purple-700 text-white ml-auto"
+                ? "bg-[var(--color-primary-500)] text-white ml-auto"
                 : "bg-white border border-purple-100 text-gray-800"
             }`}
           >
@@ -198,13 +198,13 @@ export default function HelpChatPage() {
             }}
             rows={2}
             placeholder="Typ je vraag…"
-            className="flex-1 rounded-xl border-2 border-purple-200 px-4 py-3 focus:border-purple-500 outline-none resize-none"
+            className="flex-1 rounded-xl border-2 border-gray-200 px-4 py-3 focus:border-purple-500 outline-none resize-none"
           />
           <button
             type="button"
             disabled={busy}
             onClick={send}
-            className="self-end px-5 py-3 rounded-xl bg-purple-700 text-white disabled:opacity-50"
+            className="self-end px-5 py-3 rounded-xl bg-[var(--color-primary-500)] text-white disabled:opacity-50"
           >
             <FaPaperPlane />
           </button>
@@ -223,7 +223,7 @@ export default function HelpChatPage() {
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg border border-purple-200 px-3 py-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2"
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -235,7 +235,7 @@ export default function HelpChatPage() {
             <input
               value={ticketSubject}
               onChange={(e) => setTicketSubject(e.target.value)}
-              className="w-full rounded-lg border border-purple-200 px-3 py-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2"
               placeholder="Korte samenvatting"
               required
             />
@@ -250,7 +250,7 @@ export default function HelpChatPage() {
               <button
                 type="button"
                 onClick={submitTicket}
-                className="px-4 py-2 rounded-lg bg-purple-700 text-white font-semibold"
+                className="px-4 py-2 rounded-lg bg-[var(--color-primary-500)] text-white font-semibold"
               >
                 Versturen
               </button>

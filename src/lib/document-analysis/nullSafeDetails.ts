@@ -47,7 +47,8 @@ function isPresent(value: unknown): boolean {
   return true;
 }
 
-function normalizeDutchLevel(value: unknown): string | undefined {
+/** Map raw Dutch skill strings (incl. G/R/O) to Goed|Voldoende|Matig|Geen. */
+export function normalizeDutchLevel(value: unknown): string | undefined {
   if (value == null) return undefined;
   const s = String(value).trim();
   const lower = s.toLowerCase();
@@ -84,6 +85,34 @@ export function splitContactPersonName(fullName: string): { first_name: string; 
     first_name: parts.slice(0, -1).join(' ').trim(),
     last_name: parts[parts.length - 1].trim(),
   };
+}
+
+function titleCaseToken(token: string): string {
+  const t = token.trim();
+  if (!t) return '';
+  if (t.length === 1) return t.toUpperCase();
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
+/**
+ * Derive contact first/last from email local-part when name is missing.
+ * Accepts voornaam.achternaam / voornaam_achternaam / voornaam-achternaam (2+ tokens).
+ */
+export function deriveContactNameFromEmail(
+  email: string | null | undefined
+): { first_name: string; last_name: string } | null {
+  if (!email || typeof email !== 'string') return null;
+  const local = email.trim().split('@')[0] || '';
+  if (!local || !/^[a-zA-Z0-9._-]+$/.test(local)) return null;
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  // Skip pure numeric / role-like locals (info, hr, admin)
+  const roleLike = /^(info|hr|admin|contact|noreply|no-reply|secretariaat)$/i;
+  if (parts.every((p) => roleLike.test(p))) return null;
+  const last_name = titleCaseToken(parts[parts.length - 1]);
+  const first_name = parts.slice(0, -1).map(titleCaseToken).join(' ');
+  if (!first_name || !last_name) return null;
+  return { first_name, last_name };
 }
 
 function normalizeReferentPhone(value: unknown): string | undefined {
@@ -301,6 +330,14 @@ export function extractReferentFromRaw(
     }
   }
 
+  if (!out.referent_first_name && !out.referent_last_name && out.referent_email) {
+    const fromEmail = deriveContactNameFromEmail(String(out.referent_email));
+    if (fromEmail) {
+      out.referent_first_name = fromEmail.first_name;
+      out.referent_last_name = fromEmail.last_name;
+    }
+  }
+
   if (out.referent_phone != null && out.referent_phone !== '') {
     const formatted = normalizeReferentPhone(out.referent_phone);
     if (formatted) out.referent_phone = formatted;
@@ -336,6 +373,24 @@ export function mergeReferentFields(
     ) {
       out[k] = incoming;
     }
+  }
+  return out;
+}
+
+/**
+ * Aanmeld wins field-by-field, then intake sectie 4, then AD/FML/extra gap-fill.
+ * Call sources in product priority; each pass only fills empty slots.
+ */
+export function composeReferentByPriority(parts: {
+  aanmeld?: Record<string, unknown> | null;
+  intake?: Record<string, unknown> | null;
+  secondary?: Array<Record<string, unknown> | null | undefined>;
+}): Record<string, unknown> {
+  let out: Record<string, unknown> = {};
+  if (parts.aanmeld) out = mergeReferentFields(out, parts.aanmeld);
+  if (parts.intake) out = mergeReferentFields(out, parts.intake);
+  for (const src of parts.secondary ?? []) {
+    if (src) out = mergeReferentFields(out, src);
   }
   return out;
 }

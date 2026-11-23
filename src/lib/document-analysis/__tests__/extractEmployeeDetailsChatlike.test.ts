@@ -4,6 +4,7 @@ import {
   buildChatlikeEmployeeDetailsFromRaw,
   buildIntakeTextExcerptForChatlike,
   parseChatlikeEmployeeOutput,
+  partitionChatlikeDocInputs,
 } from '../extractEmployeeDetailsChatlike';
 
 describe('buildChatlikeEmployeeDetailsFromRaw', () => {
@@ -54,5 +55,40 @@ describe('buildIntakeTextExcerptForChatlike', () => {
     assert.match(excerpt, /Hoe verplaatst/);
     assert.match(excerpt, /☒ Auto/);
     assert.ok(excerpt.length <= 1500);
+  });
+});
+
+describe('partitionChatlikeDocInputs', () => {
+  it('routes gespreksverslag.txt to inlineTexts and keeps PDFs as binary', () => {
+    const { binaryDocs, inlineTexts, documentLabels } = partitionChatlikeDocInputs([
+      {
+        buffer: Buffer.from('%PDF-fml'),
+        filename: 'FML.pdf',
+        docType: 'fml_izp',
+      },
+      {
+        buffer: Buffer.from(
+          'De werknemer werkt 36 uur per week. Hij spreekt en schrijft Nederlands.',
+          'utf8'
+        ),
+        filename: 'gespreksverslag.txt',
+        docType: 'gespreksverslag',
+      },
+    ]);
+
+    assert.equal(binaryDocs.length, 1);
+    assert.equal(binaryDocs[0]!.filename, 'FML.pdf');
+    assert.equal(inlineTexts.length, 1);
+    assert.match(inlineTexts[0]!.label, /gespreksverslag/);
+    assert.match(inlineTexts[0]!.text, /36 uur/);
+    assert.equal(documentLabels.length, 2);
+  });
+
+  it('skips empty txt buffers', () => {
+    const { binaryDocs, inlineTexts } = partitionChatlikeDocInputs([
+      { buffer: Buffer.from('   '), filename: 'empty.txt', docType: 'gespreksverslag' },
+    ]);
+    assert.equal(binaryDocs.length, 0);
+    assert.equal(inlineTexts.length, 0);
   });
 });

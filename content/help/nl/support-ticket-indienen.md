@@ -56,4 +56,4 @@ Volg status en berichten: [Ticket opvolgen](/dashboard/help/a/support-ticket-sta
 
 - [Ticket opvolgen: status en berichten](/dashboard/help/a/support-ticket-status-en-berichten)
 - [Wanneer de helpchat gebruiken?](/dashboard/help/a/help-chat-wanneer-gebruiken)
-- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [Admin, gebruiker en back office](/dashboard/help/a/admin-vs-standaard-gebruiker)

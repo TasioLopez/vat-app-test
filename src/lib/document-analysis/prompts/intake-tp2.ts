@@ -39,12 +39,14 @@ PERSOONSVELDEN:
    - osv_doctor_name: naam op de OSV-rij (superviserend arts)
    - Anios ≠ Aios: aparte vakjes; nooit verwisselen
    - Arts ≠ BA: NOOIT primary als Bedrijfsarts zetten tenzij het BA-vakje op de Naam-rij is aangevinkt
+   - Als de Naam-rij een ingevulde artsnaam heeft: occupational_doctor_org MAG NIET null/leeg zijn
+   - Als OSV-rij een naam heeft: vul osv_doctor_name + osv_doctor_role en bouw de supervisie-zin
    - occupational_doctor_org EINDwaarde ALTIJD met volle titelprefix(en) wanneer de rol bekend is:
      • Alleen primary: "Verzekeringsarts A.J. Karim" / "Arts P. Mort" / "Aios J. de Vries"
      • Met OSV: "Arts P. Mort werkend onder supervisie van Bedrijfsarts K. Julien"
    - Schrijf NOOIT "BA" of "VA" als titelprefix in occupational_doctor_org; gebruik:
      Arts | Anios | Aios | Bedrijfsarts | Verzekeringsarts (doctor_role/osv_doctor_role blijven wel "BA"/"VA")
-   - Geen "intern gebruik bij..." boilerplate
+   - Geen trailing punt/komma na de titel (niet "Bedrijfsarts."); geen "intern gebruik bij..." boilerplate
 9. occupational_doctor_name — arbeidsdeskundige: sectie 6 "Naam AD:" of sectie 7 "Naam arbeidsdeskundige"
    - Formaat: "Naam, Organisatie" indien beide bekend
    - Dit is NIET de bedrijfsarts/arts (P. Mort); dat hoort in occupational_doctor_org
@@ -60,11 +62,11 @@ PERSOONSVELDEN:
    - Een ingevulde "Datum AD-rapport" of sectie 7-inhoud maakt Concept NIET true
    - Betekenis: het AD-rapport is een conceptversie (geen definitieve rapportage); default is niet-concept (false)
 
-11. is_ex_werknemer — boolean: ALLEEN true wanneer het vakje naast "Ex-werknemer" (sectie 6 header / OSV-gebied, Juni V6) duidelijk is AANGEVINKT
-   - Lees UITSLUITEND de checkbox-status naast het label "Ex-werknemer":
-     • ☒ / ☑ / [x] naast Ex-werknemer → true
+11. is_ex_werknemer — boolean: true wanneer het vakje naast "Ex-werknemer" (sectie 6 header / OSV-gebied, Juni V6) duidelijk is AANGEVINKT
+   - Lees de checkbox-status naast het label "Ex-werknemer" (ook dichtgevulde vakjes ■/● en OCR "x Ex-werknemer"):
+     • ☒ / ☑ / ■ / [x] / x naast Ex-werknemer → true
      • ☐ / □ / [ ] naast Ex-werknemer → false
-   - Unchecked, leeg, of onduidelijk → false (NOOIT null, NOOIT true bij twijfel)
+   - Unchecked of leeg → false; bij twijfel of het vakje aangevinkt is terwijl het label zichtbaar is: kies true alleen bij duidelijk aangevinkt markering
 
 HARDE REGELS:
 - registration_date mag NOOIT gelijk zijn aan fml_izp_lab_date tenzij het formulier dat echt zo invult

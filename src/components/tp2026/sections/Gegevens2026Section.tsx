@@ -9,6 +9,7 @@ import { gegevensPageCountForLegendaSpill } from '@/lib/tp2026/gegevens-paginati
 import { boolToJaNee } from '@/lib/tp2026/schema';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import { GEGEVENS_EDITOR_SECTIONS } from '@/lib/tp2026/gegevens-editor-layout';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 import {
   A4LogoHeader,
   A4Page,
@@ -96,7 +97,7 @@ function GegevensContextCard({ data }: { data: Record<string, any> }) {
 
   const items: { label: string; value: React.ReactNode }[] = [
     { label: 'Naam', value: naam },
-    { label: 'Werkgever', value: werkgever },
+    { label: applyExWerknemerWording('Werkgever', data.is_ex_werknemer === true), value: werkgever },
     { label: 'Opdrachtnemer', value: 'ValentineZ' },
     {
       label: 'Loopbaanadviseur',
@@ -236,14 +237,18 @@ export function Gegevens2026Editor({
     <div className="space-y-6">
       <GegevensContextCard data={data} />
       {GEGEVENS_EDITOR_SECTIONS.map((section) => (
-        <GegevensEditorSection key={section.id} title={section.title} icon={section.icon}>
+        <GegevensEditorSection
+          key={section.id}
+          title={applyExWerknemerWording(section.title, data.is_ex_werknemer === true)}
+          icon={section.icon}
+        >
           <div className="space-y-4">
             {section.id === 'opdrachtgever' ? (
               <>
                 <DocumentEmployerNameField
                   data={data}
                   updateField={updateField}
-                  label="Werkgever"
+                  label={applyExWerknemerWording('Werkgever', data.is_ex_werknemer === true)}
                 />
                 <DocumentReferentFields data={data} updateField={updateField} />
               </>
@@ -361,7 +366,7 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
       <A4LogoHeader />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-gegevens-body>
         <div>
-          <SectionBand title="Gegevens werknemer" />
+          <SectionBand title={applyExWerknemerWording('Gegevens werknemer', data.is_ex_werknemer === true)} />
           <TP2026FieldTable>
             <DataRow label="Naam" value={<GegevensNaamBlock data={data} />} />
             <DataRow label="Telefoon" value={formatPhoneForDisplay(data.phone)} />
@@ -411,7 +416,10 @@ function GegevensPage1({ data, pageNumber }: { data: Record<string, any>; pageNu
         <div className="mt-7">
           <SectionBand title="Gegevens opdrachtgever" />
           <TP2026FieldTable>
-            <DataRow label="Werkgever" value={getWerkgeverName(data) || '—'} />
+            <DataRow
+              label={applyExWerknemerWording('Werkgever', data.is_ex_werknemer === true)}
+              value={getWerkgeverName(data) || '—'}
+            />
             <DataRow label="Contactpersoon" value={referent.client_referent_name || '—'} />
             <DataRow
               label="Telefoon"

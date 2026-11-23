@@ -2,16 +2,15 @@
 
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import type { AutofillProgressState } from '@/lib/autofill-progress-stream';
 
-export type AutofillProgressState = {
-  currentIndex: number;
-  total: number;
-  currentLabel: string;
-};
+export type { AutofillProgressState };
 
 type Props = {
   progress: AutofillProgressState;
   title?: string;
+  /** Spinner + label only (no Stap N/M bar), e.g. PDF export. */
+  indeterminate?: boolean;
   onCancel?: () => void;
   cancelLabel?: string;
   cancelling?: boolean;
@@ -20,6 +19,7 @@ type Props = {
 export function AutofillProgressOverlay({
   progress,
   title = 'Automatisch invullen met AI',
+  indeterminate = false,
   onCancel,
   cancelLabel = 'Stoppen',
   cancelling = false,
@@ -48,20 +48,22 @@ export function AutofillProgressOverlay({
             </p>
           </div>
         </div>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>
-              Stap {progress.currentIndex} / {progress.total}
-            </span>
-            <span>{pct}%</span>
+        {!indeterminate ? (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>
+                Stap {progress.currentIndex} / {progress.total}
+              </span>
+              <span>{pct}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full bg-[var(--color-primary-500)] transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full bg-purple-600 transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        </div>
+        ) : null}
         {onCancel ? (
           <Button
             variant="destructive"

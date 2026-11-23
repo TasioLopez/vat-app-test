@@ -1,11 +1,37 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isAdDocumentType, isFmlDocumentType } from '@/lib/document-analysis/doc-type-matchers';
-import { isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
+import { isGespreksverslagDocType, isSpreekReportageDocType } from '@/lib/documents/employee-doc-types';
 import { INTAKE_TYPE_VARIANTS } from '@/lib/document-analysis/storage';
 
 export function isIntakeDocumentType(type: string | null | undefined): boolean {
   const t = (type || '').toLowerCase();
   return INTAKE_TYPE_VARIANTS.some((variant) => t.includes(variant));
+}
+
+export function isAanmeldDocumentType(type: string | null | undefined): boolean {
+  const t = (type || '').toLowerCase();
+  return t === 'aanmeldformulier' || t.includes('aanmeldformulier');
+}
+
+/** True when an `extra` (or other) file is clearly an aanmelding by filename. */
+export function fileNameLooksLikeAanmeld(name: string | null | undefined): boolean {
+  return /aanmeld/i.test(name || '');
+}
+
+/**
+ * Stable bron-label for dossier generate prompts.
+ * Mistyped uploads (`extra` + filename containing "aanmeld") are labeled as aanmeldformulier.
+ */
+export function dossierSourceLabel(
+  type: string | null | undefined,
+  name: string | null | undefined
+): string {
+  const t = (type || '').toLowerCase();
+  const fileName = (name || '').trim() || 'bestand';
+  if (isAanmeldDocumentType(type) || (t.includes('extra') && fileNameLooksLikeAanmeld(name))) {
+    return `aanmeldformulier: ${fileName}`;
+  }
+  return `${type || 'doc'}: ${fileName}`;
 }
 
 export function isDossierSourceType(type: string | null | undefined): boolean {
@@ -15,6 +41,8 @@ export function isDossierSourceType(type: string | null | undefined): boolean {
     isAdDocumentType(type) ||
     isFmlDocumentType(type) ||
     isSpreekReportageDocType(type) ||
+    isGespreksverslagDocType(type) ||
+    isAanmeldDocumentType(type) ||
     t === 'extra' ||
     t.includes('extra')
   );

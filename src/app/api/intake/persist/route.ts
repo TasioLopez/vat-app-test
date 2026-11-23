@@ -28,6 +28,13 @@ export async function POST(req: NextRequest) {
   const intakeInstanceId = body?.intakeInstanceId as string | undefined;
   const employeeId = body?.employeeId as string | undefined;
   const validate = Boolean(body?.validate);
+  const statusRaw = body?.status;
+  const status =
+    statusRaw === 'concept' || statusRaw === 'gevalideerd'
+      ? statusRaw
+      : validate
+        ? ('gevalideerd' as const)
+        : undefined;
   const dataJson = body?.data_json;
 
   if (!intakeInstanceId || !employeeId || dataJson == null) {
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
     employeeId,
     intakeData: ensureIntakeShape(dataJson),
     userId: user?.id ?? null,
-    validate,
+    status,
   });
 
   if (result.error) {
@@ -57,5 +64,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     validated_at: result.validated_at ?? null,
+    skipped_validated: result.skippedValidated ?? [],
+    worker_facts: result.values ?? {},
   });
 }

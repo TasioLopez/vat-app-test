@@ -58,18 +58,21 @@ export default function TemplatePicker({ onChoose, busy }: Props) {
         >
           <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-orange-50/80">
             <div className="relative h-32 w-24 overflow-hidden rounded-lg bg-white shadow-md">
-              <div className="h-6 w-full bg-orange-200" />
+              <div className="h-8 w-full bg-orange-300" />
+              <div className="absolute right-2 top-4 h-6 w-6 rounded-full border-2 border-white bg-orange-100" />
               <div className="grid grid-cols-2 gap-1 p-2">
-                <div className="h-1 rounded bg-emerald-200" />
-                <div className="h-1 rounded bg-sky-200" />
-                <div className="h-1 rounded bg-emerald-200" />
-                <div className="h-1 rounded bg-sky-200" />
+                <div className="h-1 rounded bg-gray-200" />
+                <div className="h-1 rounded bg-gray-200" />
+                <div className="h-1 rounded bg-orange-200" />
+                <div className="h-1 rounded bg-orange-200" />
+                <div className="h-1 rounded bg-gray-200" />
+                <div className="h-1 rounded bg-gray-200" />
               </div>
             </div>
           </div>
           <h2 className="text-lg font-bold text-gray-900">Creatief & opvallend</h2>
           <p className="mt-2 flex-1 text-sm text-gray-600">
-            Brede kleurenkop en twee kolommen daaronder
+            Brede kleurenkop, foto op de rand, daaronder twee gelijke witte kolommen
           </p>
           <span className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00A3CC] py-3 text-sm font-semibold text-white">
             <Check className="h-4 w-4" />
@@ -88,19 +91,24 @@ export default function TemplatePicker({ onChoose, busy }: Props) {
         >
           <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-neutral-100">
             <div className="relative h-32 w-24 rounded border border-neutral-300 bg-white shadow-sm">
-              <div className="mx-2 mt-2 h-1.5 w-16 rounded bg-neutral-800" />
-              <div className="mx-2 mt-1 h-0.5 w-12 rounded bg-neutral-300" />
-              <div className="absolute right-2 top-2 h-7 w-7 rounded border border-neutral-300 bg-neutral-100" />
-              <div className="absolute bottom-3 left-2 right-2 space-y-1">
-                <div className="h-0.5 w-full bg-neutral-300" />
-                <div className="h-0.5 w-[80%] bg-neutral-200" />
-                <div className="h-0.5 w-[90%] bg-neutral-200" />
+              <div className="mx-2 mt-3 h-1.5 w-12 rounded bg-neutral-800" />
+              <div className="mx-2 mt-1 h-0.5 w-8 rounded bg-neutral-400" />
+              <div className="absolute right-2 top-2 h-6 w-6 rounded border border-neutral-300 bg-neutral-100" />
+              <div className="mx-2 mt-2 h-px bg-neutral-300" />
+              <div className="mx-2 mt-2 flex items-center justify-between">
+                <div className="h-0.5 w-10 rounded bg-neutral-700" />
+                <div className="h-0.5 w-4 rounded bg-neutral-300" />
+              </div>
+              <div className="absolute bottom-3 left-2 right-2 flex gap-1">
+                <div className="h-2 flex-1 rounded-full bg-neutral-200" />
+                <div className="h-2 flex-1 rounded-full bg-neutral-200" />
+                <div className="h-2 w-3 rounded-full bg-neutral-100" />
               </div>
             </div>
           </div>
           <h2 className="text-lg font-bold text-gray-900">Formeel executive</h2>
           <p className="mt-2 flex-1 text-sm text-gray-600">
-            Één smalle kolom: kopregel, compacte meta en gestapelde secties
+            Eén kolom met serif naam, datum rechts en compacte vaardigheden
           </p>
           <span className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-800 py-3 text-sm font-semibold text-white">
             <Check className="h-4 w-4" />
@@ -118,17 +126,20 @@ export default function TemplatePicker({ onChoose, busy }: Props) {
           )}
         >
           <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-teal-50/80">
-            <div className="relative h-32 w-24 rounded-lg border border-teal-200 bg-white shadow-md">
-              <div className="mx-2 mt-2 h-1 w-16 rounded bg-teal-300" />
-              <div className="absolute bottom-4 left-1/2 top-10 w-px -translate-x-1/2 bg-teal-400" />
-              <div className="absolute left-[calc(50%-3px)] top-11 h-2 w-2 rounded-full bg-teal-500" />
-              <div className="absolute left-[calc(50%-3px)] top-[3.25rem] h-2 w-2 rounded-full bg-teal-500" />
-              <div className="absolute left-[calc(50%-3px)] top-[4.5rem] h-2 w-2 rounded-full bg-teal-500" />
+            <div className="relative h-32 w-24 overflow-hidden rounded-lg border border-teal-200 bg-white shadow-md">
+              <div className="h-1 w-full bg-teal-500" />
+              <div className="mx-2 mt-2 h-1 w-14 rounded bg-teal-700" />
+              <div className="absolute bottom-6 left-7 top-8 w-px bg-teal-500" />
+              <div className="absolute left-[1.6rem] top-9 h-1.5 w-1.5 rounded-full bg-teal-500" />
+              <div className="absolute left-10 top-9 h-0.5 w-8 rounded bg-gray-300" />
+              <div className="absolute left-[1.6rem] top-[3.1rem] h-1.5 w-1.5 rounded-full bg-teal-500" />
+              <div className="absolute left-10 top-[3.1rem] h-0.5 w-7 rounded bg-gray-300" />
+              <div className="absolute bottom-2 left-2 right-2 h-3 border-t border-teal-100" />
             </div>
           </div>
           <h2 className="text-lg font-bold text-gray-900">Chronologische tijdlijn</h2>
           <p className="mt-2 flex-1 text-sm text-gray-600">
-            Profiel bovenaan, verticale lijn voor werk en opleiding, lijsten onderaan
+            Datumkolom met een verticale lijn, en vaardigheden als voettekst
           </p>
           <span className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 py-3 text-sm font-semibold text-white">
             <Check className="h-4 w-4" />

@@ -5,6 +5,7 @@ export {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   mergeReferentFields,
+  composeReferentByPriority,
   splitContactPersonName,
 } from './nullSafeDetails';
 export { getAutofillCompleteness, type AutofillWarning } from './incomplete';
@@ -62,6 +63,7 @@ export {
   applyIntakeCheckboxTextOverrides,
   filterAllowedDriversLicenseTypes,
 } from './intakeCheckboxText';
+export { inferDriversLicenseFromOwnCar } from './inferLicenseFromOwnCar';
 export {
   bufferToPlainText,
   detectDocumentKind,

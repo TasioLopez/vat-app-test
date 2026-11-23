@@ -428,12 +428,13 @@ function SuggestionRow({
           onChange={(e) => onNaamChange(e.target.value)}
           aria-label="Functienaam"
         />
-        <input
-          className={INPUT_CLASS}
+        <textarea
+          className={TEXTAREA_CLASS}
           value={toelichting}
           onChange={(e) => onToelichtingChange(e.target.value)}
           aria-label="Toelichting"
           placeholder="Korte toelichting"
+          rows={3}
         />
       </div>
     </div>

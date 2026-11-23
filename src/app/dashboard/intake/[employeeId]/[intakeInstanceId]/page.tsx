@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
 import { INTAKE_LAYOUT_KEY } from '@/lib/intake/schema';
+import { overlayIntakeWithWorkerFacts } from '@/lib/intake/worker-overlay';
+import { loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 import IntakeBuilder from '@/components/intake/IntakeBuilder';
 
 type Params = {
@@ -38,12 +40,23 @@ export default async function IntakeInstancePage({ params }: { params: Promise<P
     notFound();
   }
 
+  const facts = await loadWorkerFacts(supabase, employeeId);
+  const initialData = facts.snapshot
+    ? overlayIntakeWithWorkerFacts(instance.data_json || {}, facts.snapshot.values)
+    : instance.data_json || {};
+
+  const { count: exportCount } = await (supabase as any)
+    .from('intake_exports')
+    .select('id', { count: 'exact', head: true })
+    .eq('intake_instance_id', intakeInstanceId);
+
   return (
     <IntakeBuilder
       employeeId={employeeId}
       intakeInstanceId={intakeInstanceId}
-      initialData={instance.data_json || {}}
+      initialData={initialData}
       initialValidatedAt={instance.validated_at ?? null}
+      initialHasExport={(exportCount ?? 0) > 0}
     />
   );
 }

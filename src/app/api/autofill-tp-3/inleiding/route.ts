@@ -58,10 +58,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Geen documenten gevonden" }, { status: 200 });
     }
 
+    const metaRow = (meta ?? {}) as Record<string, unknown>;
     const ctx = {
       employee: employee ?? {},
       details: details ?? {},
-      meta: meta ?? {},
+      meta: {
+        ...metaRow,
+        client_referent_function:
+          (metaRow.client_referent_function as string | null | undefined) ?? null,
+        intake_referent_function: intake?.s4?.referent_function ?? null,
+      },
       client: client ?? {},
       referent,
     };

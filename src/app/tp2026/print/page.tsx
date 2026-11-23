@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 import TP2026PrintableClient from '@/components/tp2026/TP2026PrintableClient';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import { applyWorkerFacts, loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +31,14 @@ export default async function Page(props: { searchParams: Promise<SearchParams> 
   if (error || !instance) notFound();
 
   const profileContext = await resolveTPProfileContext(supabase, instance.employee_id);
-  const data = applyTPProfileContext(
-    ensureTP2026Shape((instance.data_json || {}) as Record<string, any>),
-    profileContext
-  ) as Record<string, any>;
+  const facts = await loadWorkerFacts(supabase, instance.employee_id);
+  const withFacts = facts.snapshot
+    ? applyWorkerFacts(
+        ensureTP2026Shape((instance.data_json || {}) as Record<string, any>) as unknown as Record<string, unknown>,
+        facts.snapshot.values
+      )
+    : ensureTP2026Shape((instance.data_json || {}) as Record<string, any>);
+  const data = applyTPProfileContext(withFacts, profileContext) as Record<string, any>;
 
   return <TP2026PrintableClient data={data} />;
 }

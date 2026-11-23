@@ -5,7 +5,7 @@ INTAKEFORMULIER LAYOUT (V7.5 / ValentineZ-stijl / Juni V6, compatibel met V5/V4/
 - Sectie 2 Persoonsgegevens: leeftijd, geslacht, functietitel, werkgever/organisatie, urenomvang, woonplaats, Telefoonnummer (werknemer → phone), Andere werkgever
 - Sectie 3 Functiebeschrijving:
   • "Korte beschrijving van de werkzaamheden:" — verbatim job description for TP inleiding Functieomschrijving block; ends before sectie 4 Aanmelding
-- Sectie 4 Aanmelding: Naam contactpersoon, Functietitel contactpersoon, Telefoonnummer contactpersoon, Email contactpersoon (enige bron voor referent_*)
+- Sectie 4 Aanmelding: Naam contactpersoon, Functietitel contactpersoon, Telefoonnummer contactpersoon, Email contactpersoon (primaire bron binnen dit intake-PDF voor referent_*; bij multi-doc: aanmeldformulier wint per veld, daarna intake s4, daarna AD/overige voor lege velden)
 - Sectie 5 Medische situatie:
   • Datum eerste ziekte dag
   • FML/IZP rubriek checkboxes (beperkingen)

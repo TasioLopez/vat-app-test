@@ -240,7 +240,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
 
   return (
     <div className="min-h-full shrink-0 bg-gray-100 pb-24 print:bg-white print:pb-0" data-cv-editor>
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur cv-no-print">
+      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white cv-no-print">
         <div className="mx-auto flex w-full max-w-[min(100%,1400px)] flex-col gap-2 px-6 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-gray-600" asChild>
@@ -284,7 +284,7 @@ export default function CVEditorShell({ employeeId, employeeLabel, employeeEmail
           </div>
 
           <CvToolbarScroll
-            className="border-t border-gray-100"
+            className="border-t border-gray-200"
             role="toolbar"
             aria-label="CV-werkbalk"
           >

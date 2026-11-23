@@ -12,7 +12,7 @@ import {
   normalizeBasisSectionReview,
 } from '@/lib/tp2026/basis-section-review';
 import { repairEmployeeEducationFields } from '@/lib/tp2026/gegevens-field-options';
-import { isAdReportConcept } from '@/lib/tp/ad-report-wording';
+import { coerceHasAdReportForShape } from '@/lib/tp/intake-ad-presence';
 import { isExWerknemer } from '@/lib/tp/ex-werknemer-wording';
 import { materializeSpoor2ForExWerknemer } from '@/lib/tp/tp_activities';
 import {
@@ -23,6 +23,13 @@ import { TOELICHTING_POW_DELIMITER } from '@/lib/tp/pow-meter/constants';
 
 export const PRACTISCHE_BELEMMERINGEN_DEFAULT =
   'Voor zover bekend zijn er geen praktische belemmeringen die van invloed kunnen zijn op het verloop van het tweede spoortraject.';
+
+/** Absent/meta intake text must not become a TP quote — use the default sentence. */
+export function resolvePraktischeBelemmeringenValue(raw: string | null | undefined): string {
+  const text = String(raw ?? '').trim();
+  if (!text || isAbsentText(text)) return PRACTISCHE_BELEMMERINGEN_DEFAULT;
+  return text;
+}
 
 const bijlage1PhaseDefaults: TP2026Bijlage1Phase[] = [
   {
@@ -192,9 +199,7 @@ export function ensureTP2026Shape(raw: Record<string, any>): Record<string, any>
     next.other_employers = 'Geen';
   }
 
-  if (isAdReportConcept(next) && next.has_ad_report !== false) {
-    next.has_ad_report = false;
-  }
+  next.has_ad_report = coerceHasAdReportForShape(next);
 
   if (next.fml_izp_lab_kind != null && next.fml_izp_lab_kind !== '') {
     const kind = normalizeFmlIzpLabKind(next.fml_izp_lab_kind);

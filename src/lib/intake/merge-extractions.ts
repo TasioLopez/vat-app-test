@@ -238,12 +238,12 @@ export function mergeExtractionsIntoIntake(
     data.s6[key] = fillIfEmpty(data.s6[key], nar[key] ?? (nar.s6 as Record<string, unknown> | undefined)?.[key]);
   }
 
-  applyNar('s8', ['woonplaats', 'woonsituatie', 'uitwonende_kinderen']);
-  applyNar('s9', ['contact_familie', 'hoe_vaak_contact', 'ondersteuning_familie', 'mantelzorg']);
-  applyNar('s10', ['zelfstandig_huishouden', 'hulp_huishouden', 'taken_verdeeld']);
-  applyNar('s11', ['gemiddelde_dag', 'activiteiten_buitenshuis', 'energie_belastbaarheid']);
-  applyNar('s12', ['hobbies', 'leest_of_muziek', 'kan_uitvoeren', 'graag_oppakken']);
-  applyNar('s13', ['hoe_lang_werkzaam', 'verbonden_organisatie', 'wens_terugkeer']);
+  applyNar('s8', ['tekst']);
+  applyNar('s9', ['tekst']);
+  applyNar('s10', ['tekst']);
+  applyNar('s11', ['tekst']);
+  applyNar('s12', ['tekst']);
+  applyNar('s13', ['tekst']);
   applyNar('s14', ['houding_spoor2']);
   applyNar('s16', ['interesses_voorkeuren', 'ideeen_passend_werk', 'bereid_scholing', 'graag_ontdekken']);
 
@@ -257,9 +257,6 @@ export function mergeExtractionsIntoIntake(
       (nar.s17 as Record<string, unknown> | undefined)?.praktische_belemmeringen
   );
 
-  if (data.s8.woonplaats === '' && data.s2.city) data.s8.woonplaats = data.s2.city;
-  if (data.s2.city === '' && data.s8.woonplaats) data.s2.city = data.s8.woonplaats;
-
   if (parts.sourceNotes?.length) {
     data.meta.generation_notes = [...data.meta.generation_notes, ...parts.sourceNotes];
   }
@@ -267,14 +264,12 @@ export function mergeExtractionsIntoIntake(
   return ensureIntakeShape(data);
 }
 
-/** Boolean fields that intake PDF checkbox detection owns — never overwritten by dossier gap-fill. */
+/**
+ * Boolean fields that intake PDF checkbox detection owns — never overwritten by dossier gap-fill.
+ * FML/IZP rubrieken are intentionally NOT here: unchecked intake boxes default to false and must
+ * not block dossier FML/IZP from setting true (true-wins merge below).
+ */
 const INTAKE_AUTHORITATIVE_BOOL_PATHS = new Set([
-  's5.fml_beperkingen.persoonlijk_functioneren',
-  's5.fml_beperkingen.sociaal_functioneren',
-  's5.fml_beperkingen.dynamische_handelingen',
-  's5.fml_beperkingen.statische_houdingen',
-  's5.fml_beperkingen.aanpassingen_fysieke_omgevingseisen',
-  's5.fml_beperkingen.werktijden',
   's6.ad_report_concept',
   's6.is_ex_werknemer',
   's17.has_pc',
@@ -322,7 +317,8 @@ function mergeValueFillBlanks(base: unknown, gap: unknown, path: string): unknow
 
 /**
  * Blank-only merge: keep non-empty intake (base) values; fill empties from dossier (gap).
- * Intake-authoritative booleans (Concept, Ex-werknemer, FML flags, devices) are never changed.
+ * Intake-authoritative booleans (Concept, Ex-werknemer, devices) are never changed.
+ * FML rubriek booleans use true-wins so dossier FML/IZP can fill unchecked intake boxes.
  */
 export function mergeIntakeFillBlanks(base: unknown, gap: unknown): IntakeData {
   const baseData = ensureIntakeShape(base);

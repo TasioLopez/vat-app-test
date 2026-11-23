@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 import {
   ALINEA_1_TOPICS,
   ALINEA_2_TOPICS,
@@ -15,7 +16,7 @@ INTAKE SECTIES VOOR VISIE VAN WERKNEMER (Juni V5):
 - Groep: Visie van de werknemer (label bij sectie 12 / werkverleden-blok)
 - Sectie 13 Werkverleden en verbondenheid
 - Sectie 14 Houding t.o.v. spoor 2
-- Sectie 16 Toekomstbeeld en voorkeuren
+- Sectie 15 Toekomstbeeld en voorkeuren
 `.trim();
 
 /**
@@ -74,6 +75,8 @@ SCHRIJFSTIJL
 JSON OUTPUT
 Lever exact: alinea_1, alinea_2, heeft_concrete_spoor2_voorkeuren.
 Geen kop, geen toelichting — alleen de twee alinea-teksten en de boolean.
+
+${EX_WERKNEMER_GENERATION_RULE}
 `.trim();
 
 export function buildVisieWerknemerContextMessage(context: Record<string, unknown>): string {

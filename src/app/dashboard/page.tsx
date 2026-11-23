@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { StatCard, Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-import { Users, Building2, ChevronRight } from 'lucide-react';
+import { Users, Building2, ChevronRight, FileText, FileUser } from 'lucide-react';
 import {
   canOpenEmployeeDossier,
   canViewOverallDashboardStats,
@@ -12,6 +12,7 @@ import {
   resolveDashboardScope,
 } from '@/lib/dashboard/stats';
 import DashboardScopeToggle from './DashboardScopeToggle';
+import { PAGE_SHELL_CLASS, PAGE_SUBTITLE_CLASS, PAGE_TITLE_CLASS } from '@/lib/ui/page-chrome';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -50,7 +51,7 @@ export default async function DashboardPage(props: {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <div className="text-error-600 p-6">Unauthorized</div>;
+    return <div className="p-6 text-error-600">Niet geautoriseerd</div>;
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -60,7 +61,7 @@ export default async function DashboardPage(props: {
     .single();
 
   if (profileError || !profile) {
-    return <div className="text-error-600 p-6">User profile not found.</div>;
+    return <div className="p-6 text-error-600">Gebruikersprofiel niet gevonden.</div>;
   }
 
   const role = profile.role;
@@ -134,116 +135,75 @@ export default async function DashboardPage(props: {
     last5Clients = data ?? [];
   }
 
-  const clientsLabel = scope === 'mine' ? 'Werkgevers toegewezen' : 'Werkgevers';
+  const clientsLabel = scope === 'mine' ? 'Mijn werkgevers' : 'Werkgevers';
   const subtitle =
-    scope === 'mine' ? 'Persoonlijk overzicht' : 'Organisatiebreed overzicht';
+    scope === 'mine' ? 'Ga verder waar je gebleven was' : 'Organisatiebreed overzicht';
 
   return (
-    <div className="space-y-8 bg-gradient-to-br from-gray-50 to-purple-50/30 p-8">
+    <div className={PAGE_SHELL_CLASS}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-lg text-gray-600">{subtitle}</p>
+        <div>
+          <h1 className={PAGE_TITLE_CLASS}>Dashboard</h1>
+          <p className={PAGE_SUBTITLE_CLASS}>{subtitle}</p>
         </div>
         {showScopeToggle && <DashboardScopeToggle scope={scope} />}
       </div>
 
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.totalUsers !== null && (
-          <StatCard title="Totaal gebruikers" value={stats.totalUsers} />
-        )}
-        <StatCard title={clientsLabel} value={stats.clientsCount} />
-        <StatCard title="Werknemers" value={stats.employeesCount} />
-        <StatCard
-          title="TP Documenten"
-          value={stats.tpDocumentsCount}
-          description="Inclusief regeneraties"
-        />
-        <StatCard title="TPs deze maand" value={stats.tpDocumentsThisMonth} />
-        <StatCard
-          title="Nieuwe werknemers deze maand"
-          value={stats.newEmployeesThisMonth}
-        />
-        <StatCard title="TP concepten" value={stats.tpDraftsCount} />
-        <StatCard title="Werknemers met TP" value={stats.employeesWithTp} />
-        <StatCard title="Werknemers zonder TP" value={stats.employeesWithoutTp} />
-        <StatCard
-          title="TP downloads"
-          value={stats.tpDownloadsCount}
-          description="Geëxporteerde PDF's"
-        />
-        <StatCard title="TP downloads deze maand" value={stats.tpDownloadsThisMonth} />
-        <StatCard
-          title="Werknemers met TP-download"
-          value={stats.employeesWithTpDownload}
-        />
-        <StatCard title="CV documenten" value={stats.cvDocumentsCount} />
-        <StatCard title="CVs deze maand" value={stats.cvDocumentsThisMonth} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <StatCard title={clientsLabel} value={stats.clientsCount} icon={<Building2 className="h-5 w-5" />} />
+        <StatCard title="Werknemers" value={stats.employeesCount} icon={<Users className="h-5 w-5" />} />
+        <StatCard title="TP-concepten" value={stats.tpDraftsCount} icon={<FileText className="h-5 w-5" />} />
+        <StatCard title="Zonder TP" value={stats.employeesWithoutTp} />
+        <StatCard title="CV-documenten" value={stats.cvDocumentsCount} icon={<FileUser className="h-5 w-5" />} />
         <StatCard title="Actieve CV-shares" value={stats.cvActiveSharesCount} />
-        <StatCard title="CV-shares deze maand" value={stats.cvSharesThisMonth} />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card className="border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30 hover:shadow-xl hover:shadow-purple-500/20">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                  <Users className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-gray-900">
-                    Laatste 5 Werknemers
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-gray-500">Meest recent geopend</p>
-                </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-50)]">
+                <Users className="h-4 w-4 text-[var(--color-primary-500)]" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold text-gray-900">
+                  Verder werken — werknemers
+                </CardTitle>
+                <p className="mt-0.5 text-sm text-gray-500">Recent geopend</p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {last5Employees.length === 0 ? (
-              <div className="py-8 text-center text-gray-500">
-                <p>Geen werknemers beschikbaar</p>
+              <div className="py-8 text-center text-sm text-gray-500">
+                Geen werknemers beschikbaar
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {last5Employees.map((employee) => {
                   const content = (
-                    <div className="flex cursor-pointer items-center justify-between rounded-lg border border-purple-100 bg-white p-4 transition-all duration-200 hover:border-purple-300 hover:bg-purple-50">
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-50">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-gray-900 transition-colors group-hover:text-purple-700">
+                        <h3 className="font-medium text-gray-900">
                           {employee.first_name} {employee.last_name}
                         </h3>
-                        <p className="mt-1 truncate text-sm text-gray-500">
+                        <p className="mt-0.5 truncate text-sm text-gray-500">
                           {employee.email}
                         </p>
-                        {employee.created_at && (
-                          <p className="mt-1 text-xs text-gray-400">
-                            {new Date(employee.created_at).toLocaleDateString('nl-NL', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
-                          </p>
-                        )}
                       </div>
-                      <ChevronRight className="ml-4 h-5 w-5 flex-shrink-0 text-gray-400 transition-colors group-hover:text-purple-600" />
+                      <ChevronRight className="ml-3 h-4 w-4 flex-shrink-0 text-gray-400" />
                     </div>
                   );
 
                   if (!canOpenDossier) {
-                    return (
-                      <div key={employee.id} className="group">
-                        {content}
-                      </div>
-                    );
+                    return <div key={employee.id}>{content}</div>;
                   }
 
                   return (
                     <Link
                       key={employee.id}
                       href={`/dashboard/employees/${employee.id}`}
-                      className="group block"
+                      className="block"
                     >
                       {content}
                     </Link>
@@ -254,59 +214,41 @@ export default async function DashboardPage(props: {
           </CardContent>
         </Card>
 
-        <Card className="border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30 hover:shadow-xl hover:shadow-purple-500/20">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                  <Building2 className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-gray-900">
-                    Laatste 5 Werkgevers
-                  </CardTitle>
-                  <p className="mt-1 text-sm text-gray-500">Meest recent geopend</p>
-                </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-50)]">
+                <Building2 className="h-4 w-4 text-[var(--color-primary-500)]" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold text-gray-900">
+                  Verder werken — werkgevers
+                </CardTitle>
+                <p className="mt-0.5 text-sm text-gray-500">Recent geopend</p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {last5Clients.length === 0 ? (
-              <div className="py-8 text-center text-gray-500">
-                <p>Geen werkgevers beschikbaar</p>
+              <div className="py-8 text-center text-sm text-gray-500">
+                Geen werkgevers beschikbaar
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {last5Clients.map((client) => (
                   <Link
                     key={client.id}
-                    href="/dashboard/clients"
-                    className="group block"
+                    href={`/dashboard/clients/${client.id}`}
+                    className="block"
                   >
-                    <div className="flex cursor-pointer items-center justify-between rounded-lg border border-purple-100 bg-white p-4 transition-all duration-200 hover:border-purple-300 hover:bg-purple-50">
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-50">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-gray-900 transition-colors group-hover:text-purple-700">
-                          {client.name}
-                        </h3>
+                        <h3 className="font-medium text-gray-900">{client.name}</h3>
                         {client.industry && (
-                          <p className="mt-1 text-sm text-gray-500">{client.industry}</p>
-                        )}
-                        {client.contact_email && (
-                          <p className="mt-1 truncate text-sm text-gray-500">
-                            {client.contact_email}
-                          </p>
-                        )}
-                        {client.created_at && (
-                          <p className="mt-1 text-xs text-gray-400">
-                            {new Date(client.created_at).toLocaleDateString('nl-NL', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric',
-                            })}
-                          </p>
+                          <p className="mt-0.5 text-sm text-gray-500">{client.industry}</p>
                         )}
                       </div>
-                      <ChevronRight className="ml-4 h-5 w-5 flex-shrink-0 text-gray-400 transition-colors group-hover:text-purple-600" />
+                      <ChevronRight className="ml-3 h-4 w-4 flex-shrink-0 text-gray-400" />
                     </div>
                   </Link>
                 ))}

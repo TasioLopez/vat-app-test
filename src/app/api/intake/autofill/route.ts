@@ -3,8 +3,17 @@ import OpenAI from 'openai';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
+import {
+  AUTOFILL_SSE_HEADERS,
+  encodeErrorEvent,
+  encodeProgressEvent,
+  encodeResultEvent,
+} from '@/lib/autofill-progress-stream';
 import { autofillIntakeFromDocuments } from '@/lib/intake/autofill';
 import { ensureIntakeShape } from '@/lib/intake/schema';
+import { saveWorkerFacts } from '@/lib/employee/save-worker-facts';
+import { normalizeWorkerFactValues } from '@/lib/intake/normalize-controlled-fields';
+import { blankIntakeSharedFacts, intakeSharedFacts, overlayIntakeWithWorkerFacts } from '@/lib/intake/worker-overlay';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,7 +21,7 @@ export const maxDuration = 300;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/** Intake-first autofill, then blank-only dossier gap-fill. */
+/** Intake-first autofill, then blank-only dossier gap-fill. Streams progress via SSE. */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const employeeId = body?.employeeId as string | undefined;
@@ -38,51 +47,93 @@ export async function POST(req: NextRequest) {
     }
   );
 
-  try {
-    const result = await autofillIntakeFromDocuments({
-      openai,
-      supabase,
-      employeeId,
-    });
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendProgress = (progress: {
+        currentIndex: number;
+        total: number;
+        currentLabel: string;
+      }) => {
+        controller.enqueue(encodeProgressEvent(progress));
+      };
 
-    if (result.error && !result.sourceDocumentId) {
-      return NextResponse.json({ error: result.error }, { status: 404 });
-    }
+      try {
+        const result = await autofillIntakeFromDocuments({
+          openai,
+          supabase,
+          employeeId,
+          onProgress: sendProgress,
+        });
 
-    const data = ensureIntakeShape(result.data);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+        if (result.error && !result.sourceDocumentId) {
+          controller.enqueue(encodeErrorEvent(result.error, 404));
+          return;
+        }
 
-    const { error } = await (supabase as any)
-      .from('intake_instances')
-      .update({
-        data_json: data,
-        source_document_id: result.sourceDocumentId,
-        validated_at: null,
-        validated_by: null,
-        updated_by: user?.id ?? null,
-      })
-      .eq('id', intakeInstanceId)
-      .eq('employee_id', employeeId);
+        const total = result.progressTotal;
+        sendProgress({
+          currentIndex: total,
+          total,
+          currentLabel: 'Gegevens opslaan…',
+        });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+        const generated = ensureIntakeShape(result.data);
+        const shared = normalizeWorkerFactValues(intakeSharedFacts(generated));
+        const saved = await saveWorkerFacts(supabase, employeeId, shared, 'autofill');
+        if (saved.error) {
+          controller.enqueue(encodeErrorEvent(saved.error, 500));
+          return;
+        }
+        const data = saved.values
+          ? overlayIntakeWithWorkerFacts(generated, saved.values)
+          : generated;
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-    return NextResponse.json({
-      ok: true,
-      data_json: data,
-      source_document_id: result.sourceDocumentId,
-      gap_filled: result.gapFilled,
-      warning: result.warning || null,
-      conflicts: data.meta.conflicts,
-    });
-  } catch (e) {
-    console.error('intake autofill failed', e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Automatisch invullen mislukt' },
-      { status: 500 }
-    );
-  }
+        const { error } = await (supabase as any)
+          .from('intake_instances')
+          .update({
+            data_json: blankIntakeSharedFacts(data),
+            source_document_id: result.sourceDocumentId,
+            validated_at: null,
+            validated_by: null,
+            updated_by: user?.id ?? null,
+          })
+          .eq('id', intakeInstanceId)
+          .eq('employee_id', employeeId);
+
+        if (error) {
+          controller.enqueue(encodeErrorEvent(error.message, 500));
+          return;
+        }
+
+        controller.enqueue(
+          encodeResultEvent({
+            ok: true,
+            data_json: data,
+            source_document_id: result.sourceDocumentId,
+            gap_filled: result.gapFilled,
+            generated_from_dossier: result.generatedFromDossier === true,
+            warning: result.warning || null,
+            conflicts: data.meta.conflicts,
+            skipped_validated: saved.skippedValidated,
+            proposed_facts: shared,
+          })
+        );
+      } catch (e) {
+        console.error('intake autofill failed', e);
+        controller.enqueue(
+          encodeErrorEvent(
+            e instanceof Error ? e.message : 'Automatisch invullen mislukt',
+            500
+          )
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, { headers: AUTOFILL_SSE_HEADERS });
 }

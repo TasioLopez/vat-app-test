@@ -88,9 +88,9 @@ export default function TPDocsTable({ rows }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>TP</TableHead>
-              <TableHead>Employee</TableHead>
-              <TableHead>Employer</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>Werknemer</TableHead>
+              <TableHead>Werkgever</TableHead>
+              <TableHead>Aangemaakt</TableHead>
               <TableHead className="w-36"></TableHead>
             </TableRow>
           </TableHeader>
@@ -167,7 +167,7 @@ export default function TPDocsTable({ rows }: Props) {
               <div className="flex-1 overflow-hidden bg-muted/30">
                 {loading && (
                   <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-                    Loading preview…
+                    Voorbeeld laden…
                   </div>
                 )}
                 {signError && (

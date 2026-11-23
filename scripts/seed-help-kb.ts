@@ -71,6 +71,8 @@ async function main() {
     const categorySlug = meta.category_slug;
     const translationGroupId = meta.translation_group_id;
     const locale = meta.locale || "nl";
+    const publishedRaw = (meta.published ?? "true").trim().toLowerCase();
+    const published = publishedRaw !== "false" && publishedRaw !== "0" && publishedRaw !== "no";
 
     if (!slug || !title || !categorySlug || !translationGroupId) {
       console.warn("Skip", file, "incomplete frontmatter");
@@ -94,8 +96,8 @@ async function main() {
           slug,
           body,
           excerpt,
-          published: true,
-          published_at: new Date().toISOString(),
+          published,
+          published_at: published ? new Date().toISOString() : null,
         },
         { onConflict: "locale,slug" },
       )

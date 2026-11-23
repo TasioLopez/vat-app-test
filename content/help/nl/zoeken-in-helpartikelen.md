@@ -9,21 +9,24 @@ locale: nl
 
 # Zoeken in helpartikelen
 
-De zoekfunctie op `/dashboard/help` helpt u artikelen te vinden op **trefwoord**. Dit artikel beschrijft **waar** het veld staat, **hoe** het reageert en wat u doet bij **geen resultaten**.
+Op **Help & Kenniscentrum** (`/dashboard/help`) zoekt u artikelen op **trefwoord**. Dit artikel beschrijft waar het veld staat, hoe het reageert en wat u doet bij geen resultaten.
 
 ## Waar is het zoekveld?
 
-Open **Help** in het zijmenu. Bovenaan de help-startpagina staat het **zoekveld**.
+1. Open **Help** in het zijmenu.
+2. Bovenaan de pagina staat het zoekveld met de placeholder **Zoek in de kennisbank…**.
+
+Daaronder bladert u via **Onderwerpen** (categorieën). Rechtsboven op dezelfde pagina staan ook **Nieuw ticket**, **Vraag de assistent** en **Mijn tickets**.
 
 > **Schermafbeelding (nog toe te voegen)**
 >
-> Toon: help-hub met zoekveld en open resultatenlijst.
+> Toon: Help-hub met zoekveld, knoppenrij en open resultatenlijst.
 >
 > **Bestandsnaam:** `help-zoekveld.png`
 
 ## Hoe werkt het?
 
-- U typt tekst; na een korte **pauze** (debounce) wordt er gezocht.
+- U typt tekst; na een korte **pauze** (ongeveer 300 ms) wordt er gezocht.
 - Gebruik minimaal **twee tekens** (vereiste van de app).
 - Klik een **resultaat** om het artikel te openen.
 
@@ -32,19 +35,19 @@ Open **Help** in het zijmenu. Bovenaan de help-startpagina staat het **zoekveld*
 1. Ga naar `/dashboard/help`.
 2. Klik in het zoekveld.
 3. Typ minstens twee letters.
-4. Wacht op resultaten.
+4. Wacht op resultaten onder **Zoekresultaten**.
 5. Open het gewenste artikel.
 
 ## Geen resultaten?
 
 - Probeer **andere woorden** of kortere termen.
-- **Blader** via categorieën: [Navigatie en zoeken](/dashboard/help/a/kenniscentrum-navigatie-zoeken).
-- Gebruik de **helpchat**: [Wanneer de helpchat gebruiken?](/dashboard/help/a/help-chat-wanneer-gebruiken).
+- **Blader** via **Onderwerpen**: [Navigatie en zoeken](/dashboard/help/a/kenniscentrum-navigatie-zoeken).
+- Gebruik de assistent: [Wanneer de helpchat gebruiken?](/dashboard/help/a/help-chat-wanneer-gebruiken).
 - Dien een **ticket** in als documentatie ontbreekt: [Supportticket indienen](/dashboard/help/a/support-ticket-indienen).
 
 ## Chat versus zoeken
 
-**Zoeken** geeft een lijst artikelen op trefwoord. **Chat** beantwoordt een vraag in eigen woorden maar kan fouten maken; controleer altijd artikelen.
+**Zoeken** geeft een lijst artikelen op trefwoord. **Vraag de assistent** beantwoordt een vraag in eigen woorden, maar kan fouten maken; controleer altijd de artikelen.
 
 ## Zie ook
 

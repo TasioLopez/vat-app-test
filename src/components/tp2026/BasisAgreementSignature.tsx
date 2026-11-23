@@ -8,11 +8,12 @@ import {
 import { TP_BASIS_DISCLAIMER_CLASS } from '@/lib/tp2026/basis-document-layout';
 import { SectionBand, ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { TP2026_BORDER_BOX_CLASS } from '@/lib/tp2026/tp2026-colors';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 
 const paperText =
   'tp-body-prose bg-[#f5efe6] p-2.5 text-[11px] leading-relaxed text-neutral-900';
 
-export function BasisAgreementBlock() {
+export function BasisAgreementBlock({ isEx = false }: { isEx?: boolean }) {
   return (
     <div className="mb-2 mt-3">
       <SectionBand title={TP_BASIS_AGREEMENT_INTRO} />
@@ -20,7 +21,7 @@ export function BasisAgreementBlock() {
         <div className="ml-1 space-y-1.5">
           {TP_BASIS_AGREEMENT_POINTS.map((t, i) => (
             <ValentineZLogoBulletRow key={i}>
-              {t}
+              {applyExWerknemerWording(t, isEx)}
             </ValentineZLogoBulletRow>
           ))}
         </div>
@@ -56,11 +57,13 @@ export function BasisSignatureBlock({
   advisorName,
   employerContact,
   employerFunction,
+  isEx = false,
 }: {
   employeeName: string;
   advisorName: string;
   employerContact: string;
   employerFunction?: string;
+  isEx?: boolean;
 }) {
   const row = 'mt-3 grid grid-cols-2 gap-3';
   const employerLine = formatEmployerLine(employerContact, employerFunction);
@@ -70,7 +73,7 @@ export function BasisSignatureBlock({
       <SectionBand title="Ondertekening" className="mb-0" />
       <div className="whitespace-pre-wrap pb-2 text-[12px] leading-relaxed text-neutral-900">
         <div className="grid grid-cols-2 gap-3">
-          <SignatureCell title="Werknemer">
+          <SignatureCell title={applyExWerknemerWording('Werknemer', isEx)}>
             <div>{employeeName}</div>
             <div className="min-h-2" aria-hidden />
             <div className="min-h-8" aria-hidden />
@@ -122,16 +125,19 @@ export function BasisAgreementSignatureBlock({
   advisorName,
   employerContact,
   employerFunction,
+  isEx = false,
 }: {
   employeeName: string;
   advisorName: string;
   employerContact: string;
   employerFunction?: string;
+  isEx?: boolean;
 }) {
   return (
     <div className="[break-inside:avoid] print:[break-inside:avoid]">
-      <BasisAgreementBlock />
+      <BasisAgreementBlock isEx={isEx} />
       <BasisSignatureBlock
+        isEx={isEx}
         employeeName={employeeName}
         advisorName={advisorName}
         employerContact={employerContact}

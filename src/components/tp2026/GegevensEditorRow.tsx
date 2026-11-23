@@ -17,6 +17,7 @@ import {
   materializeSpoor2ForExWerknemer,
 } from '@/lib/tp/tp_activities';
 import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 
 function shouldHideField(key: string, data: Record<string, unknown>): boolean {
   if (
@@ -27,7 +28,7 @@ function shouldHideField(key: string, data: Record<string, unknown>): boolean {
     return true;
   }
   if (key === 'drivers_license_type' && data.drivers_license !== true) return true;
-  if (key === 'computer_skills' && data.has_computer === false) return true;
+  // PC skills stay editable regardless of has_computer (availability ≠ skill level).
   return false;
 }
 
@@ -79,6 +80,10 @@ export function GegevensEditorRow({
               ),
             };
           }
+          field = {
+            ...field,
+            label: applyExWerknemerWording(field.label, data.is_ex_werknemer === true),
+          };
           const props = resolveFieldProps(field);
 
           if (key === 'computer_skills') {
@@ -105,6 +110,15 @@ export function GegevensEditorRow({
                 }
                 if (key === 'ad_report_concept' && v === true) {
                   updateField('has_ad_report', false);
+                }
+                if (key === 'ad_report_date') {
+                  if (hasFilledAdReportDate(v)) {
+                    if (!isAdReportConcept(data)) {
+                      updateField('has_ad_report', true);
+                    }
+                  } else if (data.has_ad_report === true) {
+                    updateField('has_ad_report', false);
+                  }
                 }
                 if (key === 'is_ex_werknemer' && v === true) {
                   const spoor2 = materializeSpoor2ForExWerknemer(data.tp3_activities, true);

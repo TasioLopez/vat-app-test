@@ -4,6 +4,7 @@ import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options'
 import type { IntakeSectie3Content } from '@/lib/tp/intake-sectie3/schema';
 import type { IntakeSectie5Content } from '@/lib/tp/intake-sectie5/schema';
 import type { IntakeSectie7Content } from '@/lib/tp/intake-sectie7/schema';
+import { isAbsentText } from '@/lib/utils';
 
 const SOURCE_PREAMBLE =
   'INTAKEFORMULIER (gedigitaliseerd en gevalideerd). Gebruik deze tekst als het intakeformulier.';
@@ -70,33 +71,15 @@ function formatWork(rows: IntakeWorkExperienceRow[]): string | null {
 
 function socialeSections(intake: IntakeData): string[] {
   return [
-    section('Sectie 8 Woonsituatie', [
-      field('Woonplaats', intake.s8.woonplaats),
-      field('Woonsituatie', intake.s8.woonsituatie),
-      field('Uitwonende kinderen', intake.s8.uitwonende_kinderen),
-    ]),
-    section('Sectie 9 Familie en sociaal netwerk', [
-      field('Contact familie', intake.s9.contact_familie),
-      field('Hoe vaak contact', intake.s9.hoe_vaak_contact),
-      field('Ondersteuning familie', intake.s9.ondersteuning_familie),
-      field('Mantelzorg', intake.s9.mantelzorg),
-    ]),
+    section('Sectie 8 Woonsituatie', [field('Notitie', intake.s8.tekst)]),
+    section('Sectie 9 Familie en sociaal netwerk', [field('Notitie', intake.s9.tekst)]),
     section('Sectie 10 Huishoudelijke taken en zorgtaken', [
-      field('Zelfstandig huishouden', intake.s10.zelfstandig_huishouden),
-      field('Hulp huishouden', intake.s10.hulp_huishouden),
-      field('Taken verdeeld', intake.s10.taken_verdeeld),
+      field('Notitie', intake.s10.tekst),
     ]),
     section('Sectie 11 Dagstructuur en energieverdeling', [
-      field('Gemiddelde dag', intake.s11.gemiddelde_dag),
-      field('Activiteiten buitenshuis', intake.s11.activiteiten_buitenshuis),
-      field('Energie en belastbaarheid', intake.s11.energie_belastbaarheid),
+      field('Notitie', intake.s11.tekst),
     ]),
-    section("Sectie 12 Vrije tijd en hobby's", [
-      field("Hobby's", intake.s12.hobbies),
-      field('Leest of muziek', intake.s12.leest_of_muziek),
-      field('Kan uitvoeren', intake.s12.kan_uitvoeren),
-      field('Graag oppakken', intake.s12.graag_oppakken),
-    ]),
+    section("Sectie 12 Vrije tijd en hobby's", [field('Notitie', intake.s12.tekst)]),
   ];
 }
 
@@ -115,7 +98,7 @@ function reintegratieSection(intake: IntakeData): string {
 function profileSections(intake: IntakeData): string[] {
   return [
     section('Sectie 2 Functie', [field('Huidige functie', intake.s2.current_job)]),
-    section('Sectie 17 Opleiding, werk, vervoer en taal', [
+    section('Sectie 16 Opleiding, werk, vervoer en taal', [
       field('Opleidingsniveau', intake.s17.education_level),
       field('Opleiding', intake.s17.education_name),
       formatEducation(intake.s17.opleidingen),
@@ -184,14 +167,12 @@ export function intakeTextForVisieWerknemer(intake: IntakeData): string {
   return joinSections([
     reintegratieSection(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Hoe lang werkzaam', intake.s13.hoe_lang_werkzaam),
-      field('Verbonden met organisatie', intake.s13.verbonden_organisatie),
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
     section('Sectie 14 Houding ten opzichte van spoor 2', [
       field('Houding spoor 2', intake.s14.houding_spoor2),
     ]),
-    section('Sectie 16 Toekomstbeeld en voorkeuren', [
+    section('Sectie 15 Toekomstbeeld en voorkeuren', [
       field('Interesses en voorkeuren', intake.s16.interesses_voorkeuren),
       field('Ideeën passend werk', intake.s16.ideeen_passend_werk),
       field('Bereid tot scholing', intake.s16.bereid_scholing),
@@ -204,12 +185,98 @@ export function intakeTextForPersoonlijkProfiel(intake: IntakeData): string {
   return joinSections(profileSections(intake));
 }
 
+function putPersoonlijkFact(
+  facts: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (value == null) return;
+  if (typeof value === 'string' && (!value.trim() || isAbsentText(value))) return;
+  if (Array.isArray(value) && value.length === 0) return;
+  facts[key] = value;
+}
+
+/** Structured s17 facts for persoonlijk-profiel generation (only present values). */
+export function intakeFactsForPersoonlijkProfiel(intake: IntakeData): Record<string, unknown> {
+  const s17 = intake.s17;
+  const facts: Record<string, unknown> = {};
+
+  putPersoonlijkFact(facts, 'rijbewijs', s17.drivers_license_types);
+  putPersoonlijkFact(facts, 'vervoer', s17.transport_types);
+  putPersoonlijkFact(facts, 'has_pc', s17.has_pc);
+  putPersoonlijkFact(facts, 'has_smartphone', s17.has_smartphone);
+  putPersoonlijkFact(facts, 'computervaardigheden', formatComputerSkillsOption(s17.computer_skills));
+  putPersoonlijkFact(facts, 'computervaardigheden_toelichting', s17.computer_skills_extra);
+  putPersoonlijkFact(facts, 'typvaardigheid', s17.typing_skills);
+  putPersoonlijkFact(facts, 'nederlands_spreken', s17.dutch_speaking);
+  putPersoonlijkFact(facts, 'nederlands_schrijven', s17.dutch_writing);
+  putPersoonlijkFact(facts, 'nederlands_lezen', s17.dutch_reading);
+  putPersoonlijkFact(facts, 'andere_talen', s17.other_languages);
+  return facts;
+}
+
+/**
+ * Map WorkerFacts / employee_details into the same profile_facts shape.
+ * Used when intake s17 was blanked after validate.
+ */
+export function workerFactsForPersoonlijkProfiel(
+  workerFacts: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  if (!workerFacts) return {};
+  const facts: Record<string, unknown> = {};
+  const licenses = workerFacts.drivers_license_type;
+  const transport = workerFacts.transport_type;
+  const hasComputer =
+    workerFacts.has_computer === true ||
+    (typeof workerFacts.computer_skills === 'string' && Boolean(workerFacts.computer_skills.trim()));
+
+  putPersoonlijkFact(facts, 'rijbewijs', licenses);
+  putPersoonlijkFact(facts, 'vervoer', transport);
+  if (hasComputer) putPersoonlijkFact(facts, 'has_pc', true);
+  putPersoonlijkFact(
+    facts,
+    'computervaardigheden',
+    formatComputerSkillsOption(
+      typeof workerFacts.computer_skills === 'string' ? workerFacts.computer_skills : ''
+    )
+  );
+  putPersoonlijkFact(facts, 'computervaardigheden_toelichting', workerFacts.computer_skills_description);
+  putPersoonlijkFact(facts, 'nederlands_spreken', workerFacts.dutch_speaking);
+  putPersoonlijkFact(facts, 'nederlands_schrijven', workerFacts.dutch_writing);
+  putPersoonlijkFact(facts, 'nederlands_lezen', workerFacts.dutch_reading);
+  return facts;
+}
+
+/** Intake facts first; WorkerFacts fill blanks (WorkerFacts win only when intake key absent). */
+export function mergePersoonlijkProfileFacts(
+  intakeFacts: Record<string, unknown>,
+  workerFacts: Record<string, unknown>
+): Record<string, unknown> {
+  const merged = { ...intakeFacts };
+  for (const [key, value] of Object.entries(workerFacts)) {
+    if (merged[key] == null || merged[key] === '' || (Array.isArray(merged[key]) && (merged[key] as unknown[]).length === 0)) {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
+/** Prefer intake s17 when present; otherwise WorkerFacts / employee_details. */
+export function resolvePersoonlijkProfileFacts(
+  intake: IntakeData | null | undefined,
+  workerFacts?: Record<string, unknown> | null
+): Record<string, unknown> {
+  const fromIntake = intake ? intakeFactsForPersoonlijkProfiel(intake) : {};
+  const fromWorker = workerFactsForPersoonlijkProfiel(workerFacts);
+  return mergePersoonlijkProfileFacts(fromIntake, fromWorker);
+}
+
 export function intakeTextForPowMeter(intake: IntakeData): string {
   return joinSections([
     reintegratieSection(intake),
     ...socialeSections(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
     section('Sectie 14 Houding ten opzichte van spoor 2', [
       field('Houding spoor 2', intake.s14.houding_spoor2),
@@ -221,10 +288,9 @@ export function intakeTextForVisieLoopbaanadviseur(intake: IntakeData): string {
   return joinSections([
     ...profileSections(intake),
     section('Sectie 13 Werkverleden en verbondenheid', [
-      field('Hoe lang werkzaam', intake.s13.hoe_lang_werkzaam),
-      field('Wens terugkeer', intake.s13.wens_terugkeer),
+      field('Notitie', intake.s13.tekst),
     ]),
-    section('Sectie 16 Toekomstbeeld en voorkeuren', [
+    section('Sectie 15 Toekomstbeeld en voorkeuren', [
       field('Interesses en voorkeuren', intake.s16.interesses_voorkeuren),
       field('Ideeën passend werk', intake.s16.ideeen_passend_werk),
       field('Bereid tot scholing', intake.s16.bereid_scholing),
@@ -235,7 +301,7 @@ export function intakeTextForVisieLoopbaanadviseur(intake: IntakeData): string {
 export function intakeTextForZoekprofiel(intake: IntakeData): string {
   return joinSections([
     section('Sectie 2 Functie', [field('Huidige functie', intake.s2.current_job)]),
-    section('Sectie 17 Opleiding en werkervaring', [
+    section('Sectie 16 Opleiding en werkervaring', [
       field('Opleidingsniveau', intake.s17.education_level),
       field('Opleiding', intake.s17.education_name),
       formatEducation(intake.s17.opleidingen),
@@ -246,7 +312,10 @@ export function intakeTextForZoekprofiel(intake: IntakeData): string {
 }
 
 export function intakePraktischeBelemmeringen(intake: IntakeData): string {
-  return intake.s17.praktische_belemmeringen.trim();
+  const raw = intake.s17.praktische_belemmeringen.trim();
+  // Meta labels like "niet benoemd" must not become a TP quote.
+  if (isAbsentText(raw)) return '';
+  return raw;
 }
 
 export function intakeToSectie3Content(intake: IntakeData): IntakeSectie3Content | null {

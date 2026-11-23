@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createEmptyIntakeData } from '@/lib/intake/schema';
 import {
+  intakeFactsForPersoonlijkProfiel,
   intakePraktischeBelemmeringen,
   intakeTextForInleiding,
   intakeTextForPersoonlijkProfiel,
@@ -55,9 +56,9 @@ describe('validated intake TP source', () => {
 
   it('limits sociale achtergrond to social sections plus transport and language', () => {
     const data = createEmptyIntakeData();
-    data.s8.woonsituatie = 'Woont samen met partner.';
-    data.s11.energie_belastbaarheid = 'Energetische beperking.';
-    data.s13.wens_terugkeer = 'Wil terug in eigen werk.';
+    data.s8.tekst = 'Woont samen met partner.';
+    data.s11.tekst = 'Energetische beperking.';
+    data.s13.tekst = 'Wil terug in eigen werk.';
     data.s17.transport_types = ['fiets'];
     data.s17.dutch_speaking = 'G';
     data.s17.dutch_reading = 'Goed';
@@ -76,7 +77,7 @@ describe('validated intake TP source', () => {
     data.s6.actief_spoor1 = 'Ja, 8 uur';
     data.s6.ervaart_belastbaarheid = 'Beperkt belastbaar.';
     data.s14.houding_spoor2 = 'Staat open voor spoor 2.';
-    data.s8.woonplaats = 'Utrecht';
+    data.s8.tekst = 'Woont in Utrecht.';
 
     const text = intakeTextForVisieWerknemer(data);
     assert.match(text, /Ja, 8 uur/);
@@ -85,14 +86,14 @@ describe('validated intake TP source', () => {
     assert.doesNotMatch(text, /Utrecht/);
   });
 
-  it('builds persoonlijk profiel from job and section 17 profile facts', () => {
+  it('builds persoonlijk profiel from job and section 16 profile facts', () => {
     const data = createEmptyIntakeData();
     data.s2.current_job = 'Docent LB';
     data.s17.education_level = 'HBO';
     data.s17.opleidingen = [{ opleiding: 'Pabo', afgerond: 'ja' }];
     data.s17.has_pc = true;
     data.s17.computer_skills = '3';
-    data.s12.hobbies = 'Lezen';
+    data.s12.tekst = 'Lezen';
 
     const text = intakeTextForPersoonlijkProfiel(data);
     assert.match(text, /Docent LB/);
@@ -103,10 +104,23 @@ describe('validated intake TP source', () => {
     assert.doesNotMatch(text, /Lezen/);
   });
 
+  it('exports structured profile facts for persoonlijk profiel', () => {
+    const data = createEmptyIntakeData();
+    data.s17.drivers_license_types = ['B'];
+    data.s17.dutch_speaking = 'Goed';
+    data.s17.typing_skills = 'goed';
+    data.s17.has_pc = true;
+    const facts = intakeFactsForPersoonlijkProfiel(data);
+    assert.deepEqual(facts.rijbewijs, ['B']);
+    assert.equal(facts.nederlands_spreken, 'Goed');
+    assert.equal(facts.typvaardigheid, 'goed');
+    assert.equal(facts.has_pc, true);
+  });
+
   it('includes hours and daily activity for the POW-meter', () => {
     const data = createEmptyIntakeData();
     data.s6.uren_werkzaam = '12 uur';
-    data.s11.gemiddelde_dag = 'Ochtend rust, middag afspraken.';
+    data.s11.tekst = 'Ochtend rust, middag afspraken.';
     data.s14.houding_spoor2 = 'Wil meewerken.';
 
     const text = intakeTextForPowMeter(data);
@@ -120,7 +134,7 @@ describe('validated intake TP source', () => {
     data.s2.current_job = 'Operator';
     data.s17.work_experience = 'Productie en logistiek.';
     data.s16.interesses_voorkeuren = 'Administratief werk.';
-    data.s12.hobbies = 'Tuinieren';
+    data.s12.tekst = 'Tuinieren';
 
     const zoek = intakeTextForZoekprofiel(data);
     assert.match(zoek, /Operator/);
@@ -176,6 +190,12 @@ describe('validated intake TP source', () => {
     const data = createEmptyIntakeData();
     data.s17.praktische_belemmeringen = 'Geen rijbewijs en beperkt ov.';
     assert.equal(intakePraktischeBelemmeringen(data), 'Geen rijbewijs en beperkt ov.');
+  });
+
+  it('treats niet benoemd as empty practical barriers', () => {
+    const data = createEmptyIntakeData();
+    data.s17.praktische_belemmeringen = 'niet benoemd';
+    assert.equal(intakePraktischeBelemmeringen(data), '');
   });
 
   it('drops intake PDFs and keeps AD and FML documents', () => {

@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
+  mergeReferentFields,
+  composeReferentByPriority,
   splitContactPersonName,
+  deriveContactNameFromEmail,
 } from '../nullSafeDetails';
 
 describe('mapAndValidateEmployeeDetails', () => {
@@ -149,6 +152,88 @@ describe('extractReferentFromRaw', () => {
       referent_function: 'Arbeidsdeskundige',
     });
     assert.deepEqual(ref, {});
+  });
+
+  it('derives name from email local-part when name is empty (Melissa)', () => {
+    const ref = extractReferentFromRaw({
+      referent_email: 'Maaike.boudewijn@ihub.nl',
+      referent_phone: '0636472177',
+    });
+    assert.equal(ref.referent_first_name, 'Maaike');
+    assert.equal(ref.referent_last_name, 'Boudewijn');
+    assert.equal(ref.referent_email, 'Maaike.boudewijn@ihub.nl');
+  });
+});
+
+describe('deriveContactNameFromEmail', () => {
+  it('parses voornaam.achternaam locals', () => {
+    assert.deepEqual(deriveContactNameFromEmail('maaike.boudewijn@ihub.nl'), {
+      first_name: 'Maaike',
+      last_name: 'Boudewijn',
+    });
+    assert.deepEqual(deriveContactNameFromEmail('p.deuschle@rocva.nl'), {
+      first_name: 'P',
+      last_name: 'Deuschle',
+    });
+  });
+
+  it('returns null for role-like or single-token locals', () => {
+    assert.equal(deriveContactNameFromEmail('info@ihub.nl'), null);
+    assert.equal(deriveContactNameFromEmail('hr@company.nl'), null);
+  });
+});
+
+describe('composeReferentByPriority', () => {
+  it('fills name from AD when aanmeld only has phone and email', () => {
+    const merged = composeReferentByPriority({
+      aanmeld: {
+        referent_phone: '06 - 12 34 56 78',
+        referent_email: 'hr@werkgever.nl',
+      },
+      intake: { referent_function: 'HR adviseur' },
+      secondary: [
+        {
+          referent_first_name: 'Herleen',
+          referent_last_name: 'Brama',
+          referent_phone: '06 - 99 99 99 99',
+        },
+      ],
+    });
+    assert.equal(merged.referent_phone, '06 - 12 34 56 78');
+    assert.equal(merged.referent_email, 'hr@werkgever.nl');
+    assert.equal(merged.referent_function, 'HR adviseur');
+    assert.equal(merged.referent_first_name, 'Herleen');
+    assert.equal(merged.referent_last_name, 'Brama');
+  });
+
+  it('does not let AD overwrite aanmeld name', () => {
+    const merged = composeReferentByPriority({
+      aanmeld: {
+        referent_first_name: 'Sara',
+        referent_last_name: 'Jansen',
+        referent_email: 'sara@werkgever.nl',
+      },
+      secondary: [
+        {
+          referent_first_name: 'Piet',
+          referent_last_name: 'De Vries',
+          referent_function: 'Manager',
+        },
+      ],
+    });
+    assert.equal(merged.referent_first_name, 'Sara');
+    assert.equal(merged.referent_last_name, 'Jansen');
+    assert.equal(merged.referent_function, 'Manager');
+    assert.equal(merged.referent_email, 'sara@werkgever.nl');
+  });
+
+  it('mergeReferentFields still fills gaps without overwriting', () => {
+    const merged = mergeReferentFields(
+      { referent_first_name: 'Jan' },
+      { referent_first_name: 'Piet', referent_last_name: 'Jansen' }
+    );
+    assert.equal(merged.referent_first_name, 'Jan');
+    assert.equal(merged.referent_last_name, 'Jansen');
   });
 });
 

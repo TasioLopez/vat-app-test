@@ -9,25 +9,31 @@ locale: nl
 
 # Instellingen: overzicht
 
-Op Instellingen beheert u uw account via drie tabs: Profiel Informatie, Wachtwoord Wijzigen en Mijn Stem. De route is /dashboard/settings. Tabs staan links; inhoud rechts.
+Op **Instellingen** beheert u uw account via drie tabs: **Profiel Informatie**, **Wachtwoord Wijzigen** en **Mijn Stem**. De route is `/dashboard/settings`. Tabs staan links; de inhoud rechts.
 
 ## Korte samenvatting
 
-Een pagina met drie tabknoppen in de linker kolom.
+| Tab | Waarvoor |
+|-----|----------|
+| **Profiel Informatie** | Voornaam, achternaam (e-mail is alleen-lezen) |
+| **Wachtwoord Wijzigen** | Nieuw wachtwoord als u het huidige kent |
+| **Mijn Stem** | Schrijfstijl leren uit eerdere TP-documenten |
 
 ## Stap voor stap
 
-1. Open Instellingen vanuit het menu onderaan de zijbalk.
-2. Kies Profiel Informatie, Wachtwoord Wijzigen of Mijn Stem.
+1. Open **Instellingen** vanuit het menu onderaan de zijbalk.
+2. Kies **Profiel Informatie**, **Wachtwoord Wijzigen** of **Mijn Stem**.
 3. Wijzig velden en sla op via de knop op het tabblad.
 
 ## Waar in de app
 
-Onderaan de hoofdnavigatie staat Instellingen naast andere items. Na klikken opent u /dashboard/settings.
+Onderaan de hoofdnavigatie staat **Instellingen**. Na klikken opent `/dashboard/settings`.
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: Instellingen met drie tabs links en actieve inhoud rechts.  
-> **Bestandsnaam:** instellingen-overzicht.png
+> **Schermafbeelding (nog toe te voegen)**
+>
+> Toon: Instellingen met drie tabs links en actieve inhoud rechts.
+>
+> **Bestandsnaam:** `instellingen-overzicht.png`
 
 ## Veelvoorkomende problemen
 
@@ -39,4 +45,3 @@ Onderaan de hoofdnavigatie staat Instellingen naast andere items. Na klikken ope
 - [Profielgegevens wijzigen](/dashboard/help/a/profiel-gegevens-wijzigen)
 - [Wachtwoord wijzigen](/dashboard/help/a/wachtwoord-wijzigen)
 - [Mijn Stem](/dashboard/help/a/mijn-stem-functie)
-

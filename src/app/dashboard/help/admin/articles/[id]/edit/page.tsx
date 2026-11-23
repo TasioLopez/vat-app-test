@@ -217,13 +217,13 @@ export default function EditArticlePage() {
             placeholder="Typ of plak tekst; gebruik de werkbalk voor koppen, lijsten en afbeeldingen."
           />
         ) : (
-          <div className="min-h-[360px] rounded-xl border border-purple-200 bg-purple-50/50 animate-pulse p-4 text-sm text-purple-700">
+          <div className="min-h-[360px] rounded-xl border border-gray-200 bg-purple-50/50 animate-pulse p-4 text-sm text-purple-700">
             Artikel laden…
           </div>
         )}
       </div>
       <div className="flex gap-3">
-        <button type="button" onClick={save} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
+        <button type="button" onClick={save} className="px-6 py-3 bg-[var(--color-primary-500)] text-white rounded-xl font-semibold">
           Opslaan
         </button>
         <button

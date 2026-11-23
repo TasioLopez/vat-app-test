@@ -7,7 +7,7 @@ import {
   normalizeFieldStylesMap,
 } from '@/lib/cv/field-styles';
 import { normalizePhotoSizePx } from '@/lib/cv/photo-size';
-import { getDefaultLayout } from '@/lib/cv/layout-presets';
+import { getDefaultLayout, migrateLegacyLayout } from '@/lib/cv/layout-presets';
 import type {
   CvDocumentPayload,
   CvEducationItem,
@@ -215,7 +215,7 @@ export function normalizeCvPayload(
     const nl = normalizeCvModel(contentRaw?.nl ?? contentRaw);
     const en = contentRaw?.en != null ? normalizeCvModel(contentRaw.en) : undefined;
     const layout = Array.isArray(o.layout)
-      ? (o.layout as CvDocumentPayload['layout'])
+      ? migrateLegacyLayout(templateKey, o.layout as CvDocumentPayload['layout'])
       : getDefaultLayout(templateKey);
     const customSections =
       o.customSections && typeof o.customSections === 'object'

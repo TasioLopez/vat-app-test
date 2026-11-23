@@ -10,6 +10,7 @@ import {
   ValentineZLogoBulletRow,
 } from '@/components/tp2026/primitives';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 import {
   BASIS_INHOUDSOPGAVE_INTRO_ITEMS,
   BASIS_INHOUDSOPGAVE_SECTIONS,
@@ -44,6 +45,8 @@ export function Basis2026InhoudsopgavePage({
   data: Record<string, any>;
   pageNumber: number;
 }) {
+  const isEx = data.is_ex_werknemer === true;
+  const wording = (text: string) => applyExWerknemerWording(text, isEx);
   return (
     <A4Page className={`${TP2026_A4_PAGE_CLASS} flex flex-col`}>
       <A4LogoHeader />
@@ -52,18 +55,18 @@ export function Basis2026InhoudsopgavePage({
         <div className="mt-3 space-y-1">
           {BASIS_INHOUDSOPGAVE_INTRO_ITEMS.map((item) => (
             <ValentineZLogoBulletRow key={item} className={tocItemClass}>
-              {item}
+              {wording(item)}
             </ValentineZLogoBulletRow>
           ))}
         </div>
 
         {BASIS_INHOUDSOPGAVE_SECTIONS.map((section) => (
           <div key={section.title} className="mt-4">
-            <TocSectionBar variant={section.barVariant} title={section.title} />
+            <TocSectionBar variant={section.barVariant} title={wording(section.title)} />
             <div className="mt-2 space-y-1">
               {section.items.map((item) => (
                 <ValentineZLogoBulletRow key={item} className={tocItemClass}>
-                  {item}
+                  {wording(item)}
                 </ValentineZLogoBulletRow>
               ))}
             </div>

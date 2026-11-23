@@ -49,6 +49,9 @@ export const BANNED_PHRASES = [
   'niet benoemd in het',
   'geen expliciet benoemde vaardigheden',
   'verdere expliciet benoemde vaardigheden',
+  'goed genoeg is aangeduid',
+  'als goed genoeg',
+  'typvaardigheid die als',
 ] as const;
 
 /** Matches source-document references in output (for sentence removal). */

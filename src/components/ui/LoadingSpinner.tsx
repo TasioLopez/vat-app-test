@@ -24,7 +24,7 @@ export function LoadingSpinner({
       <div className="flex flex-col items-center gap-2">
         <div
           className={cn(
-            'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600',
+            'animate-spin rounded-full border-2 border-gray-300 border-t-[var(--color-primary-500)]',
             sizeClasses[size]
           )}
         />
@@ -74,7 +74,7 @@ export function LoadingButton({
       className={cn(
         'inline-flex items-center justify-center gap-2',
         'px-4 py-2 rounded-md font-medium transition-colors',
-        'bg-blue-600 text-white hover:bg-blue-700',
+        'bg-[var(--color-primary-500)] text-white hover:bg-[var(--color-primary-600)]',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         className
       )}

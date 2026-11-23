@@ -26,6 +26,7 @@ import {
 } from '@/components/tp2026/primitives';
 import type { TP2026Bijlage1Activity, TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
+import { applyExWerknemerWording } from '@/lib/tp/ex-werknemer-wording';
 import { computeBijlage1PhaseDateSlots } from '@/lib/tp2026/bijlage1-dates';
 import { applyExWerknemerBijlage1Rule } from '@/lib/tp/tp_activities';
 import { parseDateFlexible, toISODate } from '@/lib/tp2026/trajectory-dates';
@@ -775,8 +776,10 @@ export function Bijlage1A4Pages({
         </div>
         <div className="mt-1.5 shrink-0 pb-1">
           <p className="text-[8pt] leading-tight italic text-[#702A90]">
-            * Het solliciteren geschiedt volgens planning, aanvang sollicitatiefase wordt vervroegd indien werknemer
-            daar eerder klaar voor is.
+            {applyExWerknemerWording(
+              '* Het solliciteren geschiedt volgens planning, aanvang sollicitatiefase wordt vervroegd indien werknemer daar eerder klaar voor is.',
+              data.is_ex_werknemer === true
+            )}
           </p>
           <p className="text-[9pt] leading-tight">
             <span className="font-bold text-[#702A90]">G</span> gedaan / succesvol uitgevoerd -{' '}

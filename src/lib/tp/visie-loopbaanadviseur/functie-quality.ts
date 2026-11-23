@@ -28,6 +28,13 @@ const FUNCTIE_STOPWORDS = new Set([
 /** Max significant tokens in a realistic short NL job title. */
 export const MAX_FUNCTIE_TITLE_TOKENS = 6;
 
+const LIMITATION_CUE_PATTERN =
+  /\b(uren|uur|zitten|zittend|tillen|staan|lopen|beperking|beperkingen|belastbaarheid|fml|izp|werktijden|persoonlijk functioneren|sociaal functioneren)\b/i;
+
+function hasLimitationCue(toelichting: string): boolean {
+  return LIMITATION_CUE_PATTERN.test(toelichting);
+}
+
 const LIMITATIONS_ONLY_MARKERS = [
   ...TOELICHTING_CLONE_PHRASES,
   'belastbaarheid',
@@ -263,6 +270,9 @@ export function assessFunctieQuality(
         `Toelichting alleen belastbaarheid/prikkelarm zonder profielbrug: "${f.naam}"`
       );
     }
+    if (!hasLimitationCue(f.toelichting || '')) {
+      issues.push(`Toelichting noemt geen concrete beperking: "${f.naam}"`);
+    }
   }
 
   for (let i = 0; i < concrete.length; i++) {
@@ -294,16 +304,16 @@ export function buildRepairFeedbackMessage(
 ): string {
   const names = rejectedNames.filter(Boolean).join('; ');
   const realismHint = issues.some((i) =>
-    /niche|anker|profielbrug|belastbaarheid\/prikkelarm/i.test(i)
+    /niche|anker|profielbrug|concrete beperking|belastbaarheid\/prikkelarm/i.test(i)
   )
-    ? 'Realisme: gebruik korte, gangbare NL-titels; elk item mét anker+anker_detail uit opleiding/ervaring/zoekprofiel; geen niche-samenstellingen of limitations-only toelichtingen.'
+    ? 'Realisme: korte gangbare NL-titels; elk item mét anker+anker_detail; elke toelichting noemt het anker én één concrete beperking (uren, zitten, tillen, persoonlijk/sociaal functioneren, werktijden of FML-rubriek). Geen alleen-prikkelarm zin zonder profielbrug.'
     : '';
   return [
     'REPARATIE — vorige functiesuggesties voldeden niet aan de kwaliteitseisen.',
     `Problemen: ${issues.join(' | ')}`,
     names ? `Afgewezen namen: ${names}` : '',
     `Lever opnieuw exact ${batchSize} NIEUWE functies.`,
-    `Eisen: ${batchSize} duidelijk verschillende roltypen; common titles; anker verplicht; geen AD/behouden/afgewezen-overlap; gevarieerde toelichtingen; blijf binnen zoekprofiel en belastbaarheid.`,
+    `Eisen: ${batchSize} duidelijk verschillende roltypen; common titles; anker verplicht; geen AD/behouden/afgewezen-overlap; elke toelichting noemt anker én één concrete beperking; blijf binnen zoekprofiel en belastbaarheid.`,
     realismHint,
   ]
     .filter(Boolean)
@@ -332,7 +342,7 @@ export function buildRegenerateFeedbackMessage(opts: {
     opts.userFeedback?.trim()
       ? `Feedback adviseur: ${opts.userFeedback.trim()}`
       : '',
-    `Lever alleen nieuwe, concrete functies; verschillende roltypen; geen AD-overlap; exact ${batchSize} items.`,
+    `Lever alleen nieuwe, concrete functies; verschillende roltypen; elke toelichting noemt anker én één concrete beperking; geen AD-overlap; exact ${batchSize} items.`,
   ]
     .filter(Boolean)
     .join('\n\n');

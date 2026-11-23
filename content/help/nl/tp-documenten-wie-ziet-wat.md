@@ -1,28 +1,29 @@
 ---
 slug: tp-documenten-wie-ziet-wat
-title: TP-documenten: wie ziet wat?
-excerpt: U ziet TP-documenten alleen voor werknemers waartoe u toegang heeft.
+title: Documenten: wie ziet wat?
+excerpt: U ziet trajectplan-PDF’s alleen voor werknemers waartoe u toegang heeft.
 category_slug: tp-documenten
 translation_group_id: f7057508-a4e6-4d54-b03b-19fda2239385
 locale: nl
 ---
 
-# TP-documenten: wie ziet wat?
+# Documenten: wie ziet wat?
 
-U ziet TP-documenten alleen voor **werknemers waartoe u toegang heeft** (zelf aangemaakt of door admin toegewezen). Beheerders zien alles.
+Onder **Documenten** ziet u trajectplan-PDF’s alleen voor **werknemers waartoe u toegang heeft** (eigenaar of toegewezen). Beheerders zien alles.
 
 ## Korte samenvatting
 
-- **Standaardgebruiker**: TP Docs van eigen/toegewezen werknemers.
-- **Beheerder**: alle TP Docs; kan ook dossiers verwijderen.
+- **Gebruiker**: documenten van eigen/toegewezen werknemers.
+- **Beheerder**: alle documenten; kan ook dossiers verwijderen.
+- **Back office**: volgt de toegangsregels van die rol (geen dossiertoegang); zie [Rollen](/dashboard/help/a/admin-vs-standaard-gebruiker).
 
 ## Veelvoorkomende vragen
 
-- **Ik zie niets in TP Docs** — vraag een admin om toewijzing, of maak zelf een werknemer aan.
+- **Ik zie niets onder Documenten** — vraag toewijzing of eigenaarschap, of exporteer eerst vanuit de bouwer.
 - **Mag ik dit delen extern?** — volg uw interne privacy- en werkgeverafspraken.
 
 ## Zie ook
 
-- [Wat zijn TP-documenten?](/dashboard/help/a/tp-documenten-wat-zijn-dit)
+- [Wat zijn trajectplan-documenten?](/dashboard/help/a/tp-documenten-wat-zijn-dit)
 - [Werknemer toewijzen](/dashboard/help/a/werknemer-koppelen-aan-gebruiker)
-- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [Admin, gebruiker en back office](/dashboard/help/a/admin-vs-standaard-gebruiker)

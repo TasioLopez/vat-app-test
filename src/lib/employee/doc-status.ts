@@ -1,10 +1,19 @@
 export type TpStatus = 'none' | 'draft' | 'completed';
+/** Intake list/status: Concept → Gevalideerd → Afgerond (export). */
+export type IntakeStatus = 'none' | 'draft' | 'validated' | 'completed';
 export type CvStatus = 'none' | 'draft' | 'shared' | 'opened';
 
 const TP_RANK: Record<TpStatus, number> = {
   none: 0,
   draft: 1,
   completed: 2,
+};
+
+const INTAKE_RANK: Record<IntakeStatus, number> = {
+  none: 0,
+  draft: 1,
+  validated: 2,
+  completed: 3,
 };
 
 const CV_RANK: Record<CvStatus, number> = {
@@ -24,6 +33,14 @@ export function cvStatusRank(status: CvStatus): number {
 
 export function maxTpStatus(a: TpStatus, b: TpStatus): TpStatus {
   return tpStatusRank(a) >= tpStatusRank(b) ? a : b;
+}
+
+export function intakeStatusRank(status: IntakeStatus): number {
+  return INTAKE_RANK[status];
+}
+
+export function maxIntakeStatus(a: IntakeStatus, b: IntakeStatus): IntakeStatus {
+  return intakeStatusRank(a) >= intakeStatusRank(b) ? a : b;
 }
 
 export function maxCvStatus(a: CvStatus, b: CvStatus): CvStatus {
@@ -50,7 +67,8 @@ export function isShareLinkActive(row: {
   return new Date(row.expires_at).getTime() > now.getTime();
 }
 
-export function buildTpStatusMap(
+/** Bulk map for builder docs that become completed when an export row exists (TP, Intake). */
+export function buildBuilderStatusMap(
   instances: Array<{ id: string; employee_id: string }>,
   exportInstanceIds: Set<string>
 ): Map<string, TpStatus> {
@@ -60,6 +78,107 @@ export function buildTpStatusMap(
     map.set(row.employee_id, maxTpStatus(map.get(row.employee_id) ?? 'none', next));
   }
   return map;
+}
+
+export function buildTpStatusMap(
+  instances: Array<{ id: string; employee_id: string }>,
+  exportInstanceIds: Set<string>
+): Map<string, TpStatus> {
+  return buildBuilderStatusMap(instances, exportInstanceIds);
+}
+
+/**
+ * Intake status: export → Afgerond (completed), validated_at → Gevalideerd,
+ * else instance → Concept (draft).
+ */
+export function buildIntakeStatusMap(
+  instances: Array<{ id: string; employee_id: string; validated_at?: string | null }>,
+  exportInstanceIds: Set<string>
+): Map<string, IntakeStatus> {
+  const map = new Map<string, IntakeStatus>();
+  for (const row of instances) {
+    const next: IntakeStatus = exportInstanceIds.has(row.id)
+      ? 'completed'
+      : row.validated_at
+        ? 'validated'
+        : 'draft';
+    map.set(row.employee_id, maxIntakeStatus(map.get(row.employee_id) ?? 'none', next));
+  }
+  return map;
+}
+
+/**
+ * VGR list status: export or a `final` instance counts as completed;
+ * any other instance is draft.
+ */
+export function buildVgrStatusMap(
+  instances: Array<{ id: string; employee_id: string; status: string | null }>,
+  exportInstanceIds: Set<string>
+): Map<string, TpStatus> {
+  const map = new Map<string, TpStatus>();
+  for (const row of instances) {
+    const next: TpStatus =
+      exportInstanceIds.has(row.id) || row.status === 'final' ? 'completed' : 'draft';
+    map.set(row.employee_id, maxTpStatus(map.get(row.employee_id) ?? 'none', next));
+  }
+  return map;
+}
+
+/** Documents the app generates from a builder; their PDFs land in `documents` under these types. */
+export const GENERATED_DOC_KINDS = ['tp', 'intake', 'vgr'] as const;
+export type GeneratedDocKind = (typeof GENERATED_DOC_KINDS)[number];
+
+export type GeneratedDocSummary = {
+  exportCount: number;
+  lastExportAt: string | null;
+};
+
+/** Count exported PDFs per generated document kind and keep the most recent export date. */
+export function summarizeGeneratedDocs(
+  documents: Array<{ type: string | null; uploaded_at: string | null }>
+): Record<GeneratedDocKind, GeneratedDocSummary> {
+  const summary: Record<GeneratedDocKind, GeneratedDocSummary> = {
+    tp: { exportCount: 0, lastExportAt: null },
+    intake: { exportCount: 0, lastExportAt: null },
+    vgr: { exportCount: 0, lastExportAt: null },
+  };
+
+  for (const doc of documents) {
+    const kind = (doc.type || '').toLowerCase().trim();
+    if (kind !== 'tp' && kind !== 'intake' && kind !== 'vgr') continue;
+    const entry = summary[kind];
+    entry.exportCount += 1;
+    if (!doc.uploaded_at) continue;
+    if (!entry.lastExportAt || new Date(doc.uploaded_at) > new Date(entry.lastExportAt)) {
+      entry.lastExportAt = doc.uploaded_at;
+    }
+  }
+
+  return summary;
+}
+
+/** Status of a builder document for one employee: an export or a final instance means completed. */
+export function resolveBuilderDocStatus(input: {
+  hasInstance: boolean;
+  exportCount: number;
+  hasFinalInstance?: boolean;
+}): TpStatus {
+  if (input.exportCount > 0 || input.hasFinalInstance) return 'completed';
+  return input.hasInstance ? 'draft' : 'none';
+}
+
+/**
+ * Intake status for one employee: export → completed (Afgerond/Klaar),
+ * validated_at → validated (Gevalideerd), instance → draft (Concept).
+ */
+export function resolveIntakeDocStatus(input: {
+  hasInstance: boolean;
+  exportCount: number;
+  validatedAt?: string | null;
+}): IntakeStatus {
+  if (input.exportCount > 0) return 'completed';
+  if (input.validatedAt) return 'validated';
+  return input.hasInstance ? 'draft' : 'none';
 }
 
 export function buildCvStatusMap(

@@ -172,7 +172,7 @@ export default function AdminTicketDetailPage() {
         <button
           type="button"
           onClick={() => void patchTicket()}
-          className="sm:col-span-2 px-4 py-2 bg-purple-700 text-white rounded-lg"
+          className="sm:col-span-2 px-4 py-2 bg-[var(--color-primary-500)] text-white rounded-lg"
         >
           Ticketvelden opslaan
         </button>
@@ -219,7 +219,7 @@ export default function AdminTicketDetailPage() {
         <button
           type="button"
           onClick={() => void sendMsg()}
-          className="px-4 py-2 bg-purple-700 text-white rounded-lg"
+          className="px-4 py-2 bg-[var(--color-primary-500)] text-white rounded-lg"
         >
           Bericht toevoegen
         </button>

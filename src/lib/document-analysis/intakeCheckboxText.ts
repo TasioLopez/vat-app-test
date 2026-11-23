@@ -112,9 +112,9 @@ export function detectTransportFromIntakeText(
 }
 
 /**
- * Overwrite transport / rijbewijs from PDF text when detectors can decide.
- * When detectors return null, clear vision guesses so invented OV/BE cannot stick.
- * Mutates `mapped` in place.
+ * Apply transport / rijbewijs from intake PDF text only when there is a positive
+ * checkbox selection. Incomplete intake (all ☐ / no glyphs) leaves mapped alone so
+ * dossier/chatlike values can fill gaps. Mutates `mapped` in place.
  */
 export type CheckboxFieldSource = 'text' | 'cleared' | 'absent';
 
@@ -128,28 +128,25 @@ export function applyIntakeCheckboxTextOverrides(
   mapped: Record<string, unknown>,
   text: string | null | undefined
 ): IntakeCheckboxOverrideResult {
-  const hasText = Boolean(text && text.trim());
-
   const transport = detectTransportFromIntakeText(text);
   let transportSource: CheckboxFieldSource;
-  if (transport !== null) {
+  if (transport !== null && transport.length > 0) {
     mapped.transport_type = transport;
     transportSource = 'text';
   } else {
-    delete mapped.transport_type;
-    transportSource = hasText ? 'cleared' : 'absent';
+    // null or all-unchecked: intake incomplete — keep chatlike/dossier values.
+    transportSource = 'absent';
   }
 
   const licenses = detectDriversLicenseFromIntakeText(text);
   let licenseSource: CheckboxFieldSource;
-  if (licenses !== null) {
+  if (licenses !== null && licenses.length > 0) {
     mapped.drivers_license_type = licenses;
-    mapped.drivers_license = licenses.length > 0;
+    mapped.drivers_license = true;
     licenseSource = 'text';
   } else {
-    delete mapped.drivers_license_type;
-    delete mapped.drivers_license;
-    licenseSource = hasText ? 'cleared' : 'absent';
+    // null or all-unchecked: do not force "geen rijbewijs".
+    licenseSource = 'absent';
   }
 
   const exFromText = detectExWerknemerFromText(text);
@@ -157,10 +154,8 @@ export function applyIntakeCheckboxTextOverrides(
   if (exFromText !== null) {
     mapped.is_ex_werknemer = applyExWerknemerFromText(mapped.is_ex_werknemer, exFromText);
     exWerknemerSource = 'text';
-  } else if (hasText) {
-    // Label absent or inconclusive: do not invent; leave model value if present.
-    exWerknemerSource = 'absent';
   } else {
+    // Label absent or inconclusive: do not invent; leave model value if present.
     exWerknemerSource = 'absent';
   }
 

@@ -225,18 +225,21 @@ locale: nl
 
 Vul de bijlage in zoals vereist voor dit dossier. Controleer of alle verwijzingen kloppen.
 
-Ga vervolgens naar Eindecontrole.
+Download het trajectplan via het download-icoon in de bouwer wanneer de inhoud klopt.
 `],
   ["tp-stap-eindcontrole.md", `---
 slug: tp-stap-eindcontrole
 title: Stap 5: Eindecontrole
 excerpt: Controleren en afronden van het trajectplan.
-category_slug: tp-part-5
+category_slug: tp-part-4
 translation_group_id: 99c06522-3dc0-4b9e-8a33-5c395095da28
 locale: nl
+published: false
 ---
 
 # Eindecontrole
+
+> Unpublished: de live Trajectplan Bouwer heeft geen aparte Eindecontrole-stap (4 stappen; download vanuit Bijlage 1 / topbalk).
 
 Controleer alle stappen op volledigheid. Los ontbrekende velden op voordat u exporteert of afrondt.
 
@@ -253,7 +256,7 @@ locale: nl
 
 # TP-documenten
 
-Onder TP Docs vindt u trajectplanbestanden (meestal PDF) gekoppeld aan werknemers. U ziet titel, werknemer, werkgever en datum.
+Onder Documenten vindt u trajectplanbestanden (meestal PDF) gekoppeld aan werknemers. U ziet titel, werknemer, werkgever en datum.
 
 Open een regel om het bestand te downloaden of te bekijken, afhankelijk van uw browser.
 `],

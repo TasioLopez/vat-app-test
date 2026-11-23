@@ -1,7 +1,7 @@
 ---
 slug: trajectplan-bouwer-werkwijze
 title: Trajectplan Bouwer: werkwijze
-excerpt: Stappen, voortgang en niet-opgeslagen wijzigingen.
+excerpt: Vier stappen, navigatie, AI-invullen en downloaden.
 category_slug: trajectplan-builder
 translation_group_id: db778ef3-8ed5-4488-b2bc-a9ca85fc395a
 locale: nl
@@ -9,38 +9,38 @@ locale: nl
 
 # Trajectplan Bouwer: werkwijze
 
-De **Trajectplan Bouwer** is een **wizard** met **vijf stappen**, een **voortgangsbalk** bovenaan en knoppen **Terug** en **Volgende** onderaan. Dit artikel beschrijft **navigatie**, **opslaan** en **waarschuwingen bij niet-opgeslagen wijzigingen**.
+De **Trajectplan Bouwer** is een wizard met **vier stappen**. Bovenaan ziet u **Stap x van 4**, tabs voor elke stap, en acties zoals **download** en AI-invullen.
 
 ## Schermopbouw
 
-- **Titelbalk**: toont dat u in de bouwer bent en welke **stap** (bijv. stap 2 van 5).
-- **Voortgang**: gekleurde segmenten tonen voltooide en actieve stap.
-- **Inhoud**: het formulier van de huidige stap.
-- **Voettekst**: **Terug** / **Volgende**.
+- **Titel**: Trajectplan + indicator **Stap … van 4**.
+- **Tabs**: **Voorblad** · **Gegevens** · **Basisdocument** · **Bijlage 1**.
+- **Links**: editor voor de huidige stap.
+- **Rechts**: live A4-voorvertoning.
+- **Navigatie**: pijlen / **Volgende** en **Terug** (of gelijkwaardige knoppen).
+- **Download**: icoon in de topbalk om het trajectplan als PDF te downloaden (geen aparte “Eindecontrole”-stap).
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: bouwer met voortgangsbalk en footer-knoppen.  
-> **Bestandsnaam:** `trajectplan-bouwer-layout.png`
+![bouwer op stap 1 van 4 met tabs en preview.](fe872bb3-29cb-4b33-b6af-5ba48157c7b1/1795439307567-trajectplan-bouwer-layout.png)
 
-## Navigeren tussen stappen
+## De vier stappen
 
-- **Volgende**: valideert vaak de huidige stap en gaat verder (gedrag kan per stap verschillen).
-- **Terug**: naar vorige stap; ingevulde gegevens blijven doorgaans bewaard als ze zijn **opgeslagen** volgens app-logica.
+1. [Voorblad](/dashboard/help/a/tp-stap-voorblad)  
+2. [Gegevens](/dashboard/help/a/tp-stap-gegevens-werknemer)  
+3. [Basisdocument](/dashboard/help/a/tp-stap-deel-drie)  
+4. [Bijlage 1](/dashboard/help/a/tp-stap-bijlage-een)  
+
+## Navigeren en AI
+
+- Wissel van stap via de **tabs** of **Volgende** / **Terug**.
+- Bij AI-invullen kunt u kiezen voor **alleen de huidige stap** of **alle stappen**.
+- Als er al **gevalideerde** gegevens zijn, kan een pop-up vragen of u die wilt **behouden** of een AI-**voorstel overnemen**. Vergelijk Huidig en Voorstel voordat u kiest.
 
 ## Opslaan en niet-opgeslagen wijzigingen
 
-- Gebruik expliciete **opslaan**-acties op het scherm wanneer die zichtbaar zijn.
-- Bij **navigatie weg** van de app (ander menu, tab sluiten) kan een **waarschuwing** verschijnen als er **wijzigingen** zijn. Kies **opslaan** of **annuleren** bewust.
-
-## Per-stap hulp
-
-- [Voorblad](/dashboard/help/a/tp-stap-voorblad)  
-- [Gegevens werknemer](/dashboard/help/a/tp-stap-gegevens-werknemer)  
-- [TP deel 3](/dashboard/help/a/tp-stap-deel-drie)  
-- [Bijlage 1](/dashboard/help/a/tp-stap-bijlage-een)  
-- [Eindecontrole](/dashboard/help/a/tp-stap-eindcontrole)
+- Gebruik **Opslaan** wanneer die zichtbaar is.
+- Bij navigatie weg van de pagina kan een waarschuwing verschijnen bij openstaande wijzigingen.
 
 ## Zie ook
 
 - [Trajectplan starten vanuit werknemer](/dashboard/help/a/trajectplan-starten-vanuit-werknemer)
-- [TP-documenten](/dashboard/help/a/tp-documenten-wat-zijn-dit)
+- [Documenten (trajectplan-PDF’s)](/dashboard/help/a/tp-documenten-wat-zijn-dit)

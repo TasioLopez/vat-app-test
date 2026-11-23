@@ -145,7 +145,7 @@ export default function NewArticlePage() {
           placeholder="Typ of plak tekst; gebruik de werkbalk voor koppen, lijsten en afbeeldingen."
         />
       </div>
-      <button type="button" onClick={handleSaveClick} className="px-6 py-3 bg-purple-700 text-white rounded-xl font-semibold">
+      <button type="button" onClick={handleSaveClick} className="px-6 py-3 bg-[var(--color-primary-500)] text-white rounded-xl font-semibold">
         Opslaan &amp; indexeren
       </button>
     </div>

@@ -358,6 +358,48 @@ describe('runStructuredMultiFileExtraction', () => {
     assert.equal(result.dutch_speaking, 'Goed');
     assert.deepEqual(result.transport_type, []);
   });
+
+  it('sends inline text without uploading a PDF when there are no files', async () => {
+    let uploadCount = 0;
+    const createPayloads: unknown[] = [];
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: 'file-txt', status: 'processed' };
+        }),
+        retrieve: mock.fn(async () => ({ id: 'file-txt', status: 'processed' })),
+        delete: mock.fn(async () => {}),
+      },
+      responses: {
+        create: mock.fn(async (payload: unknown) => {
+          createPayloads.push(payload);
+          return { output_text: '{"ok":true}' };
+        }),
+      },
+    };
+
+    const result = await runStructuredMultiFileExtraction({
+      openai: openai as never,
+      files: [],
+      inlineTexts: [{ label: 'gespreksverslag: gespreksverslag.txt', text: 'Werknemer wil in de logistiek blijven.' }],
+      instructions: 'Extract',
+      userMessage: 'Analyze',
+      schemaName: 'test',
+      schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+      parse: (raw) => raw as { ok: boolean },
+    });
+
+    assert.equal(uploadCount, 0);
+    assert.equal(result.ok, true);
+    const payload = createPayloads[0] as {
+      input: { content: { type: string; text?: string }[] }[];
+    };
+    const text = payload.input[0].content.find((item) => item.type === 'input_text')?.text ?? '';
+    assert.match(text, /gespreksverslag: gespreksverslag.txt/);
+    assert.match(text, /logistiek/);
+    assert.equal(payload.input[0].content.some((item) => item.type === 'input_file'), false);
+  });
 });
 
 describe('runChatlikeMultiFileExtraction', () => {
@@ -405,7 +447,7 @@ describe('runChatlikeMultiFileExtraction', () => {
     assert.equal(createPayloads.length, 1);
     const payload = createPayloads[0] as {
       text?: unknown;
-      input: { content: { type: string; file_id?: string; detail?: string }[] }[];
+      input: { content: { type: string; file_id?: string; detail?: string; text?: string }[] }[];
     };
     assert.equal(payload.text, undefined);
     const fileContents = payload.input[0].content.filter((c) => c.type === 'input_file');
@@ -413,5 +455,125 @@ describe('runChatlikeMultiFileExtraction', () => {
     assert.equal(fileContents[0]?.detail, 'high');
     assert.match(text, /transport_type/);
     assert.deepEqual(deletedIds.sort(), ['file-1', 'file-2']);
+  });
+
+  it('embeds inline TXT in the user message without uploading it as a PDF', async () => {
+    let uploadCount = 0;
+    const createPayloads: unknown[] = [];
+
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: `file-${uploadCount}`, status: 'processed' };
+        }),
+        retrieve: mock.fn(async (id: string) => ({ id, status: 'processed' })),
+        delete: mock.fn(async () => undefined),
+      },
+      responses: {
+        create: mock.fn(async (payload: unknown) => {
+          createPayloads.push(payload);
+          return {
+            output_text: '{"contract_hours":36,"dutch_speaking":"Goed","dutch_writing":"Goed"}',
+          };
+        }),
+      },
+    };
+
+    const text = await runChatlikeMultiFileExtraction({
+      openai: openai as never,
+      files: [{ pdfBuffer: Buffer.from('%PDF-1'), analysisFilename: 'fml.pdf', label: 'fml_izp' }],
+      inlineTexts: [
+        {
+          label: 'gespreksverslag:gespreksverslag.txt',
+          text: 'De werknemer werkt 36 uur per week bij eHub. Hij spreekt en schrijft Nederlands.',
+        },
+      ],
+      instructions: 'Extract like ChatGPT',
+      userMessage: 'Fill employee profile as JSON',
+      model: 'gpt-test',
+    });
+
+    assert.equal(uploadCount, 1);
+    assert.match(text, /contract_hours/);
+    const payload = createPayloads[0] as {
+      input: { content: { type: string; text?: string }[] }[];
+    };
+    const message = payload.input[0].content.find((c) => c.type === 'input_text')?.text || '';
+    assert.match(message, /Inline brontekst/);
+    assert.match(message, /werkt 36 uur per week/);
+    assert.match(message, /gespreksverslag:gespreksverslag\.txt/);
+    assert.equal(payload.input[0].content.filter((c) => c.type === 'input_file').length, 1);
+  });
+
+  it('succeeds with only inline text when no PDFs are provided', async () => {
+    let uploadCount = 0;
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          return { id: 'file-1', status: 'processed' };
+        }),
+        retrieve: mock.fn(async () => ({ id: 'file-1', status: 'processed' })),
+        delete: mock.fn(async () => undefined),
+      },
+      responses: {
+        create: mock.fn(async () => ({
+          output_text: '{"contract_hours":36,"dutch_reading":"Goed"}',
+        })),
+      },
+    };
+
+    const text = await runChatlikeMultiFileExtraction({
+      openai: openai as never,
+      files: [],
+      inlineTexts: [
+        {
+          label: 'gespreksverslag:gespreksverslag.txt',
+          text: 'Werkt 36 uur per week. Spreekt en schrijft Nederlands.',
+        },
+      ],
+      instructions: 'Extract',
+      userMessage: 'JSON only',
+    });
+
+    assert.equal(uploadCount, 0);
+    assert.match(text, /36/);
+  });
+
+  it('skips a failed PDF upload and continues with remaining files and inline text', async () => {
+    let uploadCount = 0;
+    const openai = {
+      files: {
+        create: mock.fn(async () => {
+          uploadCount++;
+          if (uploadCount === 1) throw new Error('invalid_file');
+          return { id: 'file-ok', status: 'processed' };
+        }),
+        retrieve: mock.fn(async () => ({ id: 'file-ok', status: 'processed' })),
+        delete: mock.fn(async () => undefined),
+      },
+      responses: {
+        create: mock.fn(async () => ({
+          output_text: '{"contract_hours":36}',
+        })),
+      },
+    };
+
+    const text = await runChatlikeMultiFileExtraction({
+      openai: openai as never,
+      files: [
+        { pdfBuffer: Buffer.from('not-a-pdf'), analysisFilename: 'bad.pdf', label: 'bad' },
+        { pdfBuffer: Buffer.from('%PDF-ok'), analysisFilename: 'ok.pdf', label: 'ok' },
+      ],
+      inlineTexts: [
+        { label: 'gespreksverslag:gespreksverslag.txt', text: 'Werkt 36 uur per week.' },
+      ],
+      instructions: 'Extract',
+      userMessage: 'JSON only',
+    });
+
+    assert.equal(uploadCount, 2);
+    assert.match(text, /36/);
   });
 });

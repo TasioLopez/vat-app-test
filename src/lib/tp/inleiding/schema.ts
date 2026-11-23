@@ -42,7 +42,8 @@ export const INLEIDING_CONTENT_JSON_SCHEMA = {
     },
     reintegratie_uren: {
       type: ['string', 'null'],
-      description: 'Hours per week in spoor 1 when reintegreert_spoor1 is true, e.g. "8".',
+      description:
+        'Spoor-1 hours when reintegreert_spoor1 is true. Prefer the source schedule phrasing when present (e.g. "3 x 2 uur per week"); only use a bare weekly total like "8" when no schedule detail exists. Do NOT sum N x M into a single total when the source says N x M.',
     },
     reintegratie_werk_type: {
       type: ['string', 'null'],

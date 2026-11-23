@@ -212,7 +212,7 @@ export default function DocumentModal({
                     type="button"
                     onClick={() => void openOrDownloadExisting()}
                     disabled={busy}
-                    className="min-w-0 flex-1 break-all text-left text-sm text-blue-600 underline disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-w-0 flex-1 break-all text-left text-sm text-[var(--color-primary-500)] underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {opening ? 'Openen…' : existingDoc.name || 'Document'}
                   </button>
@@ -251,10 +251,10 @@ export default function DocumentModal({
             )}
 
             {status && (
-              <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+              <div className="mb-4 rounded-md border border-[var(--color-primary-200)] bg-[var(--color-primary-50)] p-3">
                 <div className="flex items-center">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-600" />
-                  <p className="text-sm text-blue-800">{status}</p>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-[var(--color-primary-500)]" />
+                  <p className="text-sm text-[var(--color-primary-800)]">{status}</p>
                 </div>
               </div>
             )}
@@ -280,8 +280,8 @@ export default function DocumentModal({
             <div
               className={`rounded border border-dashed p-6 text-center transition-colors ${
                 dragActive
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-400 hover:bg-gray-50'
+                  ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-50)]'
+                  : 'border-gray-300 hover:bg-gray-50'
               } ${uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
               onClick={() => !uploading && fileInputRef.current?.click()}
               onDragEnter={handleDrag}
@@ -291,7 +291,7 @@ export default function DocumentModal({
             >
               {uploading ? (
                 <div className="flex flex-col items-center">
-                  <Loader2 className="mb-2 h-8 w-8 animate-spin text-blue-600" />
+                  <Loader2 className="mb-2 h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
                   <p className="text-sm text-gray-600">Uploaden…</p>
                 </div>
               ) : (

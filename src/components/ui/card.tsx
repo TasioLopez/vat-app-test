@@ -21,9 +21,9 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-xl border border-purple-200/50 bg-card text-card-foreground shadow-md transition-all duration-200',
-        hover && 'hover:shadow-xl hover:shadow-purple-500/10',
-        clickable && 'cursor-pointer hover:border-purple-300 hover:scale-[1.02] active:scale-[0.98]',
+        'rounded-xl border border-gray-200 bg-card text-card-foreground shadow-none transition-colors duration-150',
+        hover && 'hover:border-gray-300',
+        clickable && 'cursor-pointer hover:border-gray-300 hover:bg-gray-50/50',
         className
       )}
       onClick={onClick}
@@ -121,13 +121,13 @@ export function StatCard({
   className 
 }: StatCardProps) {
   return (
-    <Card className={cn('p-6 hover:shadow-xl hover:shadow-purple-500/20 border-purple-200/50 bg-gradient-to-br from-white to-purple-50/30', className)} hover>
+    <Card className={cn('p-5', className)} hover>
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
             {title}
           </p>
-          <p className="text-3xl font-bold text-purple-700 mt-1">
+          <p className="text-2xl font-semibold text-gray-900 mt-1">
             {value}
           </p>
           {description && (
@@ -153,7 +153,7 @@ export function StatCard({
         </div>
         {icon && (
           <div className="flex-shrink-0 ml-4">
-            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+            <div className="w-10 h-10 rounded-lg bg-[var(--color-primary-50)] flex items-center justify-center text-[var(--color-primary-500)]">
               {icon}
             </div>
           </div>
@@ -180,9 +180,9 @@ export function FeatureCard({
   className 
 }: FeatureCardProps) {
   return (
-    <Card className={cn('p-6 text-center hover:shadow-xl hover:shadow-purple-500/20', className)} hover>
+    <Card className={cn('p-6 text-center', className)} hover>
       <div className="flex justify-center mb-4">
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25">
+        <div className="w-12 h-12 rounded-xl bg-[var(--color-primary-50)] flex items-center justify-center text-[var(--color-primary-500)]">
           {icon}
         </div>
       </div>
