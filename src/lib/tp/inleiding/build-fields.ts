@@ -1,4 +1,3 @@
-import type { IntakeData } from '@/lib/intake/schema';
 import type { ReferentRow } from '@/lib/referents';
 import { formatPersonShortName } from '@/lib/utils';
 import {
@@ -17,7 +16,7 @@ import {
   VALENTINEZ_DOEL_AFSLUITING,
   VALENTINEZ_DOEL_BASE,
 } from './constants';
-import type { ExtraAanmelder, InleidingContentResult } from './schema';
+import type { InleidingContentResult } from './schema';
 
 export type InleidingBuildContext = {
   employee: { first_name?: string | null; last_name?: string | null };
@@ -217,10 +216,11 @@ function isDistinctExtraAanmelder(
 }
 
 function splitPersonName(name: string): { first_name: string; last_name: string } {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const cleaned = name.replace(/^(?:de\s+heer|mevrouw|meneer|dhr\.?|mevr\.?)\s+/i, '').trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first_name: '', last_name: '' };
-  if (parts.length === 1) return { first_name: '', last_name: parts[0] };
-  return { first_name: parts.slice(0, -1).join(' '), last_name: parts[parts.length - 1] };
+  if (parts.length === 1) return { first_name: parts[0], last_name: parts[0] };
+  return { first_name: parts[0], last_name: parts.slice(1).join(' ') };
 }
 
 export type IntakeExtraReferentSource = {

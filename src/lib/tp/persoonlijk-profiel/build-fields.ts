@@ -146,12 +146,15 @@ function transportPhrase(raw: string): string {
   return raw.trim();
 }
 
-const LEVEL_ADJECTIVES: Record<string, string> = {
+const COMPUTER_LEVEL_ADJECTIVES: Record<string, string> = {
   geen: '',
   basis: 'basis',
   gemiddeld: 'gemiddelde',
   geavanceerd: 'geavanceerde',
   expert: 'expert',
+};
+
+const TYPING_ADJECTIVES: Record<string, string> = {
   goed: 'goede',
   'goed genoeg': 'goede',
   matig: 'matige',
@@ -159,9 +162,10 @@ const LEVEL_ADJECTIVES: Record<string, string> = {
   uitstekend: 'uitstekende',
   'zeer goed': 'uitstekende',
   voldoende: 'voldoende',
+  basis: 'basis',
 };
 
-function levelAdjective(raw: string): { recognized: boolean; adjective: string } {
+function computerLevelAdjective(raw: string): { recognized: boolean; adjective: string } {
   const text = raw.trim();
   if (!text) return { recognized: false, adjective: '' };
   const numberKey = text.split(' - ')[0]?.trim() ?? '';
@@ -171,19 +175,17 @@ function levelAdjective(raw: string): { recognized: boolean; adjective: string }
   )
     .trim()
     .toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(LEVEL_ADJECTIVES, label)) {
-    return { recognized: true, adjective: LEVEL_ADJECTIVES[label] };
+  if (Object.prototype.hasOwnProperty.call(COMPUTER_LEVEL_ADJECTIVES, label)) {
+    return { recognized: true, adjective: COMPUTER_LEVEL_ADJECTIVES[label] };
   }
   return { recognized: false, adjective: '' };
 }
 
 function typingAdjective(raw: string): string {
-  const text = raw.trim();
+  const text = raw.trim().toLowerCase();
   if (!text) return '';
-  const known = levelAdjective(text);
-  if (known.recognized) return known.adjective;
-  if (!text.includes(' ')) return text.toLowerCase();
-  return text.toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(TYPING_ADJECTIVES, text)) return TYPING_ADJECTIVES[text];
+  return text;
 }
 
 function programPhrase(raw: string): string {
@@ -194,14 +196,20 @@ function programPhrase(raw: string): string {
   return joinNl(parts);
 }
 
+function movementPhrase(phrases: string[]): string {
+  if (phrases.length === 1 && phrases[0] === 'te voet') return 'te voet';
+  return `met ${joinNl(phrases)}`;
+}
+
 function mobilitySentence(facts: PersoonlijkProfileFacts): string[] {
   const licenses = listFromFact(facts.rijbewijs);
   const transport = listFromFact(facts.vervoer).map(transportPhrase);
   const sentences: string[] = [];
+  const move = transport.length > 0 ? movementPhrase(transport) : '';
 
-  if (licenses.length > 0 && transport.length > 0) {
+  if (licenses.length > 0 && move) {
     sentences.push(
-      `Werknemer beschikt over rijbewijs ${licenses.join(', ')} en verplaatst zich met ${joinNl(transport)}.`
+      `Werknemer beschikt over rijbewijs ${licenses.join(', ')} en verplaatst zich ${move}.`
     );
     return sentences;
   }
@@ -210,8 +218,8 @@ function mobilitySentence(facts: PersoonlijkProfileFacts): string[] {
   } else if (facts.rijbewijs === false) {
     sentences.push('Werknemer beschikt niet over een rijbewijs.');
   }
-  if (transport.length > 0) {
-    sentences.push(`Werknemer verplaatst zich met ${joinNl(transport)}.`);
+  if (move) {
+    sentences.push(`Werknemer verplaatst zich ${move}.`);
   }
   return sentences;
 }
@@ -278,7 +286,7 @@ function otherLanguageSentences(raw: string): string[] {
 function computerSentence(facts: PersoonlijkProfileFacts): string | null {
   const computer = String(facts.computervaardigheden ?? '').trim();
   const extra = String(facts.computervaardigheden_toelichting ?? '').trim();
-  const level = levelAdjective(computer);
+  const level = computerLevelAdjective(computer);
   const programs = programPhrase(extra);
   let skillCore = '';
   if (level.recognized && level.adjective && programs) {

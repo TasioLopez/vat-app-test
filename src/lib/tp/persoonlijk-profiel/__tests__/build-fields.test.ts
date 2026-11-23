@@ -255,6 +255,8 @@ describe('assembleAlinea2FromProfileFacts', () => {
       vervoer: ['Auto', 'Fiets'],
     });
     assert.match(text, /verplaatst zich met de auto en de fiets/);
+    assert.doesNotMatch(assembleAlinea2FromProfileFacts({ vervoer: ['Lopend'] }), /met te voet/);
+    assert.match(assembleAlinea2FromProfileFacts({ vervoer: ['Lopend'] }), /verplaatst zich te voet/);
     assert.match(text, /goed in spreken en lezen/);
     assert.match(text, /Schrijven beheerst werknemer niet/);
   });
