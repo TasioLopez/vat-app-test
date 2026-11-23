@@ -9,25 +9,32 @@ locale: nl
 
 # Helpbeheer: inzichten
 
-Inzichten geeft admins een samenvatting van gebruik rond help, zoals trends in tickets of zoekgedrag. Exacte widgets hangen van de configuratie af.
+**Inzichten** geeft beheerders een samenvatting van gebruik rond help, zoals trends in tickets of zoekgedrag. Exacte widgets hangen van de configuratie af.
 
 ## Waar in de app
 
-/dashboard/help/admin/insights
+1. Open **Helpbeheer** → **Inzichten**.
+2. Route: `/dashboard/help/admin/insights`.
 
 ## Gebruik
 
-1. Open Helpbeheer en kies Inzichten.
+1. Open Helpbeheer en kies **Inzichten**.
 2. Bekijk de beschikbare kaarten of grafieken.
 3. Herken terugkerende vragen en onderwerpen met pieken.
 4. Verbeter documentatie of artikelen op basis van die signalen.
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: inzichten-dashboard met geaggregeerde cijfers.  
-> **Bestandsnaam:** helpbeheer-inzichten.png
+> **Schermafbeelding (nog toe te voegen)**
+>
+> Toon: inzichten-dashboard met geaggregeerde cijfers (geen persoonsgegevens).
+>
+> **Bestandsnaam:** `helpbeheer-inzichten.png`
+
+## Tip
+
+> Gebruik inzichten als signaal, niet als enige bron. Combineer met ticketinhoud en feedback van collega’s.
 
 ## Zie ook
 
-- [Artikelen publiceren](/dashboard/help/a/helpbeheer-artikelen-publiceren)
-- [Tickets behandelen](/dashboard/help/a/helpbeheer-tickets-behandelen)
+- [Helpbeheer: artikelen](/dashboard/help/a/helpbeheer-artikelen-publiceren)
+- [Helpbeheer: supporttickets](/dashboard/help/a/helpbeheer-tickets-behandelen)
 - [Zoeken in helpartikelen](/dashboard/help/a/zoeken-in-helpartikelen)
