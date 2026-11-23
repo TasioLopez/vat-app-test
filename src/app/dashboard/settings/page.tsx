@@ -87,7 +87,7 @@ function SettingsPageContent() {
   );
 
   return (
-    <div className="min-h-full bg-gray-50">
+    <div className="min-h-full flex-1 bg-gray-50">
       <div className="mx-auto max-w-4xl px-6 py-8">
         <h1 className="text-2xl font-semibold text-gray-900">Instellingen</h1>
 

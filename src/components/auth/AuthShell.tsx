@@ -25,9 +25,6 @@ export default function AuthShell({ children, banner }: AuthShellProps) {
         <h1 className="mt-5 text-center text-2xl font-semibold tracking-normal text-gray-900 sm:text-3xl">
           ValentineZ Assist Tool
         </h1>
-        <p className="mt-2 text-center text-sm text-gray-500">
-          Voor adviseurs van ValentineZ
-        </p>
 
         {banner ? <div className="mt-5 w-full">{banner}</div> : null}
 

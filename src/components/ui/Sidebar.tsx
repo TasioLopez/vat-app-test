@@ -136,7 +136,7 @@ export default function Sidebar({
       label: "Documenten",
       items: [
         {
-          name: "Trajectplannen",
+          name: "Documenten",
           href: "/dashboard/tpdocs",
           icon: <FileText className="h-5 w-5" />,
         },
@@ -231,7 +231,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`flex h-full flex-col border-r border-white/10 bg-[var(--color-primary-800)] ${
+      className={`flex h-full flex-col overflow-x-hidden border-r border-white/10 bg-[var(--color-primary-800)] ${
         isMobile
           ? "w-full"
           : `fixed left-0 top-0 z-10 h-screen flex-shrink-0 transition-[width] duration-200 ${
@@ -289,7 +289,7 @@ export default function Sidebar({
         )}
       </div>
 
-      <nav className="flex-1 space-y-4 overflow-y-auto px-2 pb-3 pt-2">
+      <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-2 pb-3 pt-2">
         {groups.map((group) => (
           <div key={group.id} className="space-y-1">
             {group.label && showLabels ? (

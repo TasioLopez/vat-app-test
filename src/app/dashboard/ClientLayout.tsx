@@ -19,6 +19,7 @@ export default function ClientLayout({
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const isCvRoute = pathname?.startsWith('/dashboard/cv');
+  const isSettingsRoute = pathname?.startsWith('/dashboard/settings');
 
   return (
     <UnsavedChangesGuardProvider>
@@ -27,7 +28,7 @@ export default function ClientLayout({
           <Toaster richColors position="top-center" />
           <ResponsiveLayout
             collapsed={collapsed}
-            className={isCvRoute ? 'bg-gray-100' : undefined}
+            className={isCvRoute ? 'bg-gray-100' : isSettingsRoute ? 'bg-gray-50' : undefined}
             sidebar={
               <Sidebar
                 collapsed={collapsed}
