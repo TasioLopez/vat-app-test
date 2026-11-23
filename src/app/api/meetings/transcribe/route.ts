@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI, { toFile } from 'openai';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
-import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import { requireMeetingEmployeeAccess } from '@/lib/meetings/access';
 import {
   MEETING_AUDIO_MAX_BYTES,
   applyTranscriptWrite,
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const employeeId = (body?.employeeId ?? '').toString();
   const captureId = (body?.captureId ?? '').toString();
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
   if (!isUuid(captureId)) return NextResponse.json({ error: 'Ongeldig gesprek' }, { status: 400 });
 

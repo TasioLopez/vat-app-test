@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
-import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import {
+  assertMeetingPurposeAllowed,
+  requireMeetingEmployeeAccess,
+} from '@/lib/meetings/access';
 import {
   applyTranscriptWrite,
   isCanonicalMeetingAudioPath,
@@ -25,7 +28,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const body = await req.json().catch(() => null);
   const employeeId = (body?.employeeId ?? '').toString();
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
   if (!isUuid(id)) return NextResponse.json({ error: 'Ongeldig gesprek' }, { status: 400 });
 
@@ -73,6 +76,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     patch.consent_by = access.user.id;
   }
   if (isMeetingPurpose(body?.purpose) && body.purpose !== existing.data.purpose) {
+    const purposeBlocked = assertMeetingPurposeAllowed(body.purpose);
+    if (purposeBlocked) return purposeBlocked;
     patch.purpose = body.purpose;
     if (existing.data.status === 'accepted') {
       patch.status = 'notes_draft';
@@ -93,7 +98,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 export async function DELETE(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const employeeId = req.nextUrl.searchParams.get('employeeId') ?? '';
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
   if (!isUuid(id)) return NextResponse.json({ error: 'Ongeldig gesprek' }, { status: 400 });
 

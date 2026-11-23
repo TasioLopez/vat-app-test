@@ -26,6 +26,12 @@ export const MEETING_PURPOSE_LABELS: Record<MeetingPurpose, string> = {
   overig: 'Overig',
 };
 
+/** VGR purpose stays staging-only until VGR promote. */
+export function visibleMeetingPurposes(): MeetingPurpose[] {
+  if (process.env.NEXT_PUBLIC_APP_ENV === 'staging') return [...MEETING_PURPOSES];
+  return MEETING_PURPOSES.filter((purpose) => purpose !== 'vgr');
+}
+
 /** Published document type for a purpose that can become a bron. */
 export function documentTypeForPurpose(purpose: MeetingPurpose): string | null {
   if (purpose === 'intake') return 'gespreksverslag';

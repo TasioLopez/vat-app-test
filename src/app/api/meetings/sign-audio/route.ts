@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthError, isUuid } from '@/lib/auth/api-auth';
-import { requireStagingEmployeeAccess } from '@/lib/meetings/access';
+import { requireMeetingEmployeeAccess } from '@/lib/meetings/access';
 import {
   MEETING_AUDIO_MAX_BYTES,
   isMeetingAudioExt,
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const extension = (body?.extension ?? '').toString().toLowerCase();
   const sizeBytes = Number(body?.sizeBytes);
 
-  const access = await requireStagingEmployeeAccess(employeeId);
+  const access = await requireMeetingEmployeeAccess(employeeId);
   if (isAuthError(access)) return access;
   if (!isUuid(captureId) || !isMeetingAudioExt(extension)) {
     return NextResponse.json({ error: 'Ongeldige opname' }, { status: 400 });

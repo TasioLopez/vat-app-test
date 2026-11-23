@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   MEETING_PURPOSE_LABELS,
-  MEETING_PURPOSES,
   bronStepLabelForPurpose,
+  visibleMeetingPurposes,
   type MeetingCapture,
   type MeetingPurpose,
 } from '@/lib/meetings/audio';
@@ -182,7 +182,7 @@ export function GesprekHeader({
               className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 disabled:opacity-50"
               aria-label="Doel van dit gesprek"
             >
-              {MEETING_PURPOSES.map((value) => (
+              {visibleMeetingPurposes().map((value) => (
                 <option key={value} value={value}>
                   {MEETING_PURPOSE_LABELS[value]}
                 </option>

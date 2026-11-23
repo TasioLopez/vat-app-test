@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { NextRequest } from 'next/server';
-import { acceptNotesDecision, meetingAudioExtension } from '@/lib/meetings/audio';
+import {
+  acceptNotesDecision,
+  meetingAudioExtension,
+  visibleMeetingPurposes,
+} from '@/lib/meetings/audio';
+import { assertMeetingPurposeAllowed } from '@/lib/meetings/access';
 
 describe('acceptNotesDecision', () => {
   it('asks to replace an existing gespreksverslag and allows an empty slot', () => {
@@ -18,46 +23,53 @@ describe('meetingAudioExtension', () => {
   });
 });
 
-describe('meeting routes staging gate', () => {
+describe('visibleMeetingPurposes', () => {
+  it('hides VGR purpose outside staging', () => {
+    const prev = process.env.NEXT_PUBLIC_APP_ENV;
+    process.env.NEXT_PUBLIC_APP_ENV = 'production';
+    assert.deepEqual(visibleMeetingPurposes(), ['intake', 'overig']);
+    process.env.NEXT_PUBLIC_APP_ENV = 'staging';
+    assert.deepEqual(visibleMeetingPurposes(), ['intake', 'vgr', 'overig']);
+    process.env.NEXT_PUBLIC_APP_ENV = prev;
+  });
+});
+
+describe('assertMeetingPurposeAllowed', () => {
+  it('blocks VGR purpose outside staging', () => {
+    const prev = process.env.NEXT_PUBLIC_APP_ENV;
+    process.env.NEXT_PUBLIC_APP_ENV = 'production';
+    assert.equal(assertMeetingPurposeAllowed('intake'), null);
+    assert.equal(assertMeetingPurposeAllowed('vgr')?.status, 403);
+    process.env.NEXT_PUBLIC_APP_ENV = 'staging';
+    assert.equal(assertMeetingPurposeAllowed('vgr'), null);
+    process.env.NEXT_PUBLIC_APP_ENV = prev;
+  });
+});
+
+describe('meeting routes production unlock', () => {
   const prev = process.env.NEXT_PUBLIC_APP_ENV;
 
-  it('returns 404 outside staging', async () => {
+  it('no longer returns staging-only 404 on production', async () => {
     process.env.NEXT_PUBLIC_APP_ENV = 'production';
     try {
-    const captures = await import('@/app/api/meetings/captures/route');
-    const captureId = await import('@/app/api/meetings/captures/[id]/route');
-    const signAudio = await import('@/app/api/meetings/sign-audio/route');
-    const transcribe = await import('@/app/api/meetings/transcribe/route');
-    const generateNotes = await import('@/app/api/meetings/generate-notes/route');
-    const acceptNotes = await import('@/app/api/meetings/accept-notes/route');
-    const importText = await import('@/app/api/meetings/import-text/route');
+      const captures = await import('@/app/api/meetings/captures/route');
+      const importText = await import('@/app/api/meetings/import-text/route');
 
-    const post = (path: string) =>
-      new NextRequest(`http://localhost${path}`, {
-        method: 'POST',
-        body: '{}',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const getRes = await captures.GET(
+        new NextRequest('http://localhost/api/meetings/captures?employeeId=')
+      );
+      // Missing employeeId → 400, not staging 404
+      assert.equal(getRes.status, 400);
 
-    const responses = await Promise.all([
-      captures.GET(new NextRequest('http://localhost/api/meetings/captures')),
-      captures.POST(post('/api/meetings/captures')),
-      captureId.PATCH(post('/api/meetings/captures/x'), {
-        params: Promise.resolve({ id: '00000000-0000-4000-8000-000000000001' }),
-      }),
-      captureId.DELETE(new NextRequest('http://localhost/api/meetings/captures/x'), {
-        params: Promise.resolve({ id: '00000000-0000-4000-8000-000000000001' }),
-      }),
-      signAudio.POST(post('/api/meetings/sign-audio')),
-      transcribe.POST(post('/api/meetings/transcribe')),
-      generateNotes.POST(post('/api/meetings/generate-notes')),
-      acceptNotes.POST(post('/api/meetings/accept-notes')),
-      importText.POST(post('/api/meetings/import-text')),
-    ]);
-
-    for (const res of responses) {
-      assert.equal(res.status, 404);
-    }
+      const form = new FormData();
+      form.set('employeeId', '');
+      const importRes = await importText.POST(
+        new NextRequest('http://localhost/api/meetings/import-text', {
+          method: 'POST',
+          body: form,
+        })
+      );
+      assert.equal(importRes.status, 400);
     } finally {
       process.env.NEXT_PUBLIC_APP_ENV = prev;
     }
