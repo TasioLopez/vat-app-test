@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { formatIntakeConflictField } from '@/lib/intake/conflict-labels';
 import {
   createEmptyIntakeData,
   ensureIntakeShape,
@@ -12,8 +13,12 @@ import {
 import { intakeToGegevensFields } from '@/lib/intake/project';
 import * as intakeHydrate from '@/lib/intake/tp-hydrate';
 import { isStagingEnv, assertStagingOnly } from '@/lib/auth/staging-only';
+import { isAdDocumentType } from '@/lib/document-analysis/doc-type-matchers';
+import { classifyDossierFileName } from '@/lib/intake/dossier-files';
 import { formatIntakeDateNl } from '@/lib/intake/format-date';
 import {
+  dossierSourceLabel,
+  fileNameLooksLikeAanmeld,
   intakeDraftHasContent,
   isDossierSourceType,
   isIntakeDocumentType,
@@ -24,14 +29,63 @@ import { mergeIntakeFillBlanks } from '@/lib/intake/merge-extractions';
 describe('intake schema', () => {
   it('ensureIntakeShape fills defaults', () => {
     const shaped = ensureIntakeShape({});
-    assert.equal(shaped.meta.form_version, 'perfectview_v4');
+    assert.equal(shaped.meta.form_version, 'perfectview_v5');
     assert.equal(shaped.s2.current_job, '');
     assert.equal(shaped.s5.fml_beperkingen.werktijden, false);
     assert.deepEqual(shaped.s17.transport_types, []);
+    assert.equal(shaped.s8.tekst, '');
+    assert.equal(shaped.s12.tekst, '');
+  });
+
+  it('migrates legacy multi-field narrative sections into tekst', () => {
+    const shaped = ensureIntakeShape({
+      s8: {
+        woonplaats: 'Zaandam',
+        woonsituatie: 'Woont samen met partner.',
+        uitwonende_kinderen: 'Geen uitwonende kinderen.',
+      },
+      s12: {
+        hobbies: 'Sporten en kickboksen.',
+        leest_of_muziek: 'Lezen lukt minder goed.',
+        kan_uitvoeren: 'Sportschool niet iedere week.',
+        graag_oppakken: 'Mist zelf kickboksen.',
+      },
+    });
+    assert.match(shaped.s8.tekst, /Woont samen met partner/);
+    assert.match(shaped.s8.tekst, /Geen uitwonende kinderen/);
+    assert.match(shaped.s8.tekst, /Zaandam/);
+    assert.equal('woonplaats' in shaped.s8, false);
+    assert.match(shaped.s12.tekst, /Sporten en kickboksen/);
+    assert.match(shaped.s12.tekst, /Mist zelf kickboksen/);
+  });
+
+  it('prefers existing tekst over legacy fields', () => {
+    const shaped = ensureIntakeShape({
+      s9: {
+        tekst: 'Heeft goed contact met familie.',
+        contact_familie: 'Oude waarde',
+      },
+    });
+    assert.equal(shaped.s9.tekst, 'Heeft goed contact met familie.');
   });
 
   it('layout key is intake_v1', () => {
     assert.equal(INTAKE_LAYOUT_KEY, 'intake_v1');
+  });
+
+  it('formats conflict fields with section and Dutch labels', () => {
+    assert.equal(
+      formatIntakeConflictField('s2.employer'),
+      '2. Persoonsgegevens — Werkgever/organisatie'
+    );
+    assert.equal(
+      formatIntakeConflictField('s6.fml_izp_lab_date'),
+      'Dossiergegevens — Datum FML/IZP'
+    );
+    assert.equal(
+      formatIntakeConflictField('s6.opbouwschema_aanwezig'),
+      '6. Re-integratie en houding — Opbouwschema aanwezig'
+    );
   });
 });
 
@@ -198,6 +252,18 @@ describe('intake sources helpers', () => {
     assert.equal(isIntakeDocumentType('extra'), false);
     assert.equal(isDossierSourceType('extra'), true);
     assert.equal(isDossierSourceType('intakeformulier'), false);
+    assert.equal(isDossierSourceType('gespreksverslag'), true);
+    assert.equal(isIntakeDocumentType('gespreksverslag'), false);
+    assert.equal(isDossierSourceType('aanmeldformulier'), true);
+    assert.equal(isIntakeDocumentType('aanmeldformulier'), false);
+    assert.equal(isAdDocumentType('gespreksverslag'), false);
+  });
+
+  it('keeps plain-text dossier notes out of the PDF upload path', () => {
+    assert.equal(classifyDossierFileName('gespreksverslag.txt'), 'inline-text');
+    assert.equal(classifyDossierFileName('folder/Note.TXT'), 'inline-text');
+    assert.equal(classifyDossierFileName('ad-rapport.pdf'), 'document');
+    assert.equal(classifyDossierFileName('verslag.docx'), 'document');
   });
 
   it('detects draft content', () => {
@@ -205,6 +271,20 @@ describe('intake sources helpers', () => {
     const filled = createEmptyIntakeData();
     filled.s1.employee_name = 'Jan';
     assert.equal(intakeDraftHasContent(filled), true);
+  });
+
+  it('labels extra+aanmeld filename as aanmeldformulier bron', () => {
+    assert.equal(fileNameLooksLikeAanmeld('Aanmelding per mail Bounou.docx'), true);
+    assert.equal(fileNameLooksLikeAanmeld('IZP.pdf'), false);
+    assert.equal(
+      dossierSourceLabel('extra', 'Aanmeldformulier_ValentineZ_C._de_Ridder.docx'),
+      'aanmeldformulier: Aanmeldformulier_ValentineZ_C._de_Ridder.docx'
+    );
+    assert.equal(
+      dossierSourceLabel('aanmeldformulier', 'Aanmelding per mail Bounou.docx'),
+      'aanmeldformulier: Aanmelding per mail Bounou.docx'
+    );
+    assert.equal(dossierSourceLabel('extra', 'notitie.docx'), 'extra: notitie.docx');
   });
 });
 
@@ -225,6 +305,14 @@ describe('applyIntakeCheckboxOverridesFromText', () => {
       'Datum AD-rapport: 1-2-2026 Concept ☒'
     );
     assert.equal(out.ad_report_concept, true);
+  });
+
+  it('keeps model Ex-werknemer true when label has no checkbox glyph', () => {
+    const out = applyIntakeCheckboxOverridesFromText(
+      { is_ex_werknemer: true },
+      'Sectie 6\nEx-werknemer\nNaam Arts: P. Mort'
+    );
+    assert.equal(out.is_ex_werknemer, true);
   });
 });
 
@@ -253,14 +341,33 @@ describe('mergeIntakeFillBlanks', () => {
   it('does not flip intake-authoritative false booleans from dossier true', () => {
     const base = createEmptyIntakeData();
     base.s6.is_ex_werknemer = false;
-    base.s5.fml_beperkingen.werktijden = false;
+    base.s6.ad_report_concept = false;
+    base.s17.has_pc = false;
 
     const gap = createEmptyIntakeData();
     gap.s6.is_ex_werknemer = true;
-    gap.s5.fml_beperkingen.werktijden = true;
+    gap.s6.ad_report_concept = true;
+    gap.s17.has_pc = true;
 
     const merged = mergeIntakeFillBlanks(base, gap);
     assert.equal(merged.s6.is_ex_werknemer, false);
-    assert.equal(merged.s5.fml_beperkingen.werktijden, false);
+    assert.equal(merged.s6.ad_report_concept, false);
+    assert.equal(merged.s17.has_pc, false);
+  });
+
+  it('lets dossier FML true fill unchecked intake FML rubrics', () => {
+    const base = createEmptyIntakeData();
+    base.s5.fml_beperkingen.werktijden = false;
+    base.s5.fml_beperkingen.dynamische_handelingen = false;
+
+    const gap = createEmptyIntakeData();
+    gap.s5.fml_beperkingen.werktijden = true;
+    gap.s5.fml_beperkingen.dynamische_handelingen = true;
+    gap.s5.fml_beperkingen.persoonlijk_functioneren = false;
+
+    const merged = mergeIntakeFillBlanks(base, gap);
+    assert.equal(merged.s5.fml_beperkingen.werktijden, true);
+    assert.equal(merged.s5.fml_beperkingen.dynamische_handelingen, true);
+    assert.equal(merged.s5.fml_beperkingen.persoonlijk_functioneren, false);
   });
 });

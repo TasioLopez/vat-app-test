@@ -109,6 +109,56 @@ export function stripLeadingDoctorRolePrefix(value: string): string {
   return expanded.slice(prefix.length).trim();
 }
 
+/** Longest title first so Bedrijfsarts/Verzekeringsarts are not read as Arts. */
+const SIGNATURE_ROLE_PATTERN = 'Verzekeringsarts|Bedrijfsarts|Anios|Aios|Arts';
+
+function canonicalDoctorRole(role: string): string {
+  const found = DOCTOR_ROLE_PREFIXES.find(
+    (prefix) => prefix.toLowerCase() === role.toLowerCase()
+  );
+  return found ?? role;
+}
+
+function stripDoctorCourtesyTitles(value: string): string {
+  return value.replace(/\b(?:de heer|mevrouw)\s+/gi, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Dutch report signatures put the title after the name:
+ * "E. van Wijk, Arts. Werkend onder supervisie van …".
+ * Move that title to the front, or drop it when a leading title is already present.
+ * Supervisor text is left as written.
+ */
+function normalizeDoctorSignature(value: string): string {
+  const supervisie = value.match(
+    new RegExp(
+      `^(.+?)(?:,\\s*|\\s+)(${SIGNATURE_ROLE_PATTERN})\\.?\\s+werkend onder supervisie van\\s+(.+)$`,
+      'i'
+    )
+  );
+  if (supervisie) {
+    const name = supervisie[1].replace(/[\s,-]+$/, '').trim();
+    const supervisor = supervisie[3].trim();
+    if (!name || !supervisor) return value;
+    if (hasDoctorRolePrefix(name)) {
+      return `${name} werkend onder supervisie van ${supervisor}`;
+    }
+    return `${canonicalDoctorRole(supervisie[2])} ${name} werkend onder supervisie van ${supervisor}`;
+  }
+
+  // "Onder supervisie van …, bedrijfsarts" is a different footer; leave it for the trailing strip.
+  if (/supervisie/i.test(value)) return value;
+
+  const trailing = value.match(
+    new RegExp(`^(.+?),\\s*(${SIGNATURE_ROLE_PATTERN})\\.?$`, 'i')
+  );
+  if (!trailing) return value;
+  const name = trailing[1].replace(/[\s,-]+$/, '').trim();
+  if (!name) return value;
+  if (hasDoctorRolePrefix(name)) return name;
+  return `${canonicalDoctorRole(trailing[2])} ${name}`;
+}
+
 export function cleanDoctorOrgRaw(raw: string): string {
   let cleaned = expandDoctorRoleAbbreviations(raw.trim());
 
@@ -117,11 +167,23 @@ export function cleanDoctorOrgRaw(raw: string): string {
   cleaned = cleaned.replace(/\bBIG\s*(nr\.?|nummer)?\s*[\d.\s]+/gi, '');
   cleaned = cleaned.replace(/\(\s*\)/g, '');
 
-  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
+  cleaned = stripDoctorCourtesyTitles(cleaned);
+  cleaned = normalizeDoctorSignature(cleaned);
+
+  // Strip trailing punctuation first so "bedrijfsarts." still matches the role strip below.
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
+  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\.?\s*$/i, '');
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  cleaned = cleaned.replace(/[,\-]\s*$/, '').trim();
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
   return cleaned;
+}
+
+/** Soft omission when arts name is unknown — keeps intro templates grammatical. */
+export const UNKNOWN_ARTS_PHRASE = 'de bedrijfsarts';
+
+function stripTrailingPhrasePunctuation(value: string): string {
+  return value.replace(/[.,;:\-]+\s*$/, '').trim();
 }
 
 function formatSupervisiePart(part: string): string {
@@ -134,29 +196,37 @@ function formatSupervisiePart(part: string): string {
 /**
  * Phrase for FML / medisch spreekuur intros.
  * Preserves Verzekeringsarts/Bedrijfsarts/Arts role prefixes from tp_meta.
+ * Returns empty string when unknown — callers omit "opgesteld door …" rather than
+ * printing the soft placeholder "de bedrijfsarts".
  */
 export function buildArtsPhrase(occupational_doctor_org: string | null | undefined): string {
   const raw = cleanDoctorOrgRaw(occupational_doctor_org || '');
   if (!raw) {
-    return 'Arts [naam] werkend onder supervisie van Arts [supervisor]';
+    return '';
   }
 
+  let phrase: string;
   const commaMatch = raw.match(/^(.+?)\s*,\s*werkend onder supervisie van\s*:?\s*(.+)$/i);
   if (commaMatch) {
     const primary = formatSupervisiePart(commaMatch[1].trim());
     const supervisor = formatSupervisiePart(commaMatch[2].trim());
-    return cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
+    phrase = cleanDoctorOrgRaw(`${primary} werkend onder supervisie van ${supervisor}`);
+  } else if (/werkend onder supervisie van/i.test(raw)) {
+    phrase = raw;
+  } else if (hasDoctorRolePrefix(raw)) {
+    phrase = raw;
+  } else {
+    phrase = `Arts ${raw}`;
   }
 
-  if (/werkend onder supervisie van/i.test(raw)) {
-    return raw;
-  }
+  return stripTrailingPhrasePunctuation(phrase);
+}
 
-  if (hasDoctorRolePrefix(raw)) {
-    return raw;
-  }
-
-  return `Arts ${raw}`;
+/** True when artsPhrase should be omitted from intro templates. */
+export function isUnknownArtsPhrase(artsPhrase: string | null | undefined): boolean {
+  const raw = String(artsPhrase ?? '').trim();
+  if (!raw) return true;
+  return raw.toLowerCase() === UNKNOWN_ARTS_PHRASE.toLowerCase();
 }
 
 function extractPrimaryDoctorName(value: string): string {

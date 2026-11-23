@@ -286,8 +286,8 @@ export function isAbsentText(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const s = value.trim();
   if (!s) return true;
-  const lower = s.toLowerCase();
-  return (
+  const lower = s.toLowerCase().replace(/[.,;:!?'"“”]+$/g, '').replace(/\s+/g, ' ').trim();
+  if (
     lower === 'null' ||
     lower === 'undefined' ||
     lower === 'none' ||
@@ -295,11 +295,26 @@ export function isAbsentText(value: unknown): boolean {
     lower === 'nee' ||
     lower === 'nei' ||
     lower === 'n.v.t.' ||
+    lower === 'n.v.t' ||
     lower === 'nvt' ||
     lower === 'n/a' ||
+    lower === 'niet' ||
     s === '—' ||
     s === '-'
-  );
+  ) {
+    return true;
+  }
+
+  // Invented negative prose / meta labels — not real field content.
+  if (/^niet\s+(benoemd|vermeld|ingevuld|aanwezig|bekend|van toepassing)\b/.test(lower)) {
+    return true;
+  }
+  if (/^geen\s+(tweede\s+)?dienstverband\b/.test(lower)) return true;
+  if (/^geen\s+andere\s+werkgever/.test(lower)) return true;
+  if (/^geen\s+tweede\s+werkgever/.test(lower)) return true;
+  if (/^niet\s+van\s+toepass/.test(lower)) return true;
+
+  return false;
 }
 
 /**

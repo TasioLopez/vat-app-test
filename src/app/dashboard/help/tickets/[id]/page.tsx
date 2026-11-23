@@ -81,7 +81,7 @@ export default function TicketDetailPage() {
     | undefined;
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+    <div className="min-h-full bg-gray-50 p-6 md:p-10">
       <CreateFormLeaveGuard values={{ reply }} onSave={sendReply} />
       <div className="max-w-3xl mx-auto space-y-6">
         <GuardedLink href="/dashboard/help/tickets" className="text-purple-700 font-medium inline-flex items-center gap-2">
@@ -103,7 +103,7 @@ export default function TicketDetailPage() {
             <h2 className="font-semibold text-gray-800 mb-2">Chatgeschiedenis (escalatie)</h2>
             <ul className="space-y-2 text-sm">
               {transcript.map((m, i) => (
-                <li key={i} className="border-l-2 border-purple-200 pl-3">
+                <li key={i} className="border-l-2 border-gray-200 pl-3">
                   <span className="font-medium text-purple-800">{m.role}:</span>{" "}
                   <span className="text-gray-700 whitespace-pre-wrap">{m.content}</span>
                 </li>
@@ -130,13 +130,13 @@ export default function TicketDetailPage() {
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             rows={3}
-            className="flex-1 rounded-xl border border-purple-200 px-3 py-2"
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-2"
             placeholder="Voeg een vervolgbericht toe…"
           />
           <button
             type="button"
             onClick={() => void sendReply().catch((err) => toast.error(err instanceof Error ? err.message : "Bericht versturen mislukt"))}
-            className="self-end px-4 py-2 rounded-xl bg-purple-700 text-white font-medium"
+            className="self-end px-4 py-2 rounded-xl bg-[var(--color-primary-500)] text-white font-medium"
           >
             Versturen
           </button>

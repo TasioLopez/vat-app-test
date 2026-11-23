@@ -147,12 +147,21 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
 
       {(
         [
-          ['s8', intake.s8],
-          ['s9', intake.s9],
-          ['s10', intake.s10],
-          ['s11', intake.s11],
-          ['s12', intake.s12],
-          ['s13', intake.s13],
+          ['s8', intake.s8.tekst],
+          ['s9', intake.s9.tekst],
+          ['s10', intake.s10.tekst],
+          ['s11', intake.s11.tekst],
+          ['s12', intake.s12.tekst],
+          ['s13', intake.s13.tekst],
+        ] as const
+      ).map(([key, value]) => (
+        <SectionBlock key={key} title={titleFor(key)}>
+          <Row label="Notitie" value={value} />
+        </SectionBlock>
+      ))}
+
+      {(
+        [
           ['s14', intake.s14],
           ['s16', intake.s16],
         ] as const

@@ -1,70 +1,141 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { FaUser, FaLock, FaMicrophone } from "react-icons/fa";
+import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { User, Lock, Shield, Mic, type LucideIcon } from "lucide-react";
 import ProfileInformation from "./components/ProfileInformation";
 import PasswordChange from "./components/PasswordChange";
 import MijnStem from "./components/MijnStem";
+import SecurityMfa from "./components/SecurityMfa";
 
-type SettingsTab = 'profile' | 'password' | 'mijn-stem';
+type SettingsTab = "profile" | "password" | "security" | "mijn-stem";
+
+const VALID_TABS: SettingsTab[] = ["profile", "password", "security", "mijn-stem"];
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return !!value && (VALID_TABS as string[]).includes(value);
+}
+
+const settingsTabs: {
+  id: SettingsTab;
+  name: string;
+  icon: LucideIcon;
+  component: ReactNode;
+}[] = [
+  {
+    id: "profile",
+    name: "Profiel Informatie",
+    icon: User,
+    component: <ProfileInformation />,
+  },
+  {
+    id: "password",
+    name: "Wachtwoord Wijzigen",
+    icon: Lock,
+    component: <PasswordChange />,
+  },
+  {
+    id: "security",
+    name: "Beveiliging",
+    icon: Shield,
+    component: <SecurityMfa />,
+  },
+  {
+    id: "mijn-stem",
+    name: "Mijn Stem",
+    icon: Mic,
+    component: <MijnStem />,
+  },
+];
+
+function SettingsPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() =>
+    isSettingsTab(tabFromUrl) ? tabFromUrl : "profile"
+  );
+
+  useEffect(() => {
+    if (isSettingsTab(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    } else if (!tabFromUrl) {
+      setActiveTab("profile");
+    }
+  }, [tabFromUrl]);
+
+  const selectTab = useCallback(
+    (tab: SettingsTab) => {
+      setActiveTab(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "profile") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const activeContent = useMemo(
+    () => settingsTabs.find((tab) => tab.id === activeTab)?.component,
+    [activeTab]
+  );
+
+  return (
+    <div className="min-h-full flex-1 bg-gray-50">
+      <div className="mx-auto max-w-4xl px-6 py-8">
+        <h1 className="text-2xl font-semibold text-gray-900">Instellingen</h1>
+
+        <nav
+          className="mt-6 flex gap-1 overflow-x-auto border-b border-gray-200"
+          aria-label="Instellingen secties"
+        >
+          {settingsTabs.map((tab) => {
+            const Icon = tab.icon;
+            const selected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => selectTab(tab.id)}
+                aria-current={selected ? "page" : undefined}
+                className={`relative flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  selected
+                    ? "text-[var(--color-primary-700)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--color-primary-500)]"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <Icon className="h-4 w-4" aria-hidden />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mt-8">{activeContent}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-
-    const settingsTabs = [
-        {
-            id: 'profile' as SettingsTab,
-            name: 'Profiel Informatie',
-            icon: <FaUser />,
-            component: <ProfileInformation />
-        },
-        {
-            id: 'password' as SettingsTab,
-            name: 'Wachtwoord Wijzigen',
-            icon: <FaLock />,
-            component: <PasswordChange />
-        },
-        {
-            id: 'mijn-stem' as SettingsTab,
-            name: 'Mijn Stem',
-            icon: <FaMicrophone />,
-            component: <MijnStem />
-        }
-    ];
-
-    return (
-        <div className="flex h-full bg-gradient-to-br from-gray-50 to-purple-50/30">
-            {/* Settings Sidebar */}
-            <div className="w-72 bg-white/80 backdrop-blur-sm border-r-2 border-purple-200/50 flex-shrink-0 shadow-lg">
-                <div className="p-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Instellingen</h1>
-                    
-                    <nav className="space-y-2">
-                        {settingsTabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center gap-4 px-4 py-3 text-left rounded-xl transition-all duration-200 ${
-                                    activeTab === tab.id
-                                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                                        : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
-                                }`}
-                            >
-                                <span className="text-xl">{tab.icon}</span>
-                                <span className="font-semibold">{tab.name}</span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 p-8 overflow-y-auto">
-                <div className="max-w-3xl">
-                    {settingsTabs.find(tab => tab.id === activeTab)?.component}
-                </div>
-            </div>
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-full bg-gray-50 px-6 py-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="text-2xl font-semibold text-gray-900">Instellingen</h1>
+            <p className="mt-4 text-sm text-gray-500">Laden…</p>
+          </div>
         </div>
-    );
+      }
+    >
+      <SettingsPageContent />
+    </Suspense>
+  );
 }

@@ -8,6 +8,7 @@ import type { CvLocale } from '@/types/cv';
 import { coerceCvTemplateKey, DEFAULT_ACCENT_COLOR } from '@/types/cv';
 import { normalizeCvPayload } from '@/lib/cv/normalize';
 import { getActiveCvModel } from '@/lib/cv/normalize';
+import { isValidCvPhotoStoragePath } from '@/lib/cv/photoPath';
 
 /** Print-only route for guest CV PDF export (share session required). */
 export default async function Page(props: {
@@ -51,7 +52,11 @@ export default async function Page(props: {
 
   let initialPhotoSignedUrl: string | null = null;
   const photoPath = activeModel.personal.photoStoragePath?.trim();
-  if (photoPath && activeModel.options?.includePhotoInCv) {
+  if (
+    photoPath &&
+    activeModel.options?.includePhotoInCv &&
+    isValidCvPhotoStoragePath(share.employee_id, share.cv_document_id, photoPath)
+  ) {
     const { data, error: signErr } = await supabaseAdmin.storage
       .from('cv-photos')
       .createSignedUrl(photoPath, 3600);

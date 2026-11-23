@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { isAuthError, requireEmployeeAccess } from '@/lib/auth/api-auth';
 import { serviceRoleSupabase as service } from '@/lib/supabase/service-role';
 import { getActiveCvModel, normalizeCvModel, normalizeCvPayload } from '@/lib/cv/normalize';
 import type { CvLocale, CvModel } from '@/types/cv';
@@ -41,6 +40,15 @@ function stripCitations(text: string): string {
     .trim();
 }
 
+function keepWrittenCvBlocks(payload: CvModel, current: CvModel): CvModel {
+  if (current.digitalSkills?.trim()) payload.digitalSkills = current.digitalSkills;
+  const hasEducation = current.education.some((item) =>
+    [item.institution, item.diploma, item.period, item.description].some((part) => part?.trim())
+  );
+  if (hasEducation) payload.education = current.education;
+  return payload;
+}
+
 function sanitizeCvModel(payload: CvModel, source: CvModel): CvModel {
   preserveCvPhotoFields(payload, source);
   payload.profile = stripCitations(payload.profile);
@@ -77,26 +85,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'employeeId and cvId required' }, { status: 400 });
   }
 
-  const cookieStore = await cookies();
-  const auth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key) => cookieStore.get(key)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
-  const {
-    data: { user },
-  } = await auth.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const access = await requireEmployeeAccess(employeeId);
+  if (isAuthError(access)) return access;
 
-  const { data: cvRow, error: cvErr } = await auth
+  const { data: cvRow, error: cvErr } = await access.supabase
     .from('cv_documents')
     .select('*')
     .eq('id', cvId)
@@ -157,6 +149,7 @@ export async function GET(req: NextRequest) {
       }
       let payload = normalizeCvModel(JSON.parse(raw));
       payload = sanitizeCvModel(payload, current);
+      payload = keepWrittenCvBlocks(payload, current);
       return NextResponse.json({
         success: true,
         data: { payload, locale: 'en', quality: evaluateCvQuality(payload, facts) },
@@ -190,6 +183,7 @@ export async function GET(req: NextRequest) {
 
     let payload = normalizeCvModel(JSON.parse(rawComposed) as unknown);
     payload = sanitizeCvModel(payload, current);
+    payload = keepWrittenCvBlocks(payload, current);
 
     const quality = evaluateCvQuality(payload, facts);
     console.info('autofill-cv: first-pass quality', quality.metrics);
@@ -213,8 +207,8 @@ export async function GET(req: NextRequest) {
         });
         const rewriteRaw = rewrite.choices[0]?.message?.content;
         if (rewriteRaw) {
-          const rewritten = sanitizeCvModel(
-            normalizeCvModel(JSON.parse(rewriteRaw) as unknown),
+          const rewritten = keepWrittenCvBlocks(
+            sanitizeCvModel(normalizeCvModel(JSON.parse(rewriteRaw) as unknown), current),
             current
           );
           payload = rewritten;

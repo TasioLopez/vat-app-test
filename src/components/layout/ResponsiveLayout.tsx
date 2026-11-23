@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, ReactNode } from 'react';
-import { Menu, X } from 'lucide-react';
+import React, { useState, useEffect, ReactNode, cloneElement, isValidElement } from 'react';
+import Image from 'next/image';
+import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveLayoutProps {
@@ -29,72 +30,71 @@ export function ResponsiveLayout({ children, sidebar, className, collapsed = fal
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const desktopSidebar =
+    isValidElement(sidebar)
+      ? cloneElement(sidebar as React.ReactElement<{ variant?: string }>, { variant: 'desktop' })
+      : sidebar;
+
+  const mobileSidebar =
+    isValidElement(sidebar)
+      ? cloneElement(sidebar as React.ReactElement<{ variant?: string; onNavigate?: () => void; collapsed?: boolean }>, {
+          variant: 'mobile',
+          collapsed: false,
+          onNavigate: () => setSidebarOpen(false),
+        })
+      : sidebar;
+
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Mobile sidebar overlay */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-black/40"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar - only for mobile overlay */}
       {isMobile && (
         <aside
           className={cn(
-            'bg-sidebar border-r border-sidebar-border shadow-lg transition-transform duration-300 ease-in-out',
-            'flex flex-col fixed inset-y-0 left-0 z-50 w-64 transform',
+            'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out',
             !sidebarOpen && '-translate-x-full',
             sidebarOpen && 'translate-x-0'
           )}
         >
-          {/* Mobile close button */}
-          <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            <h2 className="text-lg font-semibold text-sidebar-foreground">
-              Menu
-            </h2>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {sidebar}
-          </div>
+          {mobileSidebar}
         </aside>
       )}
 
-      {/* Desktop sidebar - rendered directly, not wrapped */}
-      {!isMobile && sidebar}
+      {!isMobile && desktopSidebar}
 
-      {/* Main content */}
-      <div className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-screen",
-        !isMobile && (collapsed ? "ml-16" : "ml-64")
-      )}>
-        {/* Mobile header */}
+      <div
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-screen',
+          !isMobile && (collapsed ? 'ml-16' : 'ml-64')
+        )}
+      >
         {isMobile && (
-          <header className="bg-card border-b border-border shadow-sm px-4 py-3 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-2 rounded-md text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <h1 className="text-lg font-semibold text-foreground">
-                VAT App
-              </h1>
-              <div className="w-9" /> {/* Spacer for centering */}
-            </div>
+          <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              aria-label="Menu openen"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <Image
+              src="/branding/vat-app-logo.svg"
+              alt="ValentineZ Assist Tool"
+              width={72}
+              height={28}
+              className="h-7 w-auto object-contain"
+            />
+            <div className="w-9" />
           </header>
         )}
 
-        {/* Content - removed default padding, pages handle their own */}
         <main className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto', className)}>
           {children}
         </main>

@@ -3,10 +3,8 @@ import {
   buildEmployeeDetailsPayload,
   normalizeEmployeeDetailsPayload,
 } from '@/lib/employee/autofill-persist';
-import {
-  GEGEVENS_EMPLOYEE_KEYS,
-  GEGEVENS_TP2_KEYS,
-} from '@/lib/tp2026/gegevens-autofill';
+import { saveWorkerFacts, stripWorkerFacts, applyWorkerFactsToDocument } from '@/lib/employee/save-worker-facts';
+import { GEGEVENS_EMPLOYEE_KEYS } from '@/lib/tp2026/gegevens-autofill';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { stripTPProfileFields } from '@/lib/tp/resolve-profile-context';
@@ -38,7 +36,7 @@ function pickKeys(
 /** Keys stored on employee_details (excludes email — stored on employees). */
 const DETAILS_KEYS_FOR_PERSIST = GEGEVENS_EMPLOYEE_KEYS.filter((k) => k !== 'email');
 
-const TP_META_PERSIST_KEYS = [...GEGEVENS_TP2_KEYS, 'tp3_activities'] as const;
+const TP_META_ACTIVITY_KEYS = ['tp3_activities'] as const;
 
 export function pickGegevensEmployeeDetailsPayload(
   tpData: Record<string, unknown>,
@@ -58,7 +56,24 @@ export function pickGegevensTpMetaPayload(
 ): Record<string, unknown> {
   return {
     employee_id: employeeId,
-    ...pickKeys(tpData, TP_META_PERSIST_KEYS),
+    ...pickKeys(tpData, TP_META_ACTIVITY_KEYS),
+    ...pickKeys(tpData, [
+      'first_sick_day',
+      'registration_date',
+      'intake_date',
+      'tp_creation_date',
+      'has_ad_report',
+      'ad_report_concept',
+      'is_ex_werknemer',
+      'ad_report_date',
+      'occupational_doctor_name',
+      'occupational_doctor_org',
+      'fml_izp_lab_date',
+      'fml_izp_lab_kind',
+      'tp_lead_time',
+      'tp_start_date',
+      'tp_end_date',
+    ]),
   };
 }
 
@@ -80,10 +95,15 @@ export async function persistTp2026Draft(
     shaped.work_experience = normalizedWork || '';
   }
 
+  const saved = await saveWorkerFacts(supabase, employeeId, shaped, 'human');
+  if (saved.error) return { error: saved.error };
+
+  const stored = stripWorkerFacts(applyWorkerFactsToDocument(shaped, saved.values));
+
   const { error: instanceError } = await (supabase as any)
     .from('tp_instances')
     .update({
-      data_json: shaped,
+      data_json: stored,
       updated_by: userId ?? null,
     })
     .eq('id', tpInstanceId);
@@ -92,40 +112,13 @@ export async function persistTp2026Draft(
     return { error: `tp_instances: ${instanceError.message}` };
   }
 
-  const detailsPayload = pickGegevensEmployeeDetailsPayload(shaped, employeeId);
-  const { error: detailsError } = await supabase
-    .from('employee_details')
-    .upsert([buildEmployeeDetailsPayload(detailsPayload, employeeId)], {
-      onConflict: 'employee_id',
-    });
-
-  if (detailsError) {
-    return { error: `employee_details: ${detailsError.message}` };
+  if (shaped.tp3_activities !== undefined) {
+    const { error: metaError } = await supabase.from('tp_meta').upsert(
+      [{ employee_id: employeeId, tp3_activities: shaped.tp3_activities }],
+      { onConflict: 'employee_id' }
+    );
+    if (metaError) return { error: `tp_meta: ${metaError.message}` };
   }
-
-  const metaPayload = pickGegevensTpMetaPayload(shaped, employeeId);
-  const { error: metaError } = await supabase
-    .from('tp_meta')
-    .upsert([metaPayload], { onConflict: 'employee_id' });
-
-  if (metaError) {
-    return { error: `tp_meta: ${metaError.message}` };
-  }
-
-  const email = typeof shaped.email === 'string' ? shaped.email.trim() : '';
-  if (email) {
-    const { error: employeeError } = await supabase
-      .from('employees')
-      .update({ email })
-      .eq('id', employeeId);
-
-    if (employeeError) {
-      return { error: `employees: ${employeeError.message}` };
-    }
-  }
-
-  // Contact person edits are document-only (document_referent_* in data_json).
-  // Explicit "Opslaan als nieuwe contactpersoon" creates referents outside this path.
 
   return {};
 }

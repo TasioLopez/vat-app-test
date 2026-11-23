@@ -7,6 +7,7 @@ import {
   mapAndValidateEmployeeDetails,
   extractReferentFromRaw,
   mergeReferentFields,
+  composeReferentByPriority,
   getAutofillCompleteness,
   AD_EMPLOYEE_PROMPT,
   AD_EMPLOYEE_USER_MESSAGE,
@@ -34,12 +35,25 @@ import {
 import { requireEmployeeAutofillAccess } from '@/lib/auth/autofill-access';
 import { isIntakeLockedTransportField } from '@/lib/tp2026/gegevens-field-options';
 import { shouldSkipSecondaryDocsForWorkerProfile } from '@/lib/document-analysis/worker-profile-autofill';
+import {
+  fileNameLooksLikeAanmeld,
+  isAanmeldDocumentType,
+} from '@/lib/intake/sources';
 import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
 import {
   describeIntakePlainText,
   extractPdfPlainTextWithGlyphFallback,
 } from '@/lib/document-analysis/documentPlainText';
 import { resolveWorkExperienceFromIntake } from '@/lib/tp2026/intake-algemene-info';
+import { buildEmployeeAutofillSteps } from '@/lib/autofill-progress';
+import {
+  AUTOFILL_SSE_HEADERS,
+  createStepProgressReporter,
+  encodeErrorEvent,
+  encodeProgressEvent,
+  encodeResultEvent,
+  type AutofillProgressReporter,
+} from '@/lib/autofill-progress-stream';
 
 export const maxDuration = 180;
 
@@ -259,7 +273,10 @@ async function processExtraDoc(doc: DocRow) {
   });
 }
 
-async function processDocumentsSeparately(docs: DocRow[]): Promise<{
+async function processDocumentsSeparately(
+  docs: DocRow[],
+  onProgress?: AutofillProgressReporter
+): Promise<{
   results: Record<string, unknown>;
   referent: Record<string, unknown>;
   intakeProcessed: boolean;
@@ -272,8 +289,21 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
 }> {
   console.log('🚀 Processing documents separately with vision extraction...');
 
+  const steps = buildEmployeeAutofillSteps(docs);
+  const report = createStepProgressReporter(steps, onProgress);
+  let stepIdx = 0;
+  const advance = (labelIncludes?: string) => {
+    if (labelIncludes) {
+      const hit = steps.findIndex((s, i) => i >= stepIdx && s.includes(labelIncludes));
+      if (hit >= 0) stepIdx = hit;
+    }
+    report(stepIdx);
+    stepIdx = Math.min(stepIdx + 1, steps.length - 1);
+  };
+
+  advance(); // Documenten voorbereiden…
   const results: Record<string, unknown> = {};
-  let referent: Record<string, unknown> = {};
+  let intakeReferent: Record<string, unknown> = {};
   let intakeProcessed = false;
   let checkboxText:
     | {
@@ -285,28 +315,35 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
     | undefined;
   const processedDocs: string[] = [];
 
+  const isAanmeldDoc = (d: DocRow) =>
+    isAanmeldDocumentType(d.type) || fileNameLooksLikeAanmeld(d.name);
+
   const intakeDoc = docs.find((d) => (d.type || '').toLowerCase().includes('intake'));
 
   if (intakeDoc) {
+    advance('Intakeformulier');
     console.log('📄 Processing intake form (priority 1)...');
     const intakeResult = await processIntakeForm(intakeDoc);
     Object.assign(results, intakeResult.mapped);
-    referent = intakeResult.referent;
+    intakeReferent = intakeResult.referent;
     checkboxText = intakeResult.checkboxText;
     intakeProcessed = true;
     processedDocs.push('intakeformulier');
     console.log(`✅ Intake form: ${Object.keys(intakeResult.mapped).length} fields extracted`);
   }
 
-  if (shouldSkipSecondaryDocsForWorkerProfile(intakeProcessed, results)) {
+  const skipWorkerProfileSecondary = shouldSkipSecondaryDocsForWorkerProfile(
+    intakeProcessed,
+    results
+  );
+  if (skipWorkerProfileSecondary) {
     console.log(
-      '📋 Intake present — skipping AD/FML/extra for worker-profile autofill'
+      '📋 Intake present — skipping AD/FML/extra for worker-profile fields; still gap-filling referent'
     );
-    console.log(
-      `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
-    );
-    return { results, referent, intakeProcessed, checkboxText };
   }
+
+  const aanmeldReferents: Record<string, unknown>[] = [];
+  const secondaryReferents: Record<string, unknown>[] = [];
 
   const adDoc = docs.find((d) => {
     const type = (d.type || '').toLowerCase();
@@ -314,27 +351,32 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   });
 
   if (adDoc) {
-    console.log('📄 Processing AD report (priority 2)...');
+    advance('AD-rapport');
+    console.log(
+      skipWorkerProfileSecondary
+        ? '📄 Processing AD report (referent gap-fill only)...'
+        : '📄 Processing AD report (priority 2)...'
+    );
     const adResult = await processADReport(adDoc);
-    Object.keys(adResult.mapped).forEach((key) => {
-      const adValue = adResult.mapped[key];
-      if (isIntakeLockedTransportField(intakeProcessed, key)) {
-        return;
-      }
-      if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
-        return;
-      }
-      if (AD_FIRST_FIELDS.includes(key)) {
-        if (isFilled(adValue)) results[key] = adValue;
-      } else if (!isFilled(results[key])) {
-        results[key] = adValue;
-      }
-    });
-    if (!intakeProcessed) {
-      referent = mergeReferentFields(referent, adResult.referent);
-      if (Object.keys(adResult.referent).length > 0) {
-        console.log('✅ AD report: referent contact extracted');
-      }
+    if (!skipWorkerProfileSecondary) {
+      Object.keys(adResult.mapped).forEach((key) => {
+        const adValue = adResult.mapped[key];
+        if (isIntakeLockedTransportField(intakeProcessed, key)) {
+          return;
+        }
+        if (key === 'work_experience' && intakeProcessed && isFilled(results[key])) {
+          return;
+        }
+        if (AD_FIRST_FIELDS.includes(key)) {
+          if (isFilled(adValue)) results[key] = adValue;
+        } else if (!isFilled(results[key])) {
+          results[key] = adValue;
+        }
+      });
+    }
+    if (Object.keys(adResult.referent).length > 0) {
+      secondaryReferents.push(adResult.referent);
+      console.log('✅ AD report: referent contact extracted');
     }
     processedDocs.push('ad_rapport');
     console.log(`✅ AD report: ${Object.keys(adResult.mapped).length} fields extracted`);
@@ -343,14 +385,21 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   const fmlDoc = docs.find((d) => isFmlDocumentType(d.type));
 
   if (fmlDoc) {
-    console.log('📄 Processing FML/IZP (priority 3)...');
+    advance('FML');
+    console.log(
+      skipWorkerProfileSecondary
+        ? '📄 Processing FML/IZP (referent gap-fill only)...'
+        : '📄 Processing FML/IZP (priority 3)...'
+    );
     const fmlResult = await processFMLIZP(fmlDoc);
-    Object.keys(fmlResult.mapped).forEach((key) => {
-      if (isIntakeLockedTransportField(intakeProcessed, key)) return;
-      if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
-    });
-    if (!intakeProcessed) {
-      referent = mergeReferentFields(referent, fmlResult.referent);
+    if (!skipWorkerProfileSecondary) {
+      Object.keys(fmlResult.mapped).forEach((key) => {
+        if (isIntakeLockedTransportField(intakeProcessed, key)) return;
+        if (!isFilled(results[key])) results[key] = fmlResult.mapped[key];
+      });
+    }
+    if (Object.keys(fmlResult.referent).length > 0) {
+      secondaryReferents.push(fmlResult.referent);
     }
     processedDocs.push('fml/izp');
     console.log(`✅ FML/IZP: ${Object.keys(fmlResult.mapped).length} fields extracted`);
@@ -372,187 +421,213 @@ async function processDocumentsSeparately(docs: DocRow[]): Promise<{
   });
 
   if (extraDocs.length > 0) {
-    console.log(`📄 Processing ${extraDocs.length} extra document(s) (priority 4)...`);
+    advance('Overige');
+    console.log(
+      `📄 Processing ${extraDocs.length} extra document(s) (${
+        skipWorkerProfileSecondary ? 'referent gap-fill' : 'priority 4'
+      })...`
+    );
     for (const extraDoc of extraDocs) {
       const extraResult = await processExtraDoc(extraDoc);
-      Object.keys(extraResult.mapped).forEach((key) => {
-        if (isIntakeLockedTransportField(intakeProcessed, key)) return;
-        if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
-      });
-      if (!intakeProcessed) {
-        referent = mergeReferentFields(referent, extraResult.referent);
+      if (!skipWorkerProfileSecondary) {
+        Object.keys(extraResult.mapped).forEach((key) => {
+          if (isIntakeLockedTransportField(intakeProcessed, key)) return;
+          if (!isFilled(results[key])) results[key] = extraResult.mapped[key];
+        });
+      }
+      if (Object.keys(extraResult.referent).length > 0) {
+        if (isAanmeldDoc(extraDoc)) {
+          aanmeldReferents.push(extraResult.referent);
+        } else {
+          secondaryReferents.push(extraResult.referent);
+        }
       }
     }
     processedDocs.push('extra');
     console.log('✅ Extra documents: processed');
   }
 
+  // Collapse multiple aanmeld extracts (first non-empty wins within that tier).
+  let aanmeldMerged: Record<string, unknown> = {};
+  for (const a of aanmeldReferents) {
+    aanmeldMerged = mergeReferentFields(aanmeldMerged, a);
+  }
+
+  const referent = composeReferentByPriority({
+    aanmeld: aanmeldMerged,
+    intake: intakeReferent,
+    secondary: secondaryReferents,
+  });
+
+  advance('samenvoegen');
   console.log(
     `✅ Document processing completed. Processed: ${processedDocs.join(', ')}. Total fields: ${Object.keys(results).length}`
   );
 
+  advance('Profiel');
   return { results, referent, intakeProcessed, checkboxText };
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    const access = await requireEmployeeAutofillAccess(req);
-    if (access instanceof NextResponse) return access;
-    const { employeeId } = access;
+  const access = await requireEmployeeAutofillAccess(req);
+  if (access instanceof NextResponse) return access;
+  const { employeeId } = access;
 
-    const { data: docs, error: docsError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('employee_id', employeeId);
-
-    if (docsError) {
-      console.error('Database error:', docsError);
-      return NextResponse.json({
-        success: false,
-        error: 'Database error',
-        data: { details: {} },
-      }, { status: 500 });
-    }
-
-    if (!docs || docs.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: { details: {} },
-        message: 'No documents found for this employee',
-      });
-    }
-
-    console.log('📄 Found documents:', docs.length);
-
-    const {
-      results: details,
-      referent,
-      intakeProcessed,
-      checkboxText,
-    } = await processDocumentsSeparately(docs);
-
-    if (Object.keys(details).length === 0) {
-      console.error('❌ No data extracted from documents');
-      return NextResponse.json({
-        success: false,
-        data: { details: {} },
-        message: 'Geen relevante informatie gevonden in de documenten',
-      });
-    }
-
-    const { incomplete: autofill_incomplete, warnings: autofill_warnings } = getAutofillCompleteness(
-      details,
-      { intakeProcessed }
-    );
-
-    let suggested_referent: {
-      first_name: string;
-      last_name: string;
-      referent_function?: string;
-      phone?: string;
-      email?: string;
-      gender?: string;
-    } | null = null;
-    let referent_exists = false;
-    let existing_referent_id: string | null = null;
-
-    const refFirst = (referent.referent_first_name ?? '').toString().trim();
-    const refLast = (referent.referent_last_name ?? '').toString().trim();
-
-    if (refFirst || refLast) {
-      console.log('📇 Referent extracted:', {
-        has_function: Boolean(referent.referent_function),
-        has_phone: Boolean(referent.referent_phone),
-        has_email: Boolean(referent.referent_email),
-      });
-      suggested_referent = {
-        first_name: refFirst,
-        last_name: refLast,
-        referent_function:
-          referent.referent_function != null ? String(referent.referent_function).trim() : undefined,
-        phone:
-          referent.referent_phone != null && referent.referent_phone !== ''
-            ? formatDutchPhoneDisplay(String(referent.referent_phone).trim()) ??
-              String(referent.referent_phone).trim()
-            : undefined,
-        email:
-          referent.referent_email != null && referent.referent_email !== ''
-            ? String(referent.referent_email).trim()
-            : undefined,
-        gender:
-          referent.referent_gender != null && referent.referent_gender !== ''
-            ? String(referent.referent_gender).trim()
-            : undefined,
+  const stream = new ReadableStream({
+    async start(controller) {
+      const sendProgress: AutofillProgressReporter = (progress) => {
+        controller.enqueue(encodeProgressEvent(progress));
       };
 
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('client_id')
-        .eq('id', employeeId)
-        .single();
+      try {
+        const { data: docs, error: docsError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('employee_id', employeeId);
 
-      if (employee?.client_id) {
-        const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-        const suggestedFull = normalize(`${refFirst} ${refLast}`);
-        const { data: referents } = await (supabase as any)
-          .from('referents')
-          .select('id, first_name, last_name')
-          .eq('client_id', employee.client_id);
-
-        const match = referents?.find(
-          (r: { id: string; first_name: string | null; last_name: string | null }) => {
-            const full = normalize(`${r.first_name ?? ''} ${r.last_name ?? ''}`);
-            return (
-              full === suggestedFull ||
-              (suggestedFull && full.includes(suggestedFull)) ||
-              (full && suggestedFull.includes(full))
-            );
-          }
-        );
-        if (match) {
-          referent_exists = true;
-          existing_referent_id = match.id;
+        if (docsError) {
+          console.error('Database error:', docsError);
+          controller.enqueue(encodeErrorEvent('Database error', 500));
+          return;
         }
+
+        if (!docs || docs.length === 0) {
+          controller.enqueue(
+            encodeResultEvent({
+              success: true,
+              data: { details: {} },
+              message: 'No documents found for this employee',
+            })
+          );
+          return;
+        }
+
+        console.log('📄 Found documents:', docs.length);
+
+        const {
+          results: details,
+          referent,
+          intakeProcessed,
+          checkboxText,
+        } = await processDocumentsSeparately(docs, sendProgress);
+
+        if (Object.keys(details).length === 0) {
+          console.error('❌ No data extracted from documents');
+          controller.enqueue(
+            encodeErrorEvent('Geen relevante informatie gevonden in de documenten', 500)
+          );
+          return;
+        }
+
+        const { incomplete: autofill_incomplete, warnings: autofill_warnings } =
+          getAutofillCompleteness(details, { intakeProcessed });
+
+        let suggested_referent: {
+          first_name: string;
+          last_name: string;
+          referent_function?: string;
+          phone?: string;
+          email?: string;
+          gender?: string;
+        } | null = null;
+        let referent_exists = false;
+        let existing_referent_id: string | null = null;
+
+        const refFirst = (referent.referent_first_name ?? '').toString().trim();
+        const refLast = (referent.referent_last_name ?? '').toString().trim();
+
+        if (refFirst || refLast) {
+          console.log('📇 Referent extracted:', {
+            has_function: Boolean(referent.referent_function),
+            has_phone: Boolean(referent.referent_phone),
+            has_email: Boolean(referent.referent_email),
+          });
+          suggested_referent = {
+            first_name: refFirst,
+            last_name: refLast,
+            referent_function:
+              referent.referent_function != null
+                ? String(referent.referent_function).trim()
+                : undefined,
+            phone:
+              referent.referent_phone != null && referent.referent_phone !== ''
+                ? formatDutchPhoneDisplay(String(referent.referent_phone).trim()) ??
+                  String(referent.referent_phone).trim()
+                : undefined,
+            email:
+              referent.referent_email != null && referent.referent_email !== ''
+                ? String(referent.referent_email).trim()
+                : undefined,
+            gender:
+              referent.referent_gender != null && referent.referent_gender !== ''
+                ? String(referent.referent_gender).trim()
+                : undefined,
+          };
+
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('client_id')
+            .eq('id', employeeId)
+            .single();
+
+          if (employee?.client_id) {
+            const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+            const suggestedFull = normalize(`${refFirst} ${refLast}`);
+            const { data: referents } = await (supabase as any)
+              .from('referents')
+              .select('id, first_name, last_name')
+              .eq('client_id', employee.client_id);
+
+            const match = referents?.find(
+              (r: { id: string; first_name: string | null; last_name: string | null }) => {
+                const full = normalize(`${r.first_name ?? ''} ${r.last_name ?? ''}`);
+                return (
+                  full === suggestedFull ||
+                  (suggestedFull && full.includes(suggestedFull)) ||
+                  (full && suggestedFull.includes(full))
+                );
+              }
+            );
+            if (match) {
+              referent_exists = true;
+              existing_referent_id = match.id;
+            }
+          }
+        }
+
+        console.log('✅ Document processing completed');
+
+        controller.enqueue(
+          encodeResultEvent({
+            success: true,
+            data: {
+              details,
+              autofilled_fields: Object.keys(details),
+              autofill_incomplete,
+              autofill_warnings,
+              checkbox_text: checkboxText,
+              suggested_referent: suggested_referent ?? undefined,
+              referent_exists,
+              existing_referent_id: existing_referent_id ?? undefined,
+            },
+            message: `Employee information successfully extracted from ${docs.length} documents using separate document processing`,
+          })
+        );
+      } catch (error: unknown) {
+        if (error instanceof GotenbergConversionError) {
+          console.error('❌ Gotenberg conversion error:', error.message);
+          controller.enqueue(encodeErrorEvent(error.userMessage, 503));
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('❌ API Error:', error);
+        controller.enqueue(encodeErrorEvent(message || 'Processing failed', 500));
+      } finally {
+        controller.close();
       }
-    }
+    },
+  });
 
-    console.log('✅ Document processing completed');
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        details,
-        autofilled_fields: Object.keys(details),
-        autofill_incomplete,
-        autofill_warnings,
-        checkbox_text: checkboxText,
-        suggested_referent: suggested_referent ?? undefined,
-        referent_exists,
-        existing_referent_id: existing_referent_id ?? undefined,
-      },
-      message: `Employee information successfully extracted from ${docs.length} documents using separate document processing`,
-    });
-  } catch (error: unknown) {
-    if (error instanceof GotenbergConversionError) {
-      console.error('❌ Gotenberg conversion error:', error.message);
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.userMessage,
-          details: error.message,
-          data: { details: {} },
-        },
-        { status: 503 }
-      );
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('❌ API Error:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Processing failed',
-      details: message,
-      data: { details: {} },
-    }, { status: 500 });
-  }
+  return new Response(stream, { headers: AUTOFILL_SSE_HEADERS });
 }

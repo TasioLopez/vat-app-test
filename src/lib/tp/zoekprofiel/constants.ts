@@ -58,6 +58,34 @@ export type ActualisatieEntry = {
   datum_voluit: string;
 };
 
+/** Calendar-day key (Y-M-D) for comparing leading doc vs actualisatie dates. */
+export function actualisatieCalendarDayKey(
+  value: string | null | undefined,
+  parseDate: (v: string | null | undefined) => Date | null
+): string | null {
+  const d = parseDate(value);
+  if (!d) return null;
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/**
+ * Drop actualisaties on the same calendar day as the leading belastbaarheidsdatum
+ * (Mourad / same-date "geactualiseerd" regression).
+ */
+export function filterActualisatiesNotSameDayAsLeading(
+  actualisaties: ActualisatieEntry[],
+  leadingDatumVoluit: string | null | undefined,
+  parseDate: (v: string | null | undefined) => Date | null
+): ActualisatieEntry[] {
+  const leadingKey = actualisatieCalendarDayKey(leadingDatumVoluit, parseDate);
+  if (!leadingKey) return actualisaties.filter((a) => a.datum_voluit.trim());
+  return actualisaties.filter((a) => {
+    if (!a.datum_voluit.trim()) return false;
+    const key = actualisatieCalendarDayKey(a.datum_voluit, parseDate);
+    return !key || key !== leadingKey;
+  });
+}
+
 /** Build V3 actualisatie suffix appended to para 1 closing. */
 export function buildActualisatieSuffix(actualisaties: ActualisatieEntry[]): string {
   if (!actualisaties.length) return '';

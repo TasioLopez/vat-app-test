@@ -21,7 +21,7 @@ Tekst:
 - work_experience: ALLE functietitels uit tabel "Werkervaring? Van-tot?" in blok Algemene informatie (sectie 17 V5 of onderaan V4) — komma-gescheiden, geen datums/organisaties/jaren. Sla pure werkgevernamen over zonder functietitel (bijv. alleen bedrijfsnaam). Neem alle ingevulde regels mee (bijv. Teamleider PostNL/PTT, Thuiszorg, Keukenassistent, Winkelmedewerker). NIET sectie 2 functietitel — die hoort bij current_job. FALLBACK: als de tabel alleen werkgever/duur bevat (geen functietitel), lees sectie 13 "Werkverleden" — bijv. "andere functies gedaan passagiers assistent, operationele planner". Sla current_job (huidige functie) NOOIT op in work_experience.
 - education_level: HOOGSTE afgeronde basisopleiding uit tabel "Opleidingen? Afgerond?" in blok Algemene informatie — alleen regels met "Afgerond" = Ja. Bij V7/V7.5: aangevinkte checkbox ☒/☑ in Afgerond-kolom = Ja; ☐ of tweede box aangevinkt (☐ ☒) = Nee. Bij meerdere afgeronde opleidingen: kies het hoogste niveau. Geldige niveaus: Praktijkonderwijs, VMBO, Huishoudschool, LTS, LHNO, HAVO, VWO, MBO 1-4, MTS, HBO, WO. Plain "Mbo" zonder cijfer is geldig (tel als MBO). Certificaten (VCA, VCA-VOL, BHV, EHBO, etc.) zijn NOOIT education_level. Onvoltooide opleidingen (Afgerond = Nee) NOOIT als education_level. Geen afgeronde opleiding → laat education_level weg. NOOIT "geen", "nee" of "nei" als education_level invullen. NIET aspiratie uit sectie 16 tenzij enige afgeronde opleiding.
 - education_name: richting/naam bij die gekozen basisopleiding; certificaten (VCA, etc.) NOOIT in education_name als er schooling op regel 1 staat
-- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; laat de key weg als leeg/"Nee"/"Geen"/n.v.t. — alleen echte werkgeversnamen; NOOIT "Nee", "Geen" of "null" als waarde
+- other_employers: komma-gescheiden werkgeversnamen uit sectie 2 "Andere werkgever:"; laat de key weg als leeg/"Nee"/"Geen"/n.v.t./"geen tweede dienstverband"/niet van toepassing — alleen echte werkgeversnamen; NOOIT negatieve zinnen of "Nee"/"Geen"/"null" als waarde
 
 Vervoer:
 - transport_type: array van aangevinkte opties uit "Hoe verplaatst werknemer zich:": "Auto", "Fiets", "OV", "Lopend"
@@ -30,8 +30,8 @@ Vervoer:
 - drivers_license_type: array zoals ["B"] — weglaten indien geen rijbewijs
 
 Talen (Nederlands, G/R/O):
-- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen"
-  (G → "Goed", R → "Voldoende", O → "Matig", geen vakje aangevinkt → "Geen")
+- dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen" alleen als dat vakje expliciet is aangevinkt
+  (G → "Goed", R → "Voldoende", O → "Matig"; geen vakje / onbekend → weglaten of null — nooit fake "Geen")
 
 Computer:
 - has_computer: true/false (PC/Laptop aangevinkt)
@@ -44,6 +44,7 @@ Lees ALLEEN deze velden in sectie 4 "Aanmelding":
 - "Functietitel contactpersoon:" → referent_function
 - "Telefoonnummer contactpersoon:" → referent_phone
 - "Email contactpersoon:" → referent_email
+- Als naam leeg is maar e-mail is voornaam.achternaam@domein: vul referent_first_name/referent_last_name uit het local-part (niet de functie verzinnen)
 
 NOOIT referent_* vullen met namen of contactgegevens uit andere secties, o.a.:
 - sectie 1 Naam werknemer

@@ -8,14 +8,19 @@ export const EMPLOYEE_CHATLIKE_PROMPT = `Je bent een expert die Nederlandse werk
 
 DOCUMENTEN:
 - Alle bijgevoegde PDF's horen bij dezelfde werknemer.
+- Er kan ook "Inline brontekst" staan (bijv. gespreksverslag.txt) — behandel die als volwaardige bron, niet als bijlage-PDF.
 - Er kan ook een blok "Intake PDF-tekst" in het bericht staan met ☒/☐ — gebruik dat voor checkboxes.
 
 BRONPRIORITEIT:
 1. Intakeformulier (tekst + PDF) — primaire bron voor het werknemersprofiel.
 2. AD-rapport — alleen gaten vullen / bevestigen.
-3. Spreekuurrapportage, FML/IZP, CV, overig — alleen aanvullen waar intake niets geeft.
+3. Spreekuurrapportage, FML/IZP, CV, gespreksverslag, overig — alleen aanvullen waar intake niets geeft.
 
 Conflict: wat het intake duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV) wint.
+
+TAAL / RIJBEWIJS:
+- Als de bron zegt dat de werknemer Nederlands spreekt én schrijft, en lezen niet zwakker vermeldt, zet dutch_speaking, dutch_writing én dutch_reading op hetzelfde niveau (meestal "Goed").
+- Eigen auto / vervoer Auto zonder ander genoemd rijbewijs-type: zet drivers_license true en drivers_license_type ["B"] (standaard personenauto). Alleen een ander type zetten als dat expliciet genoemd is (BE, C, …).
 
 ${INTAKE_LAYOUT_V75_HINT}
 
@@ -31,14 +36,20 @@ phone, work_experience (komma-gescheiden functietitels, niet current_job),
 education_level (ÉÉN hoogste AFGERONDE basisopleiding: bijv. "MBO 4" — geen lijst, geen certificaten),
 education_name (ÉÉN richting/specialisatie bij die opleiding, bijv. "Manager Transport & Logistiek" —
   GEEN certificaten zoals BHV, VCA, Lean Six Sigma, Green Belt; GEEN komma-lijst van cursussen),
-other_employers (alleen echte werkgeversnamen uit "Andere werkgever:"; weglaten bij leeg/Nee/Geen — NOOIT "Nee" of "Geen" als waarde),
+other_employers (alleen echte werkgeversnamen uit "Andere werkgever:"; weglaten bij leeg/Nee/Geen/"geen tweede dienstverband"/niet van toepassing — NOOIT negatieve zinnen of "Nee"/"Geen" als waarde),
 transport_type (array: "Auto"|"Fiets"|"OV"|"Lopend" — alleen aangevinkt),
 drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
 dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Voldoende"|"Matig"|"Geen"),
 has_computer (boolean), computer_skills ("1"-"5": 1=Geen … 5=Expert),
 computer_skills_description (tekst tussen haakjes bij niveau en/of "Aanvullende programma's", bijv. "SAP ERP, WMS"),
-referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender
-(referent_* ALLEEN uit intake sectie 4 contactpersoon werkgever).
+referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender.
+
+CONTACTPERSOON / REFERENT_* (veld-voor-veld; bestaande waarden niet overschrijven met zwakkere bron):
+1. Aanmeldformulier (type of bestandsnaam met "aanmeld") — contactblok wint voor elk veld dat daar staat.
+2. Intake sectie 4 "contactpersoon werkgever" — alleen lege referent_*-velden vullen.
+3. AD-rapport / overige — alleen resterende lege velden vullen als het duidelijk dezelfde werkgever-contactpersoon / opdrachtgever-contact is.
+NOOIT: leidinggevende, budgethouder, facturatiecontact, bedrijfsarts, AD-persoon of ValentineZ-medewerker als referent.
+NOOIT: een naam verzinnen uit het e-mailadres (local-part).
 
 Vul wat je ziet. Laat een key weg alleen als die info echt ontbreekt — niet uit voorzichtigheid alles leeg laten als de checkboxes leesbaar zijn.`;
 

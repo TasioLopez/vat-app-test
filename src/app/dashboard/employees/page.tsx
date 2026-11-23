@@ -37,11 +37,15 @@ import {
 } from '@/lib/auth/roles';
 import {
   buildCvStatusMap,
+  buildIntakeStatusMap,
   buildTpStatusMap,
+  buildVgrStatusMap,
   chunkIds,
   cvStatusRank,
+  intakeStatusRank,
   tpStatusRank,
   type CvStatus,
+  type IntakeStatus,
   type TpStatus,
 } from '@/lib/employee/doc-status';
 
@@ -49,12 +53,40 @@ export type Employee = Database['public']['Tables']['employees']['Row'] & {
   clients?: Database['public']['Tables']['clients']['Row'];
 };
 
-type SortField = 'name' | 'client' | 'created_at' | 'owner' | 'tp' | 'cv';
+type SortField = 'name' | 'client' | 'created_at' | 'owner' | 'intake' | 'tp' | 'vgr' | 'cv';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'table' | 'cards';
 type OwnerFilterMode = 'mine' | 'all' | 'colleague' | 'unassigned';
 
+type BuilderInstanceRow = { id: string; employee_id: string };
+type IntakeInstanceRow = { id: string; employee_id: string; validated_at: string | null };
+type VgrInstanceRow = { id: string; employee_id: string; status: string | null };
+
+/** `intake_instances` / `intake_exports` are not in the generated Supabase types yet. */
+type IntakeTablesClient = {
+  from: (table: 'intake_instances' | 'intake_exports') => {
+    select: (columns: string) => {
+      in: (
+        column: string,
+        values: string[]
+      ) => PromiseLike<{ data: Array<Record<string, string | null>> | null; error: unknown }>;
+    };
+  };
+};
+
 const OWNER_FILTER_STORAGE_KEY = 'werknemers.ownerFilter';
+
+const DOC_STATUS_CELLS: Array<{
+  kind: 'intake' | 'tp' | 'vgr' | 'cv';
+  label: string;
+  title: string;
+  sortField: SortField;
+}> = [
+  { kind: 'intake', label: 'Intake', title: 'Intake', sortField: 'intake' },
+  { kind: 'tp', label: 'TP', title: 'Trajectplan', sortField: 'tp' },
+  { kind: 'vgr', label: 'VGR', title: 'VGR', sortField: 'vgr' },
+  { kind: 'cv', label: 'CV', title: 'CV', sortField: 'cv' },
+];
 
 function readStoredOwnerFilter(): { mode: OwnerFilterMode; colleagueId: string | null } {
   if (typeof window === 'undefined') return { mode: 'all', colleagueId: null };
@@ -88,12 +120,28 @@ export default function EmployeesPage() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [intakeStatusByEmployee, setIntakeStatusByEmployee] = useState<Map<string, IntakeStatus>>(
+    () => new Map()
+  );
   const [tpStatusByEmployee, setTpStatusByEmployee] = useState<Map<string, TpStatus>>(
+    () => new Map()
+  );
+  const [vgrStatusByEmployee, setVgrStatusByEmployee] = useState<Map<string, TpStatus>>(
     () => new Map()
   );
   const [cvStatusByEmployee, setCvStatusByEmployee] = useState<Map<string, CvStatus>>(
     () => new Map()
   );
+
+  const statusFor = (
+    kind: 'intake' | 'tp' | 'vgr' | 'cv',
+    employeeId: string
+  ): TpStatus | IntakeStatus | CvStatus => {
+    if (kind === 'intake') return intakeStatusByEmployee.get(employeeId) ?? 'none';
+    if (kind === 'tp') return tpStatusByEmployee.get(employeeId) ?? 'none';
+    if (kind === 'vgr') return vgrStatusByEmployee.get(employeeId) ?? 'none';
+    return cvStatusByEmployee.get(employeeId) ?? 'none';
+  };
   const { showSuccess, showError } = useToastHelpers();
   const router = useRouter();
 
@@ -125,13 +173,18 @@ export default function EmployeesPage() {
 
   const fetchDocStatuses = async (employeeIds: string[]) => {
     if (employeeIds.length === 0) {
+      setIntakeStatusByEmployee(new Map());
       setTpStatusByEmployee(new Map());
+      setVgrStatusByEmployee(new Map());
       setCvStatusByEmployee(new Map());
       return;
     }
 
+    const intakeClient = supabase as unknown as IntakeTablesClient;
     const idChunks = chunkIds(employeeIds);
-    const instances: Array<{ id: string; employee_id: string }> = [];
+    const tpInstances: BuilderInstanceRow[] = [];
+    const intakeInstances: IntakeInstanceRow[] = [];
+    const vgrInstances: VgrInstanceRow[] = [];
     const parentCvs: Array<{ employee_id: string }> = [];
     const shares: Array<{
       employee_id: string;
@@ -141,8 +194,13 @@ export default function EmployeesPage() {
     }> = [];
 
     for (const chunk of idChunks) {
-      const [tpRes, cvRes, shareRes] = await Promise.all([
+      const [tpRes, intakeRes, vgrRes, cvRes, shareRes] = await Promise.all([
         supabase.from('tp_instances').select('id, employee_id').in('employee_id', chunk),
+        intakeClient
+          .from('intake_instances')
+          .select('id, employee_id, validated_at')
+          .in('employee_id', chunk),
+        supabase.from('vgr_instances').select('id, employee_id, status').in('employee_id', chunk),
         supabase
           .from('cv_documents')
           .select('id, employee_id')
@@ -155,32 +213,86 @@ export default function EmployeesPage() {
       ]);
 
       if (tpRes.error) console.error('Error fetching tp_instances:', tpRes.error);
+      if (intakeRes.error) console.error('Error fetching intake_instances:', intakeRes.error);
+      if (vgrRes.error) console.error('Error fetching vgr_instances:', vgrRes.error);
       if (cvRes.error) console.error('Error fetching cv_documents:', cvRes.error);
       if (shareRes.error) console.error('Error fetching cv_share_links:', shareRes.error);
 
-      if (tpRes.data) instances.push(...tpRes.data);
+      if (tpRes.data) tpInstances.push(...tpRes.data);
+      if (intakeRes.data) {
+        for (const row of intakeRes.data) {
+          if (row.id && row.employee_id) {
+            intakeInstances.push({
+              id: row.id,
+              employee_id: row.employee_id,
+              validated_at: typeof row.validated_at === 'string' ? row.validated_at : null,
+            });
+          }
+        }
+      }
+      if (vgrRes.data) vgrInstances.push(...vgrRes.data);
       if (cvRes.data) parentCvs.push(...cvRes.data);
       if (shareRes.data) shares.push(...shareRes.data);
     }
 
-    const exportInstanceIds = new Set<string>();
-    const instanceIdChunks = chunkIds(instances.map((r) => r.id));
-    for (const chunk of instanceIdChunks) {
-      if (chunk.length === 0) continue;
-      const { data, error } = await supabase
-        .from('tp_exports')
-        .select('tp_instance_id')
-        .in('tp_instance_id', chunk);
-      if (error) {
-        console.error('Error fetching tp_exports:', error);
-        continue;
-      }
-      for (const row of data ?? []) {
-        if (row.tp_instance_id) exportInstanceIds.add(row.tp_instance_id);
-      }
-    }
+    const tpExportIds = new Set<string>();
+    const intakeExportIds = new Set<string>();
+    const vgrExportIds = new Set<string>();
 
-    setTpStatusByEmployee(buildTpStatusMap(instances, exportInstanceIds));
+    // Table and column names stay literal in each query: the Supabase types cannot follow them as variables.
+    const collectTpExportIds = async () => {
+      for (const chunk of chunkIds(tpInstances.map((r) => r.id))) {
+        const { data, error } = await supabase
+          .from('tp_exports')
+          .select('tp_instance_id')
+          .in('tp_instance_id', chunk);
+        if (error) {
+          console.error('Error fetching tp_exports:', error);
+          continue;
+        }
+        for (const row of data ?? []) {
+          if (row.tp_instance_id) tpExportIds.add(row.tp_instance_id);
+        }
+      }
+    };
+
+    const collectIntakeExportIds = async () => {
+      for (const chunk of chunkIds(intakeInstances.map((r) => r.id))) {
+        const { data, error } = await intakeClient
+          .from('intake_exports')
+          .select('intake_instance_id')
+          .in('intake_instance_id', chunk);
+        if (error) {
+          console.error('Error fetching intake_exports:', error);
+          continue;
+        }
+        for (const row of data ?? []) {
+          if (row.intake_instance_id) intakeExportIds.add(row.intake_instance_id);
+        }
+      }
+    };
+
+    const collectVgrExportIds = async () => {
+      for (const chunk of chunkIds(vgrInstances.map((r) => r.id))) {
+        const { data, error } = await supabase
+          .from('vgr_exports')
+          .select('vgr_instance_id')
+          .in('vgr_instance_id', chunk);
+        if (error) {
+          console.error('Error fetching vgr_exports:', error);
+          continue;
+        }
+        for (const row of data ?? []) {
+          if (row.vgr_instance_id) vgrExportIds.add(row.vgr_instance_id);
+        }
+      }
+    };
+
+    await Promise.all([collectTpExportIds(), collectIntakeExportIds(), collectVgrExportIds()]);
+
+    setIntakeStatusByEmployee(buildIntakeStatusMap(intakeInstances, intakeExportIds));
+    setTpStatusByEmployee(buildTpStatusMap(tpInstances, tpExportIds));
+    setVgrStatusByEmployee(buildVgrStatusMap(vgrInstances, vgrExportIds));
     setCvStatusByEmployee(buildCvStatusMap(parentCvs, shares));
   };
 
@@ -294,16 +406,15 @@ export default function EmployeesPage() {
         
       if (!error) {
         setEmployees((prev) => prev.filter((emp) => emp.id !== selectedEmployeeId));
-        setTpStatusByEmployee((prev) => {
+        const removeStatus = <T,>(prev: Map<string, T>) => {
           const next = new Map(prev);
           next.delete(selectedEmployeeId);
           return next;
-        });
-        setCvStatusByEmployee((prev) => {
-          const next = new Map(prev);
-          next.delete(selectedEmployeeId);
-          return next;
-        });
+        };
+        setIntakeStatusByEmployee(removeStatus);
+        setTpStatusByEmployee(removeStatus);
+        setVgrStatusByEmployee(removeStatus);
+        setCvStatusByEmployee(removeStatus);
         setShowDeleteModal(false);
         setSelectedEmployeeId(null);
         showSuccess('Werknemer succesvol verwijderd!');
@@ -375,9 +486,17 @@ export default function EmployeesPage() {
           aValue = ownerDisplayName(a.owner_id).toLowerCase();
           bValue = ownerDisplayName(b.owner_id).toLowerCase();
           break;
+        case 'intake':
+          aValue = intakeStatusRank(intakeStatusByEmployee.get(a.id) ?? 'none');
+          bValue = intakeStatusRank(intakeStatusByEmployee.get(b.id) ?? 'none');
+          break;
         case 'tp':
           aValue = tpStatusRank(tpStatusByEmployee.get(a.id) ?? 'none');
           bValue = tpStatusRank(tpStatusByEmployee.get(b.id) ?? 'none');
+          break;
+        case 'vgr':
+          aValue = tpStatusRank(vgrStatusByEmployee.get(a.id) ?? 'none');
+          bValue = tpStatusRank(vgrStatusByEmployee.get(b.id) ?? 'none');
           break;
         case 'cv':
           aValue = cvStatusRank(cvStatusByEmployee.get(a.id) ?? 'none');
@@ -407,13 +526,15 @@ export default function EmployeesPage() {
     sortField,
     sortDirection,
     ownerById,
+    intakeStatusByEmployee,
     tpStatusByEmployee,
+    vgrStatusByEmployee,
     cvStatusByEmployee,
   ]);
 
   const groupedByClient = useMemo(() => {
     return filteredAndSortedEmployees.reduce<Record<string, Employee[]>>((acc, emp) => {
-    const clientName = emp.clients?.name || 'Unassigned';
+    const clientName = emp.clients?.name || 'Niet toegewezen';
     if (!acc[clientName]) acc[clientName] = [];
     acc[clientName].push(emp);
     return acc;
@@ -421,12 +542,12 @@ export default function EmployeesPage() {
   }, [filteredAndSortedEmployees]);
 
   return (
-    <div className="p-8 space-y-6 bg-gradient-to-br from-gray-50 to-purple-50/30">
+    <div className="space-y-6 bg-gray-50 p-6 md:p-8">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Werknemers</h1>
-          <p className="text-lg text-gray-600">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Werknemers</h1>
+          <p className="mt-1 text-sm text-gray-600">
             Beheer werknemers en hun gegevens ({filteredAndSortedEmployees.length} {filteredAndSortedEmployees.length === 1 ? 'werknemer' : 'werknemers'})
           </p>
         </div>
@@ -502,7 +623,7 @@ export default function EmployeesPage() {
 
         {/* View Toggle — back office is table-only */}
         {!isBackOfficeUser && (
-          <div className="flex gap-2 border-2 border-purple-200 rounded-lg p-1">
+          <div className="flex gap-2 border border-gray-200 rounded-lg p-1 bg-white">
             <Button
               variant={viewMode === 'table' ? 'default' : 'ghost'}
               size="sm"
@@ -540,39 +661,35 @@ export default function EmployeesPage() {
           <TableHeader>
             <TableRow>
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
                 Naam <SortIcon field="name" />
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('client')}
               >
                 Werkgever <SortIcon field="client" />
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('owner')}
               >
                 Dossier-eigenaar <SortIcon field="owner" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-purple-100/50"
-                title="Trajectplan"
-                onClick={() => handleSort('tp')}
-              >
-                TP <SortIcon field="tp" />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer hover:bg-purple-100/50"
-                title="CV"
-                onClick={() => handleSort('cv')}
-              >
-                CV <SortIcon field="cv" />
-              </TableHead>
+              {DOC_STATUS_CELLS.map((col) => (
+                <TableHead
+                  key={col.kind}
+                  className="w-14 cursor-pointer hover:bg-gray-100"
+                  title={col.title}
+                  onClick={() => handleSort(col.sortField)}
+                >
+                  {col.label} <SortIcon field={col.sortField} />
+                </TableHead>
+              ))}
               <TableHead 
-                className="cursor-pointer hover:bg-purple-100/50"
+                className="cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('created_at')}
               >
                 Toegevoegd <SortIcon field="created_at" />
@@ -612,12 +729,15 @@ export default function EmployeesPage() {
                     ownerDisplayName(employee.owner_id)
                   )}
                 </TableCell>
-                <TableCell>
-                  <DocStatusPill kind="tp" status={tpStatusByEmployee.get(employee.id) ?? 'none'} />
-                </TableCell>
-                <TableCell>
-                  <DocStatusPill kind="cv" status={cvStatusByEmployee.get(employee.id) ?? 'none'} />
-                </TableCell>
+                {DOC_STATUS_CELLS.map((col) => (
+                  <TableCell key={col.kind} className="w-14">
+                    <DocStatusPill
+                      kind={col.kind}
+                      status={statusFor(col.kind, employee.id)}
+                      variant="icon"
+                    />
+                  </TableCell>
+                ))}
                 <TableCell>
                   {employee.created_at 
                     ? new Date(employee.created_at).toLocaleDateString('nl-NL')
@@ -657,14 +777,14 @@ export default function EmployeesPage() {
         <div className="space-y-8">
           {Object.entries(groupedByClient).map(([clientName, group]) => (
             <div key={clientName} className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-purple-200 pb-3">
+              <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">
                 {clientName} ({group.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.map((employee) => (
                   <Card
                     key={employee.id}
-                    className="cursor-pointer hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-200"
+                    className="cursor-pointer transition-colors hover:border-gray-300"
                     onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                     hover
                   >
@@ -676,15 +796,19 @@ export default function EmployeesPage() {
                         <p className="text-xs text-gray-500 mt-2">
                           Eigenaar: {ownerDisplayName(employee.owner_id)}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <DocStatusPill
-                            kind="tp"
-                            status={tpStatusByEmployee.get(employee.id) ?? 'none'}
-                          />
-                          <DocStatusPill
-                            kind="cv"
-                            status={cvStatusByEmployee.get(employee.id) ?? 'none'}
-                          />
+                        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                          {DOC_STATUS_CELLS.map((col) => (
+                            <div key={col.kind} className="flex min-w-0 items-center gap-2">
+                              <span className="w-12 shrink-0 text-xs font-medium text-gray-500">
+                                {col.label}
+                              </span>
+                              <DocStatusPill
+                                kind={col.kind}
+                                status={statusFor(col.kind, employee.id)}
+                                variant="icon"
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
                       <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>

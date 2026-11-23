@@ -51,7 +51,7 @@ export default function HelpArticlePage() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+    <div className="min-h-full bg-gray-50 p-6 md:p-10">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/dashboard/help"

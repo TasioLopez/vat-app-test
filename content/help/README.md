@@ -6,9 +6,10 @@ Each file has YAML frontmatter:
 
 - `slug` — unique per locale (`nl`), lowercase and hyphens only
 - `title`, `excerpt`
-- `category_slug` — must match a row in `kb_categories.slug` (see migration `20260415120000_help_kb_full_taxonomy.sql`)
+- `category_slug` — must match a row in `kb_categories.slug` (see migrations `20260415120000_help_kb_full_taxonomy.sql` and `20261123140000_help_kb_taxonomy_live_align.sql`)
 - `translation_group_id` — stable UUID for this logical article
 - `locale` — `nl`
+- `published` — optional; set to `false` to upsert as unpublished (default `true`)
 
 ## Apply to the database
 

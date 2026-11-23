@@ -1,9 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyIntakeExtraAanmelder,
   buildAdSubBlock,
   buildInleidingFields,
   buildInleidingSubBlock,
+  formatReintegratieUrenDuration,
   parseInleidingSub,
   type InleidingBuildContext,
 } from '../build-fields';
@@ -73,15 +75,18 @@ describe('buildInleidingFields', () => {
     assert.ok(inleiding_sub.includes(baseContent.ad_quote!));
   });
 
-  it('appends ex-werknemer disclaimer to uitval paragraph when flagged', () => {
+  it('stores normal werknemer wording when ex-flagged (display transform is separate)', () => {
     const ctx: InleidingBuildContext = {
       ...baseCtx,
       meta: { ...baseCtx.meta, is_ex_werknemer: true },
     };
     const { inleiding } = buildInleidingFields(ctx, baseContent);
-    const uitval = inleiding.split('\n\n')[1];
-    assert.match(uitval, /\*Werknemer is uit dienst bij Cordaan\./);
-    assert.match(uitval, /Omwille van leesbaarheid wordt de term "werknemer" gehanteerd/);
+    const parts = inleiding.split('\n\n');
+    assert.match(parts[0], /mevrouw Baaijens, hierna werknemer te noemen/);
+    assert.match(parts[1], /^Werknemer is een /);
+    assert.doesNotMatch(inleiding, /\bex-werknemer\b/i);
+    assert.doesNotMatch(inleiding, /uit dienst bij/);
+    assert.doesNotMatch(inleiding, /Omwille van leesbaarheid/);
   });
 
   it('does not append ex-werknemer disclaimer when flag is false', () => {
@@ -165,6 +170,18 @@ describe('buildInleidingFields', () => {
     assert.match(inleiding, /8 uur per week in deels aangepast werk/);
   });
 
+  it('preserves schedule phrasing like 3 x 2 uur per week without doubling uur per week', () => {
+    const content = {
+      ...baseContent,
+      reintegreert_spoor1: true,
+      reintegratie_uren: '3 x 2 uur per week',
+      reintegratie_werk_type: 'aangepast werk' as const,
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /gedurende 3 x 2 uur per week in aangepast werk/);
+    assert.doesNotMatch(inleiding, /uur per week uur per week/);
+  });
+
   it('uses extra aanmelder sentence when provided', () => {
     const content = {
       ...baseContent,
@@ -176,7 +193,10 @@ describe('buildInleidingFields', () => {
       },
     };
     const { inleiding } = buildInleidingFields(baseCtx, content);
-    assert.match(inleiding, /door P\. de Vries, Casemanager bij UWV In opdracht van: meneer J\. Jansen/);
+    assert.match(
+      inleiding,
+      /door P\. de Vries, Casemanager bij UWV\. In opdracht van: meneer J\. Jansen, HR adviseur Cordaan/
+    );
   });
 
   it('does not apply referent gender title to extra aanmelder', () => {
@@ -202,6 +222,7 @@ describe('buildInleidingFields', () => {
     const { inleiding } = buildInleidingFields(ctx, content);
     assert.match(inleiding, /door H\. Nooijen, Casemanager bij Gom Schoonhouden B\.V\./);
     assert.match(inleiding, /In opdracht van: mevrouw E\. Bosma, Casemanager Cordaan/);
+    assert.doesNotMatch(inleiding, /B\.V\.\./);
   });
 
   it('uses extra aanmelder gender when provided', () => {
@@ -286,6 +307,137 @@ describe('buildInleidingFields', () => {
     assert.match(inleiding, /door mevrouw N\. van Mierlo, HR Manager bij Axxicom/);
   });
 
+  it('uses referent functie and never invents literal contactpersoon', () => {
+    const { inleiding } = buildInleidingFields(baseCtx, baseContent);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /contactpersoon/);
+  });
+
+  it('omits role when referent_function is empty', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      referent: { ...baseCtx.referent!, referent_function: null },
+    };
+    const { inleiding } = buildInleidingFields(ctx, baseContent);
+    assert.match(inleiding, /door J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /contactpersoon/);
+  });
+
+  it('drops a model extra aanmelder when intake extra contactpersoon is empty', () => {
+    const ctx: InleidingBuildContext = {
+      ...baseCtx,
+      client: { name: 'Ihub' },
+      referent: {
+        ...baseCtx.referent!,
+        first_name: 'M.',
+        last_name: 'Yilmaz',
+        referent_function: 'Casemanager Arbo & Vitaliteit',
+        gender: null,
+      },
+    };
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'leidinggevende',
+        naam: 'V. Bloem',
+        organisatie: 'Ihub',
+        gender: null,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: '', extra_referent_function: '' } },
+      ctx.referent,
+      'Ihub'
+    );
+    const { inleiding } = buildInleidingFields(ctx, gated);
+    assert.match(
+      inleiding,
+      /door Casemanager Arbo & Vitaliteit M\. Yilmaz namens Ihub/
+    );
+    assert.doesNotMatch(inleiding, /Bloem/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
+  });
+
+  it('uses the intake extra contact when the model names someone else', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'leidinggevende',
+        naam: 'V. Bloem',
+        organisatie: 'Ihub',
+        gender: 'Man' as const,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'Hans Nooijen', extra_referent_function: 'Casemanager' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door H\. Nooijen, Casemanager bij Cordaan/);
+    assert.match(inleiding, /In opdracht van: meneer J\. Jansen, HR adviseur Cordaan/);
+    assert.doesNotMatch(inleiding, /Bloem/);
+  });
+
+  it('keeps model organisation when the model names the intake extra contact', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'Casemanager',
+        naam: 'P. de Vries',
+        organisatie: 'UWV',
+        gender: null,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'P. de Vries', extra_referent_function: 'Casemanager' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door P\. de Vries, Casemanager bij UWV/);
+    assert.match(inleiding, /In opdracht van: meneer J\. Jansen/);
+  });
+
+  it('drops an extra contact that is the same person as the primary referent', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'HR adviseur',
+        naam: 'Jan Jansen',
+        organisatie: 'Cordaan',
+        gender: 'Man' as const,
+      },
+    };
+    const gated = applyIntakeExtraAanmelder(
+      content,
+      { s4: { extra_referent_name: 'Jan Jansen', extra_referent_function: 'HR adviseur' } },
+      baseCtx.referent,
+      'Cordaan'
+    );
+    const { inleiding } = buildInleidingFields(baseCtx, gated);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
+  });
+
+  it('ignores extra_aanmelder that duplicates the primary referent', () => {
+    const content = {
+      ...baseContent,
+      extra_aanmelder: {
+        functie: 'HR adviseur',
+        naam: 'J. Jansen',
+        organisatie: 'Cordaan',
+        gender: 'Man' as const,
+      },
+    };
+    const { inleiding } = buildInleidingFields(baseCtx, content);
+    assert.match(inleiding, /door HR adviseur J\. Jansen namens Cordaan/);
+    assert.doesNotMatch(inleiding, /In opdracht van/);
+  });
+
   it('falls back to advies_ad_passende_arbeid for AD quote when model quote empty', () => {
     const ctx = {
       ...baseCtx,
@@ -308,6 +460,20 @@ describe('buildInleidingFields', () => {
     const { inleiding_sub } = buildInleidingFields(baseCtx, content);
     assert.match(inleiding_sub, /Blijf de re-integratiemogelijkheden/);
     assert.doesNotMatch(inleiding_sub, /Quote advies spoor 2/);
+  });
+});
+
+describe('formatReintegratieUrenDuration', () => {
+  it('appends uur per week for bare numbers', () => {
+    assert.equal(formatReintegratieUrenDuration('8'), '8 uur per week');
+    assert.equal(formatReintegratieUrenDuration('36.5'), '36.5 uur per week');
+  });
+
+  it('keeps schedule phrasing that already includes uur', () => {
+    assert.equal(
+      formatReintegratieUrenDuration('3 x 2 uur per week'),
+      '3 x 2 uur per week'
+    );
   });
 });
 

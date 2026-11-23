@@ -15,8 +15,8 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: {
-    default: "VAT App",
-    template: "%s | VAT App",
+    default: "ValentineZ Assist Tool",
+    template: "%s | ValentineZ Assist Tool",
   },
   icons: {
     icon: "/branding/vat-app-logo.svg",
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={montserrat.variable}>
-      <body>
+    <html lang="nl" className={montserrat.variable}>
+      <body className="font-sans antialiased">
         <StagingEnvironmentBanner />
         <ToastProvider>
           {children}

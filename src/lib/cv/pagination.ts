@@ -15,6 +15,15 @@ export type CvPackedColumn = {
 
 const EPS = 0.5;
 
+export type PackColumnOptions = {
+  /**
+   * Usable height of page 0 when it is shorter than the rest (Creatief band).
+   * Later pages use `pageInnerHeight`. An atom that does not fit page 0 but
+   * fits a full page starts on page 1, leaving page 0 empty so the band is kept.
+   */
+  firstPageInnerHeight?: number;
+};
+
 /**
  * First-fit pack atoms into pages. Never drops atoms.
  * Inserts `gapPx` between consecutive atoms on the same page.
@@ -23,12 +32,25 @@ const EPS = 0.5;
 export function packColumn(
   atoms: CvMeasuredAtom[],
   pageInnerHeight: number,
-  gapPx: number
+  gapPx: number,
+  opts?: PackColumnOptions
 ): string[][] {
   const maxH = Math.max(1, pageInnerHeight);
+  const firstH = Math.max(1, opts?.firstPageInnerHeight ?? maxH);
+  const firstIsShorter = firstH + EPS < maxH;
   const pages: string[][] = [];
   let current: string[] = [];
   let used = 0;
+  let pageIndex = 0;
+
+  const limitFor = (index: number) => (index === 0 ? firstH : maxH);
+
+  const closePage = () => {
+    pages.push(current);
+    current = [];
+    used = 0;
+    pageIndex = pages.length;
+  };
 
   for (const atom of atoms) {
     const h = Math.max(0, atom.height);
@@ -37,19 +59,28 @@ export function packColumn(
       continue;
     }
 
-    if (h > maxH + EPS) {
-      if (current.length) {
-        pages.push(current);
-        current = [];
-        used = 0;
+    const pageLimit = limitFor(pageIndex);
+    if (h > pageLimit + EPS) {
+      if (current.length) closePage();
+      else if (firstIsShorter && pageIndex === 0 && pages.length === 0) {
+        pages.push([]);
+        pageIndex = 1;
       }
-      pages.push([atom.id]);
+      const nextLimit = limitFor(pageIndex);
+      if (h > nextLimit + EPS) {
+        if (current.length) closePage();
+        pages.push([atom.id]);
+        pageIndex = pages.length;
+        continue;
+      }
+      current = [atom.id];
+      used = h;
       continue;
     }
 
     const need = current.length === 0 ? h : h + gapPx;
-    if (current.length > 0 && used + need > maxH + EPS) {
-      pages.push(current);
+    if (current.length > 0 && used + need > pageLimit + EPS) {
+      closePage();
       current = [atom.id];
       used = h;
     } else {
@@ -78,14 +109,17 @@ export function pageSlice(pages: string[][], pageIndex: number): string[] {
  */
 export function normalizePackedPages(
   sidebarPages: string[][],
-  mainPages: string[][]
+  mainPages: string[][],
+  opts?: { preserveFirstPage?: boolean }
 ): { sidebarPages: string[][]; mainPages: string[][]; pageCount: number } {
   const count = twoColumnPageCount(sidebarPages, mainPages);
   let start = 0;
   let end = count;
 
-  while (start < end && pageSlice(sidebarPages, start).length === 0 && pageSlice(mainPages, start).length === 0) {
-    start += 1;
+  if (!opts?.preserveFirstPage) {
+    while (start < end && pageSlice(sidebarPages, start).length === 0 && pageSlice(mainPages, start).length === 0) {
+      start += 1;
+    }
   }
   while (end > start && pageSlice(sidebarPages, end - 1).length === 0 && pageSlice(mainPages, end - 1).length === 0) {
     end -= 1;

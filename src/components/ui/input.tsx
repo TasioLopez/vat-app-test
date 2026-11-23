@@ -10,7 +10,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       data-slot="input"
       className={cn(
         INPUT_CLASS,
-        "placeholder:text-muted-foreground/60 selection:bg-purple-200 selection:text-purple-900 dark:bg-input/30 text-base file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground md:text-sm",
+        "placeholder:text-muted-foreground/60 selection:bg-[var(--color-primary-100)] selection:text-[var(--color-primary-900)] dark:bg-input/30 text-base file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground md:text-sm",
         "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         className
       )}

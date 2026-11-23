@@ -4,8 +4,12 @@ import { extractStoragePath } from '@/lib/document-analysis/storage';
 import { normalizeForAnalysis } from '@/lib/document-analysis/normalizeForAnalysis';
 import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStructuredExtraction';
 import { INTAKE_GENERATE_SYSTEM_PROMPT, INTAKE_GENERATE_USER_MESSAGE } from '@/lib/intake/generate-prompt';
+import { normalizeIntakeControlledFields } from '@/lib/intake/normalize-controlled-fields';
 import { ensureIntakeShape, createEmptyIntakeData, type IntakeData } from '@/lib/intake/schema';
-import { isDossierSourceType } from '@/lib/intake/sources';
+import { isGespreksverslagDocType } from '@/lib/documents/employee-doc-types';
+import { classifyDossierFileName } from '@/lib/intake/dossier-files';
+import { applyGespreksverslagFactHints } from '@/lib/intake/gespreksverslag-fact-hints';
+import { dossierSourceLabel, isDossierSourceType } from '@/lib/intake/sources';
 
 function nullableString(description: string) {
   return { type: ['string', 'null'] as const, description };
@@ -149,18 +153,24 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         fml_izp_lab_date: nullableString('Datum FML/IZP'),
         fml_izp_lab_kind: { type: ['string', 'null'], enum: ['fml', 'izp', null] },
         tp_end_date: nullableString('Einddatum'),
-        doctor_role: nullableString('Arts/Anios/Aios/BA/VA'),
-        occupational_doctor_name: nullableString('Naam arts'),
+        doctor_role: nullableString(
+          'Arts/Anios/Aios/BA/VA — FML/IZP-ondertekenaar eerst, anders spreekuur'
+        ),
+        occupational_doctor_name: nullableString(
+          'Naam arts/BA van nieuwste FML/IZP; anders spreekuur; nooit AD'
+        ),
         ad_report_date: nullableString('Datum AD-rapport'),
         ad_report_concept: boolField('Concept'),
-        osv_doctor_role: nullableString('OSV rol'),
-        osv_doctor_name: nullableString('OSV naam'),
-        occupational_doctor_ad_name: nullableString('Naam AD'),
+        osv_doctor_role: nullableString('OSV rol uit FML/IZP supervisie'),
+        osv_doctor_name: nullableString('OSV naam uit FML/IZP supervisie'),
+        occupational_doctor_ad_name: nullableString('Naam AD (niet arts/BA)'),
         is_ex_werknemer: boolField('Ex-werknemer'),
         actief_spoor1: nullableString('Actief spoor 1'),
         eigen_of_aangepast_werk: nullableString('Eigen/aangepast'),
         uren_werkzaam: nullableString('Uren werkzaam'),
-        opbouwschema_aanwezig: nullableString('Opbouwschema'),
+        opbouwschema_aanwezig: nullableString(
+          'Opbouwschema uit BA-advies; bij werknemer-conflict toch BA + meta.conflicts'
+        ),
         wat_lukt_wel_niet: nullableString('Wat lukt wel/niet'),
         ervaart_belastbaarheid: nullableString('Ervaart belastbaarheid'),
         andere_werkgever: nullableString('Andere werkgever'),
@@ -221,63 +231,61 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
     s8: {
       type: 'object',
       properties: {
-        woonplaats: nullableString('Woonplaats'),
-        woonsituatie: nullableString('Woonsituatie'),
-        uitwonende_kinderen: nullableString('Uitwonende kinderen'),
+        tekst: nullableString(
+          'Eén samenhangende notitie over woonsituatie en uitwonende kinderen (aspecten weven in één tekst)'
+        ),
       },
-      required: ['woonplaats', 'woonsituatie', 'uitwonende_kinderen'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s9: {
       type: 'object',
       properties: {
-        contact_familie: nullableString('Contact familie'),
-        hoe_vaak_contact: nullableString('Hoe vaak'),
-        ondersteuning_familie: nullableString('Ondersteuning'),
-        mantelzorg: nullableString('Mantelzorg'),
+        tekst: nullableString(
+          'Eén notitie: contact familie, frequentie, ondersteuning, mantelzorg'
+        ),
       },
-      required: ['contact_familie', 'hoe_vaak_contact', 'ondersteuning_familie', 'mantelzorg'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s10: {
       type: 'object',
       properties: {
-        zelfstandig_huishouden: nullableString('Zelfstandig huishouden'),
-        hulp_huishouden: nullableString('Hulp'),
-        taken_verdeeld: nullableString('Taken verdeeld'),
+        tekst: nullableString(
+          'Eén notitie: zelfstandig huishouden, hulp, taakverdeling'
+        ),
       },
-      required: ['zelfstandig_huishouden', 'hulp_huishouden', 'taken_verdeeld'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s11: {
       type: 'object',
       properties: {
-        gemiddelde_dag: nullableString('Gemiddelde dag'),
-        activiteiten_buitenshuis: nullableString('Buitenshuis'),
-        energie_belastbaarheid: nullableString('Energie'),
+        tekst: nullableString(
+          'Eén notitie: gemiddelde dag, activiteiten buitenshuis, energie/belastbaarheid'
+        ),
       },
-      required: ['gemiddelde_dag', 'activiteiten_buitenshuis', 'energie_belastbaarheid'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s12: {
       type: 'object',
       properties: {
-        hobbies: nullableString("Hobby's"),
-        leest_of_muziek: nullableString('Leest/muziek'),
-        kan_uitvoeren: nullableString('Kan uitvoeren'),
-        graag_oppakken: nullableString('Oppakken'),
+        tekst: nullableString(
+          "Eén notitie: hobby's, lezen/muziek, kan uitvoeren, graag oppakken"
+        ),
       },
-      required: ['hobbies', 'leest_of_muziek', 'kan_uitvoeren', 'graag_oppakken'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s13: {
       type: 'object',
       properties: {
-        hoe_lang_werkzaam: nullableString('Hoe lang'),
-        verbonden_organisatie: nullableString('Verbonden'),
-        wens_terugkeer: nullableString('Terugkeer'),
+        tekst: nullableString(
+          'Eén notitie: hoe lang werkzaam, verbondenheid, wens terugkeer'
+        ),
       },
-      required: ['hoe_lang_werkzaam', 'verbonden_organisatie', 'wens_terugkeer'],
+      required: ['tekst'],
       additionalProperties: false,
     },
     s14: {
@@ -331,20 +339,30 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
             additionalProperties: false,
           },
         },
-        education_level: nullableString('Hoogste opleiding'),
+        education_level: nullableString(
+          'Hoogste opleiding: exact HBO, WO, MBO 1-4, HAVO, VWO, VMBO, … (niet Hbo)'
+        ),
         education_name: nullableString('Richting'),
         work_experience: nullableString('Functietitels komma'),
         has_pc: boolField('PC/laptop'),
         has_smartphone: boolField('Smartphone'),
         has_tablet: boolField('Tablet'),
-        computer_skills: nullableString('Computerniveau'),
-        computer_skills_extra: nullableString('Extra programma’s'),
+        computer_skills: nullableString('Alleen "1"-"5"; programma\'s in computer_skills_extra'),
+        computer_skills_extra: nullableString('Extra programma’s (bijv. Word, Excel)'),
         typing_skills: nullableString('Typvaardigheid'),
-        drivers_license_types: { type: 'array', items: { type: 'string' } },
-        transport_types: { type: 'array', items: { type: 'string' } },
-        dutch_speaking: nullableString('NL spreken'),
-        dutch_writing: nullableString('NL schrijven'),
-        dutch_reading: nullableString('NL lezen'),
+        drivers_license_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Alleen B, Code 95, BE, … bij expliciete vermelding; niet uit Auto afleiden',
+        },
+        transport_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Alleen Auto, Fiets, OV, Lopend',
+        },
+        dutch_speaking: nullableString('Goed|Voldoende|Matig|Geen of null'),
+        dutch_writing: nullableString('Goed|Voldoende|Matig|Geen of null'),
+        dutch_reading: nullableString('Goed|Voldoende|Matig|Geen of null'),
         other_languages: nullableString('Andere talen'),
       },
       required: [
@@ -396,6 +414,8 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
 export type GenerateIntakeFromDossierResult = {
   data: IntakeData;
   error?: string;
+  /** Raw gespreksverslag prose already downloaded for this run (for deterministic fact hints). */
+  gespreksverslagText?: string | null;
 };
 
 export async function generateIntakeFromDossier(params: {
@@ -415,12 +435,15 @@ export async function generateIntakeFromDossier(params: {
   if (sources.length === 0) {
     return {
       data: createEmptyIntakeData(),
-      error: 'Geen AD/FML/spreekuur/overige documenten gevonden om te genereren.',
+      error: 'Geen aanmeldformulier/AD/FML/spreekuur/gespreksverslag/overige documenten gevonden om te genereren.',
+      gespreksverslagText: null,
     };
   }
 
   const files: { pdfBuffer: Buffer; analysisFilename: string; label?: string }[] = [];
+  const inlineTexts: { label: string; text: string }[] = [];
   const notes: string[] = [];
+  const gespreksverslagChunks: string[] = [];
 
   for (const doc of sources.slice(0, 8)) {
     const path = extractStoragePath(doc.url || '');
@@ -429,23 +452,33 @@ export async function generateIntakeFromDossier(params: {
     if (!file) continue;
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = doc.name || path;
+    const label = dossierSourceLabel(doc.type, name);
+    if (classifyDossierFileName(name) === 'inline-text') {
+      const text = buffer.toString('utf8').trim();
+      if (!text) continue;
+      inlineTexts.push({ label, text });
+      notes.push(label);
+      if (isGespreksverslagDocType(doc.type)) gespreksverslagChunks.push(text);
+      continue;
+    }
     try {
       const { pdfBuffer, analysisFilename } = await normalizeForAnalysis(buffer, name);
       files.push({
         pdfBuffer,
         analysisFilename,
-        label: `${doc.type || 'doc'}: ${name}`,
+        label,
       });
-      notes.push(`${doc.type || 'doc'}: ${name}`);
+      notes.push(label);
     } catch (e) {
       console.warn('Skip dossier doc for intake generate', name, e);
     }
   }
 
-  if (files.length === 0) {
+  if (files.length === 0 && inlineTexts.length === 0) {
     return {
       data: createEmptyIntakeData(),
       error: 'Kon geen dossierdocumenten lezen voor generatie.',
+      gespreksverslagText: null,
     };
   }
 
@@ -460,6 +493,7 @@ export async function generateIntakeFromDossier(params: {
   const raw = await runStructuredMultiFileExtraction({
     openai,
     files,
+    inlineTexts,
     instructions: INTAKE_GENERATE_SYSTEM_PROMPT,
     userMessage: `${INTAKE_GENERATE_USER_MESSAGE}\nWerknemer: ${employeeName || 'onbekend'}`,
     schemaName: 'intake_generate_full',
@@ -467,7 +501,21 @@ export async function generateIntakeFromDossier(params: {
     parse: (r) => r as Record<string, unknown>,
   });
 
-  const shaped = ensureIntakeShape(raw);
+  const gespreksverslagText = gespreksverslagChunks.length
+    ? gespreksverslagChunks.join('\n\n')
+    : null;
+  let shaped = normalizeIntakeControlledFields(ensureIntakeShape(raw));
+  // Deterministic hours/Dutch from prose — LLM often skips "36 uur per week".
+  if (gespreksverslagText) {
+    const beforeHours = shaped.s2.contract_hours;
+    shaped = applyGespreksverslagFactHints(shaped, gespreksverslagText);
+    if (shaped.s2.contract_hours && shaped.s2.contract_hours !== beforeHours) {
+      shaped.meta.generation_notes = [
+        ...shaped.meta.generation_notes,
+        `Urenomvang gezet op ${shaped.s2.contract_hours} vanuit gespreksverslag.`,
+      ];
+    }
+  }
   shaped.meta.generation_notes = [
     ...shaped.meta.generation_notes,
     ...notes.map((n) => `Bron: ${n}`),
@@ -476,5 +524,5 @@ export async function generateIntakeFromDossier(params: {
     shaped.s1.employee_name = employeeName;
   }
 
-  return { data: shaped };
+  return { data: shaped, gespreksverslagText };
 }

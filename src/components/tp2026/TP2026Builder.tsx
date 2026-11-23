@@ -12,6 +12,7 @@ import TPPreviewWrapper from '@/components/tp/TPPreviewWrapper';
 import { TPDocumentRenderProvider } from '@/context/TPDocumentRenderContext';
 import { ensureTP2026Shape } from '@/lib/tp2026/mapping';
 import { cn } from '@/lib/utils';
+import DocumentEditorShell from '@/components/document-editor/DocumentEditorShell';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import {
   buildAutofillSteps,
@@ -23,6 +24,8 @@ import {
   type RunAutofillStepsResult,
 } from '@/lib/tp2026/autofill-runner';
 import { applyEmployeeAutofillDetails } from '@/lib/employee/autofill-persist';
+import { applyWorkerFacts, saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
 import { AutofillScopeDropdown } from '@/components/ui/dropdown-menu';
 import {
   AutofillProgressOverlay,
@@ -45,6 +48,7 @@ import type { TP2026Bijlage1Phase } from '@/lib/tp2026/schema';
 import { getTrajectoryDateUpdates, isLowTpLeadTime, parseTpLeadTimeWeeks } from '@/lib/tp2026/trajectory-dates';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 import { persistTp2026Draft } from '@/lib/tp2026/persist-draft';
+import { applyWorkerFactsToDocument, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
 import { TP2026PageNumberProvider, useTP2026PageNumber } from '@/context/TP2026PageNumberContext';
 import { isBasisEditorSectionField } from '@/lib/tp2026/basis-editor-sections';
 import {
@@ -72,6 +76,11 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
   const [autofilling, setAutofilling] = useState(false);
   const [autofillCancelling, setAutofillCancelling] = useState(false);
   const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
+  const [pendingFacts, setPendingFacts] = useState<{
+    conflicts: SkippedValidatedField[];
+    proposal: Record<string, unknown>;
+  } | null>(null);
+  const [confirmingFacts, setConfirmingFacts] = useState(false);
 
   const persistDraftFromData = useCallback(
     async (data: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> => {
@@ -119,13 +128,14 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
       }
       setTPData(nextData);
 
-      if (result.employeePersist) {
+      const proposal = result.factProposal || result.employeePersist?.rawDetails;
+      if (proposal && Object.keys(proposal).length > 0) {
         const persistResult = await applyEmployeeAutofillDetails(
           supabase,
           employeeId,
           employeeSnapshot,
-          result.employeePersist.rawDetails,
-          result.employeePersist.meta
+          proposal,
+          result.employeePersist?.meta
         );
         if (persistResult.error) {
           markDirty();
@@ -133,6 +143,8 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
             'Autofill deels mislukt',
             `Werknemersprofiel niet opgeslagen: ${persistResult.error}`
           );
+        } else if (persistResult.skippedValidated && persistResult.skippedValidated.length > 0) {
+          setPendingFacts({ conflicts: persistResult.skippedValidated, proposal });
         }
       }
 
@@ -174,6 +186,32 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     },
     [employeeId, markDirty, persistDraftFromData, setTPData, showError, showInfo, showSuccess, supabase]
   );
+
+  const acceptValidatedFacts = useCallback(async () => {
+    if (!pendingFacts) return;
+    setConfirmingFacts(true);
+    try {
+      const saved = await saveWorkerFacts(supabase, employeeId, pendingFacts.proposal, 'confirm', {
+        confirmKeys: pendingFacts.conflicts.map((conflict) => conflict.key),
+      });
+      if (saved.error) {
+        showError('Opslaan mislukt', saved.error);
+        return;
+      }
+      const next = applyWorkerFacts(tpData as Record<string, unknown>, saved.values);
+      setTPData(next as Record<string, any>);
+      const persisted = await persistDraftFromData(next);
+      if (!persisted.ok) {
+        markDirty();
+        showError('Opslaan mislukt', persisted.error || 'Het trajectplan is niet opgeslagen.');
+        return;
+      }
+      setPendingFacts(null);
+      showSuccess('Gevalideerde velden bijgewerkt.');
+    } finally {
+      setConfirmingFacts(false);
+    }
+  }, [employeeId, markDirty, pendingFacts, persistDraftFromData, setTPData, showError, showSuccess, supabase, tpData]);
 
   const runAutofillSession = useCallback(
     async (steps: { id: string; label: string; run: AutofillRunStep['run'] }[]) => {
@@ -346,11 +384,12 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
 
       if (cancelled) return;
 
+      let hashToStore: Record<string, unknown> | null = null;
       setTPData((prev) => {
         const meta = { ...(metaRes.data || {}) };
         delete (meta as { tp_creation_date?: unknown }).tp_creation_date;
 
-        // data_json (prev) wins; only fill empty fields from employee profile / tp_meta
+        // Worker record wins for shared facts. Other document fields stay as saved.
         let merged = mergeRecordFillBlanks(
           { ...prev } as Record<string, unknown>,
           employee as Record<string, unknown>
@@ -358,7 +397,15 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
         merged = mergeRecordFillBlanks(merged, (detailsRes.data || {}) as Record<string, unknown>);
         merged = mergeRecordFillBlanks(merged, meta as Record<string, unknown>);
 
-        const shaped = ensureTP2026Shape(merged as Record<string, any>);
+        const facts = workerFactsFromRows(
+          employee as Record<string, unknown>,
+          (detailsRes.data || null) as Record<string, unknown> | null,
+          (metaRes.data || null) as Record<string, unknown> | null
+        ).values;
+        const shaped = applyWorkerFactsToDocument(
+          ensureTP2026Shape(merged as Record<string, any>) as unknown as Record<string, unknown>,
+          facts
+        );
         const next = applyTPProfileContext(shaped, profileContext) as Record<string, any>;
 
         if (next.is_ex_werknemer === true) {
@@ -383,8 +430,21 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           next.consultant_email = appUserEmail;
         }
 
+        const previousHash =
+          typeof prev.worker_facts_hash === 'string' ? prev.worker_facts_hash : '';
+        if (previousHash !== next.worker_facts_hash) hashToStore = next;
+
         return next;
       });
+
+      if (!cancelled && hashToStore) {
+        void persistTp2026Draft(supabase, {
+          tpInstanceId,
+          employeeId,
+          tpData: hashToStore,
+          userId: user?.id ?? null,
+        });
+      }
 
       if (!cancelled) {
         employeeHydrateKeyRef.current = hydrateKey;
@@ -521,95 +581,106 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
     guardedRouter.push(`/dashboard/employees/${employeeId}`);
   };
 
+  const stepPills = [
+    { key: 'voorblad', label: 'Voorblad' },
+    { key: 'gegevens', label: 'Gegevens' },
+    { key: 'basisdocument', label: 'Basisdocument' },
+    { key: 'bijlage1', label: 'Bijlage 1' },
+  ].map((step, index) => ({
+    ...step,
+    active: currentStep === index + 1,
+    onSelect: () => setCurrentStep(index + 1),
+  }));
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-indigo-50/20">
+    <DocumentEditorShell
+      className="bg-gradient-to-br from-gray-50 to-indigo-50/20"
+      title="Trajectplan"
+      subtitle={`Stap ${currentStep} van ${totalSteps}`}
+      steps={stepPills}
+      actions={
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={goBack}
+            aria-label={backLabel}
+            title={backLabel}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
+            disabled={currentStep === totalSteps}
+            aria-label="Volgende stap"
+            title="Volgende stap"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn('h-8 w-8', textJustified && 'border-[#702A90] bg-[#702A90]/10 text-[#702A90]')}
+            onClick={() => updateField('text_justified', !textJustified)}
+            aria-pressed={textJustified}
+            aria-label={
+              textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'
+            }
+            title={textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'}
+          >
+            {textJustified ? (
+              <AlignJustify className="h-4 w-4" aria-hidden />
+            ) : (
+              <AlignLeft className="h-4 w-4" aria-hidden />
+            )}
+          </Button>
+          <ExportButton
+            employeeId={employeeId}
+            tpInstanceId={tpInstanceId}
+            layoutKey="tp_2026"
+            variant="icon"
+            onBeforeExport={async () => {
+              if (!isDirty) return;
+              await persistForGuard();
+            }}
+          />
+          <AutofillScopeDropdown
+            variant="icon"
+            loading={autofilling}
+            currentStepDisabled={!currentStepAutofillAvailable}
+            onRunAll={() => void runAutofill('all')}
+            onRunCurrentStep={() => void runAutofill('current_step')}
+          />
+          <Button
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={persist}
+            disabled={saving || !isDirty}
+            aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+            title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : isDirty ? (
+              <Save className="h-4 w-4" aria-hidden />
+            ) : (
+              <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+            )}
+          </Button>
+        </>
+      }
+    >
       <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
-      <div className="flex-shrink-0 px-6 pt-3 pb-3 border-b border-indigo-200/50 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-bold text-gray-900">Trajectplan Bouwer 2026</h1>
-            <span className="shrink-0 text-sm text-gray-400" aria-hidden>
-              ·
-            </span>
-            <p className="shrink-0 text-sm text-gray-600">
-              Stap {currentStep} van {totalSteps}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={goBack}
-              aria-label={backLabel}
-              title={backLabel}
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
-              disabled={currentStep === totalSteps}
-              aria-label="Volgende stap"
-              title="Volgende stap"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={cn('h-8 w-8', textJustified && 'border-[#702A90] bg-[#702A90]/10 text-[#702A90]')}
-              onClick={() => updateField('text_justified', !textJustified)}
-              aria-pressed={textJustified}
-              aria-label={
-                textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'
-              }
-              title={textJustified ? 'Tekst uitlijnen: uitgevuld' : 'Tekst uitlijnen: links'}
-            >
-              {textJustified ? (
-                <AlignJustify className="h-4 w-4" aria-hidden />
-              ) : (
-                <AlignLeft className="h-4 w-4" aria-hidden />
-              )}
-            </Button>
-            <ExportButton
-              employeeId={employeeId}
-              tpInstanceId={tpInstanceId}
-              layoutKey="tp_2026"
-              variant="icon"
-              onBeforeExport={async () => {
-                if (!isDirty) return;
-                await persistForGuard();
-              }}
-            />
-            <AutofillScopeDropdown
-              variant="icon"
-              loading={autofilling}
-              currentStepDisabled={!currentStepAutofillAvailable}
-              onRunAll={() => void runAutofill('all')}
-              onRunCurrentStep={() => void runAutofill('current_step')}
-            />
-            <Button
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={persist}
-              disabled={saving || !isDirty}
-              aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-              title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : isDirty ? (
-                <Save className="h-4 w-4" aria-hidden />
-              ) : (
-                <Check className="h-4 w-4 text-emerald-600" aria-hidden />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ValidatedFactsDialog
+        conflicts={pendingFacts?.conflicts ?? null}
+        busy={confirmingFacts}
+        onDismiss={() => setPendingFacts(null)}
+        onAccept={() => void acceptValidatedFacts()}
+      />
 
       <div className="flex-1 overflow-hidden min-h-0">
         <div className="relative h-full min-h-0 px-6 pt-6 pb-2">
@@ -639,7 +710,7 @@ function TP2026BuilderInner({ employeeId, tpInstanceId }: { employeeId: string; 
           {currentStep >= 4 ? <HiddenBasisPageMeasure data={tpData} /> : null}
         </div>
       </div>
-    </div>
+    </DocumentEditorShell>
   );
 }
 

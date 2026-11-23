@@ -11,6 +11,8 @@ import { isVGRLayoutKey, type VGRLayoutKey } from "@/lib/vgr/layout";
 import { ensureTP2026Shape } from "@/lib/tp2026/mapping";
 import { applyTPProfileContext, resolveTPProfileContext } from "@/lib/tp/resolve-profile-context";
 import { ensureVGRShape } from "@/lib/vgr/mapping";
+import { applyWorkerFacts, loadWorkerFacts } from "@/lib/employee/save-worker-facts";
+import { shrinkTrajectplanPdf } from "@/lib/pdf/compress-tp-pdf";
 import { waitForPrintAssets } from "@/lib/pdf/wait-for-print-assets";
 import { TP2026_PDF_PRINT_BORDER_CSS } from "@/lib/tp2026/tp2026-colors";
 import { verifyEmployeeAccess } from "@/lib/auth/api-auth";
@@ -57,6 +59,22 @@ function resolveLocalChrome(): string | null {
 
   for (const p of candidates) if (p && fs.existsSync(p)) return p;
   return null;
+}
+
+/** JPEG of the cover sheet only, at the size Chrome already painted. */
+async function captureTpCover(page: {
+  $: (selector: string) => Promise<{ screenshot: (opts: object) => Promise<Uint8Array> } | null>;
+}): Promise<Uint8Array> {
+  const handle = await page.$(".print-page");
+  if (!handle) {
+    throw new Error("Trajectplan print page is missing .print-page");
+  }
+  const shot = await handle.screenshot({
+    type: "jpeg",
+    quality: 80,
+    captureBeyondViewport: true,
+  });
+  return shot instanceof Uint8Array ? shot : new Uint8Array(shot);
 }
 
 /** Launch a browser appropriate to the environment */
@@ -181,10 +199,12 @@ export async function GET(req: NextRequest) {
 
     const resolvedVgrLayout = vgrInstance.layout_key as VGRLayoutKey;
     const vgrProfileContext = await resolveTPProfileContext(ssr, employeeId);
-    const snapshotData = applyTPProfileContext(
-      ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>),
-      vgrProfileContext
-    ) as ReturnType<typeof ensureVGRShape>;
+    const vgrFacts = await loadWorkerFacts(ssr, employeeId);
+    const vgrShaped = ensureVGRShape((vgrInstance.data_json || {}) as Record<string, any>);
+    const vgrWithFacts = vgrFacts.snapshot
+      ? applyWorkerFacts(vgrShaped as unknown as Record<string, unknown>, vgrFacts.snapshot.values)
+      : vgrShaped;
+    const snapshotData = applyTPProfileContext(vgrWithFacts, vgrProfileContext) as ReturnType<typeof ensureVGRShape>;
     const vgrNameParts = resolveExportNameParts(employeeProfile, snapshotData);
     const filename = sanitizeDownloadFilename(
       buildVgrDownloadFilename(vgrNameParts.first_name, vgrNameParts.last_name, vgrNameParts.gender)
@@ -340,6 +360,10 @@ export async function GET(req: NextRequest) {
     if (resolvedLayout === "tp_2026") {
       snapshotData = ensureTP2026Shape(snapshotData);
       const profileContext = await resolveTPProfileContext(ssr, employeeId);
+      const facts = await loadWorkerFacts(ssr, employeeId);
+      if (facts.snapshot) {
+        snapshotData = applyWorkerFacts(snapshotData as unknown as Record<string, unknown>, facts.snapshot.values);
+      }
       snapshotData = applyTPProfileContext(snapshotData, profileContext) as Record<string, any>;
     }
   }
@@ -402,11 +426,18 @@ export async function GET(req: NextRequest) {
       `,
     });
 
-    const pdfBuffer = await page.pdf({
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    const rawPdf = new Uint8Array(
+      await page.pdf({
+        printBackground: true,
+        preferCSSPageSize: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      })
+    );
+    const shrunk = await shrinkTrajectplanPdf(rawPdf, {
+      captureCover: () => captureTpCover(page),
     });
+    console.log(`tp pdf compress: ${rawPdf.byteLength} -> ${shrunk.byteLength} bytes`);
+    const pdfBuffer = Buffer.from(shrunk);
 
     const pathKey = `documents/${employeeId}/tp-final-${Date.now()}.pdf`;
     let tpExportId: string | null = null;

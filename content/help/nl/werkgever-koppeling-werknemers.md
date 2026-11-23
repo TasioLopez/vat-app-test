@@ -27,4 +27,4 @@ Alle ingelogde gebruikers zien **alle** werkgevers en werknemers. Alleen beheerd
 ## Zie ook
 
 - [Werknemer aanmaken en bewerken](/dashboard/help/a/werknemer-aanmaken-en-bewerken)
-- [Admin en standaardgebruiker](/dashboard/help/a/admin-vs-standaard-gebruiker)
+- [Admin, gebruiker en back office](/dashboard/help/a/admin-vs-standaard-gebruiker)

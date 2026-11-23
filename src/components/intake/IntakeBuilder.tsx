@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Check,
   ChevronLeft,
   Download,
   FileUp,
@@ -28,6 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import UnsavedChangesSyncGuard from '@/components/unsaved/UnsavedChangesSyncGuard';
 import type { AutosaveStatus } from '@/hooks/useDebouncedAutosave';
 import { useGuardedRouter } from '@/hooks/useGuardedRouter';
@@ -38,6 +38,7 @@ import {
 } from '@/context/IntakeInstanceContext';
 import { IntakeSectionEditor } from '@/components/intake/IntakeSectionEditor';
 import { IntakeFillModal } from '@/components/intake/IntakeFillModal';
+import { formatIntakeConflictField } from '@/lib/intake/conflict-labels';
 import {
   INTAKE_DOSSIER_NAV,
   INTAKE_SECTION_DEFS,
@@ -45,14 +46,25 @@ import {
   type IntakeSectionIcon,
   type IntakeSectionKey,
 } from '@/lib/intake/schema';
-import { AutofillProgressOverlay } from '@/components/ui/AutofillProgressOverlay';
+import {
+  AutofillProgressOverlay,
+  type AutofillProgressState,
+} from '@/components/ui/AutofillProgressOverlay';
+import { ValidatedFactsDialog } from '@/components/employee/ValidatedFactsDialog';
+import { consumeAutofillProgressStream } from '@/lib/autofill-progress-stream';
+import { supabase } from '@/lib/supabase/client';
+import { saveWorkerFacts, type SkippedValidatedField } from '@/lib/employee/save-worker-facts';
+import { overlayIntakeWithWorkerFacts, intakeSharedFacts } from '@/lib/intake/worker-overlay';
 
 type Props = {
   employeeId: string;
   intakeInstanceId: string;
   initialData: unknown;
   initialValidatedAt: string | null;
+  initialHasExport?: boolean;
 };
+
+type IntakeUiStatus = 'concept' | 'gevalideerd' | 'afgerond';
 
 type NavKey = 'dossier' | IntakeSectionKey;
 
@@ -91,9 +103,11 @@ function autosaveLabel(status: AutosaveStatus, isDirty: boolean): string {
 function IntakeBuilderInner({
   employeeId,
   intakeInstanceId,
+  initialHasExport,
 }: {
   employeeId: string;
   intakeInstanceId: string;
+  initialHasExport: boolean;
 }) {
   const guardedRouter = useGuardedRouter();
   const {
@@ -111,11 +125,24 @@ function IntakeBuilderInner({
   const { showSuccess, showError } = useToastHelpers();
   const [saving, setSaving] = useState(false);
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  const [busyIndeterminate, setBusyIndeterminate] = useState(false);
+  const [autofillProgress, setAutofillProgress] = useState<AutofillProgressState | null>(null);
   const [noIntakeOpen, setNoIntakeOpen] = useState(false);
   const [noIntakeMessage, setNoIntakeMessage] = useState<string | undefined>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('idle');
   const [activeSection, setActiveSection] = useState<NavKey>('dossier');
+  const [hasExport, setHasExport] = useState(initialHasExport);
+  const [pendingFacts, setPendingFacts] = useState<{
+    conflicts: SkippedValidatedField[];
+    proposal: Record<string, unknown>;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const uiStatus: IntakeUiStatus = hasExport
+    ? 'afgerond'
+    : validatedAt
+      ? 'gevalideerd'
+      : 'concept';
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -162,7 +189,7 @@ function IntakeBuilderInner({
   }, []);
 
   const persist = useCallback(
-    async (opts?: { validate?: boolean }) => {
+    async (opts?: { status?: 'concept' | 'gevalideerd' }) => {
       const res = await fetch('/api/intake/persist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,16 +197,31 @@ function IntakeBuilderInner({
           employeeId,
           intakeInstanceId,
           data_json: intakeData,
-          validate: opts?.validate === true,
+          ...(opts?.status ? { status: opts.status } : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || 'Opslaan mislukt');
-      if (json.validated_at) setValidatedAt(json.validated_at);
+      if (opts?.status === 'concept') {
+        setValidatedAt(null);
+      } else if (opts?.status === 'gevalideerd' || json.validated_at) {
+        setValidatedAt(json.validated_at ?? new Date().toISOString());
+      }
+      if (Array.isArray(json.skipped_validated) && json.skipped_validated.length > 0) {
+        const kept =
+          json.worker_facts && typeof json.worker_facts === 'object'
+            ? (json.worker_facts as Record<string, unknown>)
+            : {};
+        replaceIntakeData(overlayIntakeWithWorkerFacts(intakeData, kept), { markDirty: false });
+        setPendingFacts({
+          conflicts: json.skipped_validated as SkippedValidatedField[],
+          proposal: intakeSharedFacts(intakeData),
+        });
+      }
       markSaved();
       return json;
     },
-    [employeeId, intakeData, intakeInstanceId, markSaved, setValidatedAt]
+    [employeeId, intakeData, intakeInstanceId, markSaved, replaceIntakeData, setValidatedAt]
   );
 
   const persistForGuard = useCallback(async () => {
@@ -198,64 +240,98 @@ function IntakeBuilderInner({
     }
   };
 
-  const onValidate = async () => {
+  const onStatusChange = async (next: IntakeUiStatus) => {
+    if (next === 'afgerond') {
+      showError('Afgerond', 'Afgerond volgt wanneer je een PDF exporteert.');
+      return;
+    }
+    if (next === uiStatus) return;
     setSaving(true);
     try {
-      await persist({ validate: true });
-      showSuccess('Gevalideerd', 'Intake is gevalideerd en doorgezet naar werknemersprofiel/TP-meta.');
+      await persist({ status: next });
+      if (next === 'gevalideerd') {
+        showSuccess(
+          'Gevalideerd',
+          'Intake is gevalideerd; gedeelde feiten zijn vastgezet op het werknemersprofiel.'
+        );
+      } else {
+        showSuccess('Concept', 'Intake staat weer op concept.');
+      }
     } catch (e) {
-      showError('Fout', e instanceof Error ? e.message : 'Valideren mislukt');
+      showError('Fout', e instanceof Error ? e.message : 'Status wijzigen mislukt');
     } finally {
       setSaving(false);
     }
   };
 
   const onAutofill = async () => {
-    setBusyLabel('Intake automatisch invullen…');
+    setBusyIndeterminate(false);
+    setAutofillProgress({
+      currentIndex: 1,
+      total: 10,
+      currentLabel: 'Intake automatisch invullen…',
+    });
     try {
       const res = await fetch('/api/intake/autofill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId, intakeInstanceId }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (res.status === 404) {
-        setNoIntakeMessage(
-          typeof json.error === 'string'
-            ? json.error
-            : 'Er is geen intakeformulier-document gevonden bij deze werknemer. Upload eerst een intakeformulier bij de documenten.'
-        );
-        setNoIntakeOpen(true);
-        return;
+      let json: Record<string, unknown>;
+      try {
+        json = await consumeAutofillProgressStream(res, setAutofillProgress);
+      } catch (e) {
+        const status = e && typeof e === 'object' && 'status' in e ? Number((e as { status?: number }).status) : undefined;
+        const message = e instanceof Error ? e.message : 'Automatisch invullen mislukt';
+        if (status === 404 || /geen intakeformulier/i.test(message)) {
+          setNoIntakeMessage(
+            message ||
+              'Er is geen intakeformulier-document gevonden bij deze werknemer. Upload eerst een intakeformulier bij de documenten.'
+          );
+          setNoIntakeOpen(true);
+          return;
+        }
+        throw e instanceof Error ? e : new Error(message);
       }
-      if (!res.ok) throw new Error(json.error || 'Automatisch invullen mislukt');
       replaceIntakeData(json.data_json, { markDirty: false });
       setValidatedAt(null);
       markSaved();
+      if (Array.isArray(json.skipped_validated) && json.skipped_validated.length > 0) {
+        setPendingFacts({
+          conflicts: json.skipped_validated as SkippedValidatedField[],
+          proposal:
+            json.proposed_facts && typeof json.proposed_facts === 'object'
+              ? (json.proposed_facts as Record<string, unknown>)
+              : {},
+        });
+      }
       const conflicts = Array.isArray(json.conflicts) ? json.conflicts : [];
       if (conflicts.length) {
         showError(
           'Conflicten',
           `${conflicts.length} veld(en) leeg gelaten wegens tegenstrijdige bronnen.`
         );
-      } else if (json.warning) {
+      } else if (typeof json.warning === 'string' && json.warning) {
         showError('Let op', json.warning);
       } else {
         showSuccess(
           'Ingevuld',
-          json.gap_filled
-            ? 'Intake is gevuld vanuit het intakeformulier en aangevuld vanuit het dossier.'
-            : 'Intake is gevuld vanuit het intakeformulier.'
+          json.generated_from_dossier
+            ? 'Intake is gegenereerd vanuit de dossierdocumenten.'
+            : json.gap_filled
+              ? 'Intake is gevuld vanuit het intakeformulier en aangevuld vanuit het dossier.'
+              : 'Intake is gevuld vanuit het intakeformulier.'
         );
       }
     } catch (e) {
       showError('Fout', e instanceof Error ? e.message : 'Automatisch invullen mislukt');
     } finally {
-      setBusyLabel(null);
+      setAutofillProgress(null);
     }
   };
 
   const onExport = async () => {
+    setBusyIndeterminate(true);
     setBusyLabel('PDF exporteren…');
     try {
       await persist();
@@ -278,12 +354,28 @@ function IntakeBuilderInner({
       document.body.appendChild(a);
       a.click();
       a.remove();
+      setHasExport(true);
       showSuccess('Export', 'Intake-PDF is gedownload.');
     } catch (e) {
       showError('Fout', e instanceof Error ? e.message : 'Export mislukt');
     } finally {
       setBusyLabel(null);
+      setBusyIndeterminate(false);
     }
+  };
+
+  const acceptValidatedFacts = async () => {
+    if (!pendingFacts) return;
+    const saved = await saveWorkerFacts(supabase, employeeId, pendingFacts.proposal, 'confirm', {
+      confirmKeys: pendingFacts.conflicts.map((conflict) => conflict.key),
+    });
+    if (saved.error) {
+      showError('Opslaan mislukt', saved.error);
+      return;
+    }
+    replaceIntakeData(overlayIntakeWithWorkerFacts(intakeData, saved.values), { markDirty: false });
+    setPendingFacts(null);
+    showSuccess('Bijgewerkt', 'De gevalideerde velden zijn vervangen.');
   };
 
   const statusText = autosaveLabel(autosaveStatus, isDirty);
@@ -296,10 +388,18 @@ function IntakeBuilderInner({
         autosave
         onAutosaveStatusChange={setAutosaveStatus}
       />
-      {busyLabel ? (
+      <ValidatedFactsDialog
+        conflicts={pendingFacts?.conflicts ?? null}
+        onDismiss={() => setPendingFacts(null)}
+        onAccept={() => void acceptValidatedFacts()}
+      />
+      {autofillProgress ? (
+        <AutofillProgressOverlay progress={autofillProgress} title="Bezig…" />
+      ) : busyLabel ? (
         <AutofillProgressOverlay
-          progress={{ currentLabel: busyLabel, currentIndex: 0, total: 1 }}
+          progress={{ currentLabel: busyLabel, currentIndex: 1, total: 1 }}
           title="Bezig…"
+          indeterminate={busyIndeterminate}
         />
       ) : null}
 
@@ -309,16 +409,26 @@ function IntakeBuilderInner({
         message={noIntakeMessage}
       />
 
-      <div className="sticky top-0 z-20 shrink-0 border-b border-border bg-white px-6 py-3 shadow-sm">
+      <div className="sticky top-0 z-20 shrink-0 border-b border-gray-200 bg-white px-6 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="truncate text-xl font-bold text-gray-900">Intakeformulier</h1>
             <p className="text-sm text-gray-600">
-              {validatedAt ? (
-                <span className="text-emerald-700">Gevalideerd</span>
-              ) : (
-                <span className="text-amber-700">Concept</span>
-              )}
+              <span
+                className={
+                  uiStatus === 'afgerond'
+                    ? 'text-green-700'
+                    : uiStatus === 'gevalideerd'
+                      ? 'text-emerald-700'
+                      : 'text-amber-700'
+                }
+              >
+                {uiStatus === 'afgerond'
+                  ? 'Afgerond'
+                  : uiStatus === 'gevalideerd'
+                    ? 'Gevalideerd'
+                    : 'Concept'}
+              </span>
               <span className="mx-1.5 text-gray-300">·</span>
               <span
                 className={
@@ -384,10 +494,22 @@ function IntakeBuilderInner({
               {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
               Opslaan
             </Button>
-            <Button size="sm" onClick={() => void onValidate()} disabled={saving}>
-              <Check className="mr-1 h-4 w-4" />
-              Valideer
-            </Button>
+            <Select
+              value={uiStatus}
+              onValueChange={(value) => void onStatusChange(value as IntakeUiStatus)}
+              disabled={saving || !!busyLabel}
+            >
+              <SelectTrigger className="h-8 w-[140px]" aria-label="Intake status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="concept">Concept</SelectItem>
+                <SelectItem value="gevalideerd">Gevalideerd</SelectItem>
+                <SelectItem value="afgerond" disabled={!hasExport}>
+                  Afgerond
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -404,13 +526,13 @@ function IntakeBuilderInner({
                     type="button"
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
                       active
-                        ? 'bg-indigo-100 font-medium text-indigo-900'
+                        ? 'bg-[var(--color-primary-50)] font-medium text-[var(--color-primary-900)]'
                         : 'text-gray-700 hover:bg-white'
                     }`}
                     onClick={() => scrollToSection(s.key)}
                   >
                     <Icon
-                      className={`h-4 w-4 shrink-0 ${active ? 'text-indigo-700' : 'text-gray-500'}`}
+                      className={`h-4 w-4 shrink-0 ${active ? 'text-[var(--color-primary-500)]' : 'text-gray-500'}`}
                     />
                     <span className="truncate">{s.title}</span>
                   </button>
@@ -427,7 +549,7 @@ function IntakeBuilderInner({
               <ul className="mt-1 list-disc pl-5">
                 {intakeData.meta.conflicts.map((c, i) => (
                   <li key={`${c.field}-${i}`}>
-                    <strong>{c.field}:</strong> {c.message}
+                    <strong>{formatIntakeConflictField(c.field)}:</strong> {c.message}
                   </li>
                 ))}
               </ul>
@@ -452,13 +574,18 @@ export default function IntakeBuilder({
   intakeInstanceId,
   initialData,
   initialValidatedAt,
+  initialHasExport = false,
 }: Props) {
   return (
     <IntakeInstanceProvider
       initialData={initialData}
       initialValidatedAt={initialValidatedAt}
     >
-      <IntakeBuilderInner employeeId={employeeId} intakeInstanceId={intakeInstanceId} />
+      <IntakeBuilderInner
+        employeeId={employeeId}
+        intakeInstanceId={intakeInstanceId}
+        initialHasExport={initialHasExport}
+      />
     </IntakeInstanceProvider>
   );
 }

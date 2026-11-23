@@ -78,10 +78,11 @@ export function formatOccupationalDoctorOrg(
   }
 
   cleaned = cleaned.replace(/\s*-?\s*BIG\s*(nr\.?|nummer)?\s*[\d\s]+/gi, '');
-  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\s*$/i, '');
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
+  cleaned = cleaned.replace(/\s*-?\s*Bedrijfsarts\.?\s*$/i, '');
   cleaned = cleaned.replace(/,?\s*intern gebruik bij[^.]*$/i, '');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
-  cleaned = cleaned.replace(/[,\-]\s*$/, '').trim();
+  cleaned = cleaned.replace(/[.,;:\-]+\s*$/, '').trim();
   if (!cleaned) return undefined;
 
   const alreadyPrefixed = DOCTOR_ROLE_PREFIXES.some((prefix) =>

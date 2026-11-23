@@ -9,23 +9,31 @@ locale: nl
 
 # Helpbeheer: supporttickets
 
-Admins beheren supporttickets: filteren, openen, beantwoorden en status bijwerken.
+Beheerders behandelen supporttickets: filteren, openen, beantwoorden en status bijwerken. Eindgebruikers zien hun eigen tickets onder **Mijn tickets**.
 
 ## Waar in de app
 
-Overzicht: /dashboard/help/admin/tickets. Open een regel voor het detail van dat ticket.
+1. Open **Helpbeheer** → **Tickets**.
+2. Overzicht: `/dashboard/help/admin/tickets`.
+3. Open een regel voor het detail van dat ticket.
 
 ## Stap voor stap
 
 1. Open het ticketoverzicht in Helpbeheer.
 2. Filter op status of prioriteit indien beschikbaar.
 3. Open een ticket om de conversatie te lezen.
-4. Antwoord naar de aanvrager of wijzig status, prioriteit en toewijzing.
-5. Gebruik interne notities alleen voor het team; die zijn niet bedoeld voor de indiener.
+4. Stel **Status** in (**Open**, **In behandeling**, **Wacht op reactie klant**, **Opgelost**, **Gesloten**) en **Prioriteit** (Laag / Normaal / Hoog / Urgent).
+5. Antwoord naar de aanvrager; gebruik **interne notities** alleen voor het team (niet zichtbaar voor de indiener).
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: ticketlijst en detail (geanonimiseerd).  
-> **Bestandsnaam:** helpbeheer-tickets.png
+> **Schermafbeelding (nog toe te voegen)**
+>
+> Toon: ticketlijst en detail (geanonimiseerd; geen persoonsgegevens).
+>
+> **Bestandsnaam:** `helpbeheer-tickets.png`
+
+## Tip
+
+> Zet de status op **Wacht op reactie klant** wanneer u iets van de aanvrager nodig hebt, zodat die weet dat er actie van hen wordt verwacht.
 
 ## Zie ook
 

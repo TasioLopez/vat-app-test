@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { pickGegevensTpMetaPayload } from '../persist-draft';
 import { stripTPProfileFields } from '@/lib/tp/resolve-profile-context';
 import { ensureTP2026Shape } from '../mapping';
+import { stripWorkerFacts } from '@/lib/employee/save-worker-facts';
 
 describe('persist-draft profile-linked fields', () => {
   it('excludes referent keys from tp_meta payload', () => {
@@ -76,5 +77,24 @@ describe('persist-draft profile-linked fields', () => {
     assert.equal(shaped.document_referent_function, 'HR');
     assert.equal(shaped.document_referent_gender, 'Vrouw');
     assert.equal(shaped.tp_end_date, '2027-01-01');
+  });
+
+  it('strips shared worker facts from stored data_json and keeps narrative', () => {
+    const stored = stripWorkerFacts(
+      stripTPProfileFields(
+        ensureTP2026Shape({
+          education_level: 'HBO',
+          email: 'a@b.c',
+          first_sick_day: '2026-01-01',
+          inleiding: 'Blijft staan.',
+          document_employer_name: 'Doc',
+        })
+      ) as Record<string, unknown>
+    );
+    assert.equal('education_level' in stored, false);
+    assert.equal('email' in stored, false);
+    assert.equal('first_sick_day' in stored, false);
+    assert.equal(stored.inleiding, 'Blijft staan.');
+    assert.equal(stored.document_employer_name, 'Doc');
   });
 });

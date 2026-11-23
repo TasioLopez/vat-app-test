@@ -20,8 +20,7 @@ function levelFromGlyphTriple(glyphs: string[]): string | null {
   if (CHECKED.test(g!)) return 'Goed';
   if (CHECKED.test(r!)) return 'Voldoende';
   if (CHECKED.test(o!)) return 'Matig';
-  // All three unchecked → Geen
-  if (UNCHECKED.test(g!) && UNCHECKED.test(r!) && UNCHECKED.test(o!)) return 'Geen';
+  // All three unchecked → unknown (not fake "Geen")
   return null;
 }
 

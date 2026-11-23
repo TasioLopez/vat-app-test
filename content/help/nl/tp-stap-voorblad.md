@@ -1,7 +1,7 @@
 ---
 slug: tp-stap-voorblad
 title: Stap 1: Voorblad
-excerpt: Titelpagina en basis van het trajectplan.
+excerpt: Titelpagina van het trajectplan controleren.
 category_slug: tp-part-1
 translation_group_id: d8f7e71e-a1ec-4523-96b8-96c122f579c6
 locale: nl
@@ -9,54 +9,43 @@ locale: nl
 
 # Stap 1: Voorblad
 
-Het voorblad vormt de titelpagina van het trajectplan in de **Trajectplan Bouwer**. U controleert hier de zichtbare naam van de werknemer en werkgever en stelt de **rapportagedatum** in; die gegevens verschijnen ook in de live voorvertoning rechts.
+Het **voorblad** is de titelpagina van het trajectplan. U controleert weergavenaam, opdrachtgever en **datum rapportage**; rechts ziet u de live A4-voorvertoning.
 
 ## Wat is dit en waarom
 
-Deze stap zorgt dat de eerste pagina van het document professioneel en consistent is met de gegevens uit de applicatie. Naam en werkgever worden waar mogelijk automatisch ingevuld vanuit de werknemer- en werkgeverrecords; de rapportagedatum slaat u expliciet op.
+Deze stap zorgt dat de eerste pagina klopt met de werknemer en opdrachtgever. Veel velden komen uit het dossier; de rapportagedatum stelt u hier in.
 
 ## Voor wie
 
-Iedereen die een trajectplan mag bewerken voor een werknemer (beheerder of standaardgebruiker met toegang tot die werknemer).
+Iedereen die het trajectplan mag bewerken voor deze werknemer (niet back office).
 
 ## Waar in de app
 
-1. Open de werknemer vanuit het dashboard (zie [Snel naar een werknemer](/dashboard/help/a/dashboard-snel-naar-werknemer)).
-2. Start of ga verder met het trajectplan (zie [Trajectplan starten](/dashboard/help/a/trajectplan-starten-vanuit-werknemer) en [Werkwijze bouwer](/dashboard/help/a/trajectplan-bouwer-werkwijze)).
-3. U komt op `/dashboard/tp/{werknemer-id}`; bovenaan staat **Trajectplan Bouwer** en **Stap 1 van 5**.
+1. Open de werknemer en start **Trajectplan** vanuit **Documenten**.
+2. U ziet **Stap 1 van 4** en de tab **Voorblad**.
 
 ## Stap voor stap
 
-1. Wacht tot het scherm klaar is met laden (eventueel melding **Laden...**).
-2. Controleer **Werknemer Naam** en **Werkgever Naam** in de grijze vakken; pas deze niet hier aan als ze fout zijn, maar corrigeer de bron in werknemer/werkgever.
-3. Stel **Rapportage Datum** in met de datumkiezer.
-4. Klik **Opslaan** om de rapportagedatum in `tp_meta` te bewaren.
-5. Controleer rechts de A4-voorvertoning (titel **TRAJECTPLAN 2ᵉ SPOOR**, datumregel, werkgeverblok).
-6. Klik **Volgende** om naar stap 2 **Gegevens werknemer** te gaan.
+1. Controleer **Werknemer naam (weergave)**, voornaam en achternaam.
+2. Stel **Datum rapportage** in.
+3. Controleer **Opdrachtgever** (alleen voor dit trajectplan; wijzigt de werkgever in het systeem niet).
+4. Vergelijk met de preview rechts (bijv. “Trajectplan Spoor 2 begeleiding”).
+5. Ga naar stap 2 **Gegevens** via de tab of **Volgende**.
 
-> **Schermafbeelding (nog toe te voegen)**  
-> Toon: stap 1 met velden links en A4-preview rechts (geanonimiseerd).  
-> **Bestandsnaam:** `tp-stap1-voorblad.png`
+![stap 1 van 4 met editor links en A4-preview rechts (geanonimiseerd).](fe872bb3-29cb-4b33-b6af-5ba48157c7b1/1795439301244-tp-stap1-voorblad.png)
 
-## Belangrijke schermen en knoppen
+## Belangrijke knoppen
 
-- **Trajectplan Bouwer** — titel in de kopbalk.
-- Voortgangsindicator — vijf segmenten voor de stappen.
-- **Terug** / **Volgende** — onderaan het scherm (stap 1: Terug is uitgeschakeld).
-- **Opslaan** — slaat vooral de rapportagedatum op voor dit scherm.
+- Tabs: Voorblad · Gegevens · Basisdocument · Bijlage 1  
+- Download-icoon in de topbalk (PDF)  
+- AI-acties indien beschikbaar  
 
 ## Veelvoorkomende problemen
 
-- **Naam of werkgever klopt niet** — wijzig de werknemer of de gekoppelde werkgever buiten de bouwer; het voorblad haalt deze waarden op bij openen.
-- **Opslaan lijkt niets te doen** — controleer of er een fout in de browserconsole is; probeer opnieuw na netwerkherstel.
-- **Volgende is niet beschikbaar** — zeldzaam; ververs de pagina als de UI vastloopt.
-
-## Tips
-
-> Controleer spelling en datum voordat u verder gaat; later wijzigen kan, maar voorkomt dubbel werk bij afdruk of export.
+- Naam of opdrachtgever klopt niet: corrigeer brongegevens in het werknemersdossier of pas alleen de weergave op dit voorblad aan waar de UI dat toelaat.
+- Datum leeg in de preview: vul **Datum rapportage** in.
 
 ## Zie ook
 
-- [Stap 2: Gegevens werknemer](/dashboard/help/a/tp-stap-gegevens-werknemer)
+- [Stap 2: Gegevens](/dashboard/help/a/tp-stap-gegevens-werknemer)
 - [Trajectplan Bouwer: werkwijze](/dashboard/help/a/trajectplan-bouwer-werkwijze)
-- [Stap 5: Eindecontrole](/dashboard/help/a/tp-stap-eindcontrole)

@@ -32,7 +32,7 @@ export default function AdminArticlesPage() {
         <h1 className="text-2xl font-bold text-gray-900">Artikelen (Nederlands)</h1>
         <Link
           href="/dashboard/help/admin/articles/new"
-          className="px-4 py-2 bg-purple-700 text-white rounded-lg font-medium"
+          className="px-4 py-2 bg-[var(--color-primary-500)] text-white rounded-lg font-medium"
         >
           Nieuw artikel
         </Link>

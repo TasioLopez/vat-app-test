@@ -33,6 +33,24 @@ export function resolveTp2HasAdReport(
   }
 }
 
+/**
+ * Coerce null/undefined has_ad_report for drafts that never ran TP2 autofill.
+ * Infers Ja from a filled AD date; concept always forces Nee.
+ */
+export function coerceHasAdReportForShape(data: {
+  has_ad_report?: boolean | null;
+  ad_report_date?: unknown;
+  ad_report_concept?: boolean | null;
+}): boolean {
+  if (data.ad_report_concept === true) return false;
+  if (data.has_ad_report === true) return true;
+  if (data.has_ad_report === false) {
+    // Date filled after an explicit Nee (e.g. editor sync pending) → Ja
+    return hasFilledAdReportDate(data.ad_report_date);
+  }
+  return hasFilledAdReportDate(data.ad_report_date);
+}
+
 export const EMPTY_INTAKE_SECTIE7_CONTENT = {
   ad_auteur: null,
   ad_datum_iso: null,

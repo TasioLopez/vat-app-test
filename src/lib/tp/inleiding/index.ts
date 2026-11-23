@@ -10,6 +10,7 @@ export {
   buildInleidingFields,
   buildAdSubBlock,
   coerceText,
+  formatReintegratieUrenDuration,
   nlDate,
   stripCitations,
   type InleidingBuildContext,

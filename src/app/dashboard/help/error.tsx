@@ -14,7 +14,7 @@ export default function HelpError({
       <button
         type="button"
         onClick={reset}
-        className="px-4 py-2 rounded-lg bg-purple-700 text-white font-medium"
+        className="px-4 py-2 rounded-lg bg-[var(--color-primary-500)] text-white font-medium"
       >
         Opnieuw proberen
       </button>

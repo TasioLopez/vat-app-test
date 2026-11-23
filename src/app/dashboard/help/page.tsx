@@ -104,11 +104,11 @@ export default function HelpHubPage() {
   );
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-purple-50/30 p-6 md:p-10">
+    <div className="min-h-full bg-gray-50 p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Help &amp; Kenniscentrum</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Help &amp; Kenniscentrum</h1>
             <p className="text-gray-600 mt-1">
               Zoek artikelen, blader per onderwerp of stel een vraag aan de assistent.
             </p>
@@ -118,23 +118,23 @@ export default function HelpHubPage() {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/dashboard/help/tickets/new"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-700 text-white font-semibold shadow-lg shadow-purple-500/20"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-primary-500)] text-white font-semibold "
           >
             <FaTicketAlt /> Nieuw ticket
           </Link>
           <Link
             href="/dashboard/help/chat"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold shadow-lg shadow-purple-500/25"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-primary-500)] text-white font-semibold "
           >
             <FaComments /> Vraag de assistent
           </Link>
           <Link
             href="/dashboard/help/tickets"
-            className="relative inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border-2 border-purple-200 text-purple-800 font-semibold"
+            className="relative inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-semibold"
           >
             <FaTicketAlt /> Mijn tickets
             {userTicketUnread > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-[1.25rem] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-xs font-bold text-purple-900">
+              <span className="absolute -right-1 -top-1 min-w-[1.25rem] rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-xs font-bold text-[var(--color-primary-900)]">
                 {userTicketUnread > 99 ? "99+" : userTicketUnread}
               </span>
             ) : null}
@@ -142,13 +142,13 @@ export default function HelpHubPage() {
         </div>
 
         <div className="relative">
-          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400" />
+          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Zoek in de kennisbank…"
-            className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none bg-white shadow-sm text-lg"
+            className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none bg-white shadow-sm text-lg"
           />
         </div>
 
@@ -197,8 +197,8 @@ export default function HelpHubPage() {
                   className={cn(
                     "px-4 py-2.5 rounded-xl text-sm font-semibold text-left transition-all border-2",
                     selectedRootFilter === "all"
-                      ? "border-transparent bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-500/20"
-                      : "border-purple-200 bg-white text-purple-900 hover:bg-purple-50"
+                      ? "border-transparent bg-[var(--color-primary-500)] text-white "
+                      : "border-gray-200 bg-white text-[var(--color-primary-900)] hover:bg-purple-50"
                   )}
                 >
                   Alle categorieën
@@ -211,8 +211,8 @@ export default function HelpHubPage() {
                     className={cn(
                       "px-4 py-2.5 rounded-xl text-sm font-medium text-left transition-all border-2",
                       selectedRootFilter === root.id
-                        ? "border-transparent bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md shadow-purple-500/20"
-                        : "border-purple-200 bg-white text-purple-900 hover:bg-purple-50"
+                        ? "border-transparent bg-[var(--color-primary-500)] text-white "
+                        : "border-gray-200 bg-white text-[var(--color-primary-900)] hover:bg-purple-50"
                     )}
                   >
                     {root.title}

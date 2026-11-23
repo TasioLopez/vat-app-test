@@ -13,19 +13,23 @@ export function buildSpreekuurMeta(
   };
 }
 
-/** Intake checkboxes > FML/AD main extract > Spreekuur (never override fuller upstream lists). */
+/**
+ * Effective rubrieken for Belastbaarheidsprofiel.
+ * Later spreekuur with an explicit non-empty set wins (allows narrowing after actualisatie).
+ * Otherwise: intake checkboxes > FML/AD main extract > [].
+ */
 export function resolveRubrieken(
   intakeRubrieken: string[] | null | undefined,
   mainRubrieken: string[] | null | undefined,
   spreekuurRubrieken: string[] | null | undefined
 ): string[] {
+  const spreekuur = (spreekuurRubrieken ?? []).map((r) => r.trim()).filter(Boolean);
+  if (spreekuur.length > 0) return spreekuur;
+
   const intake = (intakeRubrieken ?? []).map((r) => r.trim()).filter(Boolean);
   if (intake.length > 0) return intake;
 
-  const main = (mainRubrieken ?? []).map((r) => r.trim()).filter(Boolean);
-  if (main.length > 0) return main;
-
-  return (spreekuurRubrieken ?? []).map((r) => r.trim()).filter(Boolean);
+  return (mainRubrieken ?? []).map((r) => r.trim()).filter(Boolean);
 }
 
 export function mergeBelastbaarheidsprofielContent(

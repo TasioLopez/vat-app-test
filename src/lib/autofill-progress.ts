@@ -1,5 +1,32 @@
 import { TP2026_PROFIEL_WERKNEMER_FIELD_ORDER } from '@/lib/tp2026/basis-profiel-field-order';
 
+/** Intake autofill with PDF: last step is always "opslaan" (emitted by the API route). */
+export const INTAKE_AUTOFILL_STEPS_WITH_PDF = [
+  'Werknemersfeiten uit documenten…',
+  'Intakeformulier scannen…',
+  'Trajectgegevens extraheren…',
+  'Toelichtingen extraheren…',
+  'Sectie 3 invullen…',
+  'Sectie 5 invullen…',
+  'Sectie 7 invullen…',
+  'Dossier aanvullen…',
+  'Gegevens opslaan…',
+] as const;
+
+/** Staging dossier-only path when no intake PDF exists. */
+export const INTAKE_AUTOFILL_STEPS_DOSSIER_ONLY = [
+  'Werknemersfeiten uit documenten…',
+  'Intake genereren uit dossier…',
+  'Gegevens opslaan…',
+] as const;
+
+export const EMPLOYEE_AUTOFILL_CHATLIKE_STEPS = [
+  'Documenten voorbereiden…',
+  'Documenten analyseren met AI…',
+  'Gegevens samenvoegen…',
+  'Profiel bijwerken…',
+] as const;
+
 type DocLike = { type?: string | null };
 
 function normType(doc: DocLike): string {

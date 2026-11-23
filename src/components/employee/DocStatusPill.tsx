@@ -1,28 +1,43 @@
 import { CheckCircle2, Circle, Clock, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CvStatus, TpStatus } from '@/lib/employee/doc-status';
+import type { CvStatus, GeneratedDocKind, IntakeStatus, TpStatus } from '@/lib/employee/doc-status';
 
-type DocKind = 'tp' | 'cv';
+type DocKind = GeneratedDocKind | 'cv';
 
-const TP_META: Record<
-  TpStatus,
-  { label: string; full: string; tone: string; Icon: typeof Circle }
-> = {
+const BUILDER_KIND_LABEL: Record<GeneratedDocKind, string> = {
+  tp: 'Trajectplan',
+  intake: 'Intake',
+  vgr: 'VGR',
+};
+
+const BUILDER_META: Record<TpStatus, { label: string; tone: string; Icon: typeof Circle }> = {
   none: {
     label: 'Niet gestart',
-    full: 'Trajectplan: Niet gestart',
     tone: 'bg-gray-50 text-gray-600 ring-gray-200',
     Icon: Circle,
   },
   draft: {
     label: 'Concept',
-    full: 'Trajectplan: Concept',
     tone: 'bg-amber-50 text-amber-900 ring-amber-200',
     Icon: Clock,
   },
   completed: {
     label: 'Klaar',
-    full: 'Trajectplan: Klaar',
+    tone: 'bg-green-50 text-green-800 ring-green-200',
+    Icon: CheckCircle2,
+  },
+};
+
+const INTAKE_META: Record<IntakeStatus, { label: string; tone: string; Icon: typeof Circle }> = {
+  none: BUILDER_META.none,
+  draft: BUILDER_META.draft,
+  validated: {
+    label: 'Gevalideerd',
+    tone: 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+    Icon: CheckCircle2,
+  },
+  completed: {
+    label: 'Afgerond',
     tone: 'bg-green-50 text-green-800 ring-green-200',
     Icon: CheckCircle2,
   },
@@ -61,19 +76,35 @@ const CV_META: Record<
 export function DocStatusPill({
   kind,
   status,
+  variant = 'default',
   className,
 }: {
   kind: DocKind;
-  status: TpStatus | CvStatus;
+  status: TpStatus | IntakeStatus | CvStatus;
+  /** `icon` hides the label; status text stays on title / aria-label for hover. */
+  variant?: 'default' | 'icon';
   className?: string;
 }) {
-  const meta = kind === 'tp' ? TP_META[status as TpStatus] : CV_META[status as CvStatus];
+  const meta =
+    kind === 'cv'
+      ? CV_META[status as CvStatus]
+      : kind === 'intake'
+        ? {
+            ...INTAKE_META[status as IntakeStatus],
+            full: `${BUILDER_KIND_LABEL.intake}: ${INTAKE_META[status as IntakeStatus].label}`,
+          }
+        : {
+            ...BUILDER_META[status as TpStatus],
+            full: `${BUILDER_KIND_LABEL[kind]}: ${BUILDER_META[status as TpStatus].label}`,
+          };
   const { Icon } = meta;
+  const iconOnly = variant === 'icon';
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-full text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        iconOnly ? 'h-7 w-7 p-0' : 'gap-1 px-2 py-0.5',
         meta.tone,
         className
       )}
@@ -81,7 +112,7 @@ export function DocStatusPill({
       aria-label={meta.full}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      {meta.label}
+      {!iconOnly ? meta.label : null}
     </span>
   );
 }

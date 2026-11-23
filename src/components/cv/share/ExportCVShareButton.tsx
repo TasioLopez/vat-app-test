@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import type { CvLocale } from '@/types/cv';
 import { cn } from '@/lib/utils';
@@ -32,7 +33,7 @@ export function ExportCVShareButton({
       const data = await res.json();
       if (!res.ok || !data?.signedUrl) {
         console.error('CV share PDF export failed:', data);
-        alert('PDF-export mislukt.');
+        toast.error('PDF-export mislukt.');
         return;
       }
       const a = document.createElement('a');
@@ -45,7 +46,7 @@ export function ExportCVShareButton({
       a.remove();
     } catch (e) {
       console.error(e);
-      alert('Er ging iets mis bij het exporteren.');
+      toast.error('Er ging iets mis bij het exporteren.');
     } finally {
       setBusy(false);
     }

@@ -2,12 +2,19 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   buildCvStatusMap,
+  buildIntakeStatusMap,
   buildTpStatusMap,
+  buildVgrStatusMap,
   chunkIds,
   cvStatusRank,
+  intakeStatusRank,
   isShareLinkActive,
   maxCvStatus,
+  maxIntakeStatus,
   maxTpStatus,
+  resolveBuilderDocStatus,
+  resolveIntakeDocStatus,
+  summarizeGeneratedDocs,
   tpStatusRank,
 } from '@/lib/employee/doc-status';
 
@@ -37,6 +44,40 @@ describe('doc-status helpers', () => {
     assert.equal(map.get('e1'), 'draft');
     assert.equal(map.get('e2'), 'completed');
     assert.equal(map.get('e3'), undefined);
+  });
+
+  it('builds Intake map from validated_at and exports', () => {
+    assert.ok(intakeStatusRank('draft') < intakeStatusRank('validated'));
+    assert.ok(intakeStatusRank('validated') < intakeStatusRank('completed'));
+    assert.equal(maxIntakeStatus('draft', 'validated'), 'validated');
+
+    const map = buildIntakeStatusMap(
+      [
+        { id: 'in1', employee_id: 'e1', validated_at: null },
+        { id: 'in2', employee_id: 'e2', validated_at: '2026-01-01T00:00:00.000Z' },
+        { id: 'in3', employee_id: 'e3', validated_at: '2026-01-01T00:00:00.000Z' },
+      ],
+      new Set(['in3'])
+    );
+    assert.equal(map.get('e1'), 'draft');
+    assert.equal(map.get('e2'), 'validated');
+    assert.equal(map.get('e3'), 'completed');
+  });
+
+  it('builds VGR map from exports and final instances', () => {
+    const map = buildVgrStatusMap(
+      [
+        { id: 'v1', employee_id: 'e1', status: 'draft' },
+        { id: 'v2', employee_id: 'e2', status: 'final' },
+        { id: 'v3', employee_id: 'e3', status: 'draft' },
+        { id: 'v4', employee_id: 'e3', status: 'in_progress' },
+      ],
+      new Set(['v3'])
+    );
+    assert.equal(map.get('e1'), 'draft');
+    assert.equal(map.get('e2'), 'completed');
+    assert.equal(map.get('e3'), 'completed');
+    assert.equal(map.get('e4'), undefined);
   });
 
   it('builds CV map with share progression', () => {
@@ -92,6 +133,52 @@ describe('doc-status helpers', () => {
         now,
       }),
       false
+    );
+  });
+
+  it('summarizes exported PDFs per generated document kind', () => {
+    const summary = summarizeGeneratedDocs([
+      { type: 'tp', uploaded_at: '2026-10-01T10:00:00.000Z' },
+      { type: 'TP ', uploaded_at: '2026-11-02T10:00:00.000Z' },
+      { type: 'vgr', uploaded_at: null },
+      { type: 'intakeformulier', uploaded_at: '2026-09-01T10:00:00.000Z' },
+      { type: null, uploaded_at: '2026-09-01T10:00:00.000Z' },
+    ]);
+
+    assert.deepEqual(summary.tp, { exportCount: 2, lastExportAt: '2026-11-02T10:00:00.000Z' });
+    assert.deepEqual(summary.vgr, { exportCount: 1, lastExportAt: null });
+    assert.deepEqual(summary.intake, { exportCount: 0, lastExportAt: null });
+  });
+
+  it('resolves builder status from instances and exports', () => {
+    assert.equal(resolveBuilderDocStatus({ hasInstance: false, exportCount: 0 }), 'none');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: true, exportCount: 0 }), 'draft');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: true, exportCount: 2 }), 'completed');
+    assert.equal(resolveBuilderDocStatus({ hasInstance: false, exportCount: 1 }), 'completed');
+    assert.equal(
+      resolveBuilderDocStatus({ hasInstance: true, exportCount: 0, hasFinalInstance: true }),
+      'completed'
+    );
+  });
+
+  it('resolves intake status with validated_at before export', () => {
+    assert.equal(resolveIntakeDocStatus({ hasInstance: false, exportCount: 0 }), 'none');
+    assert.equal(resolveIntakeDocStatus({ hasInstance: true, exportCount: 0 }), 'draft');
+    assert.equal(
+      resolveIntakeDocStatus({
+        hasInstance: true,
+        exportCount: 0,
+        validatedAt: '2026-11-21T00:00:00.000Z',
+      }),
+      'validated'
+    );
+    assert.equal(
+      resolveIntakeDocStatus({
+        hasInstance: true,
+        exportCount: 1,
+        validatedAt: '2026-11-21T00:00:00.000Z',
+      }),
+      'completed'
     );
   });
 

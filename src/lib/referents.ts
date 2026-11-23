@@ -238,14 +238,20 @@ export async function persistReferentFromTpData(
     client_id: employee.client_id,
   });
 
+  // Always include functie from TP/intake so inleiding can show the real job title.
+  const withFunction = referentPayloadFromTpFields(tpData, {
+    includeOptionalProfileFields: true,
+  });
+
   if (existing) {
     const { error: updateError } = await (supabase as any)
       .from("referents")
       .update({
-        first_name: payload.first_name,
-        last_name: payload.last_name,
-        phone: payload.phone,
-        email: payload.email,
+        first_name: withFunction.first_name,
+        last_name: withFunction.last_name,
+        phone: withFunction.phone,
+        email: withFunction.email,
+        referent_function: withFunction.referent_function ?? null,
       })
       .eq("id", existing.id);
     if (updateError) return { error: `referents: ${updateError.message}` };
@@ -267,12 +273,12 @@ export async function persistReferentFromTpData(
     .from("referents")
     .insert({
       client_id: employee.client_id,
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      phone: payload.phone,
-      email: payload.email,
-      referent_function: null,
-      gender: null,
+      first_name: withFunction.first_name,
+      last_name: withFunction.last_name,
+      phone: withFunction.phone,
+      email: withFunction.email,
+      referent_function: withFunction.referent_function ?? null,
+      gender: withFunction.gender ?? null,
       is_default: !existingList || existingList.length === 0,
     })
     .select("id")

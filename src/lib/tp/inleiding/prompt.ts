@@ -1,4 +1,5 @@
 import { INTAKE_LAYOUT_V75_HINT } from '@/lib/document-analysis/prompts/intake-layout-v75';
+import { EX_WERKNEMER_GENERATION_RULE } from '@/lib/tp/ex-werknemer-wording';
 
 /**
  * Content instructions for inleiding generation (masterprompt substance, no ChatGPT UI guardrails).
@@ -18,7 +19,7 @@ ALGEMENE REGELS VOOR CONTENT
 - Geen medische diagnoses, behandelingen of specifieke beperkingen beschrijven.
 - Zakelijke rapportagestijl.
 - CONSISTENTIE NAAM: verwijs nooit naar werknemer met de volledige voornaam. Gebruik óf \"werknemer\" óf uitsluitend \"[voorletter]. [achternaam]\" (geen volledige voornaam).
-- Wanneer context.is_ex_werknemer true is: schrijf GEEN ex-werknemer disclaimer — die wordt server-side toegevoegd aan alinea 2 (uitval).
+- ${EX_WERKNEMER_GENERATION_RULE}
 
 VELDEN (JSON output)
 
@@ -37,7 +38,8 @@ medische_begeleiding — kies exact één waarde:
 
 reintegreert_spoor1 / reintegratie_uren / reintegratie_werk_type
 - Bepaal uit documenten of werknemer re-integreert in spoor 1.
-- Bij true: vul uren per week en werktype (eigen werk | aangepast werk | deels aangepast werk).
+- Bij true: vul reintegratie_uren en werktype (eigen werk | aangepast werk | deels aangepast werk).
+- reintegratie_uren: behoud de bronformulering als die er is (bijv. intake "Uren werkzaam" = "3 x 2 uur per week"). Tel N×M NIET op tot één wekelijks totaal. Alleen een kaal getal (bijv. "8") wanneer de bron geen schema-detail geeft.
 
 werknemer_doel_toelichting
 - Alleen invullen als werknemer het doel van het 2e spoor anders ervaart dan standaard; anders null.
@@ -49,9 +51,12 @@ ad_quote
 - Null wanneer geen AD-inhoud in documenten en geen concept-flag.
 
 extra_aanmelder
-- Uit intake sectie 4: als er een extra aanmelder/contactpersoon naast de standaard referent is, vul functie, naam (zonder meneer/mevrouw; formaat \"I. Achternaam\"), organisatie en gender ("Man" of "Vrouw") indien bekend.
+- context.extra_referent is de enige toegestane tweede persoon. null betekent extra_aanmelder null.
+- Alleen invullen wanneer context.extra_referent een naam heeft die een andere persoon is dan de primaire contactpersoon/referent.
+- Vul functie, naam (zonder meneer/mevrouw; formaat \"I. Achternaam\"), organisatie en gender ("Man" of "Vrouw") indien bekend.
 - gender null wanneer geslacht niet vast te stellen is.
-- Anders null voor het hele object.
+- NOOIT een extra_aanmelder verzinnen uit AD-rapport, FML, e-mailhandtekening, leidinggevende of opleidingsmanager. Die bronnen vullen dit veld niet, ook niet als de tekst "aangemeld door" of "in opdracht van" zegt.
+- Als er geen tweede persoon is, of die persoon is dezelfde als de primaire referent: null voor het hele object.
 `.trim();
 
 export function buildInleidingContextMessage(context: Record<string, unknown>): string {

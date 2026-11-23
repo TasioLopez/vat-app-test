@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 import { INTAKE_LAYOUT_KEY, ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 import { intakeToGegevensFields, intakeToTpNarrativeFields } from '@/lib/intake/project';
-import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
+import { isEmptyGegevensField, mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
 
 export type ValidatedIntakeRecord = {
   id: string;
@@ -32,7 +33,26 @@ export async function getValidatedIntakeForEmployee(
   };
 }
 
-/** Deterministic Gegevens/profile fields from validated intake. */
+/**
+ * Shared Gegevens keys from WorkerFacts (sole store). Do not read blanked intake JSON
+ * for these — intake `data_json` intentionally clears shared fields on save.
+ */
+export async function gegevensFromWorkerFacts(
+  supabase: SupabaseClient,
+  employeeId: string
+): Promise<{ details: Record<string, unknown>; error?: string }> {
+  const loaded = await loadWorkerFacts(supabase, employeeId);
+  if (!loaded.snapshot) {
+    return { details: {}, error: loaded.error || 'Werknemersgegevens laden mislukt' };
+  }
+  return { details: { ...loaded.snapshot.values } };
+}
+
+export function workerFactsHaveSharedGegevens(details: Record<string, unknown>): boolean {
+  return Object.entries(details).some(([key, value]) => !isEmptyGegevensField(key, value));
+}
+
+/** @deprecated Prefer gegevensFromWorkerFacts — intake JSON blanks shared keys. */
 export function gegevensFromValidatedIntake(intake: IntakeData): Record<string, unknown> {
   return intakeToGegevensFields(intake);
 }

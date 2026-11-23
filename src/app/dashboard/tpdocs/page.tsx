@@ -1,13 +1,14 @@
 // app/dashboard/tpdocs/page.tsx
 import type { Metadata } from "next";
 import { cookies as nextCookies } from "next/headers";
-
-export const metadata: Metadata = {
-  title: "TP-documenten",
-};
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getEmployeeDocLabel } from "@/lib/documents/employee-doc-types";
 import TPDocsClient from "./tpdocs-client";
+
+export const metadata: Metadata = {
+  title: "Documenten",
+};
 
 type EmployeeRow = {
   id: string;
@@ -19,11 +20,13 @@ type EmployeeRow = {
 
 type ClientRow = { id: string; name: string | null };
 
-type Row = {
+export type DocumentRow = {
   id: string;
   employee_id: string;
   title: string;
   url: string;
+  type: string;
+  typeLabel: string;
   layout_key: string | null;
   employeeName: string;
   employeeEmail: string;
@@ -31,14 +34,27 @@ type Row = {
   created_at: string | null;
 };
 
-function filenameFromUrl(path?: string | null) {
-  if (!path) return "Trajectplan";
+const GENERATED_DOC_LABELS: Record<string, string> = {
+  tp: "Trajectplan",
+  intake: "Intake",
+  vgr: "VGR",
+};
+
+function docTypeLabel(type: string | null | undefined): string {
+  const key = (type || "").toLowerCase().trim();
+  if (!key) return "Onbekend";
+  if (GENERATED_DOC_LABELS[key]) return GENERATED_DOC_LABELS[key];
+  return getEmployeeDocLabel(key);
+}
+
+function filenameFromUrl(path?: string | null, fallback = "Document") {
+  if (!path) return fallback;
   try {
     const clean = path.replace(/^\/?documents\//i, "");
     const parts = clean.split("/");
-    return parts[parts.length - 1] || "Trajectplan";
+    return parts[parts.length - 1] || fallback;
   } catch {
-    return "Trajectplan";
+    return fallback;
   }
 }
 
@@ -53,9 +69,9 @@ export default async function TPDocsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">TP Documents</h1>
-        <p className="mt-4 text-sm text-muted-foreground">You must be signed in to view this page.</p>
+      <div className="space-y-6 bg-gray-50 p-6 md:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Documenten</h1>
+        <p className="text-sm text-muted-foreground">Je moet ingelogd zijn om deze pagina te bekijken.</p>
       </div>
     );
   }
@@ -86,23 +102,22 @@ export default async function TPDocsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: tpDocs, error: docsErr } = await admin
+  const { data: docs, error: docsErr } = await admin
     .from("documents")
     .select("id, employee_id, type, name, url, uploaded_at, layout_key")
-    .eq("type", "tp")
     .order("uploaded_at", { ascending: false })
     .limit(1000);
 
-  if (docsErr || !tpDocs || tpDocs.length === 0) {
+  if (docsErr) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">TP Documents</h1>
-        <p className="mt-4 text-sm">No TP documents found.</p>
+      <div className="space-y-6 bg-gray-50 p-6 md:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Documenten</h1>
+        <p className="text-sm text-muted-foreground">Documenten konden niet geladen worden.</p>
       </div>
     );
   }
 
-  const rows: Row[] = tpDocs
+  const rows: DocumentRow[] = (docs || [])
     .filter((d) => employeeIds.length === 0 || employeeIds.includes(d.employee_id))
     .map((d) => {
       const emp = empMap.get(d.employee_id);
@@ -110,13 +125,17 @@ export default async function TPDocsPage() {
       const employeeName = [emp?.first_name, emp?.last_name].filter(Boolean).join(" ") || "—";
       const employeeEmail = emp?.email ?? "—";
       const clientName = client?.name ?? "—";
-      const title = filenameFromUrl(d.url);
+      const type = String(d.type || "").toLowerCase().trim() || "extra";
+      const typeLabel = docTypeLabel(type);
+      const title = (d.name && String(d.name).trim()) || filenameFromUrl(d.url, typeLabel);
 
       return {
         id: d.id,
         employee_id: d.employee_id,
         title,
         url: d.url,
+        type,
+        typeLabel,
         layout_key: d.layout_key ?? null,
         employeeName,
         employeeEmail,
@@ -125,16 +144,24 @@ export default async function TPDocsPage() {
       };
     });
 
+  const typeOptions = Array.from(
+    new Map(rows.map((r) => [r.type, r.typeLabel])).entries()
+  )
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, "nl"));
+
+  const clientOptions = Array.from(
+    new Set(rows.map((r) => r.clientName).filter((n) => n && n !== "—"))
+  ).sort((a, b) => a.localeCompare(b, "nl"));
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 bg-gray-50 p-6 md:p-8">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">TP Documents</h1>
-        <p className="text-muted-foreground mt-2">Beheer en bekijk trajectplan documenten</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Documenten</h1>
+        <p className="mt-1 text-sm text-gray-600">Beheer en bekijk documenten uit dossiers</p>
       </div>
 
-      <TPDocsClient rows={rows} />
-
-      <p className="text-sm text-muted-foreground">Showing {rows.length} document(s).</p>
+      <TPDocsClient rows={rows} typeOptions={typeOptions} clientOptions={clientOptions} />
     </div>
   );
 }

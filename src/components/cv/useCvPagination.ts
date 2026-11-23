@@ -60,6 +60,11 @@ export function useCvTwoColumnPagination(opts: {
   measureMainRef: React.RefObject<HTMLElement | null>;
   /** Usable content height inside a column (page minus vertical padding). */
   pageInnerHeightPx: number;
+  /** Shorter budget for page 0 when a band sits above the columns. */
+  firstPageInnerHeightPx?: number;
+  /** Keep an empty page 0 so a band page is not stripped when columns start later. */
+  preserveFirstPage?: boolean;
+  gapPx?: number;
   deps: unknown[];
   debounceMs: number;
   enabled?: boolean;
@@ -68,6 +73,9 @@ export function useCvTwoColumnPagination(opts: {
     measureSidebarRef,
     measureMainRef,
     pageInnerHeightPx,
+    firstPageInnerHeightPx,
+    preserveFirstPage = false,
+    gapPx = CV_ATOM_GAP_PX,
     deps,
     debounceMs,
     enabled = true,
@@ -90,9 +98,13 @@ export function useCvTwoColumnPagination(opts: {
       if (gen !== genRef.current) return;
       const sidebarMeasured = measureAtoms(measureSidebarRef.current);
       const mainMeasured = measureAtoms(measureMainRef.current);
-      const sidebarPacked = packColumn(sidebarMeasured, pageInnerHeightPx, CV_ATOM_GAP_PX);
-      const mainPacked = packColumn(mainMeasured, pageInnerHeightPx, CV_ATOM_GAP_PX);
-      const normalized = normalizePackedPages(sidebarPacked, mainPacked);
+      const packOpts =
+        firstPageInnerHeightPx && firstPageInnerHeightPx > 0
+          ? { firstPageInnerHeight: firstPageInnerHeightPx }
+          : undefined;
+      const sidebarPacked = packColumn(sidebarMeasured, pageInnerHeightPx, gapPx, packOpts);
+      const mainPacked = packColumn(mainMeasured, pageInnerHeightPx, gapPx, packOpts);
+      const normalized = normalizePackedPages(sidebarPacked, mainPacked, { preserveFirstPage });
       setResult({
         mode: 'two_column',
         sidebarPages: normalized.sidebarPages,
@@ -117,7 +129,7 @@ export function useCvTwoColumnPagination(opts: {
       window.clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps provided by caller
-  }, [enabled, pageInnerHeightPx, debounceMs, ...deps]);
+  }, [enabled, pageInnerHeightPx, firstPageInnerHeightPx, preserveFirstPage, gapPx, debounceMs, ...deps]);
 
   return result;
 }
@@ -125,11 +137,12 @@ export function useCvTwoColumnPagination(opts: {
 export function useCvSingleColumnPagination(opts: {
   measureRef: React.RefObject<HTMLElement | null>;
   pageInnerHeightPx: number;
+  gapPx?: number;
   deps: unknown[];
   debounceMs: number;
   enabled?: boolean;
 }): SingleResult {
-  const { measureRef, pageInnerHeightPx, deps, debounceMs, enabled = true } = opts;
+  const { measureRef, pageInnerHeightPx, gapPx = CV_ATOM_GAP_PX, deps, debounceMs, enabled = true } = opts;
   const [result, setResult] = useState<SingleResult>({
     mode: 'single',
     pages: [[]],
@@ -146,7 +159,7 @@ export function useCvSingleColumnPagination(opts: {
     const run = () => {
       if (gen !== genRef.current) return;
       const measured = measureAtoms(measureRef.current);
-      const packed = packColumn(measured, pageInnerHeightPx, CV_ATOM_GAP_PX);
+      const packed = packColumn(measured, pageInnerHeightPx, gapPx);
       const pages = normalizeSingleColumnPages(packed);
       setResult({
         mode: 'single',
@@ -171,7 +184,7 @@ export function useCvSingleColumnPagination(opts: {
       window.clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps provided by caller
-  }, [enabled, pageInnerHeightPx, debounceMs, ...deps]);
+  }, [enabled, pageInnerHeightPx, gapPx, debounceMs, ...deps]);
 
   return result;
 }

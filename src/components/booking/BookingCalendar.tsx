@@ -268,7 +268,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Ruimtes en parkeerplaatsen
+            Reserveren
           </h1>
           {canManage ? (
             <Button asChild variant="outline">
@@ -289,7 +289,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
           <EmptyCatalog canManage={canManage} />
         ) : (
           <>
-            <section className="rounded-2xl border border-purple-100 bg-white p-4 shadow-sm md:p-5">
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                   <Select value={locationId} onValueChange={setLocationId}>
@@ -305,7 +305,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="inline-flex w-fit rounded-xl bg-purple-100 p-1">
+                  <div className="inline-flex w-fit rounded-xl bg-[var(--color-primary-50)] p-1">
                     {(['room', 'parking'] as const).map((value) => (
                       <button
                         key={value}
@@ -314,8 +314,8 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                         className={cn(
                           'cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                           kind === value
-                            ? 'bg-white text-purple-900 shadow-sm'
-                            : 'text-purple-800/70 hover:text-purple-950'
+                            ? 'bg-white text-[var(--color-primary-900)] shadow-sm'
+                            : 'text-gray-600 hover:text-[var(--color-primary-900)]'
                         )}
                       >
                         {spaceKindPlural(value)}
@@ -362,8 +362,8 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                       className={cn(
                         'cursor-pointer rounded-xl px-1 py-2 text-center transition-colors',
                         active
-                          ? 'bg-purple-700 text-white shadow-sm'
-                          : 'bg-slate-50 text-slate-700 hover:bg-purple-50'
+                          ? 'bg-[var(--color-primary-500)] text-white shadow-sm'
+                          : 'bg-slate-50 text-slate-700 hover:bg-[var(--color-primary-50)]'
                       )}
                     >
                       <div className="text-[11px] uppercase tracking-wide opacity-80">
@@ -371,7 +371,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                       </div>
                       <div className="text-base font-semibold">{day.day}</div>
                       {isToday ? (
-                        <div className={cn('mx-auto mt-1 h-1 w-1 rounded-full', active ? 'bg-amber-300' : 'bg-purple-500')} />
+                        <div className={cn('mx-auto mt-1 h-1 w-1 rounded-full', active ? 'bg-amber-300' : 'bg-[var(--color-primary-500)]')} />
                       ) : (
                         <div className="mt-1 h-1" />
                       )}
@@ -381,7 +381,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
               </div>
             </section>
 
-            <section className="rounded-2xl border border-purple-100 bg-white p-4 shadow-sm md:p-5">
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:p-5">
               <div className="mb-4 flex items-baseline justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">
                   {formatWeekdayLong(selected)} {formatMonthDay(selected)}
@@ -395,7 +395,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                   {canManage ? (
                     <>
                       {' '}
-                      <Link href="/dashboard/reserveren/beheer" className="font-medium text-purple-700 underline">
+                      <Link href="/dashboard/reserveren/beheer" className="font-medium text-[var(--color-primary-500)] underline">
                         Voeg er een toe
                       </Link>
                       .
@@ -465,7 +465,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                                       <button
                                         key={booking.id}
                                         type="button"
-                                        className="mt-1 block max-w-full cursor-pointer truncate text-left text-[11px] font-medium text-purple-700"
+                                        className="mt-1 block max-w-full cursor-pointer truncate text-left text-[11px] font-medium text-[var(--color-primary-500)]"
                                         onClick={() => setDetail(booking)}
                                       >
                                         {formatClock(new Date(booking.starts_at))}–{formatClock(new Date(booking.ends_at))}{' '}
@@ -474,14 +474,14 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                                     ))}
                                   <button
                                     type="button"
-                                    className="mt-1 w-fit cursor-pointer text-xs font-medium text-purple-700 hover:text-purple-900"
+                                    className="mt-1 w-fit cursor-pointer text-xs font-medium text-[var(--color-primary-500)] hover:text-[var(--color-primary-900)]"
                                     onClick={() => openDraft(space, '09:00', '10:00')}
                                   >
                                     Reserveer
                                   </button>
                                 </div>
                                 <div
-                                  className="relative h-16 flex-1 cursor-pointer rounded-xl border border-purple-100 bg-slate-50"
+                                  className="relative h-16 flex-1 cursor-pointer rounded-xl border border-gray-200 bg-slate-50"
                                   style={{
                                     backgroundImage:
                                       'repeating-linear-gradient(to right, transparent, transparent calc(10% - 1px), rgb(233 213 255 / 0.9) calc(10% - 1px), rgb(233 213 255 / 0.9) 10%)',
@@ -509,7 +509,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                                         type="button"
                                         className={cn(
                                           'absolute top-1.5 bottom-1.5 z-20 overflow-hidden rounded-lg px-2 py-1 text-left text-white shadow-sm',
-                                          kind === 'room' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-teal-700 hover:bg-teal-800',
+                                          kind === 'room' ? 'bg-[var(--color-primary-500)] hover:bg-[var(--color-primary-600)]' : 'bg-teal-700 hover:bg-teal-800',
                                           own && 'ring-2 ring-amber-300'
                                         )}
                                         style={{
@@ -545,7 +545,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                         .filter((booking) => booking.space_id === space.id)
                         .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
                       return (
-                        <article key={space.id} className="rounded-xl border border-purple-100 p-3">
+                        <article key={space.id} className="rounded-xl border border-gray-200 p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <h3 className="font-medium text-slate-900">{space.name}</h3>
@@ -566,11 +566,11 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                                 <li key={booking.id}>
                                   <button
                                     type="button"
-                                    className="w-full cursor-pointer rounded-lg bg-purple-50 px-3 py-2 text-left"
+                                    className="w-full cursor-pointer rounded-lg bg-[var(--color-primary-50)] px-3 py-2 text-left"
                                     onClick={() => setDetail(booking)}
                                   >
-                                    <div className="text-sm font-medium text-purple-950">{booking.title}</div>
-                                    <div className="text-xs text-purple-800/80">
+                                    <div className="text-sm font-medium text-[var(--color-primary-900)]">{booking.title}</div>
+                                    <div className="text-xs text-gray-600">
                                       {formatClock(new Date(booking.starts_at))}–{formatClock(new Date(booking.ends_at))}
                                       {' · '}
                                       {booking.booked_by === userId ? 'Jij' : booking.booker_name}
@@ -588,7 +588,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
               )}
             </section>
 
-            <section className="rounded-2xl border border-purple-100 bg-white p-4 shadow-sm md:p-5">
+            <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:p-5">
               <h2 className="text-lg font-semibold text-slate-900">Mijn reserveringen</h2>
               {mine.length === 0 ? (
                 <p className="mt-3 text-sm text-slate-500">U hebt geen komende reserveringen.</p>
@@ -601,7 +601,7 @@ export default function BookingCalendar({ role, userId }: BookingCalendarProps) 
                       <li key={booking.id} className="py-1">
                         <button
                           type="button"
-                          className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-purple-50"
+                          className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg py-2 text-left hover:bg-[var(--color-primary-50)]"
                           onClick={() => setDetail(booking)}
                         >
                         <div>
@@ -697,8 +697,8 @@ function formatWeekdayLong(day: CalendarDay): string {
 
 function EmptyCatalog({ canManage }: { canManage: boolean }) {
   return (
-    <div className="rounded-2xl border border-dashed border-purple-200 bg-white px-6 py-16 text-center">
-      <CalendarDays className="mx-auto mb-3 h-8 w-8 text-purple-400" />
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-16 text-center">
+      <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[var(--color-primary-400)]" />
       <h2 className="text-lg font-semibold text-slate-900">Nog geen locaties</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">
         {canManage

@@ -10,6 +10,16 @@ const BLOCKED_PATHS = new Set([
   '/debug-user',
 ]);
 
+/** Public or guest-token API routes (no session required at middleware). */
+function isPublicApiPath(pathname: string): boolean {
+  if (pathname === '/api/health-check') return true;
+  if (pathname === '/api/complete-signup') return true;
+  if (pathname === '/api/documents/upload') return true;
+  // Guest CV share: /api/cv-share/<token>/...
+  if (/^\/api\/cv-share\/[^/]+\//.test(pathname)) return true;
+  return false;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -17,10 +27,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const needsAuth =
+  const isApi = pathname.startsWith('/api/');
+  const needsDashboardAuth =
     pathname.startsWith('/dashboard') || pathname.startsWith('/intake/print');
+  const needsApiAuth = isApi && !isPublicApiPath(pathname);
 
-  if (!needsAuth) {
+  if (!needsDashboardAuth && !needsApiAuth) {
     return NextResponse.next();
   }
 
@@ -53,6 +65,9 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
+    if (needsApiAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.searchParams.set('redirect', pathname);
@@ -66,13 +81,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/intake/:path*',
-    '/api/intake/:path*',
-    '/api/export-intake-pdf',
-    '/api/check-schema',
-    '/api/mijn-stem/init',
-    '/api/mijn-stem/setup',
-    '/api/mijn-stem/create-bucket',
-    '/api/mijn-stem/test',
+    '/api/:path*',
     '/debug-user',
   ],
 };

@@ -75,9 +75,16 @@ export type MultiFilePdfInput = {
   label?: string;
 };
 
+export type InlineTextInput = {
+  label: string;
+  text: string;
+};
+
 export type StructuredMultiFileExtractionOptions<T> = {
   openai: OpenAI;
   files: MultiFilePdfInput[];
+  /** Plain-text sources sent in the user message, not as PDF uploads. */
+  inlineTexts?: InlineTextInput[];
   instructions: string;
   userMessage: string;
   schemaName: string;
@@ -91,9 +98,38 @@ export type StructuredMultiFileExtractionOptions<T> = {
   logLabel?: string;
 };
 
+export function composeMultiFileUserMessage(
+  userMessage: string,
+  files: MultiFilePdfInput[],
+  inlineTexts: InlineTextInput[],
+  correction?: string
+): string {
+  const parts = [userMessage];
+  if (files.length) {
+    const labels = files
+      .map((file, index) => file.label || file.analysisFilename || `document-${index + 1}`)
+      .join(', ');
+    parts.push(`Geüploade documenten (${files.length}): ${labels}`);
+  }
+  const blocks = inlineTexts
+    .map((item) => {
+      const text = item.text.trim();
+      if (!text) return '';
+      return `### ${item.label}\n${text}`;
+    })
+    .filter(Boolean);
+  if (blocks.length) {
+    parts.push(`Inline brontekst:\n\n${blocks.join('\n\n')}`);
+  }
+  if (correction?.trim()) parts.push(correction.trim());
+  return parts.join('\n\n');
+}
+
 export type ChatlikeMultiFileExtractionOptions = {
   openai: OpenAI;
   files: MultiFilePdfInput[];
+  /** Plain-text sources (e.g. gespreksverslag.txt) sent in the user message, not as PDF uploads. */
+  inlineTexts?: InlineTextInput[];
   instructions: string;
   userMessage: string;
   model?: string;
@@ -397,10 +433,12 @@ export async function runStructuredMultiFileExtraction<T>(
     validate,
     maxRetries = 0,
     logLabel,
+    inlineTexts = [],
   } = options;
 
-  if (!files.length) {
-    throw new Error('runStructuredMultiFileExtraction requires at least one PDF');
+  const usableInline = inlineTexts.filter((item) => item.text.trim());
+  if (!files.length && !usableInline.length) {
+    throw new Error('runStructuredMultiFileExtraction requires at least one PDF or inline text');
   }
 
   const fileIds: string[] = [];
@@ -411,10 +449,7 @@ export async function runStructuredMultiFileExtraction<T>(
       fileIds.push(id);
     }
 
-    const labels = files
-      .map((f, i) => f.label || f.analysisFilename || `document-${i + 1}`)
-      .join(', ');
-    let message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}`;
+    let message = composeMultiFileUserMessage(userMessage, files, usableInline);
 
     let lastParsed: T | null = null;
     let lastErrors: string[] = [];
@@ -449,7 +484,12 @@ export async function runStructuredMultiFileExtraction<T>(
         `⚠️ ${logLabel ?? schemaName} soft validation failed (attempt ${attempt + 1}): ${lastErrors.join('; ')}`
       );
       if (attempt < maxRetries) {
-        message = `${userMessage}\n\nGeüploade documenten (${files.length}): ${labels}\n\n${buildCorrectionMessage(lastErrors)}`;
+        message = composeMultiFileUserMessage(
+          userMessage,
+          files,
+          usableInline,
+          buildCorrectionMessage(lastErrors)
+        );
         continue;
       }
     }
@@ -464,7 +504,8 @@ export async function runStructuredMultiFileExtraction<T>(
 }
 
 /**
- * ChatGPT-style multi-PDF call: vision files + freeform text output (NO json_schema).
+ * ChatGPT-style multi-doc call: vision PDFs + optional inline plain text (NO json_schema).
+ * Soft-skips individual PDF upload failures; fails only when nothing usable remains.
  */
 export async function runChatlikeMultiFileExtraction(
   options: ChatlikeMultiFileExtractionOptions
@@ -472,6 +513,7 @@ export async function runChatlikeMultiFileExtraction(
   const {
     openai,
     files,
+    inlineTexts = [],
     instructions,
     userMessage,
     model = getDocumentExtractionModel(),
@@ -479,21 +521,36 @@ export async function runChatlikeMultiFileExtraction(
     logLabel,
   } = options;
 
-  if (!files.length) {
-    throw new Error('runChatlikeMultiFileExtraction requires at least one PDF');
+  const usableInline = inlineTexts.filter((item) => item.text.trim());
+  if (!files.length && !usableInline.length) {
+    throw new Error('runChatlikeMultiFileExtraction requires at least one PDF or inline text');
   }
 
   const fileIds: string[] = [];
+  const uploadedFiles: MultiFilePdfInput[] = [];
 
   try {
     for (const file of files) {
-      const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
-      fileIds.push(id);
+      try {
+        const id = await uploadPdfForResponses(openai, file.pdfBuffer, file.analysisFilename);
+        fileIds.push(id);
+        uploadedFiles.push(file);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.warn(
+          `⚠️ Chatlike: skipping PDF upload ${file.analysisFilename || file.label || 'document'}: ${message}`
+        );
+      }
     }
 
+    if (!fileIds.length && !usableInline.length) {
+      throw new Error('runChatlikeMultiFileExtraction: no usable PDFs or inline text after upload');
+    }
+
+    const composedMessage = composeMultiFileUserMessage(userMessage, uploadedFiles, usableInline);
     const inputFiles = fileIds.map((fileId) => buildPdfInputFileContent(fileId, usePdfVision));
     const userContent: OpenAI.Responses.ResponseInputContent[] = [
-      { type: 'input_text', text: userMessage },
+      { type: 'input_text', text: composedMessage },
       ...inputFiles,
     ];
 
@@ -511,7 +568,9 @@ export async function runChatlikeMultiFileExtraction(
     }
 
     if (logLabel) {
-      console.log(`✅ ${logLabel} (${files.length} files, freeform, len=${outputText.length})`);
+      console.log(
+        `✅ ${logLabel} (${uploadedFiles.length} files, ${usableInline.length} inline, freeform, len=${outputText.length})`
+      );
     }
     return outputText;
   } finally {

@@ -75,7 +75,7 @@ export default function AdminTicketsPage() {
                       {r.subject}
                     </Link>
                     {isUnread ? (
-                      <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-purple-900">
+                      <span className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-[var(--color-primary-900)]">
                         Actie nodig
                       </span>
                     ) : null}

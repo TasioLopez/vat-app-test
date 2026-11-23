@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  coerceHasAdReportForShape,
   docsIncludeAdReport,
   hasFilledAdReportDate,
   resolveTp2HasAdReport,
@@ -89,5 +90,40 @@ describe('resolveTp2HasAdReport', () => {
     const withoutDate: Record<string, unknown> = {};
     resolveTp2HasAdReport(withoutDate, false);
     assert.equal(withoutDate.has_ad_report, false);
+  });
+});
+
+describe('coerceHasAdReportForShape', () => {
+  it('coerces null/undefined to false when no AD date', () => {
+    assert.equal(coerceHasAdReportForShape({}), false);
+    assert.equal(coerceHasAdReportForShape({ has_ad_report: null }), false);
+  });
+
+  it('infers true from filled AD date when unset', () => {
+    assert.equal(
+      coerceHasAdReportForShape({ ad_report_date: '2026-06-02' }),
+      true
+    );
+  });
+
+  it('forces false when concept even with date', () => {
+    assert.equal(
+      coerceHasAdReportForShape({
+        has_ad_report: true,
+        ad_report_date: '2026-06-02',
+        ad_report_concept: true,
+      }),
+      false
+    );
+  });
+
+  it('promotes false to true when date is present (editor sync)', () => {
+    assert.equal(
+      coerceHasAdReportForShape({
+        has_ad_report: false,
+        ad_report_date: '2026-06-02',
+      }),
+      true
+    );
   });
 });

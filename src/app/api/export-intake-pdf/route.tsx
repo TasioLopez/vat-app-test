@@ -9,6 +9,8 @@ import { verifyEmployeeAccess } from '@/lib/auth/api-auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/auth/rate-limit';
 import { waitForPrintAssets } from '@/lib/pdf/wait-for-print-assets';
 import { ensureIntakeShape, INTAKE_LAYOUT_KEY } from '@/lib/intake/schema';
+import { overlayIntakeWithWorkerFacts } from '@/lib/intake/worker-overlay';
+import { loadWorkerFacts } from '@/lib/employee/save-worker-facts';
 import {
   contentDispositionAttachment,
   sanitizeDownloadFilename,
@@ -131,7 +133,10 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const snapshot = ensureIntakeShape(instance.data_json || {});
+  const facts = await loadWorkerFacts(ssr, employeeId);
+  const snapshot = facts.snapshot
+    ? overlayIntakeWithWorkerFacts(instance.data_json || {}, facts.snapshot.values)
+    : ensureIntakeShape(instance.data_json || {});
   const nameSlug =
     snapshot.s1.employee_name.replace(/[^\w\-]+/g, '_').slice(0, 40) || 'intake';
   const filename = sanitizeDownloadFilename(`Intakeformulier_${nameSlug}.pdf`);
