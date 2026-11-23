@@ -225,6 +225,19 @@ describe('assembleAlinea2FromProfileFacts', () => {
     assert.doesNotMatch(text, /spreken goed/);
   });
 
+  it('unwraps stringified rijbewijs and skips meta computer descriptions', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      rijbewijs: '["B"]',
+      vervoer: ['Auto'],
+      computervaardigheden: '2 - Basis',
+      computervaardigheden_toelichting: 'Computervaardigheden aanwezig',
+    });
+    assert.match(text, /rijbewijs B/);
+    assert.doesNotMatch(text, /rijbewijs \["B"\]/);
+    assert.match(text, /basis computervaardigheden/);
+    assert.doesNotMatch(text, /met Computervaardigheden aanwezig/i);
+  });
+
   it('writes the Ihub profile facts as fluent sentences', () => {
     const text = assembleAlinea2FromProfileFacts({
       rijbewijs: ['B'],

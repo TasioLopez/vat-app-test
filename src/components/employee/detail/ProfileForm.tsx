@@ -33,7 +33,7 @@ import {
   removeTransportType,
   splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
-import { cn, isAbsentText } from '@/lib/utils';
+import { cn, isAbsentText, normalizeStringArrayField } from '@/lib/utils';
 import {
   CARD_CLASS,
   CARD_TITLE_CLASS,
@@ -253,8 +253,8 @@ export function ProfileForm({
     cn(SELECT_CLASS, statusSurfaceClass(getStatus(field)));
   const canValidate = (field: EmployeeDetailFieldKey) => getStatus(field) === 'review';
 
-  const licenseTypes = Array.isArray(details?.drivers_license_type) ? details.drivers_license_type : [];
-  const transportTypes = Array.isArray(details?.transport_type) ? details.transport_type : [];
+  const licenseTypes = normalizeStringArrayField(details?.drivers_license_type);
+  const transportTypes = normalizeStringArrayField(details?.transport_type);
   const { custom: customTransport } = splitTransportTypes(transportTypes);
 
   const commitCustomTransport = () => {

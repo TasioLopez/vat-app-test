@@ -255,29 +255,105 @@ export function formatEducationLevel(
 }
 
 /**
+ * Unwrap one JSON-ish token (e.g. `["B"]` or nested `"[\"B\"]"`) into raw parts.
+ * Non-JSON strings are returned as a single trimmed token.
+ */
+function unwrapArrayTokens(raw: unknown, depth = 0): string[] {
+  if (raw == null) return [];
+  if (depth > 4) {
+    const fallback = String(raw).trim();
+    return fallback ? [fallback] : [];
+  }
+  if (Array.isArray(raw)) {
+    return raw.flatMap((item) => unwrapArrayTokens(item, depth + 1));
+  }
+  if (typeof raw !== 'string') {
+    const fallback = String(raw).trim();
+    return fallback ? [fallback] : [];
+  }
+  const s = raw.trim();
+  if (!s) return [];
+  if (s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return unwrapArrayTokens(parsed, depth + 1);
+    } catch {
+      /* fall through */
+    }
+  }
+  return [s];
+}
+
+/**
  * Normalize Postgres/legacy values to string[] (JSON strings, comma-separated, arrays).
+ * Also flattens double-wrapped tokens like `['["B"]']` → `['B']` and dedupes.
  */
 export function normalizeStringArrayField(value: unknown): string[] {
   if (value == null) return [];
+
+  let parts: string[] = [];
   if (Array.isArray(value)) {
-    return value.map((v) => String(v).trim()).filter(Boolean);
-  }
-  if (typeof value === 'string') {
+    parts = unwrapArrayTokens(value);
+  } else if (typeof value === 'string') {
     const s = value.trim();
     if (!s) return [];
     if (s.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(s);
-        if (Array.isArray(parsed)) {
-          return parsed.map((x) => String(x).trim()).filter(Boolean);
-        }
-      } catch {
-        /* fall through */
-      }
+      parts = unwrapArrayTokens(s);
+    } else {
+      parts = s.split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
     }
-    return s.split(/[,;]+/).map((x) => x.trim()).filter(Boolean);
+  } else {
+    return [];
   }
-  return [];
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    const token = part.trim();
+    if (!token) continue;
+    const key = token.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(token);
+  }
+  return out;
+}
+
+/**
+ * Nullable variant for employee_details array columns (empty → null).
+ * Prefer this over wrapping a JSON string as a single array element.
+ */
+export function normalizeStringArrayFieldOrNull(value: unknown): string[] | null {
+  const parts = normalizeStringArrayField(value);
+  return parts.length > 0 ? parts : null;
+}
+
+/** Meta / placeholder computer descriptions that are not real program lists. */
+export function isComputerSkillsMetaDescription(value: unknown): boolean {
+  if (value == null || typeof value !== 'string') return false;
+  const raw = value.trim();
+  if (!raw) return true;
+  const lower = raw.toLowerCase().replace(/[.,;:!?'"]+$/g, '').replace(/\s+/g, ' ').trim();
+  if (
+    lower === 'computervaardigheden' ||
+    lower === 'computervaardigheden aanwezig' ||
+    lower === 'algemene computervaardigheden' ||
+    lower === 'pc vaardigheden' ||
+    lower === 'pc-vaardigheden' ||
+    lower === 'aanwezig' ||
+    lower === 'ja' ||
+    lower === 'nee'
+  ) {
+    return true;
+  }
+  // "heeft computervaardigheden" / "beschikt over computervaardigheden" without named programs
+  if (
+    /^(heeft|beschikt over|wel)\s+computervaardigheden$/.test(lower) ||
+    /^computervaardigheden\s+(aanwezig|voldoende|ok|okay)$/.test(lower)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /** Treats null/undefined, blanks, and AI sentinel strings as absent text. */
@@ -413,8 +489,10 @@ export function formatComputerSkills(
   const level = String(skillLevel).trim();
   const label = COMPUTER_SKILLS_LABELS[level];
   if (!label) return level;
-  const desc =
-    String(description ?? '').trim() || COMPUTER_SKILLS_DEFAULT_DESCRIPTIONS[level] || '';
+  const rawDesc = String(description ?? '').trim();
+  const desc = isComputerSkillsMetaDescription(rawDesc)
+    ? COMPUTER_SKILLS_DEFAULT_DESCRIPTIONS[level] || ''
+    : rawDesc || COMPUTER_SKILLS_DEFAULT_DESCRIPTIONS[level] || '';
   if (!desc) return label;
   return `${label} (${desc})`;
 }
