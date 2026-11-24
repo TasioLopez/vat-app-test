@@ -69,6 +69,15 @@ describe('intake schema', () => {
     assert.equal(shaped.s9.tekst, 'Heeft goed contact met familie.');
   });
 
+  it('preserves trailing spaces on narrative tekst while editing', () => {
+    const shaped = ensureIntakeShape({
+      s8: { tekst: 'Woont samen ' },
+      s13: { tekst: 'Werkte als planner ' },
+    });
+    assert.equal(shaped.s8.tekst, 'Woont samen ');
+    assert.equal(shaped.s13.tekst, 'Werkte als planner ');
+  });
+
   it('layout key is intake_v1', () => {
     assert.equal(INTAKE_LAYOUT_KEY, 'intake_v1');
   });

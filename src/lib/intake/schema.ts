@@ -381,8 +381,11 @@ export function normalizeNarrativeSection(
   legacyKeys: readonly string[]
 ): IntakeNarrativeSection {
   const src = asRecord(raw);
-  const existing = str(src.tekst).trim();
-  if (existing) return { tekst: existing };
+  // Do not trim tekst here — ensureIntakeShape runs on every keystroke while
+  // editing, and trimming would swallow trailing spaces (same pattern as
+  // visie-loopbaanadviseur parseDraft).
+  const existing = str(src.tekst);
+  if (existing.trim()) return { tekst: existing };
 
   const parts: string[] = [];
   for (const key of legacyKeys) {
