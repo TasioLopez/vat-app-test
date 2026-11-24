@@ -69,6 +69,12 @@ export type PlanWorkerFactWritesOptions = {
   confirmKeys?: readonly string[];
   /** Employee-page form already decided review maps. Use them instead of auto-downgrading. */
   preserveProfileReview?: { status: unknown; hash: unknown };
+  /**
+   * Autofill only: overwrite these keys even when the worker already has a
+   * non-empty unvalidated value (e.g. intake PDF email over create-form typo).
+   * Validated fields are still skipped.
+   */
+  overwriteUnvalidatedKeys?: readonly string[];
 };
 
 export type PlannedWorkerFactWrites = {
@@ -323,8 +329,12 @@ export function planWorkerFactWrites(
         skippedValidated.push({ key, current: existing ?? null, proposed });
         continue;
       }
-      // Fill empty / weak defaults only — except clearing orphan license types with no-license.
-      if (!isEmptyGegevensField(key, existing) && !existingWeak && !licenseClear) {
+      const mayOverwrite =
+        Array.isArray(options?.overwriteUnvalidatedKeys) &&
+        options!.overwriteUnvalidatedKeys.includes(key);
+      // Fill empty / weak defaults only — except clearing orphan license types with no-license,
+      // or intake-sourced keys explicitly allowed to replace an unvalidated create-form value.
+      if (!isEmptyGegevensField(key, existing) && !existingWeak && !licenseClear && !mayOverwrite) {
         continue;
       }
     }
