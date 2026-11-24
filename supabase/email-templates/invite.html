@@ -74,7 +74,7 @@
             <tr>
               <td align="center" style="padding:0 24px 24px 24px;">
                 <a
-                  href="{{.ConfirmationURL}}"
+                  href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/signup"
                   style="display:inline-block; background-color:#7e22ce; color:#ffffff; text-decoration:none; font-size:16px; font-weight:600; line-height:1; padding:14px 28px; border-radius:8px;"
                 >
                   Account activeren
@@ -102,7 +102,7 @@
                 <p
                   style="margin:0; background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; word-break:break-all; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace; font-size:12px; line-height:1.5; color:#0f172a;"
                 >
-                  {{.ConfirmationURL}}
+                  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=invite&amp;next=/signup
                 </p>
               </td>
             </tr>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import PasswordStrengthIndicator from "@/components/ui/PasswordStrengthIndicator";
 import { validateForm, passwordValidation } from "@/lib/validation";
 import { Button } from '@/components/ui/button';
@@ -9,12 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
 export default function PasswordChange() {
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    
-    // Password change state
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +20,6 @@ export default function PasswordChange() {
         setMessage(null);
 
         try {
-            // Validate password change form
             const validation = validateForm(
                 passwordValidation.changePassword,
                 { currentPassword, newPassword, confirmPassword }
@@ -39,32 +31,25 @@ export default function PasswordChange() {
                 return;
             }
 
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) {
-                setMessage({ type: 'error', text: 'Gebruiker niet gevonden.' });
-                return;
-            }
-
-            // Verify current password by attempting to sign in
-            const { error: verifyError } = await supabase.auth.signInWithPassword({
-                email: user.email!,
-                password: currentPassword,
+            // Server verifies current password on an ephemeral client so we do
+            // not call signInWithPassword in the browser (that would drop MFA AAL2).
+            const res = await fetch("/api/change-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    currentPassword,
+                    newPassword,
+                    confirmPassword,
+                }),
             });
 
-            if (verifyError) {
-                setMessage({ type: 'error', text: 'Huidig wachtwoord is onjuist.' });
+            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) {
+                setMessage({
+                    type: "error",
+                    text: payload.error || "Er is een fout opgetreden bij het wijzigen van het wachtwoord.",
+                });
                 return;
-            }
-
-            // Update password
-            const { error: passwordError } = await supabase.auth.updateUser({
-                password: newPassword,
-            });
-
-            if (passwordError) {
-                throw passwordError;
             }
 
             setMessage({ type: 'success', text: 'Wachtwoord succesvol gewijzigd!' });
@@ -107,6 +92,7 @@ export default function PasswordChange() {
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
                             required
+                            autoComplete="current-password"
                         />
                     </div>
                     
@@ -120,6 +106,7 @@ export default function PasswordChange() {
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Voer nieuw wachtwoord in"
                             required
+                            autoComplete="new-password"
                         />
                         <div className="mt-3">
                             <PasswordStrengthIndicator password={newPassword} />
@@ -136,6 +123,7 @@ export default function PasswordChange() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Bevestig nieuw wachtwoord"
                             required
+                            autoComplete="new-password"
                         />
                         {confirmPassword && newPassword !== confirmPassword && (
                             <p className="text-sm text-red-600 mt-2 font-medium">Wachtwoorden komen niet overeen</p>

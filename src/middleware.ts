@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { redirectApexToWww } from '@/lib/auth/canonical-host';
 
 const BLOCKED_PATHS = new Set([
   '/api/check-schema',
@@ -21,6 +22,9 @@ function isPublicApiPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  const apexRedirect = redirectApexToWww(request);
+  if (apexRedirect) return apexRedirect;
+
   const { pathname } = request.nextUrl;
 
   if (BLOCKED_PATHS.has(pathname)) {
@@ -79,6 +83,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Apex→www must run for auth callbacks (query string preserved).
+    '/auth/:path*',
+    '/login',
+    '/signup',
+    '/reset-password',
     '/dashboard/:path*',
     '/intake/:path*',
     '/api/:path*',
