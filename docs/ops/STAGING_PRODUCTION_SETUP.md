@@ -65,7 +65,9 @@ Do these in order.
    - Site URL: `https://staging.vat-app.nl`
    - Redirect URLs:
      - `https://staging.vat-app.nl/auth/callback`
+     - `https://staging.vat-app.nl/auth/confirm`
      - `http://localhost:3000/auth/callback`
+     - `http://localhost:3000/auth/confirm`
 4. Disable public signup (invite-only). See [AUTH_INVITE_SETUP_CHECKLIST.md](../../AUTH_INVITE_SETUP_CHECKLIST.md).
 5. Copy custom email templates from [`supabase/email-templates/`](../../supabase/email-templates/) if production uses them.
 6. Apply the staging schema bootstrap (migrations alone are not enough on an empty DB — core tables were never in the migration history):
