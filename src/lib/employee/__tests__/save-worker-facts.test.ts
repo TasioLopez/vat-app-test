@@ -153,6 +153,35 @@ describe('planWorkerFactWrites', () => {
     assert.equal(planned.profileReview.education_level, 'review');
     assert.equal(planned.skippedValidated.length, 0);
   });
+
+  it('lets intake autofill overwrite unvalidated create-form email', () => {
+    const current = snapshot({ email: 'tulayguduk@hotmail.nl' });
+    const planned = planWorkerFactWrites(
+      current,
+      { email: 'tulayguduk@hotmail.com' },
+      'autofill',
+      { overwriteUnvalidatedKeys: ['email'] }
+    );
+    assert.deepEqual(planned.written, ['email']);
+    assert.equal(planned.values.email, 'tulayguduk@hotmail.com');
+  });
+
+  it('still skips validated email even with overwriteUnvalidatedKeys', () => {
+    const hash = computeEmployeeFieldHash('email', { email: 'locked@example.test' });
+    const current = snapshot(
+      { email: 'locked@example.test' },
+      { profileReview: { email: 'validated' }, profileHash: { email: hash } }
+    );
+    const planned = planWorkerFactWrites(
+      current,
+      { email: 'tulayguduk@hotmail.com' },
+      'autofill',
+      { overwriteUnvalidatedKeys: ['email'] }
+    );
+    assert.deepEqual(planned.written, []);
+    assert.equal(planned.values.email, 'locked@example.test');
+    assert.equal(planned.skippedValidated[0]?.key, 'email');
+  });
 });
 
 describe('applyWorkerFacts and stripWorkerFacts', () => {
