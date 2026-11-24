@@ -6,6 +6,7 @@ import {
   buildBelastbaarheidsprofielBlock,
   parseBelastbaarheidsprofiel,
 } from '@/lib/tp/belastbaarheidsprofiel/build-fields';
+import { normalizeLimitationsListMarkers } from '@/lib/tp/belastbaarheidsprofiel/list-markers';
 import { BelastbaarheidsprofielBlock } from '@/components/tp/BelastbaarheidsprofielBlock';
 import { ConfirmToEditBlock } from '@/components/tp/ConfirmToEditBlock';
 import { useDebouncedSync } from '@/hooks/useDebouncedSync';
@@ -40,7 +41,9 @@ export function BelastbaarheidsprofielEditor({
   const { limitationsBlock, prognoseQuote } = parseBelastbaarheidsprofiel(draft);
 
   const updateLimitations = (value: string) => {
-    setDraft(buildBelastbaarheidsprofielBlock(value, prognoseQuote));
+    setDraft(
+      buildBelastbaarheidsprofielBlock(normalizeLimitationsListMarkers(value), prognoseQuote)
+    );
   };
 
   const updatePrognoseQuote = (value: string) => {

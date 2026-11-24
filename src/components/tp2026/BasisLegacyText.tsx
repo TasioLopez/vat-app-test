@@ -3,6 +3,10 @@
 import React from 'react';
 import { ValentineZLogoBulletRow } from '@/components/tp2026/primitives';
 import { TP_BASIS_DISCLAIMER_CLASS, formatBasisFootnoteDisplay } from '@/lib/tp2026/basis-document-layout';
+import {
+  isLogoBulletLine,
+  stripLogoBulletPrefix,
+} from '@/lib/tp/belastbaarheidsprofiel/list-markers';
 import { protectDutchDatesInText } from '@/lib/tp/date-line-breaks';
 
 /** Inline **bold**, *italic*, ***both***, and "quoted" segments (legacy TP preview semantics). */
@@ -60,7 +64,7 @@ export function formatInlineText(
   return parts.length > 0 ? parts : processed;
 }
 
-/** Render narrative with ValentineZ logo bullets where lines use • / - / checkmarks (matches legacy Section 3). */
+/** Render narrative with ValentineZ logo bullets where lines use • / - / * / checkmarks (matches legacy Section 3). */
 export function renderTextWithLogoBullets(
   text: string,
   isPlaatsbaarheid = false,
@@ -85,21 +89,16 @@ export function renderTextWithLogoBullets(
     }
 
     const lines = trimmedPara.split('\n');
-
-    const hasBullets = lines.some((l) => {
-      const t = l.trim();
-      return t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
-    });
+    const hasBullets = lines.some((l) => isLogoBulletLine(l));
 
     if (hasBullets) {
       return (
         <div key={paraIdx} className="mb-4">
           {lines.map((line, idx) => {
             const t = line.trim();
-            const isBullet = t.startsWith('•') || t.startsWith('☑') || t.startsWith('✓') || t.startsWith('- ');
 
-            if (isBullet) {
-              const content = t.replace(/^[•☑✓\-]\s*/, '');
+            if (isLogoBulletLine(t)) {
+              const content = stripLogoBulletPrefix(t);
 
               if (isPlaatsbaarheid) {
                 const colonIndex = content.indexOf(':');
