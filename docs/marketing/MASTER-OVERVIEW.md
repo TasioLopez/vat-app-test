@@ -284,7 +284,7 @@ Even a **light** user (2 TP + 1 CV / month) saves ≈ **€342 / month** in labo
 A **mid** user (4 TP + 2 CV / month) saves ≈ **€684 / month**.  
 Org Mid path labor + Reserveren ≈ **€117k / year** before revenue upside.
 
-Incumbent CRM Advanced-class alone is already **€69 / user / month** list — for CRM only, not the document OS.
+Tribe Advanced alone is already **€69 / user / month** list — for generic CRM only, not the document OS.
 
 ### Price ladder (AI billed extra)
 
@@ -438,8 +438,8 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 
 | Asset | Keep | Soften / drop |
 |-------|------|----------------|
-| Internal one-pager | 325/164/218/30 · Sep–Nov window · 3h→30m · 2h→10m · €50/h · €55.7k to date · Year-1 Mid net · Jan vs June CRM · anonymous CRM €25k/yr | Full year-by-year table (appendix) |
-| Public | Time % · connected ecosystem · rounded volumes · no vendor name · careful on € | Exact CRM list prices, OpEx guts, margin €1,200 |
+| Internal one-pager | 325/164/218/30 · 3h→30m · 2h→10m · €49+AI · €1,000/case · Tribe vs VAT gap · Advanced tier | Full year-by-year table (appendix) |
+| Public | Time % · connected ecosystem · rounded volumes · “off-the-shelf CRM” | Tribe/PerfectView names, list-price guts |
 | Deck | Problem → ecosystem → proof → cost stack → ROI → CRM timing → ask | Assumption dump (backup slides) |
 | Use case | Advisor day-in-the-life + Reserveren + future CRM | Scenario grid |
 
