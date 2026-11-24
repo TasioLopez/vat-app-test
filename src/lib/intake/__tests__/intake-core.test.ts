@@ -227,6 +227,20 @@ describe('intake project + tp hydrate', () => {
     assert.equal(merged.s17.computer_skills_extra, 'SAP ERP');
   });
 
+  it('clears s17 rijbewijs when algemene reports drivers_license false', () => {
+    const base = createEmptyIntakeData();
+    base.s17.drivers_license_types = ['B'];
+    const merged = mergeExtractionsIntoIntake(base, {
+      algemene: {
+        drivers_license: false,
+        drivers_license_type: [],
+        transport_type: ['Auto'],
+      },
+    });
+    assert.deepEqual(merged.s17.drivers_license_types, []);
+    assert.deepEqual(merged.s17.transport_types, ['Auto']);
+  });
+
   it('does not paste validated intake into TP narrative fields', () => {
     assert.equal('tp3DetailsFromValidatedIntake' in intakeHydrate, false);
   });
