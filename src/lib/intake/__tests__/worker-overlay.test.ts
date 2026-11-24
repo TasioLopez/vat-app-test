@@ -129,4 +129,30 @@ describe('intake worker overlay', () => {
     assert.deepEqual(seeded.s17.drivers_license_types, ['B']);
     assert.equal(seeded.s17.praktische_belemmeringen, 'Reistijd.');
   });
+
+  it('keeps PerfectView email over unvalidated create-form typo during gap-fill', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      { s2: { email: 'tulayguduk@hotmail.com' } },
+      { email: 'tulayguduk@hotmail.nl', phone: '0611111111' }
+    );
+    assert.equal(seeded.s2.email, 'tulayguduk@hotmail.com');
+    assert.equal(seeded.s2.phone, '0611111111');
+  });
+
+  it('fills blank intake email from WorkerFacts when PDF had none', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      { s2: { email: '' } },
+      { email: 'coach@example.test' }
+    );
+    assert.equal(seeded.s2.email, 'coach@example.test');
+  });
+
+  it('lets a validated worker email lock win over PDF via onlyKeys', () => {
+    const seeded = seedIntakeFromWorkerFacts(
+      { s2: { email: 'tulayguduk@hotmail.com' } },
+      { email: 'locked@example.test' },
+      { onlyKeys: new Set(['email']) }
+    );
+    assert.equal(seeded.s2.email, 'locked@example.test');
+  });
 });

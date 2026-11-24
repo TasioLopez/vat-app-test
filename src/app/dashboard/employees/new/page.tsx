@@ -210,11 +210,12 @@ export default function NewEmployeePage() {
                             </div>
                         </div>
 
-                        {/* Email Field */}
+                        {/* Email Field — optional; PerfectView intake leads when uploaded */}
                         <div className="group">
                             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                 <FaEnvelope className="text-purple-600" />
                                 Email
+                                <span className="text-xs font-normal text-gray-500">(optioneel)</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -224,7 +225,7 @@ export default function NewEmployeePage() {
                                     onChange={handleChange}
                                     onFocus={() => setFocusedField('email')}
                                     onBlur={() => setFocusedField(null)}
-                                    placeholder="voorbeeld@email.com"
+                                    placeholder="Wordt overgenomen uit intake"
                                     className={`w-full px-4 py-3 pl-12 rounded-xl border-2 transition-all duration-300 ${
                                         focusedField === 'email'
                                             ? 'border-purple-500 bg-purple-50/50 shadow-lg shadow-purple-500/20'
@@ -237,6 +238,9 @@ export default function NewEmployeePage() {
                                     <FaEnvelope />
                                 </div>
                             </div>
+                            <p className="mt-1.5 text-xs text-gray-500">
+                                Liever leeg laten: bij Invullen geldt het e-mailadres uit het PerfectView-intakeformulier.
+                            </p>
                         </div>
 
                         {/* Employer Selection Field */}
