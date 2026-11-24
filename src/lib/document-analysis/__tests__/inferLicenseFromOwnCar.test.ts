@@ -33,4 +33,15 @@ describe('inferDriversLicenseFromOwnCar', () => {
     assert.equal(mapped.drivers_license, false);
     assert.equal(mapped.drivers_license_type, undefined);
   });
+
+  it('skips Auto→B when intake PDF / glyph detection asks to skip', () => {
+    const mapped: Record<string, unknown> = {
+      transport_type: ['Auto'],
+      drivers_license: false,
+      drivers_license_type: [],
+    };
+    assert.equal(inferDriversLicenseFromOwnCar(mapped, { skip: true }), false);
+    assert.equal(mapped.drivers_license, false);
+    assert.deepEqual(mapped.drivers_license_type, []);
+  });
 });
