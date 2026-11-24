@@ -29,8 +29,9 @@ VAT is a **connected operating system for 2e-spoor / re-integration work**: doss
 | TP time — with VAT | **≤ 0.5 hours** (30 min or less) | Model uses **0.5 h** (conservative end of “or less”) |
 | CV time — before | **≥ 2.0 hours** | Model uses **2.0 h** |
 | CV time — with VAT | **≤ 10 minutes** | Model uses **10 min (0.167 h)** |
-| Revenue upside | **Allowed** in materials | See §8 |
-| Incumbent CRM | In use today | Modeled as **anonymous “CRM suite”** using current public list pricing of the class of product ValentineZ uses (see §9). **Do not name the vendor in external assets.** |
+| Revenue upside | **Allowed** | **€1,000 contribution margin per extra full case** (person handled: TP + VGR + related docs) — see §8 |
+| Recommended seat price | **€49 / user / month** + AI at cost | See §9.6 |
+| CRM evaluation context | Left **PerfectView**; considering **Tribe CRM** (~**30 users**) | Internal comparison in §9. Public/external assets: prefer “off-the-shelf CRM” unless naming is intentional. |
 
 ### Implied pace in the window (not a promise)
 
@@ -143,64 +144,100 @@ Growth after Year 1 (volume): Conservative **15%** · Mid **25%** · Stretch **3
 
 ## 8. Revenue upside (allowed)
 
-**Working assumption — replace with finance truth:**
+**Locked commercial assumption:** each **extra full case** you can handle (one person through TP + VGR + the related document set) contributes **€1,000** more (contribution margin).
 
 | Parameter | Value |
 |-----------|------:|
-| Incremental **contribution margin** per additional completed TP-case | **€1,200** |
-| Sensitivity | €800 (low) · €2,000 (high) |
+| Margin per extra full case | **€1,000** |
+| What “case” means | Whole person handled — not TP alone: Intake / TP / VGR / CV and the dossier work around them |
+| Mechanism | Faster documents free advisor time → more people through the pipeline without hiring |
 
-**Mechanism:** hours freed from documentation → more completed trajectories (or less backlog / overtime) without hiring.
+| Path | Doc hours freed (approx.) | Fill into extra full cases | Extra cases | Revenue upside @ €1,000 |
+|------|--------------------------:|---------------------------:|------------:|------------------------:|
+| A Conservative | ~1,100 h | ~25% of capacity liberated | ~90 | **≈ €90k** |
+| **B Mid** | ~2,000 h | ~30% | **~150** | **≈ €150k** |
+| C Stretch | ~2,900 h | ~35% | ~250 | **≈ €250k** |
 
-| Path | Freed hours (approx.) | Equivalent old-world TPs (÷3 h) | Fill rate | Extra TPs | Revenue upside @ €1,200 |
-|------|----------------------:|-------------------------------:|----------:|----------:|------------------------:|
-| A | ~940 h | ~310 | 25% | ~78 | **≈ €94k** |
-| B | ~1,490 h | ~500 | 30% | ~150 | **≈ €180k** |
-| C | ~2,370 h | ~790 | 35% | ~275 | **≈ €330k** |
-
-Sensitivity (Mid path): @ €800 → ≈ €120k · @ €2,000 → ≈ €300k.
+*(Fill &lt; 100% because conversations, employer contact, and demand still gate throughput — documentation is no longer the bottleneck.)*
 
 ---
 
-## 9. All costs — status quo vs VAT
+## 9. All costs — Tribe path vs VAT path
 
-All figures **excl. VAT (BTW)** unless noted. CRM figures are **list-price class of the incumbent suite** ValentineZ uses today (public EU list, annual billing). **Do not name the vendor externally.**
+All figures **excl. BTW**. List prices from public Tribe pages (annual billing). Discounts unknown — treat as **ceiling**; a discount does not close the **capability** gap below.
 
-### 9.1 Incumbent CRM suite — list economics (anonymous)
+### 9.0 Context
 
-| Tier (feature class) | € / user / month (annual bill) | € / user / month (quarterly) | Min seats |
-|----------------------|-------------------------------:|-----------------------------:|----------:|
-| Essential-class | **39** | 44 | 2 |
-| Advanced-class | **69** | 75 | 2 |
-| Ultimate-class | **79** | 89 | 5 |
+- Client moved away from **PerfectView** (cheaper NL CRM: roughly €15–30/user/mo depending on seat count — general sales/service CRM).  
+- Now considering **Tribe CRM** at ~**30 users**.  
+- PerfectView / Tribe are **generic CRMs**. VAT is a **2e-spoor operating system** (documents + AI + dossier + Reserveren). They solve different jobs; stacking Tribe *plus* Word/ChatGPT/booking is the fragmented alternative to VAT @ **€49 + AI**.
 
-**Typical feature footprint of this suite (what VAT-CRM would need to absorb or intentionally leave behind):**
+### 9.1 Tribe list pricing (30 users)
 
-| Area | Essential-class | Advanced-class | Ultimate-class |
-|------|:---------------:|:--------------:|:--------------:|
-| Lead / deal pipeline, 360° relations | ✓ | ✓ | ✓ |
-| Quote → invoice, e-sign, subscriptions | ✓ | ✓ | ✓ |
-| Email campaigns | ✓ | ✓ | ✓ |
-| AI mail sentiment / enrichment | ✓ | ✓+ | ✓+ |
-| Dashboards / widgets | limited | unlimited | unlimited |
-| Projects, support tickets, work orders, events | | ✓ | ✓ |
-| Unlimited simple automations | | ✓ | ✓ |
-| AI agents, timed automations, custom entities, multi-org | | | ✓ |
-| Customer portal | add-on / Ultimate | add-on / Ultimate | ✓ / add-on |
-| EU hosting, GDPR, ISO-class security claims | ✓ | ✓ | ✓ |
+| Tier | € / user / mo (annual) | € / user / mo (quarterly) | **30 users / year** | Min seats |
+|------|-----------------------:|--------------------------:|--------------------:|----------:|
+| Essential | 39 | 44 | **€14,040** | 2 |
+| **Advanced (realistic fit)** | **69** | 75 | **€24,840** | 2 |
+| Ultimate | 79 | 89 | **€28,440** | 5 |
 
-**Add-ons (list):** white-label portal ≈ **€125 / month** · extra sandbox **from ≈ €30 / month** · implementation often **≈ €1.5k–€4k** one-time (market commentary; confirm actual contract).
+**Add-ons / extras (list):** white-label portal **€125/mo** (€1,500/yr) · sandbox **from ~€30/mo** · implementation commonly cited **≈ €1.5k–€4k** one-time.
 
-### 9.2 Incumbent CRM — annual license scenarios (ValentineZ scale)
+**Year-1 Tribe cash (illustrative, no discount):**
 
-| Seats | Essential-class | Advanced-class (**base case**) | Ultimate-class |
-|------:|----------------:|-------------------------------:|---------------:|
-| 20 | €9,360 | €16,560 | €18,960 |
-| **30** | €14,040 | **€24,840** | €28,440 |
+| Package | Year-1 € |
+|---------|---------:|
+| Essential only | ≈ €14k + impl |
+| **Advanced only** | **≈ €25k** + impl €1.5–4k → **≈ €27–29k** |
+| Advanced + portal | ≈ €26k + impl |
+| Ultimate + portal | ≈ €30k + impl |
 
-**Base case for this pack:** Advanced-class × **30 seats** × annual billing = **€24,840 / year**, plus ~**€1k / year** amortized implementation (e.g. €3k / 3 years), optional portal **€1,500 / year** if used.
+**Which Tribe tier fits a 30-person 2e-spoor org?**
 
-→ **CRM cash out today (base): ≈ €26k–€28k / year** before internal admin labor on double entry / reporting.
+| Need | Essential | Advanced | Ultimate |
+|------|:---------:|:--------:|:--------:|
+| Relations, pipeline, quotes/invoices, email campaigns | ✓ | ✓ | ✓ |
+| Projects / milestones, ticketing, work orders, richer automations | | **✓** | ✓ |
+| Custom activity types, conditional roles | | **✓** | ✓ |
+| AI agents, timed automations, custom data model, multi-org | | | ✓ |
+
+→ For case-like delivery (trajectories as work, tickets, projects), **Advanced is the tier that actually fits**. Essential is “CRM lite.” Ultimate adds generic AI agents — still **not** Trajectplan/VGR/CV intelligence.
+
+### 9.2 Capability check — does Tribe do what VAT does?
+
+**Short answer: no.** Tribe can store relations and merge **generic document templates** (offers, invoices, simple docs). It does **not** ship a 2e-spoor document factory.
+
+| Capability | VAT today | Tribe (even Ultimate) |
+|------------|:---------:|:---------------------:|
+| Werkgever / werknemer dossier hub | ✓ | Relations/projects (generic) |
+| Intake builder + dossier AI extraction | ✓ | ✗ (attach files / notes) |
+| Trajectplan 2026 wizard (5 steps, PoW, zoekprofiel, belastbaarheid, visies, …) | ✓ | ✗ (maybe a blank Word-like template you maintain yourself) |
+| AI autofill TP/CV from intake, FML/IZP, AD, notes | ✓ | ✗ (mail sentiment / lead AI ≠ dossier AI) |
+| VGR first + follow-up, hydrate from TP, period history | ✓ | ✗ |
+| CV builder, layouts, photo, share link, PDF | ✓ | ✗ |
+| Gesprek audio/text → structured gespreksverslag | ✓ | ✗ |
+| TP Docs archive + print routes | ✓ | File attachments only |
+| Reserveren (rooms + parking, multi-location) | ✓ | Calendar/activities ≠ room/parking inventory |
+| In-app help for 2e-spoor workflows | ✓ | Generic CRM help |
+| Lead → quote → invoice, email campaigns, ERP links | Roadmap / partial | **✓ (Tribe’s core)** |
+| Generic AI agents (meeting prep, lead gen) | ✗ | Ultimate |
+
+**Conclusion:** Tribe (any tier) does **not** replace VAT. Choosing Tribe means **Tribe + still needing** VAT *or* Word + generic AI + manual TP/VGR/CV + booking chaos. The fair commercial comparison is:
+
+**Fragmented stack** = Tribe Advanced (~€25k/yr) + generic AI seats + manual/document labor  
+**vs VAT** = **€49 × 30 + AI usage (~€6k)** with TP/VGR/CV/intake/Reserveren included.
+
+### 9.3 Money comparison (30 users, list, excl. BTW)
+
+| Annual cost | Tribe Advanced path | VAT path @ €49 |
+|-------------|--------------------:|---------------:|
+| CRM / platform seats | **€24,840** | **€17,640** |
+| Implementation (Year 1) | €1.5–4k | already live |
+| Portal / sandbox add-ons (if taken) | €0–2k | — |
+| AI for documents | Extra (ChatGPT-class or none → more labor) **€6–12k** or €0 + huge labor | **≈ €6,000** pass-through (usage) |
+| **Software cash (steady year, mid)** | **≈ €31–37k** + still no TP/VGR AI | **≈ €23.6k** **and** document OS included |
+| Advisor doc labor (Mid volumes) | Still ~**€140k** if manual / weak templates | ~**€38k** remaining review time |
+
+So even before labor: VAT seats+AI are in the same ballpark as **Tribe alone**, while delivering the workload Tribe cannot. With labor, the fragmented path is an order of magnitude more expensive.
 
 ### 9.3 Other status-quo tool costs (estimate — validate on invoices)
 
@@ -286,14 +323,15 @@ If fewer than 30 are billed (e.g. 20 active seats @ €49): you still clear ≈ 
 | (+) Doc labor saved | 102,000 |
 | (+) Reserveren labor | 15,000 |
 | (+) Other SaaS avoided / reduced (mid) | 10,000 |
-| (+) Revenue upside (fill on freed hours) | 180,000 |
+| (+) Revenue upside (~150 extra full cases × €1,000) | 150,000 |
 | (−) VAT seats @ €49 × 30 | −17,640 |
 | (−) AI usage pass-through | −6,000 |
-| (−) Incumbent CRM still paid | −24,840 |
-| (−) CRM impl/add-ons if any | −2,500 |
-| **Net Year-1 Mid for client (illustrative)** | **≈ €256k** |
+| (−) Tribe Advanced still paid (if they buy both) | −24,840 |
+| (−) Tribe impl/add-ons if any | −2,500 |
+| **Net Year-1 Mid for client (illustrative)** | **≈ €226k** |
 
-Without revenue upside: ≈ **€102k + €15k + €10k − €18k − €6k − €27k ≈ €76k** client net.
+Without revenue upside: ≈ **€102k + €15k + €10k − €18k − €6k − €27k ≈ €76k** client net.  
+**If they choose VAT and skip Tribe** for day-to-day 2e-spoor ops (CRM features later in VAT): drop the −€27k Tribe lines → client net Mid **≈ €253k** (with revenue upside).
 
 **Provider Year-1 (your side):** seat revenue ≈ **€17.6k** − hosting/domain ≈ **€1.2k** → **≈ €16.4k** platform contribution (AI zero-margin pass-through unless you add a small markup).
 
@@ -305,11 +343,11 @@ Without revenue upside: ≈ **€102k + €15k + €10k − €18k − €6k −
 
 | Avoided / reduced | Mid € / year |
 |-------------------|-------------:|
-| Incumbent CRM licenses (30 × Advanced-class) | **24,840** |
+| Tribe Advanced licenses (30 × €69) | **24,840** |
 | Impl amort + typical add-ons (if dropped) | **2,500** |
 | Admin labor: double entry, status chase, pack reporting | **45,000** |
 | **CRM-era gross benefit (client)** | **≈ €72k / year** |
-| Seat price step-up option when CRM ships | e.g. €49 → **€69** (+€20 × 30 × 12 = +€7.2k to provider; client still nets CRM license avoidance) |
+| Seat step-up when CRM ships in VAT | e.g. €49 → **€69** (matches Tribe Advanced list seat; client consolidates into one product) |
 
 Admin labor detail @ €50/h (mid): double entry ~€17k + weekly reporting/caseload ~€18k + rework/missed handoffs ~€10k ≈ **€45k**.
 
@@ -325,7 +363,7 @@ Admin labor detail @ €50/h (mid): double entry ~€17k + weekly reporting/case
 
 ### 11.3 Five-year forward (2027–2031) — Mid path, **client** net
 
-Docs labor +25% YoY from €102k; booking €15k; SaaS avoided €10k → €3k after CRM; revenue upside +25% YoY from €180k; client pays seats (€49 → €69 when CRM live) + AI (~€6k growing ~20%/yr with volume); CRM license drops when integrated.
+Docs labor +25% YoY from €102k; booking €15k; SaaS avoided €10k → €3k after CRM; revenue upside +25% YoY from **€150k** (€1,000/case); client pays seats (€49 → €69 when CRM live) + AI (~€6k growing ~20%/yr); Tribe license drops when CRM is inside VAT.
 
 **Cumulative 2027–2031 client net (rounded):**
 
@@ -337,18 +375,18 @@ Docs labor +25% YoY from €102k; booking €15k; SaaS avoided €10k → €3k 
 
 ### 11.4 Year-by-year sketch (client Mid + CRM Jan 2027, seats step to €69)
 
-| Year | Doc labor | Revenue upside | Booking+SaaS | CRM license+admin saved | (−) Seats+AI | **Client net** |
-|------|----------:|---------------:|-------------:|------------------------:|-------------:|---------------:|
-| 2027 | 102k | 180k | 25k | 72k | −31k | **≈ €348k** |
-| 2028 | 128k | 225k | 18k | 72k | −33k | **≈ €410k** |
-| 2029 | 160k | 281k | 18k | 72k | −35k | **≈ €496k** |
-| 2030 | 200k | 351k | 18k | 72k | −38k | **≈ €603k** |
-| 2031 | 250k | 439k | 18k | 72k | −41k | **≈ €738k** |
-| **Sum** | | | | | | **≈ €2.6M** |
+| Year | Doc labor | Revenue upside | Booking+SaaS | Tribe+admin saved | (−) Seats+AI | **Client net** |
+|------|----------:|---------------:|-------------:|------------------:|-------------:|---------------:|
+| 2027 | 102k | 150k | 25k | 72k | −31k | **≈ €318k** |
+| 2028 | 128k | 188k | 18k | 72k | −33k | **≈ €373k** |
+| 2029 | 160k | 234k | 18k | 72k | −35k | **≈ €449k** |
+| 2030 | 200k | 293k | 18k | 72k | −38k | **≈ €545k** |
+| 2031 | 250k | 366k | 18k | 72k | −41k | **≈ €665k** |
+| **Sum** | | | | | | **≈ €2.35M** |
 
 ### 11.5 Same sketch with CRM June 2027
 
-2027 client net ≈ €348k − €30k ≈ **€318k**; 2028–2031 unchanged → five-year ≈ **€2.5M**.
+2027 client net ≈ €318k − €30k ≈ **€288k**; 2028–2031 unchanged → five-year ≈ **≈ €2.3M**.
 
 ---
 
@@ -360,11 +398,11 @@ Docs labor +25% YoY from €102k; booking €15k; SaaS avoided €10k → €3k 
 |------|--------------------:|--------------------:|----------------:|
 | Advisor TP+CV labor | €140k | €38k | €38k |
 | Admin / CRM double-entry labor | €45k | €45k | €0–5k |
-| Incumbent CRM suite | €25–28k | €25–28k | **€0** |
-| Generic AI + minor SaaS | €7–19k | €3–8k | €2–5k |
+| Tribe Advanced (list) | €25–28k | €25–28k if dual-running | **€0** |
+| Generic AI + minor SaaS | €7–19k | €0–3k (VAT AI covers docs) | €0–3k |
 | VAT seats | €0 | **€17.6k** | **€24.8k** |
 | VAT AI usage (pass-through) | €0 | **€6k** | **€6–8k** |
-| **Total client out (mid-ish)** | **≈ €220–230k** | **≈ €135–145k** | **≈ €75–85k** |
+| **Total client out (mid-ish)** | **≈ €220–230k** | **≈ €135–145k** (or **≈ €110k** if no Tribe) | **≈ €75–85k** |
 
 ### Provider money (your side)
 
@@ -389,10 +427,10 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 - TP “≤30 min” / CV “≤10 min” are operating claims; model uses those ceilings  
 - Period average ≠ steady-state run rate (gradual ramp)  
 - AI ≈ €500/mo is today’s run-rate; it will rise with volume (still billed to client)  
-- Contribution margin €1,200 and fill rates drive revenue upside — confirm with finance if used externally  
-- Seat price is a commercial choice; €49 is the recommended balance, not a law of nature  
-- CRM feature parity: scope to **2e-spoor operations**, not a full marketing-suite clone  
-- Never name the incumbent CRM vendor in public assets  
+- €1,000 / extra full case and fill rates drive revenue upside  
+- Seat price €49 is the recommended balance, not a law of nature  
+- VAT-CRM roadmap should cover **2e-spoor ops**, not clone Tribe’s full marketing/ERP suite on day one  
+- Public assets: prefer “off-the-shelf CRM”; this internal doc may name Tribe / PerfectView  
 
 ---
 
@@ -409,11 +447,11 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 
 ## 16. Open items still useful
 
-1. Confirm whether AI “≈ €500” is **per month** (assumed here) or another period  
-2. Real incumbent CRM contract (tier, seats) vs list, if you want exact license avoidance  
-3. Finance sign-off on **€1,200** contribution margin if revenue upside is shown externally  
-4. Lock seat price: **€49** recommended (or €39 intro / €59 premium)  
-5. CRM go-live: **January 2027** vs **June 2027**
+1. Confirm AI “≈ €500” is **per month** (assumed)  
+2. Any Tribe quote/discount vs list (doesn’t change the capability gap)  
+3. Lock **€1,000 / extra full case** for external decks if used  
+4. Lock seat **€49** (or €39 intro / €59 premium)  
+5. CRM-in-VAT go-live: **Jan vs June 2027**
 
 ---
 
@@ -425,18 +463,15 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 | Output | 325 TP · 164 CV · 218 werkgevers · ~30 users |
 | TP | 3.0 h → 0.5 h · **€125** saved |
 | CV | 2.0 h → 10 min · **€92** saved |
-| Labor rate | **€50/h** |
-| Value to date (TP+CV labor) | **≈ €55.7k** |
-| Year-1 Mid doc labor saved | **≈ €102k** |
-| **Recommended seat price** | **€49 / user / month** + AI at cost |
-| AI run-rate | **≈ €500 / month** pass-through |
-| Hosting + domain | **€50–100 / mo** + **€10 / yr** |
-| Your platform margin @ €49×30 | **≈ €16.4k / year** |
-| Client Year-1 Mid net (with revenue upside) | **≈ €256k** |
-| Incumbent CRM (30× Advanced-class list) | **≈ €24.8k/yr** |
-| CRM-era client add-on | **≈ €72k/yr** |
-| CRM Jan vs June 2027 | June forgoes **≈ €30k** in 2027 |
-| 5-year client net Mid + CRM Jan | **≈ €2.6M** illustrative |
+| Extra full case margin | **€1,000** / person handled |
+| Mid revenue upside | **≈ €150k / year** (~150 cases) |
+| **Seat price** | **€49 / user / month** + AI at cost |
+| AI / hosting | **≈ €500/mo** AI · **€50–100/mo** host · **€10/yr** domain |
+| Your margin @ €49×30 | **≈ €16.4k / year** |
+| Tribe Advanced list @ 30 | **≈ €24.8k / year** (+ impl/add-ons) — **no TP/VGR/CV AI** |
+| VAT seats+AI @ 30 | **≈ €23.6k / year** — **document OS included** |
+| Fit tier if they still buy Tribe | **Advanced** (Essential too thin; Ultimate ≠ 2e-spoor docs) |
+| 5-year client net Mid + CRM-in-VAT Jan | **≈ €2.35M** illustrative |
 
 ---
 
