@@ -1,16 +1,21 @@
 "use client";
 
 /**
- * Client-only auth return URL for invite + password-reset emails.
+ * Client-only auth return URL for invite + password-reset emails (PKCE / hash).
+ * Prefer `/auth/confirm?token_hash=…` (server verifyOtp) for email templates —
+ * that path does not need a PKCE code_verifier in the same browser.
+ *
  * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs must include
- * each deployed origin + path, e.g. https://vat-app.nl/auth/callback and https://www.vat-app.nl/auth/callback
- * (and http://localhost:3000/auth/callback for local dev).
+ * each deployed origin + path, e.g. https://www.vat-app.nl/auth/callback,
+ * https://www.vat-app.nl/auth/confirm, https://vat-app.nl/auth/callback (apex redirects to www),
+ * and staging equivalents.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSafeAuthRedirectPath } from "@/lib/auth/safe-auth-redirect";
+import { humanizeAuthCallbackError } from "@/lib/auth/pkce-errors";
 import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
 
 export default function AuthCallbackPage() {
@@ -50,7 +55,7 @@ export default function AuthCallbackPage() {
       if (cancelled || resolvedRef.current) return;
       resolvedRef.current = true;
       clearTimeout(timeoutId);
-      setError(message);
+      setError(humanizeAuthCallbackError(message));
       setPhase("error");
     };
 
@@ -77,6 +82,20 @@ export default function AuthCallbackPage() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const nextPath = getSafeAuthRedirectPath(params.get("next"), "/signup");
+
+      // Give createBrowserClient's detectSessionInUrl a short head start so we
+      // do not race a second exchangeCodeForSession that already consumed the verifier.
+      await new Promise((r) => setTimeout(r, 50));
+      if (cancelled || resolvedRef.current) return;
+
+      const {
+        data: { session: earlySession },
+      } = await supabase.auth.getSession();
+      if (earlySession?.user) {
+        logBranch("session.early");
+        go(nextPath);
+        return;
+      }
 
       if (code) {
         logBranch("code.exchange.start");
@@ -132,7 +151,8 @@ export default function AuthCallbackPage() {
           session?.user &&
           (event === "INITIAL_SESSION" ||
             event === "SIGNED_IN" ||
-            event === "TOKEN_REFRESHED")
+            event === "TOKEN_REFRESHED" ||
+            event === "PASSWORD_RECOVERY")
         ) {
           go(nextPath);
         }
