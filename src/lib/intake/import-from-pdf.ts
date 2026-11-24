@@ -22,6 +22,7 @@ import {
 import { mergeExtractionsIntoIntake } from '@/lib/intake/merge-extractions';
 import { createEmptyIntakeData, ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
 import { applyIntakeCheckboxOverridesFromText } from '@/lib/intake/checkbox-overrides';
+import { applyIntakeCheckboxTextOverrides } from '@/lib/document-analysis/intakeCheckboxText';
 import { extractPdfPlainTextWithGlyphFallback } from '@/lib/document-analysis/documentPlainText';
 
 export type ImportIntakeFromPdfResult = {
@@ -170,9 +171,14 @@ export async function importIntakeFromPdf(params: {
     console.warn('Intake import sectie7 failed', e);
   }
 
+  // Apply rijbewijs/vervoer glyph overrides before merge so vision cannot invent
+  // checked boxes when PDF text shows all ☐ (or positive checks).
+  const algemene = { ...(vision.raw || {}) };
+  applyIntakeCheckboxTextOverrides(algemene, plainText);
+
   const merged = mergeExtractionsIntoIntake(base, {
     core: vision.raw,
-    algemene: vision.raw,
+    algemene,
     tp2,
     sectie3,
     sectie5,

@@ -127,9 +127,16 @@ export async function extractWorkerFactsFromDocuments(
   onPhase?.('merge');
   const cleaned = stripAssistantArtifactsFromRecord(extraction.raw);
   const mapped = mapAndValidateEmployeeDetails(cleaned);
-  applyIntakeCheckboxTextOverrides(mapped, extraction.intakePlainText);
-  // After checkbox text: eigen auto / vervoer Auto with no typed license ⇒ B.
-  inferDriversLicenseFromOwnCar(mapped);
+  const checkboxSources = applyIntakeCheckboxTextOverrides(
+    mapped,
+    extraction.intakePlainText
+  );
+  // Never invent B from Auto when an intake PDF was processed or glyphs decided license.
+  const skipAutoB =
+    intakeProcessed ||
+    checkboxSources.licenseSource === 'text' ||
+    checkboxSources.licenseSource === 'cleared';
+  inferDriversLicenseFromOwnCar(mapped, { skip: skipAutoB });
 
   return {
     details: mapped as Record<string, unknown>,

@@ -112,9 +112,11 @@ export function detectTransportFromIntakeText(
 }
 
 /**
- * Apply transport / rijbewijs from intake PDF text only when there is a positive
- * checkbox selection. Incomplete intake (all ☐ / no glyphs) leaves mapped alone so
- * dossier/chatlike values can fill gaps. Mutates `mapped` in place.
+ * Apply transport / rijbewijs from intake PDF text when checkbox glyphs are present.
+ * - Checked boxes → override model (`text`)
+ * - All ☐ with glyphs → clear license (and leave transport as absent for gap-fill)
+ * - No glyphs → leave mapped alone (`absent`)
+ * Mutates `mapped` in place.
  */
 export type CheckboxFieldSource = 'text' | 'cleared' | 'absent';
 
@@ -144,8 +146,13 @@ export function applyIntakeCheckboxTextOverrides(
     mapped.drivers_license_type = licenses;
     mapped.drivers_license = true;
     licenseSource = 'text';
+  } else if (licenses !== null) {
+    // Glyphs present but all ☐ — authoritative empty (blocks Auto→B invention).
+    mapped.drivers_license_type = [];
+    mapped.drivers_license = false;
+    licenseSource = 'cleared';
   } else {
-    // null or all-unchecked: do not force "geen rijbewijs".
+    // No glyphs near labels: leave model / chatlike alone.
     licenseSource = 'absent';
   }
 

@@ -113,18 +113,19 @@ describe('applyIntakeCheckboxTextOverrides', () => {
     assert.equal(sources.licenseSource, 'absent');
   });
 
-  it('preserves mapped values when intake checkboxes are all unchecked', () => {
+  it('clears invented license when intake rijbewijs checkboxes are all unchecked', () => {
     const mapped: Record<string, unknown> = {
       transport_type: ['Auto'],
-      drivers_license: false,
-      drivers_license_type: [],
+      drivers_license: true,
+      drivers_license_type: ['B', 'BE'],
     };
     const sources = applyIntakeCheckboxTextOverrides(mapped, ALL_UNCHECKED_INTAKE);
+    // Transport still absent (gap-fill); license glyphs all ☐ are authoritative clear.
     assert.deepEqual(mapped.transport_type, ['Auto']);
     assert.equal(mapped.drivers_license, false);
     assert.deepEqual(mapped.drivers_license_type, []);
     assert.equal(sources.transportSource, 'absent');
-    assert.equal(sources.licenseSource, 'absent');
+    assert.equal(sources.licenseSource, 'cleared');
   });
 
   it('leaves mapped alone when text is empty', () => {
@@ -149,15 +150,31 @@ describe('applyIntakeCheckboxTextOverrides', () => {
     assert.equal(mappedOff.is_ex_werknemer, false);
   });
 
-  it('keeps Auto through incomplete intake so Auto→B inference can run', () => {
+  it('blocks Auto→B after all-☐ rijbewijs glyphs (cleared)', () => {
     const mapped: Record<string, unknown> = {
       transport_type: ['Auto'],
       drivers_license: false,
       drivers_license_type: [],
     };
-    applyIntakeCheckboxTextOverrides(mapped, ALL_UNCHECKED_INTAKE);
-    assert.equal(inferDriversLicenseFromOwnCar(mapped), true);
-    assert.equal(mapped.drivers_license, true);
+    const sources = applyIntakeCheckboxTextOverrides(mapped, ALL_UNCHECKED_INTAKE);
+    assert.equal(sources.licenseSource, 'cleared');
+    assert.equal(
+      inferDriversLicenseFromOwnCar(mapped, { skip: sources.licenseSource !== 'absent' }),
+      false
+    );
+    assert.equal(mapped.drivers_license, false);
+    assert.deepEqual(mapped.drivers_license_type, []);
+  });
+
+  it('still allows Auto→B when no license glyphs are present', () => {
+    const mapped: Record<string, unknown> = {
+      transport_type: ['Auto'],
+      drivers_license: false,
+      drivers_license_type: [],
+    };
+    const sources = applyIntakeCheckboxTextOverrides(mapped, 'geen checkboxes hier');
+    assert.equal(sources.licenseSource, 'absent');
+    assert.equal(inferDriversLicenseFromOwnCar(mapped, { skip: false }), true);
     assert.deepEqual(mapped.drivers_license_type, ['B']);
   });
 });

@@ -204,6 +204,12 @@ export function mergeExtractionsIntoIntake(
   }
   if (Array.isArray(alg.drivers_license_type) && alg.drivers_license_type.length) {
     data.s17.drivers_license_types = alg.drivers_license_type.map(String);
+  } else if (
+    alg.drivers_license === false ||
+    (Array.isArray(alg.drivers_license_type) && alg.drivers_license_type.length === 0)
+  ) {
+    // Glyph-cleared / explicit no-license from intake PDF must wipe invented types.
+    data.s17.drivers_license_types = [];
   }
 
   // Narrative sections
