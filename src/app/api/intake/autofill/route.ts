@@ -79,7 +79,10 @@ export async function POST(req: NextRequest) {
 
         const generated = ensureIntakeShape(result.data);
         const shared = normalizeWorkerFactValues(intakeSharedFacts(generated));
-        const saved = await saveWorkerFacts(supabase, employeeId, shared, 'autofill');
+        // PerfectView "Email werknemer" leads over create-form typos when a PDF was imported.
+        const saved = await saveWorkerFacts(supabase, employeeId, shared, 'autofill', {
+          overwriteUnvalidatedKeys: result.sourceDocumentId ? ['email'] : [],
+        });
         if (saved.error) {
           controller.enqueue(encodeErrorEvent(saved.error, 500));
           return;

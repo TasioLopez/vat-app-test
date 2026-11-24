@@ -80,6 +80,13 @@ export type SeedWorkerFactsOptions = {
 };
 
 /**
+ * Keys where PerfectView / intake PDF extraction should stay ahead of an
+ * unvalidated create-form / WorkerFacts value during Invullen gap-fill.
+ * Validated locks still win via `onlyKeys`.
+ */
+export const INTAKE_PDF_PREFERRED_KEYS = ['email'] as const;
+
+/**
  * Seed intake shared fields from WorkerFacts.
  * By default seeds non-empty values; pass `onlyKeys` during Invullen so only locked
  * facts win over document extraction.
@@ -90,6 +97,7 @@ export function seedIntakeFromWorkerFacts(
   options?: SeedWorkerFactsOptions
 ): IntakeData {
   const onlyKeys = options?.onlyKeys;
+  const shaped = ensureIntakeShape(raw);
   const known: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(facts)) {
     if (onlyKeys && !onlyKeys.has(key)) continue;
@@ -112,10 +120,22 @@ export function seedIntakeFromWorkerFacts(
     ) {
       continue;
     }
+    // Unvalidated worker email must not clobber PerfectView "Email werknemer".
+    if (
+      (INTAKE_PDF_PREFERRED_KEYS as readonly string[]).includes(key) &&
+      !onlyKeys
+    ) {
+      const sectionPath = STRING_PATHS.find((p) => p.key === key);
+      if (sectionPath) {
+        const section = shaped[sectionPath.section] as unknown as Record<string, unknown>;
+        const existing = section[sectionPath.field];
+        if (typeof existing === 'string' && existing.trim()) continue;
+      }
+    }
     if (isEmptyGegevensField(key, value)) continue;
     known[key] = value;
   }
-  return overlayIntakeWithWorkerFacts(raw, known);
+  return overlayIntakeWithWorkerFacts(shaped, known);
 }
 
 /** Keys locked as validated on the worker record (profile + case). */
