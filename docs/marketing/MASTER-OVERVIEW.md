@@ -216,42 +216,86 @@ All figures **excl. VAT (BTW)** unless noted. CRM figures are **list-price class
 At Mid forward volumes **without** VAT: 700×3.0 + 350×2.0 = **2,800 h** → **€140k / year** labor on TP+CV alone.  
 With VAT (85% adoption): effective remaining labor ≈ **€38k** → **€102k labor avoided** (§7).
 
-### 9.5 VAT platform operating costs (must show — confirm actuals)
+### 9.5 VAT platform operating costs (**actuals from provider**)
 
-Not taken from production bills yet. Use as **working OpEx band** until finance fills real numbers:
+| Cost | Amount | How billed |
+|------|--------|------------|
+| Domain | **≈ €10 / year** | Fixed |
+| Hosting (app/DB/etc.) | **€50–100 / month** (≈ €600–1,200 / year) | Fixed-ish; use **€100/mo** as ceiling |
+| AI / LLM usage | **≈ €500 / month** today (≈ €6,000 / year) | **Variable** — billed to the client at usage, **not** included in the seat subscription |
 
-| VAT cost | Low / year | Mid / year | High / year | What it covers |
-|----------|----------:|-----------:|------------:|----------------|
-| Hosting (app, DB, storage, PDF workers) | €4k | €8k | €15k | Scales with users/files |
-| AI / LLM API | €8k | €18k | €35k | Scales with TP/CV/VGR/gesprek volume |
-| Email / misc services | €0.5k | €1k | €2k | Booking mail, invites |
-| Internal maintain / support allocation | €5k | €12k | €25k | Eng + admin time on the product |
-| **VAT OpEx (docs-era)** | **€17.5k** | **€39k** | **€77k** | |
-| Extra OpEx when CRM module live | +€3k | **+€8k** | +€15k | Extra build amortization / infra for CRM features |
+**Provider fixed OpEx (platform only): ≈ €610–1,210 / year** (domain + hosting).  
+**AI:** pass-through to client (~€6k/yr at current run-rate; rises with volume).
 
-**Mid docs-era VAT OpEx used below: €39k / year.**  
-**Mid VAT+CRM OpEx: €47k / year.**
+> Earlier €39k OpEx placeholder is **retired**. Net math below uses real fixed OpEx + AI pass-through.
 
-> Action: replace Mid with real Vercel/Supabase/OpenAI/invoices before board-level use.
+---
+
+## 9.6 Recommended commercial model (provider ↔ client)
+
+**Structure**
+
+1. **Seat subscription** — fixed € / user / month (platform access: dossiers, TP, CV, VGR, intake, Reserveren, help).  
+2. **AI usage** — billed separately at cost (variable; ~€500/mo org-wide today).  
+3. Optional: annual prepay (−10%), or a small AI admin fee (e.g. +10% on AI) if you want buffer.
+
+**Why this split:** AI cost scales with how hard they use the product; you are not trapped under-pricing heavy months, and the client only pays for what they consume.
+
+### Value vs price (client lens, ~30 users)
+
+Even a **light** user (2 TP + 1 CV / month) saves ≈ **€342 / month** in labor @ €50/h.  
+A **mid** user (4 TP + 2 CV / month) saves ≈ **€684 / month**.  
+Org Mid path labor + Reserveren ≈ **€117k / year** before revenue upside.
+
+Incumbent CRM Advanced-class alone is already **€69 / user / month** list — for CRM only, not the document OS.
+
+### Price ladder (AI billed extra)
+
+| Seat price | Client pays seats (30) | + AI ~€500 | Client total / mo | Your rev / mo | Your fixed cost | Your platform margin / mo |
+|-----------:|-----------------------:|-----------:|------------------:|--------------:|----------------:|--------------------------:|
+| €29 | €870 | €1,370 | €1,370 | €870 | ≤ €101 | **≈ €770** |
+| €39 | €1,170 | €1,670 | €1,670 | €1,170 | ≤ €101 | **≈ €1,070** |
+| **€49 (recommended)** | **€1,470** | **€1,970** | **€1,970** | **€1,470** | **≤ €101** | **≈ €1,370** |
+| €59 | €1,770 | €2,270 | €2,270 | €1,770 | ≤ €101 | **≈ €1,670** |
+| €69 | €2,070 | €2,570 | €2,570 | €2,070 | ≤ €101 | **≈ €1,970** |
+
+Annual at **€49 / user / month** × 30: seats **€17.6k** + AI **€6k** ≈ **€23.6k** client cost vs **≈ €117k** Mid labor/booking value → client still keeps on the order of **≈ €90k+ / year** net (before revenue upside). ROI roughly **4–5×** on fees alone.
+
+### Recommendation
+
+| Role | Price |
+|------|------:|
+| **Sweet spot** | **€49 / user / month** + AI at cost |
+| Intro / land | €39 / user / month (first 3–6 months or &lt;20 seats) |
+| Premium / SLA / roadmap priority | €59 / user / month |
+| Avoid going above | **€69** for docs-only (equals CRM list seat with less “CRM story”); once **CRM is inside VAT**, **€69–79** becomes easier to defend as it *replaces* the €69 CRM seat |
+
+**For you:** at €49 × 30, ≈ **€17.6k / year** seat revenue against ≈ **€1.2k** fixed hosting/domain → **~90%+ gross margin** on the subscription (your time to build/support is the real “cost” that margin should fund).  
+**For them:** still far below labor savings and below or near a single CRM seat while getting the whole document ecosystem.
+
+If fewer than 30 are billed (e.g. 20 active seats @ €49): you still clear ≈ **€980 / month** platform margin — healthy vs ≤ €100 hosting.
 
 ---
 
 ## 10. Net view — Year 1 (docs only, CRM still external)
 
-**Mid path** example:
+**Client Mid path** (value created minus what they pay you):
 
 | Line | € / year |
 |------|--------:|
 | (+) Doc labor saved | 102,000 |
 | (+) Reserveren labor | 15,000 |
-| (+) Other SaaS avoided / reduced (mid of band) | 10,000 |
+| (+) Other SaaS avoided / reduced (mid) | 10,000 |
 | (+) Revenue upside (fill on freed hours) | 180,000 |
-| (−) VAT platform OpEx (mid) | −39,000 |
+| (−) VAT seats @ €49 × 30 | −17,640 |
+| (−) AI usage pass-through | −6,000 |
 | (−) Incumbent CRM still paid | −24,840 |
-| (−) CRM impl amort / portal (if any) | −2,500 |
-| **Net Year-1 Mid (illustrative)** | **≈ €241k** |
+| (−) CRM impl/add-ons if any | −2,500 |
+| **Net Year-1 Mid for client (illustrative)** | **≈ €256k** |
 
-Conservative without revenue upside: labor + booking + partial SaaS − VAT OpEx − CRM ≈ **€102k + €15k + €7k − €39k − €27k ≈ €58k**.
+Without revenue upside: ≈ **€102k + €15k + €10k − €18k − €6k − €27k ≈ €76k** client net.
+
+**Provider Year-1 (your side):** seat revenue ≈ **€17.6k** − hosting/domain ≈ **€1.2k** → **≈ €16.4k** platform contribution (AI zero-margin pass-through unless you add a small markup).
 
 ---
 
@@ -264,9 +308,8 @@ Conservative without revenue upside: labor + booking + partial SaaS − VAT OpEx
 | Incumbent CRM licenses (30 × Advanced-class) | **24,840** |
 | Impl amort + typical add-ons (if dropped) | **2,500** |
 | Admin labor: double entry, status chase, pack reporting | **45,000** |
-| **CRM-era gross benefit (before extra VAT OpEx)** | **≈ €72k** |
-| (−) Extra VAT OpEx for CRM module | −8,000 |
-| **Net CRM-era add-on** | **≈ €64k / year** |
+| **CRM-era gross benefit (client)** | **≈ €72k / year** |
+| Seat price step-up option when CRM ships | e.g. €49 → **€69** (+€20 × 30 × 12 = +€7.2k to provider; client still nets CRM license avoidance) |
 
 Admin labor detail @ €50/h (mid): double entry ~€17k + weekly reporting/caseload ~€18k + rework/missed handoffs ~€10k ≈ **€45k**.
 
@@ -277,62 +320,60 @@ Admin labor detail @ €50/h (mid): double entry ~€17k + weekly reporting/case
 | Remaining 2026 (≈5 weeks) | Docs-only | Docs-only |
 | 2027 CRM benefit months | **12** | **7** (Jun–Dec) |
 | 2028–2031 | Full CRM each year | Full CRM each year |
-| 2027 CRM net add-on | **≈ €64k** | **≈ €37k** (7/12 × 64) |
-| Delay cost of waiting to June | | **≈ €27k** forgone in 2027 alone |
+| 2027 CRM benefit (license + admin) | **≈ €72k** | **≈ €42k** (7/12 × 72) |
+| Delay cost of waiting to June | | **≈ €30k** forgone in 2027 alone |
 
-### 11.3 Five-year forward (2027–2031) — Mid docs path + CRM options
+### 11.3 Five-year forward (2027–2031) — Mid path, **client** net
 
-Docs labor grows 25% YoY from Year-1 Mid €102k; booking €15k flat; other SaaS avoided €10k flat while CRM external, then €3k residual after CRM (some niche tools remain); revenue upside grows with freed hours (~25% YoY from €180k); VAT OpEx €39k → €47k when CRM live.
+Docs labor +25% YoY from €102k; booking €15k; SaaS avoided €10k → €3k after CRM; revenue upside +25% YoY from €180k; client pays seats (€49 → €69 when CRM live) + AI (~€6k growing ~20%/yr with volume); CRM license drops when integrated.
 
-**Cumulative 2027–2031 (rounded):**
+**Cumulative 2027–2031 client net (rounded):**
 
-| | Docs + revenue, CRM stays external | **+ CRM from Jan 2027** | **+ CRM from June 2027** |
-|--|-----------------------------------:|------------------------:|-------------------------:|
-| 5-year gross benefit (labor+booking+SaaS+revenue+CRM nets) | ≈ €1.9M | ≈ **€2.2M** | ≈ **€2.15M** |
-| 5-year VAT OpEx (sum) | ≈ €0.20M | ≈ **€0.23M** | ≈ **€0.23M** |
-| **5-year net (illustrative)** | ≈ **€1.7M** | ≈ **€2.0M** | ≈ **€1.92M** |
+| | Docs only (CRM stays external) | **+ CRM from Jan 2027** | **+ CRM from June 2027** |
+|--|--------------------------------:|------------------------:|-------------------------:|
+| **5-year client net** | ≈ **€1.9M** | ≈ **€2.2M** | ≈ **€2.1M** |
 
-**Jan vs June:** choosing January rather than June is worth on the order of **≈ €70–90k** over five years (forgone 2027 months + slightly earlier compounding on admin efficiency) — exact delta ≈ **€80k** in this Mid workbook.
+**Jan vs June:** January over June ≈ **€80–100k** more client value over five years (earlier license + admin savings).
 
-### 11.4 Year-by-year sketch (Mid + CRM Jan 2027)
+### 11.4 Year-by-year sketch (client Mid + CRM Jan 2027, seats step to €69)
 
-| Year | Doc labor | Revenue upside | Booking+SaaS | CRM net add-on | VAT OpEx | **Net** |
-|------|----------:|---------------:|-------------:|---------------:|---------:|--------:|
-| 2027 | 102k | 180k | 25k | 64k | −47k | **≈ €324k** |
-| 2028 | 128k | 225k | 18k | 64k | −47k | **≈ €388k** |
-| 2029 | 160k | 281k | 18k | 64k | −50k | **≈ €473k** |
-| 2030 | 200k | 351k | 18k | 64k | −52k | **≈ €581k** |
-| 2031 | 250k | 439k | 18k | 64k | −55k | **≈ €716k** |
-| **Sum** | | | | | | **≈ €2.5M** gross lines; net **≈ €2.0M** after OpEx already in rows |
-
-*(Table nets already subtract OpEx. Revenue and volumes are the sensitive levers — finance should stress-test margin and fill rate.)*
+| Year | Doc labor | Revenue upside | Booking+SaaS | CRM license+admin saved | (−) Seats+AI | **Client net** |
+|------|----------:|---------------:|-------------:|------------------------:|-------------:|---------------:|
+| 2027 | 102k | 180k | 25k | 72k | −31k | **≈ €348k** |
+| 2028 | 128k | 225k | 18k | 72k | −33k | **≈ €410k** |
+| 2029 | 160k | 281k | 18k | 72k | −35k | **≈ €496k** |
+| 2030 | 200k | 351k | 18k | 72k | −38k | **≈ €603k** |
+| 2031 | 250k | 439k | 18k | 72k | −41k | **≈ €738k** |
+| **Sum** | | | | | | **≈ €2.6M** |
 
 ### 11.5 Same sketch with CRM June 2027
 
-2027 net ≈ €324k − €27k ≈ **€297k**; 2028–2031 unchanged → five-year net ≈ **€1.92M**.
+2027 client net ≈ €348k − €30k ≈ **€318k**; 2028–2031 unchanged → five-year ≈ **€2.5M**.
 
 ---
 
 ## 12. Cost stack one-pager (everything in one place)
 
-### Money out (annual, Mid, 30 users)
+### Money out — **client** (annual, Mid, 30 users)
 
-| Cost | Status quo (no VAT) | VAT docs only | VAT + CRM |
-|------|--------------------:|--------------:|----------:|
+| Cost | Status quo (no VAT) | VAT docs only @ €49 | VAT + CRM @ €69 |
+|------|--------------------:|--------------------:|----------------:|
 | Advisor TP+CV labor | €140k | €38k | €38k |
 | Admin / CRM double-entry labor | €45k | €45k | €0–5k |
 | Incumbent CRM suite | €25–28k | €25–28k | **€0** |
 | Generic AI + minor SaaS | €7–19k | €3–8k | €2–5k |
-| VAT platform OpEx | €0 | €39k | €47k |
-| **Total money out (mid-ish)** | **≈ €220–230k** | **≈ €150–160k** | **≈ €90–100k** |
+| VAT seats | €0 | **€17.6k** | **€24.8k** |
+| VAT AI usage (pass-through) | €0 | **€6k** | **€6–8k** |
+| **Total client out (mid-ish)** | **≈ €220–230k** | **≈ €135–145k** | **≈ €75–85k** |
 
-### Money in / value (annual, Mid)
+### Provider money (your side)
 
-| | VAT docs only | VAT + CRM |
-|--|--------------:|----------:|
-| Labor & tool value vs status quo | ≈ €110–130k | ≈ €170–200k |
-| Revenue upside (fill) | ≈ €180k | ≈ €180k+ |
-| **Combined vs status quo** | **≈ €0.3M** | **≈ €0.35M+** |
+| | Docs-only @ €49 × 30 | + CRM @ €69 × 30 |
+|--|---------------------:|-----------------:|
+| Seat revenue | €17.6k / year | €24.8k / year |
+| Fixed hosting + domain | ≈ €1.2k | ≈ €1.2–2k |
+| AI | pass-through | pass-through |
+| **Platform contribution** | **≈ €16.4k / year** | **≈ €23k / year** |
 
 ---
 
@@ -347,9 +388,10 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 - Adoption uneven → € savings ramp with training  
 - TP “≤30 min” / CV “≤10 min” are operating claims; model uses those ceilings  
 - Period average ≠ steady-state run rate (gradual ramp)  
-- VAT OpEx Mid (€39k) is a **placeholder** until invoices  
-- Contribution margin €1,200 and fill rates drive revenue upside — finance must confirm  
-- CRM feature parity: VAT may not need Ultimate-class AI agents / multi-org on day one; scope the module to **2e-spoor operations** (relations, cases, stages, reporting, billing hooks), not a full marketing suite clone  
+- AI ≈ €500/mo is today’s run-rate; it will rise with volume (still billed to client)  
+- Contribution margin €1,200 and fill rates drive revenue upside — confirm with finance if used externally  
+- Seat price is a commercial choice; €49 is the recommended balance, not a law of nature  
+- CRM feature parity: scope to **2e-spoor operations**, not a full marketing-suite clone  
 - Never name the incumbent CRM vendor in public assets  
 
 ---
@@ -367,11 +409,11 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 
 ## 16. Open items still useful
 
-1. Real VAT OpEx (hosting + LLM + support) from invoices  
-2. Real incumbent CRM contract (tier, seats, add-ons, impl) vs list  
-3. Finance sign-off on **€1,200** contribution margin and fill rates  
-4. Whether public materials may show revenue upside  
-5. Preferred CRM go-live narrative: **January 2027** (max value) vs **June 2027** (more build time)
+1. Confirm whether AI “≈ €500” is **per month** (assumed here) or another period  
+2. Real incumbent CRM contract (tier, seats) vs list, if you want exact license avoidance  
+3. Finance sign-off on **€1,200** contribution margin if revenue upside is shown externally  
+4. Lock seat price: **€49** recommended (or €39 intro / €59 premium)  
+5. CRM go-live: **January 2027** vs **June 2027**
 
 ---
 
@@ -386,13 +428,16 @@ One dossier truth · consistent TP/VGR/CV · role-based access · faster onboard
 | Labor rate | **€50/h** |
 | Value to date (TP+CV labor) | **≈ €55.7k** |
 | Year-1 Mid doc labor saved | **≈ €102k** |
-| Year-1 Mid revenue upside | **≈ €180k** |
+| **Recommended seat price** | **€49 / user / month** + AI at cost |
+| AI run-rate | **≈ €500 / month** pass-through |
+| Hosting + domain | **€50–100 / mo** + **€10 / yr** |
+| Your platform margin @ €49×30 | **≈ €16.4k / year** |
+| Client Year-1 Mid net (with revenue upside) | **≈ €256k** |
 | Incumbent CRM (30× Advanced-class list) | **≈ €24.8k/yr** |
-| VAT OpEx Mid (placeholder) | **≈ €39k** docs / **€47k** +CRM |
-| CRM net add-on | **≈ €64k/yr** |
-| CRM Jan 2027 vs June 2027 | June forgoes **≈ €27k** in 2027; **≈ €80k** over 5 years |
-| 5-year net Mid + CRM Jan | **≈ €2.0M** illustrative |
+| CRM-era client add-on | **≈ €72k/yr** |
+| CRM Jan vs June 2027 | June forgoes **≈ €30k** in 2027 |
+| 5-year client net Mid + CRM Jan | **≈ €2.6M** illustrative |
 
 ---
 
-*Next: keep/discard pass → freeze OpEx/margin → cut internal one-pager + deck.*
+*Next: lock seat price → cut internal one-pager + deck.*
