@@ -1,8 +1,22 @@
+export type InferDriversLicenseOptions = {
+  /**
+   * When true (intake PDF was processed / license glyphs decided), never invent B
+   * from Auto alone — aligns with intake generate "NOOIT afleiden uit vervoer Auto".
+   */
+  skip?: boolean;
+};
+
 /**
- * Product rule: own car / vervoer Auto without a stated license type ⇒ standard B.
- * Does not invent when another license type is already present.
+ * Product rule (dossier-only / no intake glyphs): own car / vervoer Auto without a
+ * stated license type ⇒ standard B. Does not invent when another license type is
+ * already present, or when `skip` is set after intake PDF checkbox detection.
  */
-export function inferDriversLicenseFromOwnCar(mapped: Record<string, unknown>): boolean {
+export function inferDriversLicenseFromOwnCar(
+  mapped: Record<string, unknown>,
+  options?: InferDriversLicenseOptions
+): boolean {
+  if (options?.skip) return false;
+
   const transport = mapped.transport_type;
   const hasAuto =
     Array.isArray(transport) &&
