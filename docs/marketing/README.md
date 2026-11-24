@@ -1,18 +1,9 @@
-# VAT marketing & business-case materials
+# VAT marketing & client materials
 
-Working folder for one-pagers, use cases, and presentation content.
+| Document | Audience | Purpose |
+|----------|----------|---------|
+| **[CLIENT-OVERVIEW.md](./CLIENT-OVERVIEW.md)** | **Client (EN)** | **Bring this.** Concise summary, breakdown, comparison, pricing |
+| **[CLIENT-OVERVIEW-NL.md](./CLIENT-OVERVIEW-NL.md)** | **Client (NL)** | Same pack in Dutch |
+| [MASTER-OVERVIEW.md](./MASTER-OVERVIEW.md) | Internal | Full working model, assumptions, Tribe tier detail |
 
-| Document | Purpose |
-|----------|---------|
-| [MASTER-OVERVIEW.md](./MASTER-OVERVIEW.md) | **Start here.** Locked assumptions (Sep–Nov 2026, €50/h, 3h→30m TP, 2h→10m CV), full cost stack, anonymous CRM list economics, Jan vs June 2027 CRM, revenue upside, 5-year net |
-
-Interactive summary: canvas **VAT Master Overview** (link in agent chat).
-
-Still open before freezing assets: real VAT OpEx invoices, real CRM contract vs list, finance margin €1,200, CRM go-live preference.
-
-Next assets after keep/discard:
-
-1. Internal one-pager  
-2. Public one-pager  
-3. Use case  
-4. Presentation deck  
+Interactive view: canvas **VAT Master Overview** / client pack in agent chat.
