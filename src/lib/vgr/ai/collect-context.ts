@@ -298,20 +298,44 @@ export async function collectVgrAiContext(params: {
   const { files, labels, skipped } = await loadDocumentsAsPdfInputs(supabase, chosen);
   const conflicts = detectVgrSourceConflicts(data, prior);
 
+  // Phase 2: prefer verified dossier facts; keep PDFs as optional evidence.
+  let verifiedFactsBlock = '';
+  try {
+    const { loadVgrDossier } = await import('@/lib/vgr/dossier/store');
+    const { formatVerifiedFactsForPrompt } = await import('@/lib/vgr/dossier/verified-facts-text');
+    const dossier = await loadVgrDossier(supabase, employeeId);
+    verifiedFactsBlock = formatVerifiedFactsForPrompt(dossier);
+  } catch (e) {
+    console.warn('VGR AI: dossier facts unavailable', e);
+  }
+
   const text = [
     `# Dossiercontext voor onderdeel "${VGR_AI_SECTIONS[sectionId].label}"`,
+    verifiedFactsBlock,
     gegevensBlock(data),
     currentBodyBlock(data, sectionId),
     planningBlock(data),
     applicationsBlock(data),
     priorReportBlock(prior, sectionId),
     conflicts.length ? `## Gesignaleerde tegenstrijdigheden (benoem in waarschuwingen, los niet zelf op)\n${conflicts.map((c) => `- ${c}`).join('\n')}` : '',
-    files.length ? `## Bijgevoegde documenten\n${labels.map((l) => `- ${l}`).join('\n')}` : '## Bijgevoegde documenten\nGeen. Gebruik alleen bovenstaande context; laat velden leeg als informatie ontbreekt.',
+    files.length
+      ? `## Bijgevoegde documenten (bewijs; feiten hierboven hebben voorrang)\n${labels.map((l) => `- ${l}`).join('\n')}`
+      : '## Bijgevoegde documenten\nGeen. Gebruik geverifieerde feiten en rapportagecontext; laat velden leeg als informatie ontbreekt.',
     skipped.length ? `Niet leesbaar/overgeslagen: ${skipped.join(', ')}` : '',
     extraInstruction?.trim() ? `## Aanvullende instructie van de loopbaanadviseur\n${extraInstruction.trim()}` : '',
   ]
     .filter(Boolean)
     .join('\n\n');
 
-  return { text, files, sources: [...labels, 'Rapportagegegevens', ...(prior ? ['Vorige rapportage'] : [])], conflicts };
+  return {
+    text,
+    files,
+    sources: [
+      ...(verifiedFactsBlock ? ['Geverifieerd dossier'] : []),
+      ...labels,
+      'Rapportagegegevens',
+      ...(prior ? ['Vorige rapportage'] : []),
+    ],
+    conflicts,
+  };
 }
