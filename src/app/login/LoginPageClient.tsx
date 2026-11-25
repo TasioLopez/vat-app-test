@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthShell from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { validateForm, authValidation } from "@/lib/validation";
 import { getConfiguredClientAuthOrigin, normalizeAuthOrigin } from "@/lib/auth/auth-origin";
 import { tryCreateBrowserSupabase } from "@/lib/supabase/browser";
-import { isMfaOptionalEmail, listVerifiedTotpFactors } from "@/lib/auth/mfa";
+import {
+  getAssuranceLevel,
+  isMfaOptionalEmail,
+  listVerifiedTotpFactors,
+} from "@/lib/auth/mfa";
 import { markSessionAuthenticated } from "@/lib/auth/session-client";
 
 const inputClassName =
@@ -27,6 +31,7 @@ export default function LoginPageClient() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaResumeLoading, setMfaResumeLoading] = useState(reason === "mfa_required");
 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -38,8 +43,49 @@ export default function LoginPageClient() {
   async function finishLoginRedirect() {
     markSessionAuthenticated();
     const next = searchParams.get("redirect");
-    router.push(next && next.startsWith("/") ? next : "/dashboard");
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
   }
+
+  // Resume MFA-only when an AAL1 session already exists (e.g. soft cookie downgrade).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = tryCreateBrowserSupabase();
+      if (!supabase) {
+        if (!cancelled) setMfaResumeLoading(false);
+        return;
+      }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (!user || isMfaOptionalEmail(user.email)) {
+        setMfaResumeLoading(false);
+        return;
+      }
+      const totpFactors = await listVerifiedTotpFactors(supabase);
+      if (cancelled) return;
+      if (totpFactors.length === 0) {
+        setMfaResumeLoading(false);
+        return;
+      }
+      const { currentLevel } = await getAssuranceLevel(supabase);
+      if (cancelled) return;
+      if (currentLevel === "aal2") {
+        await finishLoginRedirect();
+        return;
+      }
+      setMfaFactorId(totpFactors[0].id);
+      setMfaCode("");
+      setMfaError(null);
+      setMfaResumeLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only resume; redirect/finish uses latest searchParams via closure on first paint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,9 +267,11 @@ export default function LoginPageClient() {
   const reasonMessage =
     reason === "idle_timeout"
       ? "Je bent uitgelogd door inactiviteit."
-      : reason === "session_expired"
-        ? "Je sessie is verlopen. Log opnieuw in."
-        : null;
+      : reason === "mfa_required"
+        ? "Bevestig je identiteit met je authenticator-app."
+        : reason === "session_expired"
+          ? "Je sessie is verlopen. Log opnieuw in."
+          : null;
 
   return (
     <>
@@ -236,7 +284,9 @@ export default function LoginPageClient() {
           ) : null
         }
       >
-        {mfaFactorId ? (
+        {mfaResumeLoading ? (
+          <p className="text-center text-sm text-gray-600">Sessie controleren…</p>
+        ) : mfaFactorId ? (
           <form onSubmit={handleMfaVerify} className="space-y-4">
             <h2 className="text-center text-xl font-medium text-gray-900">Tweestapsverificatie</h2>
             <p className="text-center text-sm text-gray-600">
