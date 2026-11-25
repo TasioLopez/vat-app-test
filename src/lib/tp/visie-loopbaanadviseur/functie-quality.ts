@@ -172,13 +172,27 @@ export function extractAdExclusionPhrases(
     }
   }
 
-  // Fallback: capture "zoals: A, B en C" style lists.
+  const splitProseList = (listBody: string) => {
+    for (const part of listBody.split(/\s*,\s*|\s+of\s+|\s+en\s+|;/i)) {
+      addPhrase(part.replace(/[.!?]+$/, '').trim());
+    }
+  };
+
+  // Fallback: capture "zoals: A, B en C" / "zoals A, B of C" style lists.
   if (phrases.length === 0) {
     const zoals = body.match(/zoals[:\s]+(.+)/i);
     if (zoals?.[1]) {
-      for (const part of zoals[1].split(/,| en |;/)) {
-        addPhrase(part.replace(/\.$/, '').trim());
-      }
+      splitProseList(zoals[1]);
+    }
+  }
+
+  // Fallback: prose examples — "voorbeelden van passende functies zijn A, B of C"
+  if (phrases.length === 0) {
+    const prose = body.match(
+      /(?:voorbeelden\s+van\s+(?:passende\s+)?functies\s+zijn|(?:ik\s+)?denk(?:t|en)?\s+aan(?:\s+eventuele)?(?:\s+passende)?\s+functies(?:\s+zoals)?|onder\s+andere)[:\s]+(.+)/i
+    );
+    if (prose?.[1]) {
+      splitProseList(prose[1]);
     }
   }
 

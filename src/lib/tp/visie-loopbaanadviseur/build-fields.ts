@@ -11,6 +11,7 @@ import {
   EN_SOORTGELIJK,
   FUNCTIE_FOOTER,
   FUNCTIES_DELIMITER,
+  isStandardFunctiesIntro,
   NO_AD_BELASTBAARHEID_INTRO,
   NO_AD_NO_BELASTBAARHEID_INTRO,
   TOELICHTING_DELIMITER,
@@ -71,6 +72,23 @@ export function buildFunctiesIntro(scenario: DocumentScenario): string {
     case 'intake_only':
       return NO_AD_NO_BELASTBAARHEID_INTRO;
   }
+}
+
+/**
+ * Soft-repair stored Visie functies intro when it still exactly matches a SoT constant
+ * but the recomputed scenario would pick a different constant.
+ * Custom/edited intros are left untouched.
+ */
+export function repairStoredVisieFunctiesIntro(
+  raw: string,
+  scenario: DocumentScenario
+): string {
+  const parsed = parseVisieLoopbaanadviseur(raw);
+  const current = parsed.functiesIntro.trim();
+  if (!current || !isStandardFunctiesIntro(current)) return raw;
+  const expected = buildFunctiesIntro(scenario);
+  if (current === expected) return raw;
+  return buildVisieLoopbaanadviseurBlock({ ...parsed, functiesIntro: expected });
 }
 
 function countSentences(text: string): number {
