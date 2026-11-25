@@ -64,6 +64,8 @@ export function SetupEditor({
   const selectedDocs = new Set(meta.source_document_ids);
   const [goalChangeDate, setGoalChangeDate] = useState(meta.report_date || '');
   const [goalChangeTo, setGoalChangeTo] = useState<VGRTrajectDoel>('');
+  const [dossierSyncBusy, setDossierSyncBusy] = useState(false);
+  const [dossierSyncNote, setDossierSyncNote] = useState<string | null>(null);
 
   const toggleDoc = (id: string) => {
     const next = new Set(selectedDocs);
@@ -73,6 +75,34 @@ export function SetupEditor({
   };
 
   const selectAllDocs = () => updateMeta({ source_document_ids: docs.map((d) => d.id) });
+
+  /** Phase 2: CLASSIFY→EXTRACT→MERGE into vgr_dossiers (does not write report text — D01). */
+  const syncDossier = async () => {
+    setDossierSyncBusy(true);
+    setDossierSyncNote(null);
+    try {
+      const res = await fetch('/api/vgr/dossier/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId,
+          documentIds: selectedDocs.size ? Array.from(selectedDocs) : undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.details || json.error || 'Dossier sync mislukt');
+      const c = json.counts || {};
+      setDossierSyncNote(
+        `Dossier bijgewerkt: ${c.sources ?? 0} bronnen, ${c.assertions ?? 0} claims, ${c.activities ?? 0} activiteiten` +
+          (c.issues ? `, ${c.issues} open issues` : '') +
+          '. AI-voorstellen gebruiken deze feiten; Overnemen blijft handmatig.',
+      );
+    } catch (err) {
+      setDossierSyncNote(err instanceof Error ? err.message : 'Dossier sync mislukt');
+    } finally {
+      setDossierSyncBusy(false);
+    }
+  };
 
   const registerGoalChange = () => {
     if (!goalChangeTo || !goalChangeDate) return;
@@ -234,25 +264,40 @@ export function SetupEditor({
         <p className="text-xs text-muted-foreground">
           Selecteer de documenten uit het dossier die voor deze rapportageperiode gebruikt mogen worden
           (gespreksverslagen, spreekuurrapportages, FML/IZP/LAB, AD-rapport, testrapporten). AI-voorstellen
-          gebruiken uitsluitend deze bronnen en worden nooit automatisch overgenomen.
+          gebruiken uitsluitend deze bronnen en worden nooit automatisch overgenomen. Synchroniseer eerst het
+          claim/activity-dossier zodat WRITE op geverifieerde feiten steunt (PDF-export blijft; geen DOCX).
         </p>
         {docs.length === 0 ? (
           <p className="text-sm text-muted-foreground">Geen documenten in het dossier.</p>
         ) : (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 {selectedDocs.size} van {docs.length} geselecteerd
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="ghost" size="sm" onClick={selectAllDocs}>
                   Alles
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => updateMeta({ source_document_ids: [] })}>
                   Geen
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={dossierSyncBusy}
+                  onClick={() => void syncDossier()}
+                >
+                  {dossierSyncBusy ? 'Dossier sync…' : 'Dossier synchroniseren'}
+                </Button>
               </div>
             </div>
+            {dossierSyncNote ? (
+              <p className="rounded border border-border/60 bg-muted/30 px-2 py-1.5 text-xs text-muted-foreground">
+                {dossierSyncNote}
+              </p>
+            ) : null}
             <ul className="divide-y rounded-md border">
               {docs.map((d) => (
                 <li key={d.id} className="flex items-center gap-3 px-3 py-2 text-sm">
