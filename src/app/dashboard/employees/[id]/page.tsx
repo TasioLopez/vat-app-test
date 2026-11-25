@@ -57,7 +57,8 @@ import { EmployeeHeader } from '@/components/employee/detail/EmployeeHeader';
 import { ProfileView } from '@/components/employee/detail/ProfileView';
 import { ProfileForm } from '@/components/employee/detail/ProfileForm';
 import { DocumentsCard } from '@/components/employee/detail/DocumentsCard';
-import { SourcesCard } from '@/components/employee/detail/SourcesCard';
+import { SourcesCard, type SourceUploadMode } from '@/components/employee/detail/SourcesCard';
+import { isStagingEnv } from '@/lib/auth/staging-only';
 import { DossierStrip } from '@/components/employee/detail/DossierStrip';
 import { EditBar } from '@/components/employee/detail/EditBar';
 import { EmployeeNotFound, EmployeePageSkeleton } from '@/components/employee/detail/PageStates';
@@ -126,6 +127,7 @@ type Document = {
     vgr_export_id: string | null;
     vgr_instance_id: string | null;
     uploaded_at: string | null;
+    document_date?: string | null;
     url: string;
 };
 
@@ -269,6 +271,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     const [autofilledFields, setAutofilledFields] = useState<Set<string>>(new Set());
     const [documents, setDocuments] = useState<Document[]>([]);
     const [activeDocType, setActiveDocType] = useState<string | null>(null);
+    const [activeDocUploadMode, setActiveDocUploadMode] = useState<SourceUploadMode>('replace');
     const [referents, setReferents] = useState<Referent[]>([]);
     const [suggestedReferent, setSuggestedReferent] = useState<{ first_name: string; last_name: string; referent_function?: string; phone?: string; email?: string; gender?: string } | null>(null);
     const [referentExists, setReferentExists] = useState(false);
@@ -1427,7 +1430,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                 <SourcesCard
                                     docTypes={docTypes}
                                     documents={documents}
-                                    onUpload={(type: EmployeeDocType) => setActiveDocType(type)}
+                                    allowMultiplePerType={isStagingEnv()}
+                                    onUpload={(type: EmployeeDocType, mode = 'replace') => {
+                                        setActiveDocUploadMode(mode);
+                                        setActiveDocType(type);
+                                    }}
                                     onPreview={(doc, type) =>
                                         setPreviewDoc({ title: doc.name || DOC_LABELS[type], url: doc.url })
                                     }
@@ -1499,12 +1506,21 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                 <DocumentModal
                     type={activeDocType}
                     employeeId={employeeId}
-                    existingDoc={documents.find(d => d.type?.toLowerCase().trim() === activeDocType) || null}
-                    onClose={() => setActiveDocType(null)}
+                    existingDoc={
+                        activeDocUploadMode === 'add'
+                            ? null
+                            : ((documents.find((d) => d.type?.toLowerCase().trim() === activeDocType) ||
+                                  null) as Parameters<typeof DocumentModal>[0]['existingDoc'])
+                    }
+                    onClose={() => {
+                        setActiveDocType(null);
+                        setActiveDocUploadMode('replace');
+                    }}
                     onUploaded={fetchDocuments}
                     onDeleted={() => {
                         fetchDocuments();
                         setActiveDocType(null);
+                        setActiveDocUploadMode('replace');
                     }}
                 />
             )}

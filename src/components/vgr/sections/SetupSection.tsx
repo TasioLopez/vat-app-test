@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { CalendarRange, FileText, History, Target } from 'lucide-react';
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import FieldControl from '@/components/tp2026/FieldControl';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase/client';
+import { isStagingEnv } from '@/lib/auth/staging-only';
 import { getEmployeeDocLabel } from '@/lib/documents/employee-doc-types';
 import { formatNLDateForDoc } from '@/lib/tp/date-line-breaks';
 import {
@@ -31,32 +32,55 @@ import {
 } from '@/lib/vgr/export';
 import { vgrPeriodeText } from '@/lib/vgr/period';
 import { computeVgrPreflight } from '@/lib/vgr/preflight';
+import {
+  pickLatestIdsByType,
+  sortSourcesForSelection,
+} from '@/lib/vgr/sources/selection';
+import { VgrSourceStartWizard } from '@/components/vgr/sources/VgrSourceStartWizard';
+import type { UploadedSourceInfo } from '@/components/vgr/sources/VgrMultiUploadZone';
 
 export type VGREmployeeDocument = {
   id: string;
   type: string | null;
   name: string | null;
   uploaded_at: string | null;
+  document_date?: string | null;
 };
 
-export function useVgrEmployeeDocuments(employeeId: string): VGREmployeeDocument[] {
+export function useVgrEmployeeDocuments(
+  employeeId: string,
+  refreshKey = 0
+): VGREmployeeDocument[] {
   const [docs, setDocs] = useState<VGREmployeeDocument[]>([]);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { data } = await (supabase as any)
+      // document_date may be missing until staging migration is applied — fall back.
+      let query = (supabase as any)
         .from('documents')
-        .select('id, type, name, uploaded_at')
+        .select('id, type, name, uploaded_at, document_date')
         .eq('employee_id', employeeId)
         .neq('type', 'vgr')
         .neq('type', 'tp')
+        .neq('type', 'intake')
         .order('uploaded_at', { ascending: false });
-      if (!cancelled) setDocs((data || []) as VGREmployeeDocument[]);
+      let { data, error } = await query;
+      if (error && /document_date/i.test(String(error.message || ''))) {
+        ({ data, error } = await (supabase as any)
+          .from('documents')
+          .select('id, type, name, uploaded_at')
+          .eq('employee_id', employeeId)
+          .neq('type', 'vgr')
+          .neq('type', 'tp')
+          .neq('type', 'intake')
+          .order('uploaded_at', { ascending: false }));
+      }
+      if (!cancelled && !error) setDocs((data || []) as VGREmployeeDocument[]);
     })();
     return () => {
       cancelled = true;
     };
-  }, [employeeId]);
+  }, [employeeId, refreshKey]);
   return docs;
 }
 
@@ -75,7 +99,10 @@ export function SetupEditor({
   updateBody: <K extends keyof VGRData['body']>(section: K, patch: Partial<VGRData['body'][K]>) => void;
   setVGRData: Dispatch<SetStateAction<VGRData>>;
 }) {
-  const docs = useVgrEmployeeDocuments(employeeId);
+  const staging = isStagingEnv();
+  const [docsRefreshKey, setDocsRefreshKey] = useState(0);
+  const docs = useVgrEmployeeDocuments(employeeId, docsRefreshKey);
+  const sortedDocs = useMemo(() => sortSourcesForSelection(docs), [docs]);
   const meta = data.vgr_meta;
   const doel = data.body.doelstelling_traject;
   const selectedDocs = new Set(meta.source_document_ids);
@@ -87,7 +114,15 @@ export function SetupEditor({
   const [conceptNote, setConceptNote] = useState<string | null>(null);
   const [wiaTimeline, setWiaTimeline] = useState<VgrTimelineEntry[] | null>(null);
   const [wiaBusy, setWiaBusy] = useState(false);
+  const [wizardMode, setWizardMode] = useState<'choose' | 'upload'>('choose');
   const conceptDefaults = resolveConceptVgrDefaults(data);
+  const sourceIntake = meta.source_intake;
+  const showSourceWizard =
+    staging &&
+    (sourceIntake === undefined ||
+      sourceIntake === 'pending' ||
+      sourceIntake === 'uploaded' ||
+      wizardMode === 'upload');
 
   const toggleDoc = (id: string) => {
     const next = new Set(selectedDocs);
@@ -97,6 +132,23 @@ export function SetupEditor({
   };
 
   const selectAllDocs = () => updateMeta({ source_document_ids: docs.map((d) => d.id) });
+  const selectLatestPerType = () =>
+    updateMeta({ source_document_ids: pickLatestIdsByType(docs) });
+
+  const refreshDocs = useCallback(() => setDocsRefreshKey((k) => k + 1), []);
+
+  const onDumpUploaded = useCallback(
+    (uploaded: UploadedSourceInfo[]) => {
+      refreshDocs();
+      const next = new Set(meta.source_document_ids);
+      for (const u of uploaded) next.add(u.id);
+      updateMeta({
+        source_document_ids: Array.from(next),
+        source_intake: 'uploaded',
+      });
+    },
+    [meta.source_document_ids, refreshDocs, updateMeta]
+  );
 
   /** Phase 2: CLASSIFY→EXTRACT→MERGE into vgr_dossiers (does not write report text — D01). */
   const syncDossier = async () => {
@@ -229,6 +281,38 @@ export function SetupEditor({
 
   return (
     <div className="space-y-6">
+      {showSourceWizard ? (
+        <VgrSourceStartWizard
+          employeeId={employeeId}
+          mode={wizardMode === 'upload' || sourceIntake === 'uploaded' ? 'upload' : 'choose'}
+          onChooseExisting={() => {
+            setWizardMode('choose');
+            updateMeta({
+              source_intake: 'existing',
+              source_document_ids:
+                meta.source_document_ids.length > 0
+                  ? meta.source_document_ids
+                  : pickLatestIdsByType(docs),
+            });
+          }}
+          onStartUpload={() => {
+            setWizardMode('upload');
+            updateMeta({ source_intake: 'uploaded' });
+          }}
+          onUploaded={onDumpUploaded}
+          onFinishUpload={() => {
+            setWizardMode('choose');
+            updateMeta({
+              source_intake: 'done',
+              source_document_ids:
+                meta.source_document_ids.length > 0
+                  ? meta.source_document_ids
+                  : pickLatestIdsByType(docs),
+            });
+          }}
+        />
+      ) : null}
+
       <GegevensEditorSection title="Concept-VGR maken" icon={FileText}>
         <p className="text-sm text-muted-foreground">
           Expliciete opdracht om een <span className="font-medium text-foreground">concept</span> te maken (geen
@@ -476,9 +560,38 @@ export function SetupEditor({
         <p className="text-xs text-muted-foreground">
           Selecteer de documenten uit het dossier die voor deze rapportageperiode gebruikt mogen worden
           (gespreksverslagen, spreekuurrapportages, FML/IZP/LAB, AD-rapport, testrapporten). AI-voorstellen
-          gebruiken uitsluitend deze bronnen en worden nooit automatisch overgenomen. Synchroniseer eerst het
-          claim/activity-dossier zodat WRITE op geverifieerde feiten steunt (PDF-export; DOCX-dragers ontbreken — T17/D05).
+          gebruiken trajectplan + app-context + uitsluitend deze bronnen en worden nooit automatisch
+          overgenomen (D01). Synchroniseer eerst het claim/activity-dossier. Export: PDF alleen (D05).
+          {staging
+            ? ' Meerdere versies per type zijn toegestaan; kies de nieuwste of een specifieke bron via documentdatum en uploadtijd.'
+            : null}
         </p>
+        {staging && (sourceIntake === 'existing' || sourceIntake === 'done') ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setWizardMode('upload');
+                updateMeta({ source_intake: 'uploaded' });
+              }}
+            >
+              Meer bestanden uploaden
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setWizardMode('choose');
+                updateMeta({ source_intake: 'pending' });
+              }}
+            >
+              Bronkeuze opnieuw
+            </Button>
+          </div>
+        ) : null}
         {docs.length === 0 ? (
           <p className="text-sm text-muted-foreground">Geen documenten in het dossier.</p>
         ) : (
@@ -491,6 +604,11 @@ export function SetupEditor({
                 <Button type="button" variant="ghost" size="sm" onClick={selectAllDocs}>
                   Alles
                 </Button>
+                {staging ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={selectLatestPerType}>
+                    Nieuwste per type
+                  </Button>
+                ) : null}
                 <Button type="button" variant="ghost" size="sm" onClick={() => updateMeta({ source_document_ids: [] })}>
                   Geen
                 </Button>
@@ -511,8 +629,8 @@ export function SetupEditor({
               </p>
             ) : null}
             <ul className="divide-y rounded-md border">
-              {docs.map((d) => (
-                <li key={d.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              {sortedDocs.map((d) => (
+                <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
                   <input
                     type="checkbox"
                     className="h-4 w-4"
@@ -523,8 +641,17 @@ export function SetupEditor({
                   <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                     {getEmployeeDocLabel(d.type || '')}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {d.uploaded_at ? formatNLDateForDoc(d.uploaded_at.slice(0, 10)) : ''}
+                  <span
+                    className="shrink-0 text-xs text-muted-foreground"
+                    title="Documentdatum (uit bestand) · Uploadtijd"
+                  >
+                    {d.document_date
+                      ? `Doc ${formatNLDateForDoc(d.document_date.slice(0, 10))}`
+                      : 'Doc —'}
+                    {' · '}
+                    {d.uploaded_at
+                      ? `Upload ${formatNLDateForDoc(d.uploaded_at.slice(0, 10))}`
+                      : 'Upload —'}
                   </span>
                 </li>
               ))}

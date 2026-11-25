@@ -9,6 +9,16 @@ export type UploadEmployeeDocumentInput = {
   file: File;
   /** When replacing, delete the existing document first (id + url). */
   existingDoc?: { id: string; url: string } | null;
+  /** Extracted document date (YYYY-MM-DD), distinct from upload time. */
+  documentDate?: string | null;
+};
+
+export type UploadEmployeeDocumentResult = {
+  path: string;
+  documentId: string | null;
+  uploadedAt: string | null;
+  documentDate: string | null;
+  type: string;
 };
 
 export async function readJsonResponse(res: Response): Promise<Record<string, unknown>> {
@@ -50,7 +60,8 @@ export async function uploadEmployeeDocument({
   type,
   file,
   existingDoc,
-}: UploadEmployeeDocumentInput): Promise<{ path: string }> {
+  documentDate,
+}: UploadEmployeeDocumentInput): Promise<UploadEmployeeDocumentResult> {
   const validationError = validateEmployeeDocumentFile(file);
   if (validationError) {
     throw new Error(validationError);
@@ -85,6 +96,7 @@ export async function uploadEmployeeDocument({
       name: file.name,
       content_type: contentType,
       size_bytes: file.size,
+      unique_suffix: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     }),
   });
   const signData = await readJsonResponse(signRes);
@@ -113,6 +125,7 @@ export async function uploadEmployeeDocument({
       type,
       name: file.name,
       url: path,
+      document_date: documentDate || null,
     }),
   });
   const metadataData = await readJsonResponse(metadataRes);
@@ -133,7 +146,14 @@ export async function uploadEmployeeDocument({
     );
   }
 
-  return { path };
+  return {
+    path,
+    documentId: typeof metadataData.id === 'string' ? metadataData.id : null,
+    uploadedAt: typeof metadataData.uploaded_at === 'string' ? metadataData.uploaded_at : null,
+    documentDate:
+      typeof metadataData.document_date === 'string' ? metadataData.document_date : documentDate || null,
+    type,
+  };
 }
 
 export { DOCUMENT_MAX_BYTES };

@@ -20,15 +20,22 @@ export type SourceDocument = {
   url: string;
 };
 
+export type SourceUploadMode = 'add' | 'replace';
+
 type Props<TDoc extends SourceDocument> = {
   docTypes: EmployeeDocType[];
   documents: TDoc[];
-  /** Opens the upload dialog for a type; also used to replace an existing upload. */
-  onUpload: (type: EmployeeDocType) => void;
+  /**
+   * Opens the upload dialog for a type.
+   * Staging multi-doc: `add` keeps existing files; `replace` swaps the focused doc.
+   */
+  onUpload: (type: EmployeeDocType, mode?: SourceUploadMode) => void;
   onPreview: (doc: TDoc, type: EmployeeDocType) => void;
   onDelete: (doc: TDoc, type: EmployeeDocType) => void;
   /** Opens the gesprek / transcript panel for intake or VGR purpose. */
   onOpenGesprek: (type: Extract<EmployeeDocType, 'gespreksverslag' | 'gespreksverslag_vgr'>) => void;
+  /** When true, allow a second file of the same type without forcing replace. */
+  allowMultiplePerType?: boolean;
 };
 
 /** Labels that are too long for a half-width cell; the full label stays in the tooltip and menu. */
@@ -65,9 +72,11 @@ export function SourcesCard<TDoc extends SourceDocument>({
   onPreview,
   onDelete,
   onOpenGesprek,
+  allowMultiplePerType = false,
 }: Props<TDoc>) {
-  const findDoc = (type: EmployeeDocType) =>
-    documents.find((doc) => doc.type?.toLowerCase().trim() === type) ?? null;
+  const docsForType = (type: EmployeeDocType) =>
+    documents.filter((doc) => doc.type?.toLowerCase().trim() === type);
+  const findDoc = (type: EmployeeDocType) => docsForType(type)[0] ?? null;
   const uploadedCount = docTypes.filter((type) => findDoc(type)).length;
 
   return (
@@ -149,6 +158,9 @@ export function SourcesCard<TDoc extends SourceDocument>({
             );
           }
 
+          const typeDocs = docsForType(type);
+          const countLabel = typeDocs.length > 1 ? ` (${typeDocs.length})` : '';
+
           return (
             <li key={type} className="min-w-0">
               {/* Non-modal: the items open dialogs, and a modal menu would leave the page unclickable. */}
@@ -157,10 +169,13 @@ export function SourcesCard<TDoc extends SourceDocument>({
                   <button
                     type="button"
                     className={cn(CELL_CLASS, 'data-[state=open]:bg-gray-50')}
-                    title={doc.name ? `${fullLabel}: ${doc.name}` : fullLabel}
+                    title={doc.name ? `${fullLabel}: ${doc.name}${countLabel}` : fullLabel}
                   >
                     <StatusDot uploaded />
-                    <span className="min-w-0 flex-1 truncate text-gray-900">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-gray-900">
+                      {label}
+                      {countLabel}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56 border-gray-200">
@@ -172,7 +187,13 @@ export function SourcesCard<TDoc extends SourceDocument>({
                     <Eye className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
                     Bekijken
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => onUpload(type)}>
+                  {allowMultiplePerType ? (
+                    <DropdownMenuItem onSelect={() => onUpload(type, 'add')}>
+                      <Plus className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
+                      Toevoegen
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem onSelect={() => onUpload(type, 'replace')}>
                     <Upload className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
                     Vervangen
                   </DropdownMenuItem>

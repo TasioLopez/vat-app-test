@@ -110,6 +110,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          document_date: string | null
           employee_id: string | null
           id: string
           layout_key: string | null
@@ -123,6 +124,7 @@ export type Database = {
           vgr_instance_id: string | null
         }
         Insert: {
+          document_date?: string | null
           employee_id?: string | null
           id?: string
           layout_key?: string | null
@@ -136,6 +138,7 @@ export type Database = {
           vgr_instance_id?: string | null
         }
         Update: {
+          document_date?: string | null
           employee_id?: string | null
           id?: string
           layout_key?: string | null

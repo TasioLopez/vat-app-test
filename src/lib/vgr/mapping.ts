@@ -263,6 +263,12 @@ function normalizeReportType(v: unknown, version: number): VGRMeta['report_type'
   return version >= 2 ? 'VGR_FOLLOWUP' : 'VGR1';
 }
 
+function normalizeSourceIntake(v: unknown): VGRMeta['source_intake'] {
+  const s = str(v);
+  if (s === 'pending' || s === 'existing' || s === 'uploaded' || s === 'done') return s;
+  return undefined;
+}
+
 export function normalizeVgrMeta(v: unknown): VGRMeta {
   const o = obj(v);
   const dismissedRaw = obj(o.dismissed_warnings);
@@ -283,6 +289,7 @@ export function normalizeVgrMeta(v: unknown): VGRMeta {
     approved_rules_version: str(o.approved_rules_version) || undefined,
     template_version: str(o.template_version) || undefined,
     source_document_ids: strArr(o.source_document_ids),
+    source_intake: normalizeSourceIntake(o.source_intake),
     dismissed_warnings: dismissed,
     approved_at: str(o.approved_at) || null,
     zoekprofiel_changed_at: str(o.zoekprofiel_changed_at) || null,
