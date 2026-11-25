@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { countIssues, validateVgr, visibleIssues, type VGRIssue } from '@/lib/vgr/validation';
 import { formatNLDate, trajectDoelLabel, type VGRData, type VGRMeta, type VGRStatus } from '@/lib/vgr/schema';
+import { conceptVgrReportTypeLabel, evaluateFinalizeGates, lockedModuleIds } from '@/lib/vgr/lifecycle';
 import { vgrPeriodeText } from '@/lib/vgr/period';
 import { VgrGenerateAllPanel } from '@/components/vgr/ai/VgrGenerateAllPanel';
 
@@ -46,9 +47,12 @@ export function ReviewEditor({
   const allIssues = useMemo(() => validateVgr(data), [data]);
   const issues = useMemo(() => visibleIssues(allIssues, data.vgr_meta.dismissed_warnings), [allIssues, data.vgr_meta.dismissed_warnings]);
   const counts = countIssues(issues);
-  const canFinalize = counts.errors === 0;
+  const gate = useMemo(() => evaluateFinalizeGates(data), [data]);
+  const canFinalize = gate.ok && counts.errors === 0;
   const [dismissId, setDismissId] = useState<string | null>(null);
   const [rationale, setRationale] = useState('');
+  const audit = data.vgr_meta.finalize_audit;
+  const locks = lockedModuleIds(data);
 
   const grouped = useMemo(() => {
     const map = new Map<VGRIssue['step'], VGRIssue[]>();
@@ -79,7 +83,9 @@ export function ReviewEditor({
           <Row k="Bijlage 1" v={`${data.planning_phases.length} fases · ${Object.entries(actCounts).map(([s, n]) => `${n}×${s}`).join(', ') || 'geen activiteiten'}`} />
           <Row k="Bijlage 2" v={appsCount ? `${appsCount} sollicitatie(s)` : 'geen sollicitaties'} />
           <Row k="Brondocumenten" v={`${data.vgr_meta.source_document_ids.length} geselecteerd`} />
+          <Row k="Rapporttype" v={conceptVgrReportTypeLabel(data.vgr_meta.report_type)} />
           <Row k="Status" v={status === 'final' ? 'Definitief' : status === 'review' ? 'Ter controle' : 'Concept'} />
+          <Row k="Vergrendelde modules" v={locks.length ? locks.join(', ') : 'geen'} />
         </dl>
       </section>
 
@@ -171,12 +177,18 @@ export function ReviewEditor({
       <VgrGenerateAllPanel data={data} employeeId={employeeId} vgrInstanceId={vgrInstanceId} />
 
       <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Status</h3>
+        <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Definitief vaststellen</h3>
         <p className="mb-3 text-xs text-muted-foreground">
-          Markeer de rapportage als definitief zodra alle blokkerende punten zijn opgelost. Een definitieve rapportage wordt bij
-          de volgende voortgangsrapportage automatisch als basis gebruikt (doelstelling, PoW-historie, Leernavigator, planning).
-          Instructieteksten (geel) uit de sjablonen worden nooit geëxporteerd.
+          Afzonderlijke gecontroleerde handeling. Bij definitief wordt een audittrail opgeslagen (prompt-/templateversie,
+          bronnen, vergrendelde modules). Export blijft PDF-only (D05). Een definitieve rapportage wordt bij de volgende
+          voortgangsrapportage als basis gebruikt.
         </p>
+        {!canFinalize ? (
+          <p className="mb-3 rounded border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-900">
+            Definitief geblokkeerd tot blockers zijn opgelost
+            {gate.blockers.length ? `: ${gate.blockers.slice(0, 3).join(' · ')}` : ''}.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant={status === 'draft' ? 'default' : 'outline'} size="sm" disabled={statusBusy} onClick={() => onSetStatus('draft')}>
             Concept
@@ -192,9 +204,19 @@ export function ReviewEditor({
             title={canFinalize ? undefined : 'Los eerst de blokkerende punten op'}
             onClick={() => onSetStatus('final')}
           >
-            Definitief
+            Definitief vaststellen
           </Button>
         </div>
+        {audit ? (
+          <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 border-t border-border pt-3 text-sm sm:grid-cols-2">
+            <Row k="Vastgesteld op" v={formatNLDate(audit.finalized_at.slice(0, 10)) || audit.finalized_at} />
+            <Row k="Rules-versie" v={audit.approved_rules_version || '—'} />
+            <Row k="Template-versie" v={audit.template_version || '—'} />
+            <Row k="Rapporttype" v={conceptVgrReportTypeLabel(audit.report_type)} />
+            <Row k="Bronnen in audit" v={`${audit.source_document_ids.length} document(en)`} />
+            <Row k="Locks in audit" v={audit.locked_module_ids.length ? audit.locked_module_ids.join(', ') : 'geen'} />
+          </dl>
+        ) : null}
       </section>
     </div>
   );

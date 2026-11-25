@@ -14,12 +14,15 @@ import {
   type VGRBody,
   type VGRCapacityRevision,
   type VGRData,
+  type VGRFinalizeAudit,
   type VGRFmlRubriek,
   type VGRGoalHistoryEntry,
+  type VGRImpactRegenResult,
   type VGRInterventionBlock,
   type VGRInterventionSection,
   type VGRLeernavigatorItem,
   type VGRMeta,
+  type VGRModuleLock,
   type VGRPersonalityScores,
   type VGRPlanningPhase,
   type VGRPowMeasurement,
@@ -278,11 +281,75 @@ export function normalizeVgrMeta(v: unknown): VGRMeta {
     version: ver,
     report_type: normalizeReportType(o.report_type, ver),
     approved_rules_version: str(o.approved_rules_version) || undefined,
+    template_version: str(o.template_version) || undefined,
     source_document_ids: strArr(o.source_document_ids),
     dismissed_warnings: dismissed,
     approved_at: str(o.approved_at) || null,
     zoekprofiel_changed_at: str(o.zoekprofiel_changed_at) || null,
     zoekprofiel_change_note: str(o.zoekprofiel_change_note),
+    finalize_audit: normalizeFinalizeAudit(o.finalize_audit),
+  };
+}
+
+function normalizeFinalizeAudit(v: unknown): VGRFinalizeAudit | null {
+  const o = obj(v);
+  if (!str(o.finalized_at)) return null;
+  const reportType = normalizeReportType(o.report_type, 1);
+  return {
+    finalized_at: str(o.finalized_at),
+    finalized_by: str(o.finalized_by) || null,
+    approved_rules_version: str(o.approved_rules_version),
+    template_version: str(o.template_version),
+    report_type: reportType || 'VGR1',
+    source_document_ids: strArr(o.source_document_ids),
+    locked_module_ids: strArr(o.locked_module_ids),
+    dismissed_warning_ids: strArr(o.dismissed_warning_ids),
+    fact_snapshot: str(o.fact_snapshot) || null,
+  };
+}
+
+export function normalizeModuleLocks(v: unknown): Record<string, VGRModuleLock> {
+  const o = obj(v);
+  const out: Record<string, VGRModuleLock> = {};
+  for (const [k, raw] of Object.entries(o)) {
+    if (raw === true) {
+      out[k] = { locked: true, locked_at: null };
+      continue;
+    }
+    if (raw === false) continue;
+    const lock = obj(raw);
+    const locked = lock.locked === true || lock.locked === 'true';
+    if (!locked) continue;
+    out[k] = {
+      locked: true,
+      locked_at: str(lock.locked_at) || null,
+      note: str(lock.note) || undefined,
+    };
+  }
+  return out;
+}
+
+function normalizeImpactRegen(v: unknown): VGRImpactRegenResult | null {
+  const o = obj(v);
+  if (!str(o.computed_at)) return null;
+  const hitsRaw = Array.isArray(o.hits) ? o.hits : [];
+  const hits = hitsRaw.map((raw) => {
+    const h = obj(raw);
+    return {
+      module_id: str(h.module_id),
+      reason: str(h.reason),
+      source_ids: strArr(h.source_ids),
+      manual_override_collision: Boolean(h.manual_override_collision),
+      required_human_review: Boolean(h.required_human_review),
+    };
+  });
+  return {
+    computed_at: str(o.computed_at),
+    changed_claim_ids: strArr(o.changed_claim_ids),
+    impacted_module_ids: strArr(o.impacted_module_ids).length
+      ? strArr(o.impacted_module_ids)
+      : hits.map((h) => h.module_id).filter(Boolean),
+    hits,
   };
 }
 
@@ -519,6 +586,8 @@ export function ensureVGRShape(raw: Record<string, any>): VGRData {
     applications,
     ai_proposals: normalizeProposals(next.ai_proposals),
     test_summaries: normalizeTestSummaries(next.test_summaries),
+    module_locks: normalizeModuleLocks(next.module_locks),
+    impact_regen: normalizeImpactRegen(next.impact_regen),
   } as VGRData;
 }
 

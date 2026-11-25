@@ -13,6 +13,7 @@ import {
   type VgrBodyPatch,
 } from '@/lib/vgr/ai/apply-suggesties';
 import { VGR_AI_SECTIONS, isVgrAiSectionId, vgrAiSectionCanGenerate, type VGRAiSectionId } from '@/lib/vgr/ai/sections';
+import { classifyModuleFeedback, filterPatchForLocks, isModuleLocked } from '@/lib/vgr/lifecycle';
 import { computeVgrPreflight } from '@/lib/vgr/preflight';
 import type { VGRAiProposal, VGRBody, VGRData } from '@/lib/vgr/schema';
 
@@ -74,6 +75,8 @@ function VgrAiPanelInner({
 
   const writable = preflightMod?.writable !== false;
   const gapQuestion = preflightMod?.question;
+  const moduleLocked = isModuleLocked(data, sectionId);
+  const feedbackPreview = classifyModuleFeedback(instruction);
 
   const storeProposal = (p: VGRAiProposal | null) => {
     const next = { ...(data.ai_proposals ?? {}) };
@@ -83,6 +86,13 @@ function VgrAiPanelInner({
   };
 
   const generate = async () => {
+    if (moduleLocked) {
+      showError(
+        'Vergrendeld',
+        'Dit onderdeel is handmatig vergrendeld (manual_lock). Ontgrendel eerst; regeneratie overschrijft goedgekeurde tekst niet stilzwijgend.',
+      );
+      return;
+    }
     if (!writable) {
       showError(
         'Niet schrijfbaar',
@@ -121,12 +131,30 @@ function VgrAiPanelInner({
 
   const apply = () => {
     if (!proposal) return;
+    if (moduleLocked) {
+      showError(
+        'Vergrendeld',
+        'Overnemen geblokkeerd: onderdeel is vergrendeld. Ontgrendel om een voorstel toe te passen, of bekijk de impact-collision.',
+      );
+      return;
+    }
     if (zoekprofielWouldChange() && !zoekConfirm) {
       setZoekConfirm(true);
       return;
     }
+    const factReview = proposal.notes?.some((n) => /requires_fact_review/i.test(n));
+    if (factReview && !zoekConfirm) {
+      // Reuse confirm gate for fact-review acknowledgment (T19).
+      setZoekConfirm(true);
+      return;
+    }
     const { patch: merged, refusedQuotes } = buildVgrApplyBodyPatch(data, sectionId, proposal.patch as Record<string, unknown>);
-    patchBody(merged);
+    const { patch: unlocked, skippedLocked } = filterPatchForLocks(data, merged);
+    if (!Object.keys(unlocked).length) {
+      showError('Niet overgenomen', skippedLocked.length ? 'Alle geraakte onderdelen zijn vergrendeld.' : 'Geen toepasbare wijziging.');
+      return;
+    }
+    patchBody(unlocked);
     if (sectionId === 'zoekprofiel' && zoekprofielWouldChange()) {
       updateField('vgr_meta', {
         ...data.vgr_meta,
@@ -171,13 +199,15 @@ function VgrAiPanelInner({
           size="sm"
           variant="ghost"
           className="h-7 gap-1 px-2 text-xs text-[#702A90] hover:bg-[#702A90]/10"
-          disabled={busy || !canGenerate || !writable}
+          disabled={busy || !canGenerate || !writable || moduleLocked}
           title={
-            !canGenerate
-              ? 'Geen AI-velden voor dit onderdeel'
-              : !writable
-                ? gapQuestion || 'Preflight: niet schrijfbaar'
-                : 'Genereer voorstel op basis van de brondocumenten'
+            moduleLocked
+              ? 'Vergrendeld (manual_lock)'
+              : !canGenerate
+                ? 'Geen AI-velden voor dit onderdeel'
+                : !writable
+                  ? gapQuestion || 'Preflight: niet schrijfbaar'
+                  : 'Genereer voorstel op basis van de brondocumenten'
           }
           onClick={() => (open || instruction ? void generate() : setOpen(true))}
         >
@@ -210,8 +240,20 @@ function VgrAiPanelInner({
             className="mb-2 min-h-[44px] text-xs"
             onChange={(e) => setInstruction(e.target.value)}
           />
+          {feedbackPreview.requires_fact_review ? (
+            <div className="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
+              <span className="font-semibold">Feit vs stijl: </span>
+              {feedbackPreview.confirmation_question}
+            </div>
+          ) : null}
           <div className="mb-3 flex items-center gap-2">
-            <Button type="button" size="sm" className="h-7 gap-1 bg-[#702A90] text-xs hover:bg-[#5a1f75]" disabled={busy || !writable} onClick={() => void generate()}>
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 gap-1 bg-[#702A90] text-xs hover:bg-[#5a1f75]"
+              disabled={busy || !writable || moduleLocked}
+              onClick={() => void generate()}
+            >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
               {proposal ? 'Opnieuw genereren' : 'Genereren'}
             </Button>
@@ -246,8 +288,9 @@ function VgrAiPanelInner({
 
               {zoekConfirm ? (
                 <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
-                  Dit AI-concept wijzigt het zoekprofiel. Bevestig als deskundige dat je de wijziging wilt overnemen
-                  (FML-impact gecontroleerd). Zonder bevestiging blijft het oude zoekprofiel leidend.
+                  {sectionId === 'zoekprofiel' && zoekprofielWouldChange()
+                    ? 'Dit AI-concept wijzigt het zoekprofiel. Bevestig als deskundige dat je de wijziging wilt overnemen (FML-impact gecontroleerd). Zonder bevestiging blijft het oude zoekprofiel leidend.'
+                    : 'Dit voorstel bevat mogelijke feitcorrecties. Bevestig expliciet vóór Overnemen (T19) — stijledits wijzigen geen dossierfeiten.'}
                 </div>
               ) : null}
 
@@ -276,7 +319,11 @@ function VgrAiPanelInner({
                   onClick={apply}
                 >
                   <Check className="h-3.5 w-3.5" aria-hidden />
-                  {zoekConfirm ? 'Zoekprofiel wijzigen' : 'Overnemen'}
+                  {zoekConfirm
+                    ? sectionId === 'zoekprofiel' && zoekprofielWouldChange()
+                      ? 'Zoekprofiel wijzigen'
+                      : 'Feit bevestigen & overnemen'
+                    : 'Overnemen'}
                 </Button>
               </div>
             </div>

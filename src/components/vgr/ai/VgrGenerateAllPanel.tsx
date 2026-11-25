@@ -12,6 +12,7 @@ import { useVGRInstance } from '@/context/VGRInstanceContext';
 import { useVgrEmployeeDocuments } from '@/components/vgr/sections/SetupSection';
 import { VGR_AI_SECTION_IDS, VGR_AI_SECTIONS, vgrAiSectionCanGenerate } from '@/lib/vgr/ai/sections';
 import { VGR_APPROVED_RULES_VERSION } from '@/lib/vgr/ai/style-prompt';
+import { shouldSkipAiApplyForLock } from '@/lib/vgr/lifecycle';
 import { computeVgrPreflight, writableVgrAiSectionIds, type VgrPreflightStatus } from '@/lib/vgr/preflight';
 import type { VGRAiProposal, VGRData } from '@/lib/vgr/schema';
 
@@ -56,7 +57,10 @@ export function VgrGenerateAllPanel({
   const runnable = useMemo(() => {
     const writable = new Set(writableVgrAiSectionIds(preflight));
     return VGR_AI_SECTION_IDS.filter(
-      (sectionId) => writable.has(sectionId) && vgrAiSectionCanGenerate(VGR_AI_SECTIONS[sectionId], data),
+      (sectionId) =>
+        writable.has(sectionId) &&
+        vgrAiSectionCanGenerate(VGR_AI_SECTIONS[sectionId], data) &&
+        !shouldSkipAiApplyForLock(data, sectionId),
     );
   }, [preflight, data]);
 

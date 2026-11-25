@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { CalendarRange, FileText, History, Target } from 'lucide-react';
 import { GegevensEditorSection } from '@/components/tp2026/GegevensEditorSection';
 import FieldControl from '@/components/tp2026/FieldControl';
@@ -15,9 +15,16 @@ import {
   newVgrId,
   trajectDoelLabel,
   type VGRData,
+  type VGRImpactRegenResult,
   type VGRTrajectDoel,
 } from '@/lib/vgr/schema';
+import {
+  applyConceptVgrDefaults,
+  conceptVgrReportTypeLabel,
+  resolveConceptVgrDefaults,
+} from '@/lib/vgr/lifecycle';
 import { vgrPeriodeText } from '@/lib/vgr/period';
+import { computeVgrPreflight } from '@/lib/vgr/preflight';
 
 export type VGREmployeeDocument = {
   id: string;
@@ -50,13 +57,17 @@ export function useVgrEmployeeDocuments(employeeId: string): VGREmployeeDocument
 export function SetupEditor({
   data,
   employeeId,
+  vgrInstanceId,
   updateMeta,
   updateBody,
+  setVGRData,
 }: {
   data: VGRData;
   employeeId: string;
+  vgrInstanceId: string;
   updateMeta: (patch: Partial<VGRData['vgr_meta']>) => void;
   updateBody: <K extends keyof VGRData['body']>(section: K, patch: Partial<VGRData['body'][K]>) => void;
+  setVGRData: Dispatch<SetStateAction<VGRData>>;
 }) {
   const docs = useVgrEmployeeDocuments(employeeId);
   const meta = data.vgr_meta;
@@ -66,6 +77,9 @@ export function SetupEditor({
   const [goalChangeTo, setGoalChangeTo] = useState<VGRTrajectDoel>('');
   const [dossierSyncBusy, setDossierSyncBusy] = useState(false);
   const [dossierSyncNote, setDossierSyncNote] = useState<string | null>(null);
+  const [impactBusy, setImpactBusy] = useState(false);
+  const [conceptNote, setConceptNote] = useState<string | null>(null);
+  const conceptDefaults = resolveConceptVgrDefaults(data);
 
   const toggleDoc = (id: string) => {
     const next = new Set(selectedDocs);
@@ -97,11 +111,51 @@ export function SetupEditor({
           (c.issues ? `, ${c.issues} open issues` : '') +
           '. AI-voorstellen gebruiken deze feiten; Overnemen blijft handmatig.',
       );
+      // Phase 3: refresh impact list after sync (T10 collisions).
+      await refreshImpact();
     } catch (err) {
       setDossierSyncNote(err instanceof Error ? err.message : 'Dossier sync mislukt');
     } finally {
       setDossierSyncBusy(false);
     }
+  };
+
+  const refreshImpact = async () => {
+    setImpactBusy(true);
+    try {
+      const res = await fetch('/api/vgr/impact-regen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId, vgrInstanceId, data }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.details || json.error || 'Impact mislukt');
+      const impact = json.impact as VGRImpactRegenResult;
+      setVGRData((prev) => ({ ...prev, impact_regen: impact }));
+    } catch (err) {
+      setDossierSyncNote(err instanceof Error ? err.message : 'Impact-berekening mislukt');
+    } finally {
+      setImpactBusy(false);
+    }
+  };
+
+  /** G11: Concept-VGR maken — apply period/type defaults + show preflight; proposals stay until Overnemen (D01). */
+  const makeConceptVgr = () => {
+    setConceptNote(null);
+    setVGRData((prev) => applyConceptVgrDefaults(prev));
+    const selectedTypes = docs
+      .filter((d) => selectedDocs.has(d.id) || selectedDocs.size === 0)
+      .map((d) => String(d.type || ''))
+      .filter(Boolean);
+    const pf = computeVgrPreflight(applyConceptVgrDefaults(data), selectedTypes);
+    const ready = pf.modules.filter((m) => m.status === 'READY').length;
+    const gaps = pf.questions.length;
+    setConceptNote(
+      `Concept-VGR voorbereid (${conceptVgrReportTypeLabel(conceptDefaults.report_type)}). ` +
+        `Preflight: ${ready}/${pf.modules.length} modules klaar` +
+        (gaps ? `, ${gaps} gerichte vraag/vragen` : '') +
+        '. Genereer AI-voorstellen via Controle → Genereer alle schrijfbare onderdelen; Overnemen blijft handmatig.',
+    );
   };
 
   const registerGoalChange = () => {
@@ -119,8 +173,73 @@ export function SetupEditor({
     setGoalChangeTo('');
   };
 
+  const impact = data.impact_regen;
+
   return (
     <div className="space-y-6">
+      <GegevensEditorSection title="Concept-VGR maken" icon={FileText}>
+        <p className="text-sm text-muted-foreground">
+          Expliciete opdracht om een <span className="font-medium text-foreground">concept</span> te maken (geen
+          automatische publicatie). Rapporttype en periode worden gevuld vanuit TP / vorige VGR; AI-tekst blijft
+          voorstel tot Overnemen (D01). WIA-eindrapportage volgt later (D08).
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <div className="text-xs text-muted-foreground">Rapporttype</div>
+            <div className="font-medium">{conceptVgrReportTypeLabel(meta.report_type || conceptDefaults.report_type)}</div>
+          </div>
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <div className="text-xs text-muted-foreground">Versie</div>
+            <div className="font-medium">{meta.version || conceptDefaults.version}</div>
+          </div>
+          <div className="rounded-md border bg-muted/40 px-3 py-2">
+            <div className="text-xs text-muted-foreground">Periode</div>
+            <div className="font-medium">{vgrPeriodeText(data) || '—'}</div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" className="bg-[#702A90] hover:bg-[#5a1f75]" onClick={makeConceptVgr}>
+            Concept-VGR maken
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={impactBusy} onClick={() => void refreshImpact()}>
+            {impactBusy ? 'Impact…' : 'Impact getroffen modules'}
+          </Button>
+        </div>
+        {conceptNote ? (
+          <p className="rounded border border-[#702A90]/25 bg-[#702A90]/5 px-2 py-1.5 text-xs text-[#3d1850]">
+            {conceptNote}
+          </p>
+        ) : null}
+        {impact?.hits?.length ? (
+          <div className="rounded-md border border-border p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Impact sinds dossier-update ({new Date(impact.computed_at).toLocaleString('nl-NL')})
+            </p>
+            <ul className="space-y-1.5 text-sm">
+              {impact.hits.map((h) => (
+                <li key={h.module_id} className="flex flex-wrap items-baseline justify-between gap-2 rounded border px-2 py-1.5">
+                  <span>
+                    <span className="font-medium">{h.module_id}</span>
+                    <span className="text-muted-foreground"> — {h.reason}</span>
+                  </span>
+                  {h.manual_override_collision ? (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                      Collision · vergrendeld
+                    </span>
+                  ) : h.required_human_review ? (
+                    <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-semibold text-sky-900">Review</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Vergrendelde modules worden niet stilzwijgend overschreven (T10). Genereer voorstellen per onderdeel of via
+              Controle; Overnemen blijft handmatig.
+            </p>
+          </div>
+        ) : null}
+      </GegevensEditorSection>
+
       <GegevensEditorSection title="Rapportageperiode" icon={CalendarRange}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FieldControl
@@ -149,7 +268,13 @@ export function SetupEditor({
               type="number"
               min={1}
               value={meta.version}
-              onChange={(e) => updateMeta({ version: Math.max(1, parseInt(e.target.value || '1', 10) || 1) })}
+              onChange={(e) => {
+                const version = Math.max(1, parseInt(e.target.value || '1', 10) || 1);
+                updateMeta({
+                  version,
+                  report_type: version >= 2 ? 'VGR_FOLLOWUP' : 'VGR1',
+                });
+              }}
             />
           </div>
           <div>
