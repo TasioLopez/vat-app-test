@@ -11,6 +11,8 @@ export type PrepareSignedUploadInput = {
   originalName: string;
   contentType: string;
   sizeBytes: number;
+  /** Optional unique path segment (multi-doc uploads). */
+  uniqueSuffix?: string | null;
 };
 
 export type PrepareSignedUploadOk = { ok: true; path: string; contentType: string };
@@ -47,6 +49,6 @@ export function prepareEmployeeDocumentSignedUpload(
     return { ok: false, error: 'Invalid file name', status: 400 };
   }
 
-  const path = buildDocumentStoragePath(employeeId, type, safeName);
+  const path = buildDocumentStoragePath(employeeId, type, safeName, input.uniqueSuffix);
   return { ok: true, path, contentType: resolvedMime };
 }

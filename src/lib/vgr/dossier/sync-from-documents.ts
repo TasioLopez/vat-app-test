@@ -10,6 +10,7 @@ export type EmployeeDocumentRow = {
   type: string;
   name: string;
   uploaded_at?: string | null;
+  document_date?: string | null;
 };
 
 /**
@@ -36,6 +37,7 @@ export async function syncVgrDossierFromDocuments(params: {
       appType: doc.type,
       filename: doc.name || doc.id,
       uploadedAt: doc.uploaded_at,
+      documentDate: doc.document_date ?? null,
     });
     const extracted = extractAssertionsFromSource({
       source,

@@ -31,6 +31,7 @@ export type VGRSourceDocument = {
   name: string;
   url: string;
   uploaded_at: string | null;
+  document_date?: string | null;
 };
 
 export type VGRAiContext = {
@@ -52,12 +53,21 @@ const MAX_PRIOR_SECTION_CHARS = 3500;
 /* ------------------------------------------------------------------ */
 
 export async function listVgrSourceDocuments(supabase: SupabaseClient, employeeId: string): Promise<VGRSourceDocument[]> {
-  const { data } = await supabase
+  const primary = await supabase
     .from('documents')
-    .select('id, type, name, url, uploaded_at')
+    .select('id, type, name, url, uploaded_at, document_date')
     .eq('employee_id', employeeId)
     .order('uploaded_at', { ascending: false });
-  return ((data ?? []) as VGRSourceDocument[]).filter((d) => d.url && d.type !== 'vgr' && d.type !== 'tp' && !String(d.type).startsWith('tp_'));
+  let rows = (primary.data ?? null) as VGRSourceDocument[] | null;
+  if (primary.error && /document_date/i.test(String(primary.error.message || ''))) {
+    const fallback = await supabase
+      .from('documents')
+      .select('id, type, name, url, uploaded_at')
+      .eq('employee_id', employeeId)
+      .order('uploaded_at', { ascending: false });
+    rows = (fallback.data ?? []) as VGRSourceDocument[];
+  }
+  return (rows ?? []).filter((d) => d.url && d.type !== 'vgr' && d.type !== 'tp' && !String(d.type).startsWith('tp_'));
 }
 
 /**
@@ -75,7 +85,14 @@ export function selectDocumentsForSection(
     return i === -1 ? preferred.length : i;
   };
   const selected = selectedIds.length ? docs.filter((d) => selectedIds.includes(d.id)) : docs.filter((d) => preferred.includes(d.type));
-  return [...selected].sort((a, b) => rank(a) - rank(b) || String(b.uploaded_at ?? '').localeCompare(String(a.uploaded_at ?? ''))).slice(0, MAX_FILES);
+  return [...selected]
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        String(b.document_date ?? '').localeCompare(String(a.document_date ?? '')) ||
+        String(b.uploaded_at ?? '').localeCompare(String(a.uploaded_at ?? '')),
+    )
+    .slice(0, MAX_FILES);
 }
 
 export async function loadDocumentsAsPdfInputs(
@@ -99,7 +116,13 @@ export async function loadDocumentsAsPdfInputs(
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
       const { pdfBuffer, analysisFilename } = await normalizeForAnalysis(buffer, doc.name || path);
-      const label = `${getEmployeeDocLabel(doc.type)}: ${doc.name || analysisFilename}${doc.uploaded_at ? ` (${formatNLDate(doc.uploaded_at)})` : ''}`;
+      const dateBits = [
+        doc.document_date ? `doc ${formatNLDate(doc.document_date)}` : null,
+        doc.uploaded_at ? `upload ${formatNLDate(doc.uploaded_at)}` : null,
+      ].filter(Boolean);
+      const label = `${getEmployeeDocLabel(doc.type)}: ${doc.name || analysisFilename}${
+        dateBits.length ? ` (${dateBits.join(' · ')})` : ''
+      }`;
       files.push({ pdfBuffer, analysisFilename, label });
       labels.push(label);
     } catch (e) {

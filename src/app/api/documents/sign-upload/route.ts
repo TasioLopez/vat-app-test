@@ -15,12 +15,15 @@ export async function POST(req: NextRequest) {
     const authResult = await requireEmployeeAccess(employeeId);
     if (isAuthError(authResult)) return authResult;
 
+    const uniqueSuffix = (body?.unique_suffix ?? '').toString() || null;
+
     const prepared = prepareEmployeeDocumentSignedUpload({
       employeeId,
       type,
       originalName: name,
       contentType,
       sizeBytes,
+      uniqueSuffix,
     });
 
     if (!prepared.ok) {

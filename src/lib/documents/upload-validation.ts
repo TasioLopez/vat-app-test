@@ -66,7 +66,12 @@ export function sanitizeDocumentFileName(name: string): string | null {
 export function buildDocumentStoragePath(
   employeeId: string,
   type: string,
-  safeName: string
+  safeName: string,
+  /** Unique segment so multiple files of the same type/name do not overwrite storage. */
+  uniqueSuffix?: string | null
 ): string {
-  return `${employeeId}/${type}-${safeName}`;
+  const suffix =
+    (uniqueSuffix || '').trim() ||
+    `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${employeeId}/${type}-${suffix}-${safeName}`;
 }

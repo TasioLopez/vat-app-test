@@ -42,15 +42,25 @@ describe('sanitizeDocumentFileName', () => {
 });
 
 describe('buildDocumentStoragePath', () => {
-  it('prefixes employee id and type', () => {
-    assert.equal(
-      buildDocumentStoragePath(
-        'b803b699-5876-4151-9a16-aa07e938128a',
-        'ad_rapportage',
-        'Borrel-AD-rapportage-24-juli-26.pdf'
-      ),
-      'b803b699-5876-4151-9a16-aa07e938128a/ad_rapportage-Borrel-AD-rapportage-24-juli-26.pdf'
+  it('prefixes employee id, type, and a unique suffix so multi-doc uploads do not collide', () => {
+    const path = buildDocumentStoragePath(
+      'b803b699-5876-4151-9a16-aa07e938128a',
+      'ad_rapportage',
+      'Borrel-AD-rapportage-24-juli-26.pdf',
+      'abc123'
     );
+    assert.equal(
+      path,
+      'b803b699-5876-4151-9a16-aa07e938128a/ad_rapportage-abc123-Borrel-AD-rapportage-24-juli-26.pdf'
+    );
+  });
+
+  it('auto-generates a unique suffix when omitted', () => {
+    const a = buildDocumentStoragePath('emp', 'cv', 'cv.pdf');
+    const b = buildDocumentStoragePath('emp', 'cv', 'cv.pdf');
+    assert.match(a, /^emp\/cv-.+-cv\.pdf$/);
+    assert.match(b, /^emp\/cv-.+-cv\.pdf$/);
+    assert.notEqual(a, b);
   });
 });
 
@@ -86,9 +96,23 @@ describe('prepareEmployeeDocumentSignedUpload', () => {
     });
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.match(result.path, new RegExp(`^${employeeId}/ad_rapportage-`));
+    assert.match(result.path, new RegExp(`^${employeeId}/ad_rapportage-.+-`));
     assert.match(result.path, /\.pdf$/);
     assert.equal(result.contentType, 'application/pdf');
+  });
+
+  it('accepts an explicit unique_suffix for multi-doc paths', () => {
+    const result = prepareEmployeeDocumentSignedUpload({
+      employeeId,
+      type: 'ad_rapportage',
+      originalName: 'AD.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 100,
+      uniqueSuffix: 'multi1',
+    });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.path, `${employeeId}/ad_rapportage-multi1-AD.pdf`);
   });
 
   it('rejects files over DOCUMENT_MAX_BYTES', () => {

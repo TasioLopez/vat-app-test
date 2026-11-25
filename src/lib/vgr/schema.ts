@@ -49,6 +49,11 @@ export type VGRMeta = {
   template_version?: string;
   /** Document ids selected as sources for AI generation. */
   source_document_ids: string[];
+  /**
+   * Staging multi-doc source UX: whether the adviser already finished the
+   * “al geüpload / nu uploaden” start step. Omitted on older drafts = pending.
+   */
+  source_intake?: 'pending' | 'existing' | 'uploaded' | 'done';
   /** Dismissed consistency warnings: id → rationale. */
   dismissed_warnings: Record<string, string>;
   /** ISO timestamp set when adviser approves for export. */

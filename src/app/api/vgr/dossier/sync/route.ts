@@ -32,18 +32,29 @@ export async function POST(req: NextRequest) {
         ? (body.textByDocumentId as Record<string, string>)
         : {};
 
-    const { data: docs, error } = await (access.supabase as any)
+    let { data: docs, error } = await (access.supabase as any)
       .from('documents')
-      .select('id, type, name, uploaded_at')
+      .select('id, type, name, uploaded_at, document_date')
       .eq('employee_id', employeeId)
       .order('uploaded_at', { ascending: false });
+    if (error && /document_date/i.test(String(error.message || ''))) {
+      ({ data: docs, error } = await (access.supabase as any)
+        .from('documents')
+        .select('id, type, name, uploaded_at')
+        .eq('employee_id', employeeId)
+        .order('uploaded_at', { ascending: false }));
+    }
     if (error) {
       return NextResponse.json({ error: 'Documenten laden mislukt', details: error.message }, { status: 500 });
     }
 
-    const rows = ((docs ?? []) as { id: string; type: string; name: string; uploaded_at?: string | null }[]).filter(
-      (d) => !filterIds || filterIds.has(d.id),
-    );
+    const rows = ((docs ?? []) as {
+      id: string;
+      type: string;
+      name: string;
+      uploaded_at?: string | null;
+      document_date?: string | null;
+    }[]).filter((d) => !filterIds || filterIds.has(d.id));
 
     const dossier = await syncVgrDossierFromDocuments({
       supabase: serviceRoleSupabase,
