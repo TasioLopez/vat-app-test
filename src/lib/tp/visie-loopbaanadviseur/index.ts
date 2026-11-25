@@ -16,7 +16,9 @@ export {
   FUNCTIE_FINAL_MIN_COUNT,
   DEFAULT_VISIE_LOOPBAANADVISEUR_MODEL,
   GENERATION_FALLBACK,
+  isStandardFunctiesIntro,
   SELECTION_PROCESS_V12,
+  STANDARD_FUNCTIES_INTROS,
   type DocumentScenario,
 } from './constants';
 export {
@@ -25,6 +27,7 @@ export {
   buildVisieLoopbaanadviseurContentFromIntake,
   buildVisieLoopbaanadviseurFields,
   parseVisieLoopbaanadviseur,
+  repairStoredVisieFunctiesIntro,
   stripCitations,
   type ParsedVisieLoopbaanadviseur,
   type VisieLoopbaanadviseurBuildContext,

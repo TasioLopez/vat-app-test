@@ -46,6 +46,22 @@ export const NO_AD_BELASTBAARHEID_INTRO =
 export const NO_AD_NO_BELASTBAARHEID_INTRO =
   'Er zijn geen arbeidsdeskundig rapport en belastbaarheidsprofiel beschikbaar. Hierdoor zijn er momenteel geen functies geduid door de loopbaanadviseur. Indien er een belastbaarheidsprofiel beschikbaar wordt gesteld, zullen er passende functies geduid worden.';
 
+/** All six SoT functies-intro constants (exact match → eligible for soft repair). */
+export const STANDARD_FUNCTIES_INTROS: readonly string[] = [
+  AD_FUNCTIES_INTRO,
+  AD_NO_FUNCTIES_INTRO,
+  CONCEPT_AD_FUNCTIES_INTRO,
+  CONCEPT_AD_NO_FUNCTIES_INTRO,
+  NO_AD_BELASTBAARHEID_INTRO,
+  NO_AD_NO_BELASTBAARHEID_INTRO,
+];
+
+export function isStandardFunctiesIntro(text: string | null | undefined): boolean {
+  const trimmed = String(text ?? '').trim();
+  if (!trimmed) return false;
+  return STANDARD_FUNCTIES_INTROS.some((intro) => intro === trimmed);
+}
+
 export const FUNCTIE_FOOTER =
   '*Dit is geen limitatieve opsomming. De genoemde functies zijn alleen onder voorwaarden passend. Ook andere werkmogelijkheden zullen in het 2e spoortraject onderzocht worden. Voor alle werkzaamheden geldt dat rekening gehouden moet worden met de belastbaarheid zoals beschreven in de meest recente FML/ IZP/ LAB.';
 
