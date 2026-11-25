@@ -1,6 +1,7 @@
 /**
  * Map AI `__suggesties` into a body patch so Overnemen applies ja/nee, rubrieken,
  * PoW tredes, kansen and suggested intervention selections — not only prose fields.
+ * Quote blocks for benutbare mogelijkheden / AD are sanitized on apply (honesty).
  */
 import {
   VGR_ACTIVATIE_OPTIONS,
@@ -16,8 +17,10 @@ import {
   type VGRData,
   type VGRFmlRubriek,
   type VGRPowTrede,
+  type VGRQuoteBlock,
 } from '@/lib/vgr/schema';
 import type { VGRAiSectionId } from '@/lib/vgr/ai/sections';
+import { sanitizeQuoteForApply } from '@/lib/vgr/ai/quote-honesty';
 
 export type VgrBodyPatch = { [K in keyof VGRBody]?: Partial<VGRBody[K]> };
 
@@ -229,4 +232,65 @@ export function describeVgrAiSuggesties(suggesties: Record<string, string>): str
   return Object.entries(suggesties)
     .filter(([, v]) => String(v ?? '').trim())
     .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v.trim()}`);
+}
+
+export type QuoteApplySanitization = {
+  patch: VgrBodyPatch;
+  refused: string[];
+};
+
+/**
+ * Tighten quote fields before Overnemen: refuse empty/invented quotes and AD-as-lead
+ * for benutbare mogelijkheden (G4 / G7 lite). Returns a body patch overlay + refuse reasons.
+ */
+export function sanitizeVgrQuotesInBodyPatch(
+  sectionId: VGRAiSectionId,
+  fieldPatch: VgrBodyPatch,
+): QuoteApplySanitization {
+  const refused: string[] = [];
+  const patch: VgrBodyPatch = {};
+
+  if (sectionId === 'benutbare_mogelijkheden' && fieldPatch.benutbare_mogelijkheden) {
+    const bm = fieldPatch.benutbare_mogelijkheden as Partial<VGRBody['benutbare_mogelijkheden']>;
+    const next: Partial<VGRBody['benutbare_mogelijkheden']> = { ...bm };
+    for (const key of ['prognose', 'conclusie', 'advies'] as const) {
+      const raw = bm[key] as VGRQuoteBlock | undefined;
+      if (!raw) continue;
+      const { quote, refused: didRefuse, reason } = sanitizeQuoteForApply(raw, { requireMedicalLead: true });
+      next[key] = quote;
+      if (didRefuse && reason) refused.push(`${key}: ${reason}`);
+    }
+    patch.benutbare_mogelijkheden = next;
+  }
+
+  if (sectionId === 'visie_plaatsbaarheid' && fieldPatch.visie_plaatsbaarheid) {
+    const vp = fieldPatch.visie_plaatsbaarheid as Partial<VGRBody['visie_plaatsbaarheid']>;
+    if (vp.ad) {
+      const { quote, refused: didRefuse, reason } = sanitizeQuoteForApply(vp.ad);
+      patch.visie_plaatsbaarheid = { ...vp, ad: quote };
+      if (didRefuse && reason) refused.push(`ad: ${reason}`);
+    }
+  }
+
+  return { patch, refused };
+}
+
+/**
+ * Full Overnemen body patch: fields + suggesties + intervention selection + quote honesty.
+ */
+export function buildVgrApplyBodyPatch(
+  data: VGRData,
+  sectionId: VGRAiSectionId,
+  proposalPatch: Record<string, unknown>,
+): { patch: VgrBodyPatch; refusedQuotes: string[] } {
+  const { __fields, __suggesties, ...raw } = proposalPatch;
+  void __fields;
+  const fieldPatch = raw as VgrBodyPatch;
+  const suggestiesMap = (__suggesties ?? {}) as Record<string, string>;
+  const afterFields = previewVgrDataAfterBodyPatch(data, fieldPatch);
+  const suggestPatch = applyVgrAiSuggesties(afterFields, sectionId, suggestiesMap);
+  const selectedPatch = ensureInterventionSelectedFromPatch(sectionId, afterFields, fieldPatch, suggestiesMap);
+  const merged = mergeVgrBodyPatches(fieldPatch, suggestPatch, selectedPatch);
+  const { patch: quotePatch, refused } = sanitizeVgrQuotesInBodyPatch(sectionId, merged);
+  return { patch: mergeVgrBodyPatches(merged, quotePatch), refusedQuotes: refused };
 }

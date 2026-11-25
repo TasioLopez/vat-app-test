@@ -63,6 +63,16 @@ Never use the filled ValentineZ example reports as fixture data. They contain re
 - [ ] Autosave draft; regenerate a section without wiping other edits; one approved final + signed download.
 - [ ] TP 2026 and Intake builders still open, save and export.
 
+## Autofill honesty (Phase 1 — synth)
+
+- [x] G4: Benutbare mogelijkheden uses arts/FML sources only; AD alone is non-writable; apply refuses AD-as-lead quotes.
+- [x] G10: Style prompt carries SYSTEM_VGR_CORE status vocabulary; proposals stamp `approved_rules_version`.
+- [x] G6 lite: Generate-all / per-section skip non-`writable` modules; one question per gap in preflight UI.
+- [x] T05: Exact quotes preserved (no silent spelling “fixes”); invented/empty quotes refused on Overnemen.
+- [x] T01/T06/T13: Heuristic detectors + style rules for invented tests/apps, opgesteld≠verzonden, gepland≠uitgevoerd.
+- [x] D10: Zoekprofiel AI remains concept until deskundige confirm on apply.
+- [ ] Full pack T01–T22 end-to-end (needs Phase 2 dossier layer).
+
 ## Commands
 
 ```

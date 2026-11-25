@@ -61,7 +61,10 @@ export type VGRAiSectionDef = {
   toPatch: (fields: Record<string, string>, data: VGRData) => Partial<Record<keyof VGRBody, Record<string, unknown>>>;
 };
 
+/** Docs that may include AD (visie / belastbaarheid / algemeen). */
 const BA_DOCS = ['fml_izp', 'spreek_reportage', 'ad_rapportage'];
+/** Arts / verzekeringsgeneeskunde only — AD is NOT a lead source for benutbare mogelijkheden (G4). */
+export const VGR_MEDICAL_LEAD_DOCS = ['spreek_reportage', 'fml_izp'] as const;
 const VGR_FML_RUBRIEKEN_HINT = VGR_FML_RUBRIEKEN.join(', ');
 
 function interventionFields(section: keyof VGRBody, options: VGRInterventionOption[]) {
@@ -122,28 +125,29 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
   benutbare_mogelijkheden: {
     id: 'benutbare_mogelijkheden',
     label: 'Benutbare mogelijkheden',
-    preferredDocTypes: BA_DOCS,
-    instructions: `Haal de meest recente prognose, conclusie en advies van de bedrijfsarts LETTERLIJK uit de aangeleverde spreekuurrapportage / FML / IZP / AD-rapport. Geef per citaat ook de naam van de bedrijfsarts/arbeidsdeskundige en de datum van het document (YYYY-MM-DD). Niet parafraseren; geen eigen formulering. Als er geen bron is: leeg laten.`,
+    preferredDocTypes: [...VGR_MEDICAL_LEAD_DOCS],
+    instructions: `Haal de meest recente prognose, conclusie en advies van de bedrijfsarts LETTERLIJK uit spreekuurrapportage / FML / IZP / LAB van de bedrijfsarts of verzekeringsarts. Een AD-rapport is GEEN zelfstandige bron voor benutbare mogelijkheden — negeer AD-tekst hiervoor. Geef per citaat de naam van de bedrijfsarts en de datum van het document (YYYY-MM-DD). Niet parafraseren; geen eigen formulering; spelling en interpunctie exact behouden. Zonder geverifieerde artsenbron: alle citaten leeg laten ("").`,
     fields: () => [
-      { key: 'prognose_citaat', description: 'Letterlijk citaat prognose bedrijfsarts' },
+      { key: 'prognose_citaat', description: 'Letterlijk citaat prognose bedrijfsarts (exact; geen AD)' },
       { key: 'prognose_bron_naam', description: 'Naam bedrijfsarts bij prognose' },
       { key: 'prognose_bron_datum', description: 'Datum document prognose (YYYY-MM-DD)' },
-      { key: 'prognose_bron_type', description: 'Soort document (bijv. "de terugkoppeling van het medisch spreekuur", "het belastbaarheidsprofiel")' },
-      { key: 'conclusie_citaat', description: 'Letterlijk citaat conclusie' },
+      { key: 'prognose_bron_type', description: 'Soort document (bijv. "de terugkoppeling van het medisch spreekuur", "het belastbaarheidsprofiel"); nooit "AD-rapport"' },
+      { key: 'conclusie_citaat', description: 'Letterlijk citaat conclusie bedrijfsarts' },
       { key: 'conclusie_bron_naam', description: 'Naam bedrijfsarts bij conclusie' },
       { key: 'conclusie_bron_datum', description: 'Datum document conclusie (YYYY-MM-DD)' },
-      { key: 'conclusie_bron_type', description: 'Soort document conclusie' },
-      { key: 'advies_citaat', description: 'Letterlijk citaat advies' },
+      { key: 'conclusie_bron_type', description: 'Soort document conclusie (geen AD)' },
+      { key: 'advies_citaat', description: 'Letterlijk citaat advies bedrijfsarts' },
       { key: 'advies_bron_naam', description: 'Naam bedrijfsarts bij advies' },
       { key: 'advies_bron_datum', description: 'Datum document advies (YYYY-MM-DD)' },
-      { key: 'advies_bron_type', description: 'Soort document advies' },
+      { key: 'advies_bron_type', description: 'Soort document advies (geen AD)' },
     ],
     suggestions: [{ key: 'heeft_benutbare_mogelijkheden', description: '"ja" of "nee" volgens de bedrijfsarts, anders ""' }],
     toPatch: (f, data) => {
       const cur = data.body.benutbare_mogelijkheden;
       const q = (p: 'prognose' | 'conclusie' | 'advies') => ({
         ...cur[p],
-        citaat: f[`${p}_citaat`] || cur[p].citaat,
+        // Prefer AI field when present (including explicit ""); apply-path refuses invented/AD quotes.
+        citaat: Object.prototype.hasOwnProperty.call(f, `${p}_citaat`) ? String(f[`${p}_citaat`] ?? '').trim() : cur[p].citaat,
         bron_naam: f[`${p}_bron_naam`] || cur[p].bron_naam,
         bron_datum: f[`${p}_bron_datum`] || cur[p].bron_datum,
         bron_type: f[`${p}_bron_type`] || cur[p].bron_type,
@@ -244,8 +248,8 @@ export const VGR_AI_SECTIONS: Record<VGRAiSectionId, VGRAiSectionDef> = {
     id: 'zoekprofiel',
     label: 'Zoekprofiel',
     preferredDocTypes: ['intakeformulier', 'ad_rapportage', 'fml_izp', 'cv'],
-    instructions: `Beschrijf het zoekprofiel: richting(en) van passend werk, werkniveau, uren, reisafstand, werktijden, fysieke/mentale randvoorwaarden uit de FML, taalniveau en praktische randvoorwaarden. Maak onderscheid tussen onderzochte functies, mogelijk passende functies, functies waarop is gesolliciteerd en afgevallen functies — alleen voor zover uit het dossier bekend. Noem een functie niet passend zonder onderbouwing. Actualiseer het bestaande zoekprofiel in plaats van opnieuw te beginnen.`,
-    fields: () => [{ key: 'tekst', description: 'Zoekprofiel (2–5 alinea\'s)' }],
+    instructions: `Schrijf een onderbouwd zoekprofiel-CONCEPT (deskundige moet bevestigen vóór definitief; D10). Als de FML/IZP ongewijzigd is t.o.v. het TP: neem het bestaande TP-zoekprofiel over. Bij gewijzigde FML: precies twee alinea's met alle blijvende functionele grenzen. Beschrijf richting(en), werkniveau, uren, reisafstand, werktijden, fysieke/mentale randvoorwaarden, taalniveau. Maak onderscheid tussen onderzochte, mogelijk passende, gesolliciteerde en afgevallen functies — alleen uit het dossier. Noem een functie niet passend zonder onderbouwing. Geen stille overschrijving van oude FML-grenzen.`,
+    fields: () => [{ key: 'tekst', description: 'Zoekprofiel-concept (2 alinea\'s bij FML-wijziging; anders TP-overname)' }],
     toPatch: (f) => ({ zoekprofiel: { tekst: f.tekst } }),
   },
 

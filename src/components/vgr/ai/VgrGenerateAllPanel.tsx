@@ -11,7 +11,8 @@ import { useToastHelpers } from '@/components/ui/Toast';
 import { useVGRInstance } from '@/context/VGRInstanceContext';
 import { useVgrEmployeeDocuments } from '@/components/vgr/sections/SetupSection';
 import { VGR_AI_SECTION_IDS, VGR_AI_SECTIONS, vgrAiSectionCanGenerate } from '@/lib/vgr/ai/sections';
-import { computeVgrPreflight, type VgrPreflightStatus } from '@/lib/vgr/preflight';
+import { VGR_APPROVED_RULES_VERSION } from '@/lib/vgr/ai/style-prompt';
+import { computeVgrPreflight, writableVgrAiSectionIds, type VgrPreflightStatus } from '@/lib/vgr/preflight';
 import type { VGRAiProposal, VGRData } from '@/lib/vgr/schema';
 
 const STATUS_LABEL: Record<VgrPreflightStatus, string> = {
@@ -24,8 +25,8 @@ const STATUS_LABEL: Record<VgrPreflightStatus, string> = {
 };
 
 /**
- * Optional first-draft pass: generate a proposal per body section sequentially.
- * Nothing is auto-applied — the adviser reviews each proposal in the body step.
+ * Optional first-draft pass: generate a proposal per writable body section sequentially.
+ * Nothing is auto-applied — the adviser reviews each proposal in the body step (D01).
  */
 export function VgrGenerateAllPanel({
   data,
@@ -52,11 +53,21 @@ export function VgrGenerateAllPanel({
   const preflight = useMemo(() => computeVgrPreflight(data, selectedTypes), [data, selectedTypes]);
   const blocked = preflight.blocksGenerateAll && !ackConflicts;
 
+  const runnable = useMemo(() => {
+    const writable = new Set(writableVgrAiSectionIds(preflight));
+    return VGR_AI_SECTION_IDS.filter(
+      (sectionId) => writable.has(sectionId) && vgrAiSectionCanGenerate(VGR_AI_SECTIONS[sectionId], data),
+    );
+  }, [preflight, data]);
+
+  const skippedCount = VGR_AI_SECTION_IDS.filter((id) => vgrAiSectionCanGenerate(VGR_AI_SECTIONS[id], data)).length - runnable.length;
+
   const run = async () => {
     if (blocked) return;
-    const runnable = VGR_AI_SECTION_IDS.filter((sectionId) =>
-      vgrAiSectionCanGenerate(VGR_AI_SECTIONS[sectionId], data)
-    );
+    if (!runnable.length) {
+      showError('Preflight', 'Geen schrijfbare onderdelen. Beantwoord eerst de openstaande vragen.');
+      return;
+    }
     const total = Math.max(runnable.length, 1);
     setBusy(true);
     setAutofillProgress({
@@ -90,11 +101,15 @@ export function VgrGenerateAllPanel({
         ok += 1;
         updateField('ai_proposals', { ...proposals });
       }
+      updateField('vgr_meta', {
+        ...data.vgr_meta,
+        approved_rules_version: VGR_APPROVED_RULES_VERSION,
+      });
       showSuccess(
         'Eerste concept',
         failed
-          ? `${ok} onderdelen klaar, ${failed} mislukt. Open Stap 4 om voorstellen over te nemen.`
-          : `${ok} voorstellen klaar. Open Stap 4 om ze te controleren en over te nemen.`
+          ? `${ok} onderdelen klaar, ${failed} mislukt${skippedCount ? `, ${skippedCount} overgeslagen (niet schrijfbaar)` : ''}. Open Stap 4 om voorstellen over te nemen.`
+          : `${ok} voorstellen klaar${skippedCount ? ` (${skippedCount} overgeslagen: niet schrijfbaar)` : ''}. Open Stap 4 om ze te controleren en over te nemen.`
       );
     } catch (err) {
       showError('AI-fout', err instanceof Error ? err.message : 'Genereren mislukt');
@@ -114,8 +129,8 @@ export function VgrGenerateAllPanel({
       ) : null}
       <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Eerste concept (AI)</h3>
       <p className="mb-3 text-xs text-muted-foreground">
-        Genereert per onderdeel een voorstel op basis van de geselecteerde brondocumenten. Niets wordt automatisch
-        overgenomen; PoW-tredes en medische ja/nee-keuzes worden wel als suggestie meegenomen bij Overnemen.
+        Genereert per schrijfbaar onderdeel een voorstel op basis van de geselecteerde brondocumenten. Niets wordt
+        automatisch overgenomen; PoW-tredes en medische ja/nee-keuzes worden wel als suggestie meegenomen bij Overnemen.
       </p>
 
       <div className="mb-3 max-h-48 overflow-y-auto rounded border border-border/70 bg-muted/20 p-2">
@@ -125,12 +140,28 @@ export function VgrGenerateAllPanel({
         <ul className="space-y-1">
           {preflight.modules.map((m) => (
             <li key={m.id} className="flex items-start justify-between gap-2 text-xs">
-              <span className="min-w-0 flex-1 text-neutral-800">{m.label}</span>
+              <span className="min-w-0 flex-1 text-neutral-800">
+                {m.label}
+                {!m.writable ? (
+                  <span className="ml-1 text-[10px] text-amber-800">(niet schrijfbaar)</span>
+                ) : null}
+              </span>
               <span className="shrink-0 text-muted-foreground">{STATUS_LABEL[m.status]}</span>
             </li>
           ))}
         </ul>
       </div>
+
+      {preflight.questions.length ? (
+        <div className="mb-3 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-950">
+          <div className="mb-1 font-semibold">Vragen per gap</div>
+          <ul className="list-disc space-y-0.5 pl-4">
+            {preflight.questions.map((q) => (
+              <li key={q}>{q}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {preflight.medicalConflicts.length ? (
         <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
@@ -158,11 +189,12 @@ export function VgrGenerateAllPanel({
         type="button"
         size="sm"
         className="h-8 gap-1.5 bg-[#702A90] hover:bg-[#5a1f75]"
-        disabled={busy || blocked}
+        disabled={busy || blocked || runnable.length === 0}
         onClick={() => void run()}
       >
         <Sparkles className="h-3.5 w-3.5" aria-hidden />
         Genereer eerste concept
+        {runnable.length ? ` (${runnable.length})` : ''}
       </Button>
     </section>
   );
