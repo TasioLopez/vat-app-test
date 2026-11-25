@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
+import { ADVIES_DELIMITER, ADVIES_NB_NO_REPORT } from '@/lib/tp/ad-advies/constants';
 import { BELASTBAARHEID_GEEN_PROFIEL } from '@/lib/tp/belastbaarheidsprofiel/constants';
 import {
   buildFunctiesIntro,
@@ -8,6 +8,7 @@ import {
   buildVisieLoopbaanadviseurFields,
   lowercaseDutchAfterColon,
   parseVisieLoopbaanadviseur,
+  repairStoredVisieFunctiesIntro,
 } from '../build-fields';
 import {
   AD_FUNCTIES_INTRO,
@@ -15,6 +16,7 @@ import {
   CONCEPT_AD_FUNCTIES_INTRO,
   CONCEPT_AD_NO_FUNCTIES_INTRO,
   FUNCTIE_FOOTER,
+  FUNCTIES_DELIMITER,
   NO_AD_BELASTBAARHEID_INTRO,
   NO_AD_NO_BELASTBAARHEID_INTRO,
   TOELICHTING_DELIMITER,
@@ -274,6 +276,67 @@ describe('buildFunctiesIntro', () => {
     assert.match(NO_AD_BELASTBAARHEID_INTRO, /Er is geen arbeidsdeskundig rapport beschikbaar/);
     assert.equal(buildFunctiesIntro('intake_only'), NO_AD_NO_BELASTBAARHEID_INTRO);
     assert.match(NO_AD_NO_BELASTBAARHEID_INTRO, /geen functies geduid door de loopbaanadviseur/);
+  });
+});
+
+describe('repairStoredVisieFunctiesIntro', () => {
+  it('swaps exact SoT AD_NO_FUNCTIES_INTRO to AD_FUNCTIES_INTRO when scenario has functions', () => {
+    const stored = [
+      TOELICHTING_DELIMITER,
+      TOELICHTING_VROUW,
+      FUNCTIES_DELIMITER,
+      AD_NO_FUNCTIES_INTRO,
+      '• Planner logistiek: toelichting.',
+      FUNCTIE_FOOTER,
+    ].join('\n\n');
+
+    const repaired = repairStoredVisieFunctiesIntro(stored, 'ad_with_functies');
+    const parsed = parseVisieLoopbaanadviseur(repaired);
+    assert.equal(parsed.functiesIntro, AD_FUNCTIES_INTRO);
+    assert.match(parsed.functieBullets, /Planner logistiek/);
+  });
+
+  it('leaves custom intros untouched', () => {
+    const custom = 'Handmatig aangepaste intro door adviseur.';
+    const stored = [
+      TOELICHTING_DELIMITER,
+      TOELICHTING_VROUW,
+      FUNCTIES_DELIMITER,
+      custom,
+      '• Planner logistiek: toelichting.',
+      FUNCTIE_FOOTER,
+    ].join('\n\n');
+    assert.equal(repairStoredVisieFunctiesIntro(stored, 'ad_with_functies'), stored);
+  });
+
+  it('no-ops when intro already matches scenario', () => {
+    const stored = [
+      TOELICHTING_DELIMITER,
+      TOELICHTING_VROUW,
+      FUNCTIES_DELIMITER,
+      AD_FUNCTIES_INTRO,
+      '• Planner logistiek: toelichting.',
+      FUNCTIE_FOOTER,
+    ].join('\n\n');
+    assert.equal(repairStoredVisieFunctiesIntro(stored, 'ad_with_functies'), stored);
+  });
+});
+
+describe('Kedzierska prose → scenario', () => {
+  it('detects ad_with_functies from prose examples in advies', () => {
+    const advies = [
+      'Advies.',
+      ADVIES_DELIMITER,
+      'Voorbeelden van passende functies zijn licht productiewerk dat zittend kan worden gedaan, heftruckchauffeur (certificaat halen) of naaister.',
+    ].join('\n');
+
+    const scenario = detectDocumentScenario([], {
+      has_ad_report: true,
+      ad_report_concept: false,
+      advies_ad_passende_arbeid: advies,
+    });
+    assert.equal(scenario, 'ad_with_functies');
+    assert.equal(buildFunctiesIntro(scenario), AD_FUNCTIES_INTRO);
   });
 });
 
