@@ -23,6 +23,7 @@ describe('computeVgrPreflight', () => {
     const out = computeVgrPreflight(data, ['fml_izp', 'intakeformulier']);
     assert.equal(out.blocksGenerateAll, true);
     assert.ok(out.medicalConflicts.length > 0);
+    assert.ok(Array.isArray(out.questions));
   });
 
   it('marks applications not yet relevant when wekelijks is off', () => {
@@ -34,5 +35,6 @@ describe('computeVgrPreflight', () => {
     const out = computeVgrPreflight(data, []);
     const apps = out.modules.find((m) => m.id === 'applications');
     assert.equal(apps?.status, 'NOT_YET_RELEVANT');
+    assert.equal(apps?.writable, false);
   });
 });

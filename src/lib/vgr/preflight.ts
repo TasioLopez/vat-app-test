@@ -1,9 +1,15 @@
 /**
  * Practical VGR preflight checklist (dossier-mode lite) before Generate-all.
  * Statuses follow the client projectbron vocabulary.
+ * Phase 1 (G6 lite): `writable` gates generation; at most one `question` per gap.
  */
 import { detectVgrSourceConflicts } from '@/lib/vgr/ai/collect-context';
-import { VGR_AI_SECTION_IDS, VGR_AI_SECTIONS, type VGRAiSectionId } from '@/lib/vgr/ai/sections';
+import {
+  VGR_AI_SECTION_IDS,
+  VGR_AI_SECTIONS,
+  VGR_MEDICAL_LEAD_DOCS,
+  type VGRAiSectionId,
+} from '@/lib/vgr/ai/sections';
 import type { VGRData } from '@/lib/vgr/schema';
 import { validateVgr } from '@/lib/vgr/validation';
 
@@ -21,6 +27,8 @@ export type VgrPreflightModule = {
   status: VgrPreflightStatus;
   detail: string;
   writable: boolean;
+  /** At most one focused question when the module is not READY / needs input. */
+  question?: string;
 };
 
 export type VgrPreflightResult = {
@@ -28,6 +36,8 @@ export type VgrPreflightResult = {
   medicalConflicts: string[];
   /** Soft-block Generate-all when true (coach can still acknowledge). */
   blocksGenerateAll: boolean;
+  /** Flattened gap questions (one per non-ready module that has one). */
+  questions: string[];
 };
 
 const MODULES: { id: VGRAiSectionId | 'planning' | 'applications' | 'leernavigator'; label: string }[] = [
@@ -51,12 +61,29 @@ const MODULES: { id: VGRAiSectionId | 'planning' | 'applications' | 'leernavigat
   { id: 'applications', label: 'Bijlage 2 sollicitaties' },
 ];
 
-function hasDocs(types: Set<string>, preferred: string[]): boolean {
+function hasDocs(types: Set<string>, preferred: readonly string[]): boolean {
   return preferred.some((t) => types.has(t));
 }
 
 function blank(v: unknown) {
   return String(v ?? '').trim() === '';
+}
+
+function mod(
+  base: { id: string; label: string },
+  status: VgrPreflightStatus,
+  detail: string,
+  writable: boolean,
+  question?: string,
+): VgrPreflightModule {
+  return {
+    id: base.id,
+    label: base.label,
+    status,
+    detail,
+    writable,
+    ...(question ? { question } : {}),
+  };
 }
 
 export function computeVgrPreflight(
@@ -78,92 +105,107 @@ export function computeVgrPreflight(
     if (m.id === 'applications') {
       const wekelijks = data.body.interventies_activatie.selected.includes('wekelijks_solliciteren');
       if (!wekelijks && data.applications.length === 0) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'NOT_YET_RELEVANT',
-          detail: 'Nog geen wekelijks solliciteren aangevinkt; bijlage mag leeg blijven.',
-          writable: false,
-        };
+        return mod(m, 'NOT_YET_RELEVANT', 'Nog geen wekelijks solliciteren aangevinkt; bijlage mag leeg blijven.', false);
       }
       if (wekelijks && data.applications.length === 0) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'ADDITIONAL_INFORMATION_NEEDED',
-          detail: 'Wekelijks solliciteren staat aan zonder sollicitaties in Bijlage 2.',
-          writable: true,
-        };
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          'Wekelijks solliciteren staat aan zonder sollicitaties in Bijlage 2.',
+          true,
+          'Welke sollicitaties zijn in deze periode aantoonbaar verricht?',
+        );
       }
-      return { id: m.id, label: m.label, status: 'READY', detail: `${data.applications.length} sollicitatie(s).`, writable: true };
+      return mod(m, 'READY', `${data.applications.length} sollicitatie(s).`, true);
     }
 
     if (m.id === 'planning') {
       const allP = data.planning_phases.every((p) => p.activities.every((a) => a.status === 'P'));
-      return {
-        id: m.id,
-        label: m.label,
-        status: allP ? 'ADDITIONAL_INFORMATION_NEEDED' : 'READY',
-        detail: allP ? 'Alle activiteiten staan nog op gepland (P).' : 'Planning heeft voortgangsstatussen.',
-        writable: true,
-      };
+      return mod(
+        m,
+        allP ? 'ADDITIONAL_INFORMATION_NEEDED' : 'READY',
+        allP ? 'Alle activiteiten staan nog op gepland (P).' : 'Planning heeft voortgangsstatussen.',
+        true,
+        allP ? 'Welke geplande activiteiten zijn in deze periode daadwerkelijk gestart of afgerond?' : undefined,
+      );
     }
 
     if (m.id === 'leernavigator') {
       const checked = [...data.body.leernavigator.basis, ...data.body.leernavigator.activering].some((i) => i.checked);
-      return {
-        id: m.id,
-        label: m.label,
-        status: checked ? 'READY' : 'UNKNOWN',
-        detail: checked ? 'Items aangevinkt.' : 'Nog niets aangevinkt (handmatig).',
-        writable: true,
-      };
+      return mod(
+        m,
+        checked ? 'READY' : 'UNKNOWN',
+        checked ? 'Items aangevinkt.' : 'Nog niets aangevinkt (handmatig).',
+        true,
+        checked ? undefined : 'Welke Leernavigator-onderdelen zijn in deze periode feitelijk gerealiseerd?',
+      );
+    }
+
+    // G4: benutbare mogelijkheden need a medical lead source; AD alone is not enough.
+    if (m.id === 'benutbare_mogelijkheden') {
+      const hasMedical = hasDocs(types, VGR_MEDICAL_LEAD_DOCS) || types.size === 0;
+      const onlyAd =
+        types.size > 0 &&
+        !hasDocs(types, VGR_MEDICAL_LEAD_DOCS) &&
+        hasDocs(types, ['ad_rapportage']);
+      if (onlyAd) {
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          'Alleen AD-rapport geselecteerd; AD is geen bron voor benutbare mogelijkheden.',
+          false,
+          'Is er een spreekuurrapportage of FML/IZP van de bedrijfsarts beschikbaar?',
+        );
+      }
+      if (!hasMedical && types.size > 0) {
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          'Geen medische bron (spreekuur / FML/IZP) voor benutbare mogelijkheden.',
+          false,
+          'Welke bedrijfsarts-bron (spreekuur of FML/IZP) onderbouwt de benutbare mogelijkheden?',
+        );
+      }
     }
 
     if (m.id === 'kwaliteiten_onderzoek') {
       const hasTestDoc = hasDocs(types, ['extra', 'cv']);
       const selected = data.body.kwaliteiten_onderzoek.selected;
       if (!selected.length && !hasTestDoc) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'NOT_YET_RELEVANT',
-          detail: 'Geen testen geselecteerd en geen testbronnen gekoppeld.',
-          writable: false,
-        };
+        return mod(m, 'NOT_YET_RELEVANT', 'Geen testen geselecteerd en geen testbronnen gekoppeld.', false);
       }
       if (selected.includes('persoonlijkheidstest') && Object.values(data.body.kwaliteiten_onderzoek.persoonlijkheid_scores).every(blank)) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'ADDITIONAL_INFORMATION_NEEDED',
-          detail: 'Persoonlijkheidstest aangevinkt zonder scores/testbron.',
-          writable: true,
-        };
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          'Persoonlijkheidstest aangevinkt zonder scores/testbron.',
+          true,
+          'Welk testrapport bevat de persoonlijkheidsscores?',
+        );
       }
     }
 
     if (m.id === 'visie_plaatsbaarheid') {
       const hasAd = hasDocs(types, ['ad_rapportage']) || !blank(data.body.visie_plaatsbaarheid.ad.citaat);
       if (!hasAd && blank(data.body.visie_plaatsbaarheid.conclusie)) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'ADDITIONAL_INFORMATION_NEEDED',
-          detail: 'Geen AD-rapport en nog geen conclusie loopbaanadviseur.',
-          writable: true,
-        };
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          'Geen AD-rapport en nog geen conclusie loopbaanadviseur.',
+          true,
+          'Is er een AD-rapport, of wilt u alleen de conclusie van de loopbaanadviseur laten schrijven?',
+        );
       }
     }
 
     if (hasConflict) {
-      return {
-        id: m.id,
-        label: m.label,
-        status: 'CONFLICT',
-        detail: medicalConflicts[0] || sectionIssues[0]?.message || 'Conflict gesignaleerd.',
-        writable: false,
-      };
+      return mod(
+        m,
+        'CONFLICT',
+        medicalConflicts[0] || sectionIssues[0]?.message || 'Conflict gesignaleerd.',
+        false,
+        'Welke bron is leidend voor dit conflict (arts vs AD vs eerdere VGR)?',
+      );
     }
 
     const aiId = m.id as VGRAiSectionId;
@@ -171,39 +213,41 @@ export function computeVgrPreflight(
       const preferred = VGR_AI_SECTIONS[aiId].preferredDocTypes;
       const readyDocs = !preferred.length || hasDocs(types, preferred) || types.size === 0;
       if (!readyDocs) {
-        return {
-          id: m.id,
-          label: m.label,
-          status: 'ADDITIONAL_INFORMATION_NEEDED',
-          detail: `Ontbrekende bronnen (verwacht o.a. ${preferred.slice(0, 2).join(', ')}).`,
-          writable: true,
-        };
+        return mod(
+          m,
+          'ADDITIONAL_INFORMATION_NEEDED',
+          `Ontbrekende bronnen (verwacht o.a. ${preferred.slice(0, 2).join(', ')}).`,
+          true,
+          `Welke bron(nen) ontbreken nog voor ${m.label.toLowerCase()}?`,
+        );
       }
     }
 
     const hardErrors = sectionIssues.filter((i) => i.level === 'error');
     if (hardErrors.length) {
-      return {
-        id: m.id,
-        label: m.label,
-        status: 'UNKNOWN',
-        detail: hardErrors[0].message,
-        writable: true,
-      };
+      return mod(m, 'UNKNOWN', hardErrors[0].message, true, hardErrors[0].message);
     }
 
-    return {
-      id: m.id,
-      label: m.label,
-      status: 'READY',
-      detail: 'Voldoende om te schrijven of bij te werken.',
-      writable: true,
-    };
+    return mod(m, 'READY', 'Voldoende om te schrijven of bij te werken.', true);
   });
+
+  const questions = modules
+    .filter((m) => m.question && m.status !== 'READY' && m.status !== 'NOT_APPLICABLE')
+    .map((m) => m.question as string);
 
   return {
     modules,
     medicalConflicts,
     blocksGenerateAll: medicalConflicts.length > 0,
+    questions,
   };
+}
+
+/** AI section ids that preflight marks writable (Generate-all / per-section gate). */
+export function writableVgrAiSectionIds(
+  preflight: VgrPreflightResult,
+  sectionIds: readonly VGRAiSectionId[] = VGR_AI_SECTION_IDS,
+): VGRAiSectionId[] {
+  const byId = new Map(preflight.modules.map((m) => [m.id, m]));
+  return sectionIds.filter((id) => byId.get(id)?.writable !== false);
 }
