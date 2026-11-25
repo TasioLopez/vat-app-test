@@ -75,6 +75,18 @@ export async function needsMfaChallenge(supabase: SupabaseClient): Promise<boole
   return currentLevel !== 'aal2';
 }
 
+/**
+ * Login URL for an existing AAL1 session that still needs TOTP.
+ * Prefer MFA-only resume over forcing password again (does not weaken AAL2).
+ */
+export function mfaChallengeLoginPath(redirectPath?: string | null): string {
+  const params = new URLSearchParams({ reason: 'mfa_required' });
+  if (redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//')) {
+    params.set('redirect', redirectPath);
+  }
+  return `/login?${params.toString()}`;
+}
+
 export async function needsMfaEnroll(supabase: SupabaseClient): Promise<boolean> {
   return !(await hasVerifiedTotp(supabase));
 }
