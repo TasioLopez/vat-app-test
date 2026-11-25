@@ -27,7 +27,7 @@ type Props = {
 const ROWS: Array<{ kind: DocKind; label: string; Icon: LucideIcon }> = [
   { kind: 'intake', label: 'Intake', Icon: ClipboardList },
   { kind: 'tp', label: 'Trajectplan', Icon: Route },
-  { kind: 'vgr', label: 'VGR', Icon: Target },
+  { kind: 'vgr', label: 'Concept-VGR', Icon: Target },
   { kind: 'cv', label: 'CV', Icon: FileUser },
 ];
 

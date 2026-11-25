@@ -44,6 +44,8 @@ export type VGRMeta = {
   report_type?: VGRReportType;
   /** Honesty / style prompt version stamped on concept generation. */
   approved_rules_version?: string;
+  /** PDF template / layout version stamped on finalize (D05: PDF-only). */
+  template_version?: string;
   /** Document ids selected as sources for AI generation. */
   source_document_ids: string[];
   /** Dismissed consistency warnings: id → rationale. */
@@ -54,6 +56,34 @@ export type VGRMeta = {
   zoekprofiel_changed_at?: string | null;
   /** Short note for the zoekprofiel change (coach confirmation). */
   zoekprofiel_change_note?: string;
+  /**
+   * Phase 3 finalize audit (T20). Populated on Definitief vaststellen;
+   * immutable snapshot metadata for prompt/template/fact versions.
+   */
+  finalize_audit?: VGRFinalizeAudit | null;
+};
+
+/** Pack `manual_lock` / user_locked: hand-approved module text survives impact regen. */
+export type VGRModuleLock = {
+  locked: boolean;
+  locked_at: string | null;
+  note?: string;
+};
+
+/** Audit trail written when status → final (pack §7 / T20). */
+export type VGRFinalizeAudit = {
+  finalized_at: string;
+  finalized_by: string | null;
+  approved_rules_version: string;
+  template_version: string;
+  report_type: VGRReportType;
+  source_document_ids: string[];
+  /** Stable fingerprint of locked modules at finalize time. */
+  locked_module_ids: string[];
+  /** Open soft warnings that were dismissed (ids). */
+  dismissed_warning_ids: string[];
+  /** Optional dossier fact fingerprint (claim count + ids hash). */
+  fact_snapshot: string | null;
 };
 
 /* ------------------------------------------------------------------ */
@@ -324,6 +354,30 @@ export type VGRData = Record<string, any> & {
   applications: VGRApplication[];
   ai_proposals: Record<string, VGRAiProposal>;
   test_summaries: VGRTestSummary[];
+  /**
+   * Phase 3 (G9): module_id → manual_lock. Locked modules are not overwritten
+   * by impact regen / Generate-all; collisions surface as proposals only.
+   */
+  module_locks: Record<string, VGRModuleLock>;
+  /**
+   * Last impact-regen result (editor UI). Not part of PDF export content.
+   */
+  impact_regen?: VGRImpactRegenResult | null;
+};
+
+export type VGRImpactModuleHit = {
+  module_id: string;
+  reason: string;
+  source_ids: string[];
+  manual_override_collision: boolean;
+  required_human_review: boolean;
+};
+
+export type VGRImpactRegenResult = {
+  computed_at: string;
+  changed_claim_ids: string[];
+  impacted_module_ids: string[];
+  hits: VGRImpactModuleHit[];
 };
 
 /* ------------------------------------------------------------------ */

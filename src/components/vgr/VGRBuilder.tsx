@@ -18,6 +18,7 @@ import { applyWorkerFacts, workerFactsFromRows } from '@/lib/employee/save-worke
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import type { VGRStatus } from '@/lib/vgr/schema';
 import type { VGRIssue } from '@/lib/vgr/validation';
+import { applyStatusWithAudit, setModuleLock } from '@/lib/vgr/lifecycle';
 import { SetupEditor } from '@/components/vgr/sections/SetupSection';
 import { CoverA4, CoverEditor } from '@/components/vgr/sections/CoverSection';
 import { GegevensA4Pages, GegevensEditor } from '@/components/vgr/sections/GegevensSection';
@@ -108,16 +109,25 @@ function VGRBuilderInner({
     async (next: VGRStatus) => {
       setStatusBusy(true);
       try {
-        const approved_at = next === 'final' ? new Date().toISOString() : null;
-        const data = { ...vgrData, vgr_meta: { ...vgrData.vgr_meta, approved_at } };
-        const result = await persistDraftFromData(data, next);
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const { data: audited, gate } = applyStatusWithAudit(vgrData, next, { userId: user?.id ?? null });
+        if (next === 'final' && !gate.ok) {
+          throw new Error(`Definitief geblokkeerd: ${gate.blockers.join(' · ')}`);
+        }
+        const result = await persistDraftFromData(audited, next);
         if (!result.ok) throw new Error(result.error || 'Status wijzigen mislukt');
-        updateMeta({ approved_at });
+        setVGRData(audited);
         markSaved();
         setStatus(next);
         showSuccess(
           'Status bijgewerkt',
-          next === 'final' ? 'Rapportage is definitief gemarkeerd.' : next === 'review' ? 'Rapportage staat ter controle.' : 'Rapportage is weer een concept.'
+          next === 'final'
+            ? 'Rapportage is definitief vastgesteld (audittrail opgeslagen).'
+            : next === 'review'
+              ? 'Rapportage staat ter controle.'
+              : 'Rapportage is weer een concept.',
         );
       } catch (err) {
         showError('Fout', err instanceof Error ? err.message : 'Status wijzigen mislukt.');
@@ -125,7 +135,17 @@ function VGRBuilderInner({
         setStatusBusy(false);
       }
     },
-    [markSaved, persistDraftFromData, showError, showSuccess, updateMeta, vgrData]
+    [markSaved, persistDraftFromData, setVGRData, showError, showSuccess, vgrData],
+  );
+
+  const toggleModuleLock = useCallback(
+    (moduleId: string, locked: boolean) => {
+      setVGRData((prev) => ({
+        ...prev,
+        module_locks: setModuleLock(prev.module_locks ?? {}, moduleId, locked),
+      }));
+    },
+    [setVGRData],
   );
 
   /* ---------------- live profile context + consultant defaults ---------------- */
@@ -199,7 +219,16 @@ function VGRBuilderInner({
     {
       key: 'setup',
       title: 'Rapportage',
-      renderEditor: () => <SetupEditor data={vgrData} employeeId={employeeId} updateMeta={updateMeta} updateBody={updateBody} />,
+      renderEditor: () => (
+        <SetupEditor
+          data={vgrData}
+          employeeId={employeeId}
+          vgrInstanceId={vgrInstanceId}
+          updateMeta={updateMeta}
+          updateBody={updateBody}
+          setVGRData={setVGRData}
+        />
+      ),
       renderPreview: () => <CoverA4 data={vgrData} />,
     },
     {
@@ -222,6 +251,7 @@ function VGRBuilderInner({
           data={vgrData}
           updateBody={updateBody}
           setBodySection={setBodySection}
+          onToggleLock={toggleModuleLock}
           renderAi={(sectionId) => (
             <VgrAiPanel sectionId={sectionId} data={vgrData} vgrInstanceId={vgrInstanceId} employeeId={employeeId} patchBody={patchBody} />
           )}
@@ -307,7 +337,7 @@ function VGRBuilderInner({
 
   return (
     <DocumentEditorShell
-      title="Voortgangsrapportage"
+      title="Concept-VGR"
       subtitle={
         <span className="inline-flex flex-wrap items-center gap-2">
           <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusBadge.cls}`}>

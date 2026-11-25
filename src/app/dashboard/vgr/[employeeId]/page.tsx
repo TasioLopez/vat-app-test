@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { ensureVGRShape } from '@/lib/vgr/mapping';
 import { buildVgrInitialData } from '@/lib/vgr/migrate-from-tp';
+import { applyConceptVgrDefaults } from '@/lib/vgr/lifecycle';
 import { vgrMetaToColumns } from '@/lib/vgr/persist-draft';
 
 type Params = { employeeId: string };
@@ -90,16 +91,18 @@ export default async function VGREntryPage({ params }: { params: Promise<Params>
     priorSnapshot = (exp?.snapshot_json || priorRes.data.data_json || null) as Record<string, unknown> | null;
   }
 
-  const initialData = buildVgrInitialData(existingData, {
-    tpData: (tpRes.data?.data_json || null) as Record<string, unknown> | null,
-    tpInstanceId: tpRes.data?.id ?? null,
-    employee: (employeeRes.data || null) as Record<string, unknown> | null,
-    details: (detailsRes.data || null) as Record<string, unknown> | null,
-    tpMeta: (metaRes.data || null) as Record<string, unknown> | null,
-    priorReport: priorSnapshot,
-    priorInstanceId: priorRes.data?.id ?? null,
-    priorExportId,
-  });
+  const initialData = applyConceptVgrDefaults(
+    buildVgrInitialData(existingData, {
+      tpData: (tpRes.data?.data_json || null) as Record<string, unknown> | null,
+      tpInstanceId: tpRes.data?.id ?? null,
+      employee: (employeeRes.data || null) as Record<string, unknown> | null,
+      details: (detailsRes.data || null) as Record<string, unknown> | null,
+      tpMeta: (metaRes.data || null) as Record<string, unknown> | null,
+      priorReport: priorSnapshot,
+      priorInstanceId: priorRes.data?.id ?? null,
+      priorExportId,
+    }),
+  );
 
   if (!vgrInstanceId) {
     const { data: inserted, error: insertError } = await (supabase as any)

@@ -5,6 +5,7 @@ import { serviceRoleSupabase } from '@/lib/supabase/service-role';
 import { ensureVGRShape } from '@/lib/vgr/mapping';
 import { generateVgrSection } from '@/lib/vgr/ai/generate-section';
 import { isVgrAiSectionId } from '@/lib/vgr/ai/sections';
+import { classifyModuleFeedback, isModuleLocked } from '@/lib/vgr/lifecycle';
 import type { VGRData } from '@/lib/vgr/schema';
 
 export const runtime = 'nodejs';
@@ -67,6 +68,26 @@ export async function POST(req: NextRequest) {
     }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+    if (isModuleLocked(draft, String(sectionId))) {
+      return NextResponse.json(
+        {
+          error: 'Onderdeel is vergrendeld (manual_lock)',
+          details:
+            'Dit onderdeel is handmatig goedgekeurd/vergrendeld. Ontgrendel eerst of bekijk de impact-collision; regeneratie overschrijft de override niet stilzwijgend (T10).',
+          manual_lock: true,
+        },
+        { status: 409 },
+      );
+    }
+
+    const feedbackGate = classifyModuleFeedback(instruction);
+    // Fact-like feedback: still allow generation as a proposal, but stamp requires_fact_review (T19).
+    // Style-only proceeds normally (T18).
+    const gatedInstruction =
+      feedbackGate.requires_fact_review && instruction
+        ? `${instruction}\n\n[APP-GATE] Dit is een mogelijke feitcorrectie — schrijf geen nieuwe ongeverifieerde claims; markeer ontbrekende bewijs in ontbrekende_informatie / waarschuwingen.`
+        : instruction;
+
     const result = await generateVgrSection({
       openai,
       supabase: serviceRoleSupabase,
@@ -74,10 +95,24 @@ export async function POST(req: NextRequest) {
       data: draft,
       prior,
       sectionId,
-      extraInstruction: instruction,
+      extraInstruction: gatedInstruction,
     });
 
-    return NextResponse.json({ ok: true, ...result });
+    if (feedbackGate.requires_fact_review) {
+      result.proposal = {
+        ...result.proposal,
+        notes: [
+          ...result.proposal.notes,
+          feedbackGate.confirmation_question || 'Feitcorrectie vereist bevestiging (T19).',
+          ...(feedbackGate.fact_signals.length
+            ? [`Gedetecteerde feitsignalen: ${feedbackGate.fact_signals.join(', ')}.`]
+            : []),
+          'requires_fact_review',
+        ],
+      };
+    }
+
+    return NextResponse.json({ ok: true, feedback_gate: feedbackGate, ...result });
   } catch (err) {
     console.error('❌ /api/vgr/generate-section error:', err);
     const message = err instanceof Error ? err.message : 'Unknown error';

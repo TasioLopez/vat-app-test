@@ -57,6 +57,8 @@ export type BodyEditorProps = {
   renderAi?: (sectionId: keyof VGRBody) => React.ReactNode;
   /** Slot for the test-report summarizer in "Kwaliteiten en vaardigheden onderzoek". */
   renderTestSummary?: () => React.ReactNode;
+  /** Phase 3: toggle manual_lock per module (G9 / T10). */
+  onToggleLock?: (moduleId: string, locked: boolean) => void;
 };
 
 const chapterColor = (id: (typeof VGR_CHAPTERS)[number]['id']) => VGR_CHAPTERS.find((c) => c.id === id)!.color;
@@ -181,12 +183,53 @@ function InterventionSectionEditor({
 /* Editor                                                              */
 /* ------------------------------------------------------------------ */
 
-export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderTestSummary }: BodyEditorProps) {
+function LockToggle({
+  moduleId,
+  locked,
+  onToggle,
+}: {
+  moduleId: string;
+  locked: boolean;
+  onToggle?: (moduleId: string, locked: boolean) => void;
+}) {
+  if (!onToggle) return null;
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      className={`h-7 px-2 text-xs ${locked ? 'text-amber-800 hover:bg-amber-50' : 'text-muted-foreground hover:bg-muted'}`}
+      title={
+        locked
+          ? 'Ontgrendel: impact-regen mag weer voorstellen tonen'
+          : 'Vergrendel goedgekeurde tekst (manual_lock) — regen overschrijft niet'
+      }
+      onClick={() => onToggle(moduleId, !locked)}
+    >
+      {locked ? 'Ontgrendel' : 'Vergrendel'}
+    </Button>
+  );
+}
+
+export function BodyEditor({
+  data,
+  updateBody,
+  setBodySection,
+  renderAi,
+  renderTestSummary,
+  onToggleLock,
+}: BodyEditorProps) {
   const b = data.body;
   const [newRevKind, setNewRevKind] = useState<VGRBelastbaarheidKind>(b.belastbaarheidsprofiel.kind);
   const [newPowDate, setNewPowDate] = useState(data.vgr_meta.report_date);
 
-  const ai = (id: keyof VGRBody) => renderAi?.(id) ?? null;
+  const locked = (id: string) => Boolean(data.module_locks?.[id]?.locked);
+  const ai = (id: keyof VGRBody) => (
+    <>
+      <LockToggle moduleId={id} locked={locked(id)} onToggle={onToggleLock} />
+      {renderAi?.(id) ?? null}
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -200,7 +243,13 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         <DebouncedInput value={b.periode_tekst_override} placeholder="bijv. 1 maart 2026 tot en met 31 mei 2026" onChange={(v) => setBodySection('periode_tekst_override', v)} />
       </EditorCard>
 
-      <EditorCard id="benutbare_mogelijkheden" title="Benutbare mogelijkheden" chapterColor={chapterColor('profiel')} actions={ai('benutbare_mogelijkheden')}>
+      <EditorCard
+        id="benutbare_mogelijkheden"
+        title="Benutbare mogelijkheden"
+        chapterColor={chapterColor('profiel')}
+        locked={locked('benutbare_mogelijkheden')}
+        actions={ai('benutbare_mogelijkheden')}
+      >
         <div>
           <FieldLabel>Beschikt werknemer op dit moment over benutbare mogelijkheden?</FieldLabel>
           <JaNeeControl name="bm-heeft" value={b.benutbare_mogelijkheden.heeft} onChange={(v) => updateBody('benutbare_mogelijkheden', { heeft: v })} />
@@ -229,7 +278,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         </div>
       </EditorCard>
 
-      <EditorCard id="praktische_belemmeringen" title="Praktische belemmeringen" chapterColor={chapterColor('profiel')} actions={ai('praktische_belemmeringen')}>
+      <EditorCard id="praktische_belemmeringen" title="Praktische belemmeringen" chapterColor={chapterColor('profiel')} locked={locked('praktische_belemmeringen')} actions={ai('praktische_belemmeringen')}>
         <div>
           <FieldLabel>Zijn er praktische belemmeringen bekend die van invloed kunnen zijn op het spoor 2 traject?</FieldLabel>
           <JaNeeControl name="pb-aanwezig" value={b.praktische_belemmeringen.aanwezig} onChange={(v) => updateBody('praktische_belemmeringen', { aanwezig: v })} />
@@ -238,7 +287,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         <DebouncedTextarea value={b.praktische_belemmeringen.toelichting} onChange={(v) => updateBody('praktische_belemmeringen', { toelichting: v })} />
       </EditorCard>
 
-      <EditorCard id="doelstelling_traject" title="Doelstelling traject" chapterColor={chapterColor('profiel')} actions={ai('doelstelling_traject')}>
+      <EditorCard id="doelstelling_traject" title="Doelstelling traject" chapterColor={chapterColor('profiel')} locked={locked('doelstelling_traject')} actions={ai('doelstelling_traject')}>
         <p className="text-xs text-muted-foreground">
           Doelstelling bij intake en wijzigingen registreert u in Stap 1. Huidige doelstelling:{' '}
           <span className="font-medium text-foreground">{b.doelstelling_traject.huidige || '—'}</span>
@@ -266,12 +315,12 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         ) : null}
       </EditorCard>
 
-      <EditorCard id="persoonlijk_profiel" title="Persoonlijk profiel werknemer" chapterColor={chapterColor('profiel')} actions={ai('persoonlijk_profiel')}>
+      <EditorCard id="persoonlijk_profiel" title="Persoonlijk profiel werknemer" chapterColor={chapterColor('profiel')} locked={locked('persoonlijk_profiel')} actions={ai('persoonlijk_profiel')}>
         <Instructie>{VGR_PERSOONLIJK_PROFIEL_INSTRUCTIE} Werk de tekst bij op basis van de voortgang in deze periode.</Instructie>
         <DebouncedTextarea rows={8} value={b.persoonlijk_profiel.tekst} onChange={(v) => updateBody('persoonlijk_profiel', { tekst: v })} />
       </EditorCard>
 
-      <EditorCard id="belastbaarheidsprofiel" title="Belastbaarheidsprofiel werknemer" chapterColor={chapterColor('profiel')} actions={ai('belastbaarheidsprofiel')}>
+      <EditorCard id="belastbaarheidsprofiel" title="Belastbaarheidsprofiel werknemer" chapterColor={chapterColor('profiel')} locked={locked('belastbaarheidsprofiel')} actions={ai('belastbaarheidsprofiel')}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <FieldLabel>Type</FieldLabel>
@@ -306,7 +355,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         </div>
       </EditorCard>
 
-      <EditorCard id="bijstellingen_belastbaarheid" title="Bijstellingen van het belastbaarheidsprofiel" chapterColor={chapterColor('profiel')} actions={ai('bijstellingen_belastbaarheid')}>
+      <EditorCard id="bijstellingen_belastbaarheid" title="Bijstellingen van het belastbaarheidsprofiel" chapterColor={chapterColor('profiel')} locked={locked('bijstellingen_belastbaarheid')} actions={ai('bijstellingen_belastbaarheid')}>
         <div>
           <FieldLabel>Zijn er tussentijds bijstellingen van het belastbaarheidsprofiel vastgesteld?</FieldLabel>
           <JaNeeControl name="bb-aanwezig" value={b.bijstellingen_belastbaarheid.aanwezig} onChange={(v) => updateBody('bijstellingen_belastbaarheid', { aanwezig: v })} />
@@ -426,7 +475,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         )}
       </EditorCard>
 
-      <EditorCard id="wijzigingen_doelstelling" title="Wijzigingen doelstelling" chapterColor={chapterColor('profiel')}>
+      <EditorCard id="wijzigingen_doelstelling" title="Wijzigingen doelstelling" chapterColor={chapterColor('profiel')} locked={locked('wijzigingen_doelstelling')} actions={<LockToggle moduleId="wijzigingen_doelstelling" locked={locked('wijzigingen_doelstelling')} onToggle={onToggleLock} />}>
         <div>
           <FieldLabel>Zijn er wijzigingen ten aanzien van de laatst geformuleerde doelstelling?</FieldLabel>
           <JaNeeControl name="wd-aanwezig" value={b.wijzigingen_doelstelling.aanwezig} onChange={(v) => updateBody('wijzigingen_doelstelling', { aanwezig: v })} />
@@ -439,7 +488,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         ) : null}
       </EditorCard>
 
-      <EditorCard id="zoekprofiel" title="Zoekprofiel" chapterColor={chapterColor('profiel')} actions={ai('zoekprofiel')}>
+      <EditorCard id="zoekprofiel" title="Zoekprofiel" chapterColor={chapterColor('profiel')} locked={locked('zoekprofiel')} actions={ai('zoekprofiel')}>
         <Instructie>{VGR_ZOEKPROFIEL_INSTRUCTIE}</Instructie>
         <DebouncedTextarea rows={8} value={b.zoekprofiel.tekst} onChange={(v) => updateBody('zoekprofiel', { tekst: v })} />
       </EditorCard>
@@ -447,7 +496,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
       {/* ------------------------------------------------------------ */}
       <ChapterHeading chapter="motivatie" />
 
-      <EditorCard id="inzet_houding" title="Inzet en houding werknemer" chapterColor={chapterColor('motivatie')} actions={ai('inzet_houding')}>
+      <EditorCard id="inzet_houding" title="Inzet en houding werknemer" chapterColor={chapterColor('motivatie')} locked={locked('inzet_houding')} actions={ai('inzet_houding')}>
         <div>
           <FieldLabel>Werkt werknemer mee aan het spoor 2 traject?</FieldLabel>
           <JaNeeControl name="ih-werkt-mee" value={b.inzet_houding.werkt_mee} onChange={(v) => updateBody('inzet_houding', { werkt_mee: v })} />
@@ -456,14 +505,14 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         <DebouncedTextarea rows={6} value={b.inzet_houding.toelichting} onChange={(v) => updateBody('inzet_houding', { toelichting: v })} />
       </EditorCard>
 
-      <EditorCard id="interventies_motivatie" title="Interventies gericht op motivatie" chapterColor={chapterColor('motivatie')} actions={ai('interventies_motivatie')}>
+      <EditorCard id="interventies_motivatie" title="Interventies gericht op motivatie" chapterColor={chapterColor('motivatie')} locked={locked('interventies_motivatie')} actions={ai('interventies_motivatie')}>
         <InterventionSectionEditor section={b.interventies_motivatie} options={VGR_MOTIVATIE_OPTIONS} onChange={(s) => setBodySection('interventies_motivatie', s)} />
       </EditorCard>
 
       {/* ------------------------------------------------------------ */}
       <ChapterHeading chapter="orientatie" />
 
-      <EditorCard id="kwaliteiten_onderzoek" title="Kwaliteiten en vaardigheden onderzoek" chapterColor={chapterColor('orientatie')} actions={ai('kwaliteiten_onderzoek')}>
+      <EditorCard id="kwaliteiten_onderzoek" title="Kwaliteiten en vaardigheden onderzoek" chapterColor={chapterColor('orientatie')} locked={locked('kwaliteiten_onderzoek')} actions={ai('kwaliteiten_onderzoek')}>
         <Instructie>
           Vul testresultaten alleen in op basis van daadwerkelijk aangeleverde testrapporten. Gebruik de AI-samenvatting
           (indien beschikbaar) als voorstel en controleer percentages en beroepen tegen het rapport.
@@ -527,23 +576,23 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         />
       </EditorCard>
 
-      <EditorCard id="scholing" title="Scholingsmogelijkheden" chapterColor={chapterColor('orientatie')} actions={ai('scholing')}>
+      <EditorCard id="scholing" title="Scholingsmogelijkheden" chapterColor={chapterColor('orientatie')} locked={locked('scholing')} actions={ai('scholing')}>
         <Instructie>{VGR_SCHOLING_INSTRUCTIE}</Instructie>
         <InterventionSectionEditor section={b.scholing} options={VGR_SCHOLING_OPTIONS} onChange={(s) => setBodySection('scholing', s)} />
       </EditorCard>
 
-      <EditorCard id="sollicitatie_vaardigheden" title="Sollicitatie vaardigheden" chapterColor={chapterColor('orientatie')} actions={ai('sollicitatie_vaardigheden')}>
+      <EditorCard id="sollicitatie_vaardigheden" title="Sollicitatie vaardigheden" chapterColor={chapterColor('orientatie')} locked={locked('sollicitatie_vaardigheden')} actions={ai('sollicitatie_vaardigheden')}>
         <InterventionSectionEditor section={b.sollicitatie_vaardigheden} options={VGR_SOLLICITATIE_OPTIONS} onChange={(s) => setBodySection('sollicitatie_vaardigheden', s)} withVervolg />
       </EditorCard>
 
       {/* ------------------------------------------------------------ */}
       <ChapterHeading chapter="activatie" />
 
-      <EditorCard id="interventies_activatie" title="Interventies activatie en arbeidsbemiddeling" chapterColor={chapterColor('activatie')} actions={ai('interventies_activatie')}>
+      <EditorCard id="interventies_activatie" title="Interventies activatie en arbeidsbemiddeling" chapterColor={chapterColor('activatie')} locked={locked('interventies_activatie')} actions={ai('interventies_activatie')}>
         <InterventionSectionEditor section={b.interventies_activatie} options={VGR_ACTIVATIE_OPTIONS} onChange={(s) => setBodySection('interventies_activatie', s)} withVervolg />
       </EditorCard>
 
-      <EditorCard id="pow" title="Perspectief op werk — PoW-meter™" chapterColor={chapterColor('activatie')} actions={ai('pow')}>
+      <EditorCard id="pow" title="Perspectief op werk — PoW-meter™" chapterColor={chapterColor('activatie')} locked={locked('pow')} actions={ai('pow')}>
         <Instructie>{VGR_POW_INSTRUCTIE}</Instructie>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <TredeSelect label="Trede bij intake" value={b.pow.intake_trede} onChange={(t) => updateBody('pow', { intake_trede: t })} />
@@ -605,7 +654,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         </div>
       </EditorCard>
 
-      <EditorCard id="visie_plaatsbaarheid" title="Visie op plaatsbaarheid" chapterColor={chapterColor('activatie')} actions={ai('visie_plaatsbaarheid')}>
+      <EditorCard id="visie_plaatsbaarheid" title="Visie op plaatsbaarheid" chapterColor={chapterColor('activatie')} locked={locked('visie_plaatsbaarheid')} actions={ai('visie_plaatsbaarheid')}>
         <div>
           <FieldLabel>Advies arbeidsdeskundige over passende arbeid</FieldLabel>
           <QuoteEditor value={b.visie_plaatsbaarheid.ad} naamLabel="Naam arbeidsdeskundige" bronTypePlaceholder="AD-rapport" onChange={(q) => updateBody('visie_plaatsbaarheid', { ad: q })} />
@@ -632,7 +681,7 @@ export function BodyEditor({ data, updateBody, setBodySection, renderAi, renderT
         </div>
       </EditorCard>
 
-      <EditorCard id="leernavigator" title="Leernavigator" chapterColor={chapterColor('activatie')} actions={ai('leernavigator')}>
+      <EditorCard id="leernavigator" title="Leernavigator" chapterColor={chapterColor('activatie')} locked={locked('leernavigator')} actions={ai('leernavigator')}>
         <p className="text-xs text-muted-foreground">Cumulatief over het traject: vinkjes uit eerdere rapportages blijven staan.</p>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="space-y-1.5">

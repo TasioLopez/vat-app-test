@@ -214,19 +214,33 @@ export function EditorCard({
   chapterColor,
   children,
   actions,
+  locked,
 }: {
   id: string;
   title: string;
   chapterColor?: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  /** Phase 3 manual_lock: visual cue that regen will not overwrite. */
+  locked?: boolean;
 }) {
   return (
-    <section id={`vgr-sec-${id}`} className="rounded-lg border border-border bg-card shadow-sm">
+    <section
+      id={`vgr-sec-${id}`}
+      className={cn(
+        'rounded-lg border bg-card shadow-sm',
+        locked ? 'border-amber-300/80' : 'border-border',
+      )}
+    >
       <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[#702A90]">
           {chapterColor ? <span className="inline-block h-3 w-1.5 rounded-sm" style={{ backgroundColor: chapterColor }} /> : null}
           {title}
+          {locked ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+              Vergrendeld
+            </span>
+          ) : null}
         </h3>
         {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
       </div>
