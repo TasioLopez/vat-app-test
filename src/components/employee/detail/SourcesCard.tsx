@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, Plus, Trash2, Upload } from 'lucide-react';
+import { Eye, Mic, Plus, Trash2, Upload } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,8 @@ type Props<TDoc extends SourceDocument> = {
   onUpload: (type: EmployeeDocType) => void;
   onPreview: (doc: TDoc, type: EmployeeDocType) => void;
   onDelete: (doc: TDoc, type: EmployeeDocType) => void;
-  onOpenGesprek: () => void;
+  /** Opens the gesprek / transcript panel for intake or VGR purpose. */
+  onOpenGesprek: (type: Extract<EmployeeDocType, 'gespreksverslag' | 'gespreksverslag_vgr'>) => void;
 };
 
 /** Labels that are too long for a half-width cell; the full label stays in the tooltip and menu. */
@@ -36,7 +37,9 @@ const SHORT_LABELS: Partial<Record<EmployeeDocType, string>> = {
   gespreksverslag_vgr: 'Gesprek VGR',
 };
 
-function isGesprekSourceType(type: EmployeeDocType): boolean {
+function isGesprekSourceType(
+  type: EmployeeDocType
+): type is Extract<EmployeeDocType, 'gespreksverslag' | 'gespreksverslag_vgr'> {
   return type === 'gespreksverslag' || type === 'gespreksverslag_vgr';
 }
 
@@ -83,21 +86,43 @@ export function SourcesCard<TDoc extends SourceDocument>({
           const doc = findDoc(type);
           const fullLabel = EMPLOYEE_DOC_LABELS[type];
           const label = SHORT_LABELS[type] ?? fullLabel;
+          const gesprekType = isGesprekSourceType(type) ? type : null;
 
-          if (isGesprekSourceType(type)) {
+          if (!doc && gesprekType) {
             return (
               <li key={type} className="min-w-0">
-                <button
-                  type="button"
-                  onClick={onOpenGesprek}
-                  className={CELL_CLASS}
-                  title={doc ? `${fullLabel}: bron bewaard` : `${fullLabel}: transcript en notities`}
-                >
-                  <StatusDot uploaded={Boolean(doc)} />
-                  <span className={cn('min-w-0 flex-1 truncate', doc ? 'text-gray-900' : 'text-gray-500')}>
-                    {label}
-                  </span>
-                </button>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(CELL_CLASS, 'data-[state=open]:bg-gray-50')}
+                      title={`${fullLabel}: uploaden of gesprek openen`}
+                    >
+                      <StatusDot uploaded={false} />
+                      <span className="min-w-0 flex-1 truncate text-gray-500 group-hover:text-gray-900">
+                        {label}
+                      </span>
+                      <Plus
+                        className="h-3.5 w-3.5 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 data-[state=open]:opacity-100"
+                        aria-hidden
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56 border-gray-200">
+                    <DropdownMenuLabel className="truncate font-medium text-gray-500">
+                      {fullLabel}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-gray-100" />
+                    <DropdownMenuItem onSelect={() => onUpload(gesprekType)}>
+                      <Upload className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
+                      Bestand uploaden
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onOpenGesprek(gesprekType)}>
+                      <Mic className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
+                      Gesprek / transcript
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </li>
             );
           }
@@ -151,6 +176,12 @@ export function SourcesCard<TDoc extends SourceDocument>({
                     <Upload className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
                     Vervangen
                   </DropdownMenuItem>
+                  {gesprekType ? (
+                    <DropdownMenuItem onSelect={() => onOpenGesprek(gesprekType)}>
+                      <Mic className="mr-2 h-4 w-4 text-gray-500" aria-hidden />
+                      Gesprek / transcript
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem
                     onSelect={() => onDelete(doc, type)}
                     className="text-red-700 focus:bg-red-50"

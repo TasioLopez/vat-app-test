@@ -16,6 +16,12 @@ export const VGR_SCHEMA_VERSION = 2;
 
 export type VGRStatus = 'draft' | 'review' | 'final';
 
+/**
+ * Report kind (Phase 1 scaffold — WIA_FINAL UI/export lands later).
+ * VGR1 = first report; VGR_FOLLOWUP = version ≥ 2; WIA_FINAL reserved.
+ */
+export type VGRReportType = 'VGR1' | 'VGR_FOLLOWUP' | 'WIA_FINAL';
+
 export type VGRMeta = {
   schema_version: number;
   /** Rapportageperiode (ISO dates). */
@@ -31,12 +37,23 @@ export type VGRMeta = {
   prior_vgr_export_id: string | null;
   /** Report sequence number (1 = eerste VGR). */
   version: number;
+  /**
+   * Explicit report type. Defaults from `version` when omitted.
+   * `WIA_FINAL` is reserved (Phase 4); do not select in Phase 1 UI.
+   */
+  report_type?: VGRReportType;
+  /** Honesty / style prompt version stamped on concept generation. */
+  approved_rules_version?: string;
   /** Document ids selected as sources for AI generation. */
   source_document_ids: string[];
   /** Dismissed consistency warnings: id → rationale. */
   dismissed_warnings: Record<string, string>;
   /** ISO timestamp set when adviser approves for export. */
   approved_at: string | null;
+  /** ISO timestamp when zoekprofiel was changed via confirmed AI apply. */
+  zoekprofiel_changed_at?: string | null;
+  /** Short note for the zoekprofiel change (coach confirmation). */
+  zoekprofiel_change_note?: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -281,6 +298,8 @@ export type VGRAiProposal = {
   /** Missing information / uncertainty notes. */
   notes: string[];
   status: 'proposed' | 'applied' | 'rejected';
+  /** Prompt / rules version used when this proposal was generated. */
+  approved_rules_version?: string;
 };
 
 export type VGRTestSummary = {

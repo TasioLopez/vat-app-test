@@ -116,7 +116,6 @@ const VGR_GEGEVENS_EDITOR_SECTIONS: EditorSection[] = [
 function hideField(key: string, data: Record<string, unknown>): boolean {
   if (key === 'ad_report_date' && data.has_ad_report === false && !hasFilledAdReportDate(data.ad_report_date)) return true;
   if (key === 'drivers_license_type' && data.drivers_license !== true) return true;
-  if (key === 'computer_skills' && data.has_computer === false) return true;
   return false;
 }
 

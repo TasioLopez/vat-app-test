@@ -51,7 +51,7 @@ export function validateVgr(data: VGRData): VGRIssue[] {
 
   /* ---------------- Setup / period ---------------- */
   if (isBlank(meta.period_start) || isBlank(meta.period_end)) {
-    push({ level: 'error', step: 'setup', message: 'Rapportageperiode (van / tot en met) ontbreekt.' });
+    push({ level: 'error', step: 'setup', message: 'Rapportageperiode (van / t/m) ontbreekt.' });
   } else if (meta.period_start > meta.period_end) {
     push({ level: 'error', step: 'setup', message: 'Einde rapportageperiode ligt vóór het begin.' });
   }
@@ -179,7 +179,12 @@ export function validateVgr(data: VGRData): VGRIssue[] {
     for (const id of sec.selected) {
       const block = sec.blocks[id];
       if (!block || (isBlank(block.toelichting) && !block.items.length)) {
-        push({ level: 'info', step: 'body', sectionId, message: `${label}: "${id}" aangevinkt zonder persoonlijke toelichting.` });
+        push({
+          level: 'warning',
+          step: 'body',
+          sectionId,
+          message: `${label}: "${id}" aangevinkt zonder persoonlijke toelichting.`,
+        });
       }
     }
   }
@@ -189,7 +194,12 @@ export function validateVgr(data: VGRData): VGRIssue[] {
   if (ko.selected.includes('persoonlijkheidstest')) {
     const scores = Object.values(ko.persoonlijkheid_scores);
     if (scores.every(isBlank)) {
-      push({ level: 'warning', step: 'body', sectionId: 'kwaliteiten_onderzoek', message: 'Persoonlijkheidstest aangevinkt maar geen scores ingevuld.' });
+      push({
+        level: 'warning',
+        step: 'body',
+        sectionId: 'kwaliteiten_onderzoek',
+        message: 'Persoonlijkheidstest aangevinkt maar geen scores/testbron ingevuld.',
+      });
     }
     for (const s of scores) {
       if (hasText(s) && (!/^\d{1,3}$/.test(s.trim()) || Number(s) > 100)) {
@@ -256,6 +266,15 @@ export function validateVgr(data: VGRData): VGRIssue[] {
   }
   for (const p of data.planning_phases) {
     if (isBlank(p.goal)) push({ level: 'warning', step: 'planning', message: `Bijlage 1: doel van "${p.title}" is leeg.` });
+    for (const a of p.activities) {
+      if (a.status === 'G' && isBlank(a.note)) {
+        push({
+          level: 'warning',
+          step: 'planning',
+          message: `Bijlage 1: "${a.name}" staat op uitgevoerd (G) zonder toelichting/bron.`,
+        });
+      }
+    }
   }
 
   /* ---------------- Applications ---------------- */

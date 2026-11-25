@@ -37,11 +37,11 @@ describe('isGespreksverslagDocType', () => {
 });
 
 describe('visibleEmployeeDocTypes', () => {
-  it('shows intake Gesprek on production and staging; Gesprek VGR only on staging', () => {
+  it('shows intake Gesprek and Gesprek VGR on production and staging after VGR promote', () => {
     const prev = process.env.NEXT_PUBLIC_APP_ENV;
     process.env.NEXT_PUBLIC_APP_ENV = 'production';
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);
-    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), false);
+    assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), true);
     process.env.NEXT_PUBLIC_APP_ENV = 'staging';
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag'), true);
     assert.equal(visibleEmployeeDocTypes().includes('gespreksverslag_vgr'), true);

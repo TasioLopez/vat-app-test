@@ -254,12 +254,19 @@ export function migrateLegacyBijlage2ToLeernavigator(
 /* Meta / body / planning / applications                               */
 /* ------------------------------------------------------------------ */
 
+function normalizeReportType(v: unknown, version: number): VGRMeta['report_type'] {
+  const s = str(v);
+  if (s === 'VGR1' || s === 'VGR_FOLLOWUP' || s === 'WIA_FINAL') return s;
+  return version >= 2 ? 'VGR_FOLLOWUP' : 'VGR1';
+}
+
 export function normalizeVgrMeta(v: unknown): VGRMeta {
   const o = obj(v);
   const dismissedRaw = obj(o.dismissed_warnings);
   const dismissed: Record<string, string> = {};
   for (const [k, val] of Object.entries(dismissedRaw)) dismissed[k] = str(val);
   const version = Number(o.version);
+  const ver = Number.isFinite(version) && version >= 1 ? Math.floor(version) : 1;
   return {
     schema_version: VGR_SCHEMA_VERSION,
     period_start: str(o.period_start),
@@ -268,10 +275,14 @@ export function normalizeVgrMeta(v: unknown): VGRMeta {
     linked_tp_instance_id: str(o.linked_tp_instance_id) || null,
     prior_vgr_instance_id: str(o.prior_vgr_instance_id) || null,
     prior_vgr_export_id: str(o.prior_vgr_export_id) || null,
-    version: Number.isFinite(version) && version >= 1 ? Math.floor(version) : 1,
+    version: ver,
+    report_type: normalizeReportType(o.report_type, ver),
+    approved_rules_version: str(o.approved_rules_version) || undefined,
     source_document_ids: strArr(o.source_document_ids),
     dismissed_warnings: dismissed,
     approved_at: str(o.approved_at) || null,
+    zoekprofiel_changed_at: str(o.zoekprofiel_changed_at) || null,
+    zoekprofiel_change_note: str(o.zoekprofiel_change_note),
   };
 }
 
@@ -442,6 +453,7 @@ function normalizeProposals(v: unknown): Record<string, VGRAiProposal> {
       evidence: strArr(p.evidence),
       notes: strArr(p.notes),
       status: status === 'applied' || status === 'rejected' ? status : 'proposed',
+      approved_rules_version: str(p.approved_rules_version) || undefined,
     };
   }
   return out;

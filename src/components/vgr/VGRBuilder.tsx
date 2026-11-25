@@ -14,6 +14,7 @@ import { persistVgrDraft } from '@/lib/vgr/persist-draft';
 import { VGRPageNumberProvider } from '@/context/VGRPageNumberContext';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { applyTPProfileContext, resolveTPProfileContext } from '@/lib/tp/resolve-profile-context';
+import { applyWorkerFacts, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import type { VGRStatus } from '@/lib/vgr/schema';
 import type { VGRIssue } from '@/lib/vgr/validation';
@@ -26,6 +27,7 @@ import { ApplicationsA4Pages, ApplicationsEditor } from '@/components/vgr/sectio
 import { ReviewEditor } from '@/components/vgr/sections/ReviewSection';
 import { VgrAiPanel } from '@/components/vgr/ai/VgrAiPanel';
 import { VgrTestSummaryPanel } from '@/components/vgr/ai/VgrTestSummaryPanel';
+import DocumentEditorShell from '@/components/document-editor/DocumentEditorShell';
 
 type Props = {
   employeeId: string;
@@ -134,7 +136,12 @@ function VGRBuilderInner({
     let cancelled = false;
 
     async function hydrate() {
-      const profileContext = await resolveTPProfileContext(supabase, employeeId);
+      const [profileContext, employeeRes, detailsRes, metaRes] = await Promise.all([
+        resolveTPProfileContext(supabase, employeeId),
+        supabase.from('employees').select('first_name,last_name,email').eq('id', employeeId).maybeSingle(),
+        supabase.from('employee_details').select('*').eq('employee_id', employeeId).maybeSingle(),
+        supabase.from('tp_meta').select('*').eq('employee_id', employeeId).maybeSingle(),
+      ]);
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -152,7 +159,13 @@ function VGRBuilderInner({
       if (cancelled) return;
 
       setVGRData((prev) => {
-        const next = applyTPProfileContext(prev as Record<string, unknown>, profileContext) as Record<string, any>;
+        const facts = workerFactsFromRows(
+          (employeeRes.data || null) as Record<string, unknown> | null,
+          (detailsRes.data || null) as Record<string, unknown> | null,
+          (metaRes.data || null) as Record<string, unknown> | null
+        ).values;
+        const withFacts = applyWorkerFacts(prev as Record<string, unknown>, facts);
+        const next = applyTPProfileContext(withFacts, profileContext) as Record<string, any>;
         if (!String(next.consultant_name || '').trim() && appUserDisplayName) {
           next.consultant_name = appUserDisplayName;
           if (user?.id) next.consultant_user_id = user.id;
@@ -293,62 +306,63 @@ function VGRBuilderInner({
         : { label: 'Concept', cls: 'bg-gray-100 text-gray-700' };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <DocumentEditorShell
+      title="Voortgangsrapportage"
+      subtitle={
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusBadge.cls}`}>
+            {statusBadge.label}
+          </span>
+          <span className="text-gray-400" aria-hidden>
+            ·
+          </span>
+          <span>
+            Stap {currentStep} van {totalSteps}: {steps[currentStep - 1].title}
+          </span>
+        </span>
+      }
+      steps={steps.map((s, i) => ({
+        key: s.key,
+        label: `${i + 1}. ${s.title}`,
+        active: currentStep === i + 1,
+        onSelect: () => setCurrentStep(i + 1),
+      }))}
+      actions={
+        <>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={goBack} aria-label={backLabel} title={backLabel}>
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
+            disabled={currentStep === totalSteps}
+            aria-label="Volgende stap"
+            title="Volgende stap"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+          <ExportButton employeeId={employeeId} vgrInstanceId={vgrInstanceId} layoutKey="vgr" variant="icon" />
+          <Button
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={persist}
+            disabled={saving || !isDirty}
+            aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+            title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : isDirty ? (
+              <Save className="h-4 w-4" aria-hidden />
+            ) : (
+              <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+            )}
+          </Button>
+        </>
+      }
+    >
       <UnsavedChangesSyncGuard isDirty={isDirty} onSave={persistForGuard} autosave />
-      <div className="shrink-0 border-b border-border bg-white px-6 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-bold text-gray-900">Voortgangsrapportage</h1>
-            <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold ${statusBadge.cls}`}>{statusBadge.label}</span>
-            <span className="shrink-0 text-sm text-gray-400" aria-hidden>
-              ·
-            </span>
-            <p className="shrink-0 text-sm text-gray-600">
-              Stap {currentStep} van {totalSteps}: {steps[currentStep - 1].title}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={goBack} aria-label={backLabel} title={backLabel}>
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-            <Button
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentStep((s) => Math.min(totalSteps, s + 1))}
-              disabled={currentStep === totalSteps}
-              aria-label="Volgende stap"
-              title="Volgende stap"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Button>
-            <ExportButton employeeId={employeeId} vgrInstanceId={vgrInstanceId} layoutKey="vgr" variant="icon" />
-            <Button
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={persist}
-              disabled={saving || !isDirty}
-              aria-label={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-              title={saving ? 'Opslaan…' : isDirty ? 'Opslaan' : 'Opgeslagen'}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : isDirty ? <Save className="h-4 w-4" aria-hidden /> : <Check className="h-4 w-4 text-emerald-600" aria-hidden />}
-            </Button>
-          </div>
-        </div>
-        <nav className="mt-2 flex flex-wrap gap-1" aria-label="Stappen">
-          {steps.map((s, i) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setCurrentStep(i + 1)}
-              className={`rounded px-2 py-0.5 text-xs transition ${
-                currentStep === i + 1 ? 'bg-[#702A90] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {i + 1}. {s.title}
-            </button>
-          ))}
-        </nav>
-      </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="relative h-full min-h-0 px-6 pt-6 pb-2">
@@ -369,7 +383,7 @@ function VGRBuilderInner({
           ))}
         </div>
       </div>
-    </div>
+    </DocumentEditorShell>
   );
 }
 
