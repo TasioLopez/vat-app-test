@@ -298,6 +298,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
     // Bumped to remount the guard: its autosave status only leaves 'error' through its own save run.
     const [guardEpoch, setGuardEpoch] = useState(0);
     const [gesprekOpen, setGesprekOpen] = useState(false);
+    const [gesprekPurpose, setGesprekPurpose] = useState<'intake' | 'vgr'>('intake');
     const [sourceToDelete, setSourceToDelete] = useState<Document | null>(null);
     const [deletingSource, setDeletingSource] = useState(false);
 
@@ -1431,7 +1432,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                                         setPreviewDoc({ title: doc.name || DOC_LABELS[type], url: doc.url })
                                     }
                                     onDelete={(doc) => setSourceToDelete(doc)}
-                                    onOpenGesprek={() => setGesprekOpen(true)}
+                                    onOpenGesprek={(type) => {
+                                        setGesprekPurpose(type === 'gespreksverslag_vgr' ? 'vgr' : 'intake');
+                                        setGesprekOpen(true);
+                                    }}
                                 />
                             </aside>
                         </div>
@@ -1481,6 +1485,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     employeeId={employeeId}
                     open={gesprekOpen}
                     onOpenChange={setGesprekOpen}
+                    initialPurpose={gesprekPurpose}
                     publishedDocumentTypes={documents
                         .map((d) => d.type)
                         .filter((type): type is string => Boolean(type))}
