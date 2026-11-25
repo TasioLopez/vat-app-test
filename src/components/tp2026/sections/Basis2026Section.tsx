@@ -21,10 +21,15 @@ import {
 import { BASIS_SECTION_INFO } from '@/lib/tp2026/basis-section-info';
 import {
   applyExWerknemerWording,
+  basisFieldUsesExWording,
   displayInleidingText,
-  EDITOR_EX_WORDING_FIELD_KEYS,
+  persistPlainProse,
   stripExWerknemerDisplayWording,
 } from '@/lib/tp/ex-werknemer-wording';
+import {
+  detectDocumentScenario,
+  repairStoredVisieFunctiesIntro,
+} from '@/lib/tp/visie-loopbaanadviseur';
 import FieldControl from '@/components/tp2026/FieldControl';
 import { Basis2026MarkdownBody } from '@/components/tp2026/Basis2026MarkdownBody';
 import { Spoor2ActivitiesEditor } from '@/components/tp2026/Spoor2ActivitiesEditor';
@@ -400,14 +405,40 @@ function BasisFieldEditorRow({
   const inleidingSub = field.key === 'inleiding' ? String(data.inleiding_sub ?? '').trim() : '';
   const isEx = data.is_ex_werknemer === true;
   const rawField = String(data[field.key] ?? '');
+
+  // Soft-repair Visie SoT intro when stored constant disagrees with current scenario.
+  useEffect(() => {
+    if (field.key !== 'visie_loopbaanadviseur') return;
+    const scenario = detectDocumentScenario([], {
+      has_ad_report: data.has_ad_report,
+      ad_report_concept: data.ad_report_concept,
+      advies_ad_passende_arbeid: data.advies_ad_passende_arbeid,
+      prognose_bedrijfsarts: data.prognose_bedrijfsarts,
+    });
+    const repaired = repairStoredVisieFunctiesIntro(rawField, scenario);
+    if (repaired !== rawField) {
+      updateField('visie_loopbaanadviseur', repaired);
+    }
+  }, [
+    field.key,
+    rawField,
+    data.has_ad_report,
+    data.ad_report_concept,
+    data.advies_ad_passende_arbeid,
+    data.prognose_bedrijfsarts,
+    updateField,
+  ]);
+
+  // POW uses leaf transforms inside PowInschalingEditor (JSON quotes block whole-blob apply).
+  const usesBlobEx = field.key !== 'pow_meter' && basisFieldUsesExWording(field.key);
   const displayField =
-    EDITOR_EX_WORDING_FIELD_KEYS.has(field.key) && isEx
+    usesBlobEx && isEx
       ? field.key === 'inleiding'
         ? displayInleidingText(rawField, true)
         : applyExWerknemerWording(rawField, true)
       : rawField;
   const persistField = (md: string) => {
-    updateField(field.key, isEx ? stripExWerknemerDisplayWording(md) : md);
+    updateField(field.key, persistPlainProse(md, usesBlobEx && isEx));
   };
 
   return (
@@ -428,8 +459,9 @@ function BasisFieldEditorRow({
       ) : null}
       {field.key === 'pow_meter' ? (
         <PowInschalingEditor
-          raw={displayField}
-          onChange={persistField}
+          raw={rawField}
+          isEx={isEx}
+          onChange={(md) => updateField('pow_meter', md)}
         />
       ) : field.key === 'advies_ad_passende_arbeid' ? (
         <AdviesPassendeArbeidEditor

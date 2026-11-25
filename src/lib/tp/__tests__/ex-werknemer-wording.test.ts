@@ -1,17 +1,27 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  applyExToPowInschalingLeaves,
   applyExWerknemerFromText,
   applyExWerknemerWording,
   applyExWerknemerWordingBeforeMarker,
+  basisFieldUsesExWording,
   detectExWerknemerFromText,
   displayInleidingText,
   EX_WERKNEMER_GENERATION_RULE,
+  EX_WORDING_FIELD_KEYS,
+  EX_WORDING_PREVIEW_ATOM_KEYS,
   intakeTextHasExWerknemerLabel,
   isExWerknemer,
   normalizeExWerknemer,
+  previewAtomUsesExWording,
+  stripExFromPowInschalingLeaves,
   stripExWerknemerDisplayWording,
 } from '../ex-werknemer-wording';
+import {
+  TP2026_PROFIEL_PREVIEW_META,
+  TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+} from '@/lib/tp2026/basis-profiel-field-order';
 
 describe('normalizeExWerknemer', () => {
   it('returns true only for explicit true-like values', () => {
@@ -201,5 +211,57 @@ describe('store-normal Ex wording', () => {
     assert.match(preview, /Ex-werknemer/);
     assert.equal(applyExWerknemerWording(stored, false), stored);
     assert.doesNotMatch(stripExWerknemerDisplayWording(preview), /\bex-/i);
+  });
+});
+
+describe('shared Ex wording registry', () => {
+  it('includes every profiel field including sociale_achtergrond (opt-out empty)', () => {
+    assert.equal(basisFieldUsesExWording('sociale_achtergrond'), true);
+    assert.equal(basisFieldUsesExWording('pow_meter'), true);
+    assert.equal(basisFieldUsesExWording('inleiding'), true);
+    for (const key of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
+      assert.equal(EX_WORDING_FIELD_KEYS.has(key), true, `missing field ${key}`);
+      assert.equal(basisFieldUsesExWording(key), true, `opt-out blocked ${key}`);
+    }
+  });
+
+  it('preview atom keys cover sociale (soc) and exclude pow blob key', () => {
+    assert.equal(previewAtomUsesExWording('soc'), true);
+    assert.equal(previewAtomUsesExWording('pow-toelichting'), true);
+    assert.equal(previewAtomUsesExWording('pow'), false);
+    assert.equal(previewAtomUsesExWording('pow-inschaling'), false);
+    assert.equal(EX_WORDING_PREVIEW_ATOM_KEYS.has('soc'), true);
+    for (const key of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
+      const previewKey = TP2026_PROFIEL_PREVIEW_META[key].previewKey;
+      if (previewKey === 'pow') continue;
+      assert.equal(
+        previewAtomUsesExWording(previewKey),
+        true,
+        `preview missing ${key}→${previewKey}`
+      );
+    }
+  });
+
+  it('Kedzierska-shaped sociale line matches editor and preview transform', () => {
+    const stored = 'Werknemer huurt een kamer en deelt de woning met medebewoners.';
+    const display = applyExWerknemerWording(stored, true);
+    assert.equal(display, 'Ex-werknemer huurt een kamer en deelt de woning met medebewoners.');
+    assert.equal(basisFieldUsesExWording('sociale_achtergrond'), true);
+  });
+});
+
+describe('POW leaf Ex wording', () => {
+  it('applies and strips per cell so JSON quotes cannot block Ex-', () => {
+    const cells = {
+      huidige_trede: 'Werknemer zit op trede 2.',
+      werkzame_uren: 'De werknemer werkt 20 uur.',
+      verwachting: 'Werkgever verwacht herstel.',
+    };
+    const shown = applyExToPowInschalingLeaves(cells, true);
+    assert.equal(shown.huidige_trede, 'Ex-werknemer zit op trede 2.');
+    assert.equal(shown.werkzame_uren, 'De ex-werknemer werkt 20 uur.');
+    assert.equal(shown.verwachting, 'Ex-werkgever verwacht herstel.');
+    assert.deepEqual(stripExFromPowInschalingLeaves(shown), cells);
+    assert.deepEqual(applyExToPowInschalingLeaves(cells, false), cells);
   });
 });

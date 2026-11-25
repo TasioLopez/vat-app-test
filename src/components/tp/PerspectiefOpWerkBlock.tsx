@@ -14,10 +14,10 @@ import {
  */
 export function PerspectiefOpWerkBlock({
   className = '',
-  isEx = false,
+  isEx,
 }: {
   className?: string;
-  isEx?: boolean;
+  isEx: boolean;
 }) {
   const wording = (text: string) => applyExWerknemerWording(text, isEx);
   return (

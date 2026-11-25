@@ -1,5 +1,11 @@
 /** Wording helpers when the intake marks the worker as ex-werknemer (Juni V6 checkbox). */
 
+import {
+  TP2026_PROFIEL_PREVIEW_META,
+  TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+  type TP2026ProfielWerknemerFieldKey,
+} from '@/lib/tp2026/basis-profiel-field-order';
+
 const EX_WERKNEMER_LABEL = 'Ex-werknemer';
 
 /** Coerce ex-werknemer flag; null/unknown/missing → false (only explicit true counts). */
@@ -136,19 +142,87 @@ function toExForm(word: string): string {
   return prefix + word.toLowerCase();
 }
 
-/** TP basis field keys that get Ex- wording in both A4 preview and the Basis editor body. */
-export const EDITOR_EX_WORDING_FIELD_KEYS = new Set([
-  'inleiding',
-  'wettelijke_kaders',
-  'persoonlijk_profiel',
-  'zoekprofiel',
-  'visie_loopbaanadviseur',
-  'visie_werknemer',
-  'prognose_bedrijfsarts',
-  'praktische_belemmeringen',
-  'advies_ad_passende_arbeid',
-  'pow_meter',
+/**
+ * Meta field keys that get Ex- wording on display (opt-out model).
+ * Every inleiding + profiel field applies by default; add a key to
+ * EX_WORDING_FIELD_KEY_OPT_OUT only when product requires literal storage display.
+ * POW JSON blobs use leaf helpers instead of whole-blob apply (see applyExToPowLeaves).
+ */
+export const EX_WORDING_FIELD_KEY_OPT_OUT = new Set<string>([
+  // none today — Sociale / POW / Visie all transform at the display boundary
 ]);
+
+const EX_WORDING_EXTRA_FIELD_KEYS = ['inleiding', 'wettelijke_kaders'] as const;
+
+/** Shared registry: basis meta keys that use Ex prose transform (not opt-out). */
+export const EX_WORDING_FIELD_KEYS: ReadonlySet<string> = new Set<string>([
+  ...EX_WORDING_EXTRA_FIELD_KEYS,
+  ...TP2026_PROFIEL_WERKNEMER_FIELD_ORDER,
+]);
+
+/**
+ * Preview atom keys whose `md` body gets Ex- wording in A4/print.
+ * `pow` / `pow-inschaling` are excluded — cells use leaf helpers.
+ */
+export const EX_WORDING_PREVIEW_ATOM_KEYS: ReadonlySet<string> = (() => {
+  const keys = new Set<string>(['wk', 'pow-toelichting']);
+  for (const fieldKey of TP2026_PROFIEL_WERKNEMER_FIELD_ORDER) {
+    if (EX_WORDING_FIELD_KEY_OPT_OUT.has(fieldKey)) continue;
+    const previewKey = TP2026_PROFIEL_PREVIEW_META[fieldKey as TP2026ProfielWerknemerFieldKey].previewKey;
+    if (previewKey === 'pow') continue;
+    keys.add(previewKey);
+  }
+  return keys;
+})();
+
+/** @deprecated Use basisFieldUsesExWording / EX_WORDING_FIELD_KEYS */
+export const EDITOR_EX_WORDING_FIELD_KEYS = EX_WORDING_FIELD_KEYS;
+
+export function basisFieldUsesExWording(fieldKey: string): boolean {
+  if (EX_WORDING_FIELD_KEY_OPT_OUT.has(fieldKey)) return false;
+  return EX_WORDING_FIELD_KEYS.has(fieldKey);
+}
+
+export function previewAtomUsesExWording(atomKey: string): boolean {
+  return EX_WORDING_PREVIEW_ATOM_KEYS.has(atomKey);
+}
+
+/** POW inschaling cell bag — leaf transform so JSON quotes do not block Ex-. */
+export type PowInschalingLeafText = {
+  huidige_trede: string;
+  werkzame_uren: string;
+  verwachting: string;
+};
+
+export function applyExToPowInschalingLeaves(
+  data: PowInschalingLeafText,
+  isEx: boolean
+): PowInschalingLeafText {
+  if (!isEx) return data;
+  return {
+    huidige_trede: applyExWerknemerWording(data.huidige_trede, true),
+    werkzame_uren: applyExWerknemerWording(data.werkzame_uren, true),
+    verwachting: applyExWerknemerWording(data.verwachting, true),
+  };
+}
+
+export function stripExFromPowInschalingLeaves(
+  data: PowInschalingLeafText
+): PowInschalingLeafText {
+  return {
+    huidige_trede: stripExWerknemerDisplayWording(data.huidige_trede),
+    werkzame_uren: stripExWerknemerDisplayWording(data.werkzame_uren),
+    verwachting: stripExWerknemerDisplayWording(data.verwachting),
+  };
+}
+
+export function displayPlainProse(text: string, isEx: boolean): string {
+  return applyExWerknemerWording(text, isEx);
+}
+
+export function persistPlainProse(displayText: string, isEx: boolean): string {
+  return isEx ? stripExWerknemerDisplayWording(displayText) : displayText;
+}
 
 /**
  * Reverse display Ex- wording back to normal forms for storage.

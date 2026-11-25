@@ -33,6 +33,28 @@ describe('extractAdExclusionPhrases', () => {
     assert.deepEqual(extractAdExclusionPhrases(''), []);
     assert.deepEqual(extractAdExclusionPhrases(null), []);
   });
+
+  it('pulls Kedzierska-shaped prose examples (voorbeelden … zijn A, B of C)', () => {
+    const advies = [
+      'Advies van de AD.',
+      `${ADVIES_DELIMITER}`,
+      'Voorbeelden van passende functies zijn licht productiewerk dat zittend kan worden gedaan, heftruckchauffeur (certificaat halen) of naaister.',
+    ].join('\n');
+
+    const phrases = extractAdExclusionPhrases(advies);
+    assert.ok(phrases.length >= 2, `expected phrases, got ${JSON.stringify(phrases)}`);
+    assert.ok(phrases.some((p) => /productiewerk/i.test(p)));
+    assert.ok(phrases.some((p) => /heftruckchauffeur/i.test(p)));
+    assert.ok(phrases.some((p) => /naaister/i.test(p)));
+  });
+
+  it('splits zoals lists on of as well as en', () => {
+    const advies = `Intro.\n${ADVIES_DELIMITER}\nFuncties zoals receptionist, planner of naaister.`;
+    const phrases = extractAdExclusionPhrases(advies);
+    assert.ok(phrases.some((p) => /receptionist/i.test(p)));
+    assert.ok(phrases.some((p) => /planner/i.test(p)));
+    assert.ok(phrases.some((p) => /naaister/i.test(p)));
+  });
 });
 
 describe('normalizeFunctieNaam', () => {

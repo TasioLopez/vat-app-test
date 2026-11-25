@@ -51,6 +51,7 @@ import { POW_METER_FOOTNOTE } from '@/lib/tp/pow-meter/constants';
 import {
   applyExWerknemerWording,
   applyExWerknemerWordingBeforeMarker,
+  previewAtomUsesExWording,
   displayInleidingText,
 } from '@/lib/tp/ex-werknemer-wording';
 import {
@@ -359,20 +360,6 @@ export function buildBasisBodyAtoms(data: Record<string, any>): BasisAtom[] {
   return applyBasisExWording(atoms, data.is_ex_werknemer === true);
 }
 
-const BASIS_EX_WORDING_KEYS = new Set([
-  'wk',
-  'soc',
-  'visw',
-  'prof',
-  'zp',
-  'vlb',
-  'pow-toelichting',
-  // pow-inschaling: wording applied to parsed cells in PowInschalingTable (JSON quotes would skip it)
-  'prog',
-  'blem',
-  'ad',
-]);
-
 function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {
   return atoms.map((atom) => {
     if (atom.kind === 'inleiding') {
@@ -386,7 +373,8 @@ function applyBasisExWording(atoms: BasisAtom[], isEx: boolean): BasisAtom[] {
       return {
         ...atom,
         title: applyExWerknemerWording(atom.title, true),
-        md: BASIS_EX_WORDING_KEYS.has(atom.key) ? applyExWerknemerWording(atom.md, true) : atom.md,
+        // pow-inschaling: leaf wording in PowInschalingTable (JSON quotes would skip whole-blob apply)
+        md: previewAtomUsesExWording(atom.key) ? applyExWerknemerWording(atom.md, true) : atom.md,
       };
     }
     if (atom.kind === 'spoor2') {
