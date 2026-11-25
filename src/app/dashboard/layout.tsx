@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import ClientLayout from '@/app/dashboard/ClientLayout';
-import { hasVerifiedTotp, isMfaOptionalEmail, needsMfaChallenge } from '@/lib/auth/mfa';
+import {
+  hasVerifiedTotp,
+  isMfaOptionalEmail,
+  mfaChallengeLoginPath,
+  needsMfaChallenge,
+} from '@/lib/auth/mfa';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await getSupabaseServerClient();
@@ -24,7 +29,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/mfa/setup');
   }
   if (!skipMfa && (await needsMfaChallenge(supabase))) {
-    redirect('/login?reason=session_expired');
+    // Session exists but JWT is not AAL2 — resume TOTP only, not full password login.
+    redirect(mfaChallengeLoginPath('/dashboard'));
   }
 
   return <ClientLayout role={userData.role}>{children}</ClientLayout>;
