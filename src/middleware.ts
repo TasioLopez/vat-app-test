@@ -1,9 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { redirectApexToWww } from '@/lib/auth/canonical-host';
-import { MIDDLEWARE_MATCHER } from '@/lib/auth/middleware-matcher';
-
-export { MIDDLEWARE_MATCHER };
 
 const BLOCKED_PATHS = new Set([
   '/api/check-schema',
@@ -83,6 +80,18 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// Matcher must be a static literal — Next.js cannot analyze spreads/imports here.
 export const config = {
-  matcher: [...MIDDLEWARE_MATCHER],
+  matcher: [
+    '/',
+    '/auth/:path*',
+    '/login',
+    '/signup',
+    '/reset-password',
+    '/mfa/:path*',
+    '/dashboard/:path*',
+    '/intake/:path*',
+    '/api/:path*',
+    '/debug-user',
+  ],
 };
