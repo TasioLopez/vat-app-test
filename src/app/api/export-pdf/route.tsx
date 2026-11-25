@@ -117,6 +117,24 @@ export async function GET(req: NextRequest) {
   const vgrInstanceId = search.get("vgrInstanceId");
   const requestedLayout = search.get("layoutKey");
   const isVgrExport = requestedLayout === "vgr" || Boolean(vgrInstanceId);
+  const formatParam = (search.get("format") || "pdf").toLowerCase();
+
+  // Phase 4 / T17 / D05: refuse DOCX — official Word carriers are missing.
+  if (isVgrExport && formatParam !== "pdf") {
+    const { resolveVgrExportFormat } = await import("@/lib/vgr/export");
+    const resolved = resolveVgrExportFormat(formatParam);
+    if (!resolved.ok) {
+      return new Response(
+        JSON.stringify({
+          error: resolved.message,
+          code: resolved.code,
+          house_style_exact: false,
+          carrier: resolved.carrier,
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
+    }
+  }
 
   if (!employeeId) {
     return new Response(JSON.stringify({ error: "Missing employeeId" }), {

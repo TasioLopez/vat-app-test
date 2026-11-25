@@ -81,6 +81,15 @@ Never use the filled ValentineZ example reports as fixture data. They contain re
 - [x] G5 lite: application_status chain + Bijlage 2 proposals helper (not auto-applied).
 - [ ] Full pack T01–T22 end-to-end + rich OCR extract (later).
 
+## Export & variants (Phase 4 — synth)
+
+- [x] G13 / T17: DOCX export refused with missing-carrier UX; `house_style_exact` never true without official Word dragers (D05).
+- [x] PDF remains the only available export path (`/api/export-pdf` + `/api/vgr/export?format=pdf`).
+- [x] G12 / T22: `WIA_FINAL` scaffold + cumulative timeline from prior finals; unfounded WIA-consult claims flagged (full consult = D08 later).
+- [x] Concept entry can select VGR1 / VGR_FOLLOWUP / WIA_FINAL scaffold; cover title switches for WIA.
+- [ ] Official DOCX carriers + full WIA consult module (blocked on D05/D08 unlock).
+- [ ] Promote staging → main (G18) — held until Tasio asks.
+
 ## Commands
 
 ```

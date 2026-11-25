@@ -1,13 +1,14 @@
 /**
- * Phase 3 / G11: Concept-VGR maken — period/type defaults (D01: still proposals until Overnemen).
- * WIA_FINAL is reserved (D08) and not offered in the entry UI.
+ * Phase 3 / G11 + Phase 4 / G12: Concept-VGR maken — period/type defaults.
+ * D01: still proposals until Overnemen.
+ * WIA_FINAL is selectable as scaffold (Phase 4); full WIA consult later (D08).
  */
 import type { VGRData, VGRReportType } from '@/lib/vgr/schema';
 import { VGR_APPROVED_RULES_VERSION } from '@/lib/vgr/ai/style-prompt';
 import { VGR_TEMPLATE_VERSION } from './finalize-audit';
 
 export type ConceptVgrDefaults = {
-  report_type: Exclude<VGRReportType, 'WIA_FINAL'>;
+  report_type: VGRReportType;
   version: number;
   period_start: string;
   period_end: string;
@@ -22,14 +23,22 @@ function todayIso(): string {
 
 /**
  * Derive report type / version / period defaults for a new or existing concept.
- * Follow-up when a prior final VGR is linked; otherwise VGR1.
+ * Follow-up when a prior final VGR is linked; WIA_FINAL when explicitly set on meta;
+ * otherwise VGR1.
  */
 export function resolveConceptVgrDefaults(data: VGRData): ConceptVgrDefaults {
   const meta = data.vgr_meta;
   const hasPrior = Boolean(meta.prior_vgr_instance_id);
   const version = Math.max(1, meta.version || (hasPrior ? 2 : 1));
-  const report_type: ConceptVgrDefaults['report_type'] =
-    meta.report_type === 'VGR_FOLLOWUP' || version >= 2 || hasPrior ? 'VGR_FOLLOWUP' : 'VGR1';
+
+  let report_type: VGRReportType;
+  if (meta.report_type === 'WIA_FINAL') {
+    report_type = 'WIA_FINAL';
+  } else if (meta.report_type === 'VGR_FOLLOWUP' || version >= 2 || hasPrior) {
+    report_type = 'VGR_FOLLOWUP';
+  } else {
+    report_type = 'VGR1';
+  }
 
   const report_date = meta.report_date || todayIso();
   let period_start = meta.period_start;
@@ -48,9 +57,12 @@ export function resolveConceptVgrDefaults(data: VGRData): ConceptVgrDefaults {
     }
   }
 
+  const resolvedVersion =
+    report_type === 'VGR1' ? 1 : report_type === 'WIA_FINAL' ? Math.max(version, 2) : Math.max(version, 2);
+
   return {
     report_type,
-    version: report_type === 'VGR1' ? 1 : Math.max(version, 2),
+    version: resolvedVersion,
     period_start,
     period_end,
     report_date,
@@ -79,6 +91,6 @@ export function applyConceptVgrDefaults(data: VGRData): VGRData {
 
 export function conceptVgrReportTypeLabel(type: VGRReportType | undefined): string {
   if (type === 'VGR_FOLLOWUP') return 'Vervolg-VGR (concept)';
-  if (type === 'WIA_FINAL') return 'WIA / eindrapportage (later)';
+  if (type === 'WIA_FINAL') return 'WIA / eindrapportage (concept)';
   return 'VGR1 (concept)';
 }

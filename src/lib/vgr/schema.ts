@@ -17,8 +17,9 @@ export const VGR_SCHEMA_VERSION = 2;
 export type VGRStatus = 'draft' | 'review' | 'final';
 
 /**
- * Report kind (Phase 1 scaffold — WIA_FINAL UI/export lands later).
- * VGR1 = first report; VGR_FOLLOWUP = version ≥ 2; WIA_FINAL reserved.
+ * Report kind.
+ * VGR1 = first report; VGR_FOLLOWUP = version ≥ 2; WIA_FINAL = eindrapportage scaffold (Phase 4 / G12).
+ * Full WIA consult content remains D08 later.
  */
 export type VGRReportType = 'VGR1' | 'VGR_FOLLOWUP' | 'WIA_FINAL';
 
@@ -39,7 +40,7 @@ export type VGRMeta = {
   version: number;
   /**
    * Explicit report type. Defaults from `version` when omitted.
-   * `WIA_FINAL` is reserved (Phase 4); do not select in Phase 1 UI.
+   * `WIA_FINAL` selectable as Phase 4 scaffold; full WIA consult later (D08).
    */
   report_type?: VGRReportType;
   /** Honesty / style prompt version stamped on concept generation. */
