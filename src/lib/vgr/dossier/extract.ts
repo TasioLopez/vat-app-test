@@ -3,7 +3,7 @@
  * without inventing status transitions. AI-backed extract can enrich later.
  */
 import { verifyQuoteInSource } from './quote-verify';
-import type { VgrActivity, VgrAssertion, VgrSourceDocument } from './types';
+import type { VgrActivity, VgrAssertion, VgrQuoteVerification, VgrSourceDocument } from './types';
 
 export type ExtractResult = {
   assertions: VgrAssertion[];
@@ -32,11 +32,14 @@ export function extractAssertionsFromSource(params: {
     return { assertions, activities };
   }
 
+  const quote_verification: VgrQuoteVerification = text
+    ? verifyQuoteInSource(text.slice(0, 80), text)
+    : 'not_a_quote';
   const evidenceBase = {
     source_id: source.source_id,
     source_anchor: 'document',
     evidence_excerpt: text.slice(0, 240),
-    quote_verification: (text ? verifyQuoteInSource(text.slice(0, 80), text) : 'not_a_quote') as const,
+    quote_verification,
   };
 
   if (source.doc_type === 'MOTIVATIEBRIEF') {

@@ -114,15 +114,10 @@ export function verifiedFactsForWrite(dossier: VgrDossier): {
   quarantinedSourceIds: string[];
 } {
   const quarantinedSourceIds = dossier.source_documents.filter((s) => s.quarantined).map((s) => s.source_id);
-  const facts = dossier.assertions.filter(
-    (a) =>
-      a.status === 'known' &&
-      a.approval !== 'rejected' &&
-      !a.evidence.some((e) => quarantinedSourceIds.includes(e.source_id)) &&
-      a.evidence.every((e) => e.quote_verification !== 'unverified' || e.quote_verification === 'not_a_quote' || e.quote_verification === 'exact_verified'),
-  );
-  // Prefer exact_verified quotes; drop unverified quote claims.
-  const factsClean = facts.filter((a) => {
+  // Prefer exact_verified quotes; drop unverified / rejected / quarantined claims.
+  const factsClean = dossier.assertions.filter((a) => {
+    if (a.status !== 'known' || a.approval === 'rejected') return false;
+    if (a.evidence.some((e) => quarantinedSourceIds.includes(e.source_id))) return false;
     const quotes = a.evidence.filter((e) => e.quote_verification !== 'not_a_quote');
     if (!quotes.length) return true;
     return quotes.every((e) => e.quote_verification === 'exact_verified');
