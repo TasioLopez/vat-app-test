@@ -71,7 +71,15 @@ Never use the filled ValentineZ example reports as fixture data. They contain re
 - [x] T05: Exact quotes preserved (no silent spelling “fixes”); invented/empty quotes refused on Overnemen.
 - [x] T01/T06/T13: Heuristic detectors + style rules for invented tests/apps, opgesteld≠verzonden, gepland≠uitgevoerd.
 - [x] D10: Zoekprofiel AI remains concept until deskundige confirm on apply.
-- [ ] Full pack T01–T22 end-to-end (needs Phase 2 dossier layer).
+
+## Dossier spine (Phase 2 — synth)
+
+- [x] Pack-shaped `vgr_dossiers` (`source_documents` / `assertions` / `activities` / `issues`) beside instances.
+- [x] CLASSIFY → EXTRACT → MERGE via `/api/vgr/dossier/sync` (Setup “Dossier synchroniseren”); D01: no auto Overnemen.
+- [x] WRITE context prefers verified facts (`collect-context`); PDFs remain optional evidence; PDF export only.
+- [x] G3 lite: EMAIL / MOTIVATIEBRIEF / TEST / WERKBOEK filename heuristics; G8 quarantine on mismatch.
+- [x] G5 lite: application_status chain + Bijlage 2 proposals helper (not auto-applied).
+- [ ] Full pack T01–T22 end-to-end + rich OCR extract (later).
 
 ## Commands
 
