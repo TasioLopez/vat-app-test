@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { redirectApexToWww } from '@/lib/auth/canonical-host';
+import { MIDDLEWARE_MATCHER } from '@/lib/auth/middleware-matcher';
+
+export { MIDDLEWARE_MATCHER };
 
 const BLOCKED_PATHS = new Set([
   '/api/check-schema',
@@ -31,15 +34,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const isApi = pathname.startsWith('/api/');
-  const needsDashboardAuth =
-    pathname.startsWith('/dashboard') || pathname.startsWith('/intake/print');
-  const needsApiAuth = isApi && !isPublicApiPath(pathname);
-
-  if (!needsDashboardAuth && !needsApiAuth) {
-    return NextResponse.next();
-  }
-
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -47,50 +41,48 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options) {
-          request.cookies.set({ name, value, ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
           response = NextResponse.next({ request });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options) {
-          request.cookies.set({ name, value: '', ...options });
-          response = NextResponse.next({ request });
-          response.cookies.set({ name, value: '', ...options });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
+  // Always refresh the session on matched routes so cold new-tab loads
+  // rewrite chunked auth cookies before RSC/layout AAL checks.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const isApi = pathname.startsWith('/api/');
+  const needsDashboardAuth =
+    pathname.startsWith('/dashboard') || pathname.startsWith('/intake/print');
+  const needsApiAuth = isApi && !isPublicApiPath(pathname);
 
   if (!user) {
     if (needsApiAuth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    if (needsDashboardAuth) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: [
-    // Apex→www must run for auth callbacks (query string preserved).
-    '/auth/:path*',
-    '/login',
-    '/signup',
-    '/reset-password',
-    '/dashboard/:path*',
-    '/intake/:path*',
-    '/api/:path*',
-    '/debug-user',
-  ],
+  matcher: [...MIDDLEWARE_MATCHER],
 };
