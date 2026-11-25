@@ -10,11 +10,15 @@
  */
 import { ensureVGRShape, vgrDraftIsEmpty } from '@/lib/vgr/mapping';
 import { mergeRecordFillBlanks } from '@/lib/tp2026/gegevens-autofill';
+import { applyWorkerFacts, workerFactsFromRows } from '@/lib/employee/save-worker-facts';
+import { parseAdAdvies } from '@/lib/tp/ad-advies/build-fields';
+import { ADVIES_DELIMITER } from '@/lib/tp/ad-advies/constants';
 import { parsePowInschaling, parsePowToelichting } from '@/lib/tp/pow-meter/build-fields';
 import { planningFromTpBijlage1 } from '@/lib/vgr/planning-defaults';
 import {
   newVgrId,
   type VGRBelastbaarheidKind,
+  type VGRBody,
   type VGRData,
   type VGRPowTrede,
   type VGRTrajectDoel,
@@ -121,6 +125,24 @@ function goalFromTp(tp: Record<string, unknown>): VGRTrajectDoel {
   return '';
 }
 
+/** Ensure print shows "Doelstelling datum …" even on a first VGR. */
+export function seedDoelstellingHistory(body: VGRBody, reportDate: string): void {
+  if (body.doelstelling_traject.history.length > 0) return;
+  const date = String(reportDate || '').trim();
+  if (!date) return;
+  const goal = body.doelstelling_traject.huidige || body.doelstelling_traject.bij_intake || '';
+  body.doelstelling_traject.history = [
+    {
+      id: newVgrId('doel'),
+      date,
+      from: goal,
+      to: goal,
+      changed: false,
+      toelichting: '',
+    },
+  ];
+}
+
 /**
  * Copy TP 2026 content into an (already shaped) VGR draft. Only fills blanks.
  */
@@ -159,6 +181,8 @@ export function hydrateVgrFromTp2026(
       b.praktische_belemmeringen.aanwezig = !/geen (praktische )?belemmeringen/.test(lower);
     }
   }
+  // Fill-blank only: TP "prognose_bedrijfsarts" is the structured FML/IZP narrative used as
+  // belastbaarheidsprofiel.toelichting until the adviser regenerates the VGR section.
   if (isBlank(b.belastbaarheidsprofiel.toelichting) && !isBlank(tpData.prognose_bedrijfsarts)) {
     b.belastbaarheidsprofiel.toelichting = String(tpData.prognose_bedrijfsarts);
   }
@@ -170,14 +194,18 @@ export function hydrateVgrFromTp2026(
     b.belastbaarheidsprofiel.auteur = String(tpData.occupational_doctor_org);
   }
   if (isBlank(b.visie_plaatsbaarheid.ad.citaat) && !isBlank(tpData.advies_ad_passende_arbeid)) {
-    b.visie_plaatsbaarheid.ad.citaat = String(tpData.advies_ad_passende_arbeid);
+    const rawAd = String(tpData.advies_ad_passende_arbeid);
+    const citaat = rawAd.includes(ADVIES_DELIMITER)
+      ? parseAdAdvies(rawAd).citaat.trim()
+      : rawAd.trim();
+    b.visie_plaatsbaarheid.ad.citaat = citaat || rawAd.trim();
     b.visie_plaatsbaarheid.ad.bron_type = 'AD-rapport';
-    if (isBlank(b.visie_plaatsbaarheid.ad.bron_naam)) {
-      b.visie_plaatsbaarheid.ad.bron_naam = String(tpData.occupational_doctor_name || '');
-    }
+    // Do not seed AD bron_naam from occupational_doctor_name (bedrijfsarts field).
     if (isBlank(b.visie_plaatsbaarheid.ad.bron_datum)) {
       b.visie_plaatsbaarheid.ad.bron_datum = String(tpData.ad_report_date || '');
     }
+  } else if (b.visie_plaatsbaarheid.ad.citaat.includes(ADVIES_DELIMITER)) {
+    b.visie_plaatsbaarheid.ad.citaat = parseAdAdvies(b.visie_plaatsbaarheid.ad.citaat).citaat.trim();
   }
   if (isBlank(b.visie_plaatsbaarheid.conclusie) && !isBlank(tpData.visie_loopbaanadviseur)) {
     b.visie_plaatsbaarheid.conclusie = String(tpData.visie_loopbaanadviseur);
@@ -188,6 +216,7 @@ export function hydrateVgrFromTp2026(
   if (!b.doelstelling_traject.huidige && b.doelstelling_traject.bij_intake) {
     b.doelstelling_traject.huidige = b.doelstelling_traject.bij_intake;
   }
+  seedDoelstellingHistory(b, next.vgr_meta.report_date);
 
   // 3. POW-meter: TP intake inschaling becomes the "bij intake" measurement
   const powRaw = String(tpData.pow_meter || '');
@@ -346,6 +375,10 @@ export function buildVgrInitialData(
 
   draft = hydrateVgrFromPriorReport(draft, sources.priorReport, sources.priorInstanceId, sources.priorExportId);
   draft = hydrateVgrFromTp2026(draft, sources.tpData, sources.tpInstanceId);
+
+  const facts = workerFactsFromRows(sources.employee, sources.details, sources.tpMeta).values;
+  draft = ensureVGRShape(applyWorkerFacts(draft as unknown as Record<string, unknown>, facts) as Record<string, any>);
+  seedDoelstellingHistory(draft.body, draft.vgr_meta.report_date);
 
   return ensureVGRShape(draft);
 }

@@ -34,6 +34,8 @@ type Props = {
   onDocumentsChanged: () => void;
   /** Document types already present for this employee (used for replace warnings). */
   publishedDocumentTypes?: string[];
+  /** Preferred purpose when opening an empty / new gesprek (e.g. VGR from Bronnen). */
+  initialPurpose?: MeetingPurpose;
 };
 
 type ConfirmRequest = {
@@ -78,10 +80,13 @@ export default function GesprekPanel({
   onOpenChange,
   onDocumentsChanged,
   publishedDocumentTypes = [],
+  initialPurpose = 'intake',
 }: Props) {
   const [captures, setCaptures] = useState<MeetingCapture[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [purpose, setPurpose] = useState<MeetingPurpose>('intake');
+  const [purpose, setPurpose] = useState<MeetingPurpose>(() =>
+    normalizeMeetingPurpose(initialPurpose)
+  );
   const [transcript, setTranscript] = useState('');
   const [savedTranscript, setSavedTranscript] = useState('');
   const [originalTranscript, setOriginalTranscript] = useState('');
@@ -169,14 +174,26 @@ export default function GesprekPanel({
     if (!open) return;
     setError(null);
     setSideBySide(readSideBySide());
+    const preferred = normalizeMeetingPurpose(initialPurpose);
     void load()
       .then((list) => {
-        if (!captureIdRef.current && list[0]) applyCapture(list[0]);
+        if (captureIdRef.current) return;
+        const preferredCapture =
+          list.find((item) => normalizeMeetingPurpose(item.purpose) === preferred) ?? null;
+        if (preferredCapture) {
+          applyCapture(preferredCapture);
+          return;
+        }
+        if (list[0]) {
+          applyCapture(list[0]);
+          return;
+        }
+        setPurpose(preferred);
       })
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Gesprekken laden mislukt');
       });
-  }, [open, load, applyCapture]);
+  }, [open, load, applyCapture, initialPurpose]);
 
   useEffect(() => {
     return () => {
@@ -796,7 +813,7 @@ export default function GesprekPanel({
       captureIdRef.current = null;
       activeCaptureRef.current = null;
       setActiveId(null);
-      setPurpose('intake');
+      setPurpose(normalizeMeetingPurpose(initialPurpose));
       setTranscript('');
       setSavedTranscript('');
       setOriginalTranscript('');
@@ -824,7 +841,7 @@ export default function GesprekPanel({
       captureIdRef.current = null;
       activeCaptureRef.current = null;
       setActiveId(null);
-      setPurpose('intake');
+      setPurpose(normalizeMeetingPurpose(initialPurpose));
       setTranscript('');
       setSavedTranscript('');
       setOriginalTranscript('');

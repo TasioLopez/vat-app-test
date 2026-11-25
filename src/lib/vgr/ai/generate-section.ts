@@ -5,7 +5,8 @@ import { runStructuredMultiFileExtraction } from '@/lib/document-analysis/runStr
 import type { VGRAiProposal, VGRData } from '@/lib/vgr/schema';
 import { collectVgrAiContext } from './collect-context';
 import { VGR_AI_SECTIONS, buildVgrSectionSchema, parseVgrEnvelope, sanitizeGeneratedText, type VGRAiEnvelope, type VGRAiSectionId } from './sections';
-import { VGR_STYLE_SYSTEM_PROMPT } from './style-prompt';
+import { VGR_APPROVED_RULES_VERSION, VGR_STYLE_SYSTEM_PROMPT } from './style-prompt';
+import { detectOverstatedActivityStatus } from './quote-honesty';
 
 export type GenerateVgrSectionResult = {
   proposal: VGRAiProposal;
@@ -95,13 +96,24 @@ export async function generateVgrSection(params: {
   const fields = Object.fromEntries(Object.entries(envelope.fields).map(([k, v]) => [k, sanitizeGeneratedText(v)]));
   const patch = def.toPatch(fields, data);
 
+  const proseBlob = Object.values(fields).join('\n');
+  const statusNotes = detectOverstatedActivityStatus(proseBlob).map(
+    (id) => `Eerlijkheid: mogelijke statusoverschrijding (${id}) — controleer vóór Overnemen.`,
+  );
+
   const proposal: VGRAiProposal = {
     section_id: sectionId,
     generated_at: new Date().toISOString(),
     patch: { ...patch, __fields: fields, __suggesties: envelope.suggesties },
     evidence: [...new Set([...envelope.bronnen, ...ctx.sources])],
-    notes: [...envelope.ontbrekende_informatie, ...envelope.waarschuwingen.map((w) => `Waarschuwing: ${w}`), ...ctx.conflicts.map((c) => `Dossier: ${c}`)],
+    notes: [
+      ...envelope.ontbrekende_informatie,
+      ...envelope.waarschuwingen.map((w) => `Waarschuwing: ${w}`),
+      ...ctx.conflicts.map((c) => `Dossier: ${c}`),
+      ...statusNotes,
+    ],
     status: 'proposed',
+    approved_rules_version: VGR_APPROVED_RULES_VERSION,
   };
 
   return { proposal, envelope: { ...envelope, fields }, conflicts: ctx.conflicts };

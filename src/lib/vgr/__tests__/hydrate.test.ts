@@ -34,6 +34,22 @@ describe('hydrateVgrFromTp2026', () => {
     const next = hydrateVgrFromTp2026(draft, { persoonlijk_profiel: 'Uit TP.' });
     assert.equal(next.body.persoonlijk_profiel.tekst, 'Handmatig.');
   });
+
+  it('strips AD advies delimiter and does not seed BA name as AD author', () => {
+    const draft = ensureVGRShape({ vgr_meta: { report_date: '2026-10-28' } });
+    const next = hydrateVgrFromTp2026(draft, {
+      advies_ad_passende_arbeid:
+        'Intro tekst\n<<<ADVIES>>>\nVoorlopige conclusie: passend werk mogelijk.',
+      occupational_doctor_name: 'B. Droogleever',
+      ad_report_date: '2026-05-31',
+    });
+    assert.equal(next.body.visie_plaatsbaarheid.ad.citaat, 'Voorlopige conclusie: passend werk mogelijk.');
+    assert.equal(next.body.visie_plaatsbaarheid.ad.bron_naam, '');
+    assert.equal(next.body.visie_plaatsbaarheid.ad.bron_datum, '2026-05-31');
+    assert.equal(next.body.doelstelling_traject.history.length, 1);
+    assert.equal(next.body.doelstelling_traject.history[0].date, '2026-10-28');
+    assert.equal(next.body.doelstelling_traject.history[0].changed, false);
+  });
 });
 
 describe('hydrateVgrFromPriorReport', () => {
@@ -79,5 +95,31 @@ describe('buildVgrInitialData', () => {
     assert.equal(out.body.zoekprofiel.tekst, 'Magazijnmedewerker');
     assert.equal(out.first_sick_day, '2025-02-02');
     assert.deepEqual(out.applications, []);
+  });
+
+  it('replaces a stale opleiding with the worker record', () => {
+    const out = buildVgrInitialData(
+      { education_level: 'VMBO' },
+      {
+        details: { education_level: 'HBO' },
+        tpData: { education_level: 'MBO 2' },
+      }
+    );
+    assert.equal(out.education_level, 'HBO');
+  });
+
+  it('keeps prior-report prose when the worker record replaces a shared fact', () => {
+    const prior = ensureVGRShape({
+      body: { persoonlijk_profiel: { tekst: 'Was al bekend.' } },
+    });
+    const out = buildVgrInitialData(
+      {},
+      {
+        details: { education_level: 'HBO' },
+        priorReport: prior,
+      }
+    );
+    assert.equal(out.education_level, 'HBO');
+    assert.equal(out.body.persoonlijk_profiel.tekst, 'Was al bekend.');
   });
 });

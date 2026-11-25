@@ -1,15 +1,15 @@
 import { formatNLDate, type VGRData } from '@/lib/vgr/schema';
 
-/** "1 januari 2026 tot en met 31 maart 2026" (or adviser override). */
+/** "1 januari 2026 t/m 31 maart 2026" (or adviser override). */
 export function vgrPeriodeText(data: VGRData): string {
   const override = String(data.body?.periode_tekst_override || '').trim();
   if (override) return override;
   const start = data.vgr_meta?.period_start;
   const end = data.vgr_meta?.period_end;
   if (!start && !end) return '';
-  if (start && end) return `${formatNLDate(start)} tot en met ${formatNLDate(end)}`;
+  if (start && end) return `${formatNLDate(start)} t/m ${formatNLDate(end)}`;
   if (start) return `vanaf ${formatNLDate(start)}`;
-  return `tot en met ${formatNLDate(end)}`;
+  return `t/m ${formatNLDate(end)}`;
 }
 
 /** Short "van … tot …" used in planning vervolg lines. */

@@ -72,4 +72,38 @@ describe('validateVgr', () => {
     const visible = visibleIssues(issues, dismissed);
     assert.ok(visible.filter((i) => i.level === 'error').length === errors.length);
   });
+
+  it('warns when a planning activity is G without a note', () => {
+    const data = draft({
+      planning_phases: [
+        {
+          id: 'p1',
+          title: 'Planning fase 1',
+          goal: 'Doel',
+          period_from: '2026-09-01',
+          period_to: '2026-12-01',
+          activities: [{ id: 'a1', name: 'Empowerment', status: 'G', note: '' }],
+        },
+      ],
+    });
+    const issues = validateVgr(data);
+    assert.ok(issues.some((i) => /uitgevoerd \(G\) zonder toelichting/.test(i.message)));
+  });
+
+  it('warns when a selected interventie has no toelichting', () => {
+    const data = draft({
+      body: {
+        interventies_motivatie: { selected: ['empowerment'], blocks: {} },
+      },
+    });
+    const issues = validateVgr(data);
+    assert.ok(
+      issues.some(
+        (i) =>
+          i.level === 'warning' &&
+          /empowerment/.test(i.message) &&
+          /zonder persoonlijke toelichting/.test(i.message),
+      ),
+    );
+  });
 });

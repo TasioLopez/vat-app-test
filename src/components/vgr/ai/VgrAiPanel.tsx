@@ -1,15 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, Loader2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToastHelpers } from '@/components/ui/Toast';
 import { useVGRInstance } from '@/context/VGRInstanceContext';
-import { VGR_AI_SECTIONS, isVgrAiSectionId, type VGRAiSectionId } from '@/lib/vgr/ai/sections';
+import { useVgrEmployeeDocuments } from '@/components/vgr/sections/SetupSection';
+import {
+  buildVgrApplyBodyPatch,
+  describeVgrAiSuggesties,
+  type VgrBodyPatch,
+} from '@/lib/vgr/ai/apply-suggesties';
+import { VGR_AI_SECTIONS, isVgrAiSectionId, vgrAiSectionCanGenerate, type VGRAiSectionId } from '@/lib/vgr/ai/sections';
+import { computeVgrPreflight } from '@/lib/vgr/preflight';
 import type { VGRAiProposal, VGRBody, VGRData } from '@/lib/vgr/schema';
 
-type BodyPatch = { [K in keyof VGRBody]?: Partial<VGRBody[K]> };
+type BodyPatch = VgrBodyPatch;
 
 export function VgrAiPanel({
   sectionId,
@@ -43,12 +50,30 @@ function VgrAiPanelInner({
 }) {
   const { updateField } = useVGRInstance();
   const { showError, showSuccess } = useToastHelpers();
+  const docs = useVgrEmployeeDocuments(employeeId);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [instruction, setInstruction] = useState('');
   const proposal: VGRAiProposal | undefined = data.ai_proposals?.[sectionId];
   const def = VGR_AI_SECTIONS[sectionId];
-  const fieldCount = def.fields(data).length;
+  const canGenerate = vgrAiSectionCanGenerate(def, data);
+  const [zoekConfirm, setZoekConfirm] = useState(false);
+
+  const selectedTypes = useMemo(() => {
+    const selected = new Set(data.vgr_meta.source_document_ids);
+    return docs
+      .filter((d) => selected.has(d.id) || selected.size === 0)
+      .map((d) => String(d.type || ''))
+      .filter(Boolean);
+  }, [data.vgr_meta.source_document_ids, docs]);
+
+  const preflightMod = useMemo(() => {
+    const pf = computeVgrPreflight(data, selectedTypes);
+    return pf.modules.find((m) => m.id === sectionId);
+  }, [data, selectedTypes, sectionId]);
+
+  const writable = preflightMod?.writable !== false;
+  const gapQuestion = preflightMod?.question;
 
   const storeProposal = (p: VGRAiProposal | null) => {
     const next = { ...(data.ai_proposals ?? {}) };
@@ -58,6 +83,13 @@ function VgrAiPanelInner({
   };
 
   const generate = async () => {
+    if (!writable) {
+      showError(
+        'Niet schrijfbaar',
+        gapQuestion || 'Dit onderdeel is volgens de preflight niet schrijfbaar. Vul eerst de ontbrekende bron of beantwoord de vraag.',
+      );
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch('/api/vgr/generate-section', {
@@ -77,15 +109,42 @@ function VgrAiPanelInner({
     }
   };
 
+  const zoekprofielWouldChange = (): boolean => {
+    if (sectionId !== 'zoekprofiel' || !proposal) return false;
+    const next = String((proposal.patch as Record<string, unknown>)?.zoekprofiel
+      ? ((proposal.patch as { zoekprofiel?: { tekst?: string } }).zoekprofiel?.tekst ?? '')
+      : (fields.tekst ?? '')).trim();
+    const current = String(data.body.zoekprofiel?.tekst ?? '').trim();
+    if (!next || !current) return Boolean(next && next !== current);
+    return next !== current;
+  };
+
   const apply = () => {
     if (!proposal) return;
-    const { __fields, __suggesties, ...patch } = proposal.patch as Record<string, unknown>;
-    void __fields;
-    void __suggesties;
-    patchBody(patch as BodyPatch);
+    if (zoekprofielWouldChange() && !zoekConfirm) {
+      setZoekConfirm(true);
+      return;
+    }
+    const { patch: merged, refusedQuotes } = buildVgrApplyBodyPatch(data, sectionId, proposal.patch as Record<string, unknown>);
+    patchBody(merged);
+    if (sectionId === 'zoekprofiel' && zoekprofielWouldChange()) {
+      updateField('vgr_meta', {
+        ...data.vgr_meta,
+        zoekprofiel_changed_at: new Date().toISOString(),
+        zoekprofiel_change_note: 'Gewijzigd via AI-voorstel (deskundige bevestigd)',
+      });
+    }
     storeProposal({ ...proposal, status: 'applied' });
+    setZoekConfirm(false);
     setOpen(false);
-    showSuccess('Overgenomen', 'Het voorstel is in de rapportage gezet. Controleer en pas aan waar nodig.');
+    if (refusedQuotes.length) {
+      showSuccess(
+        'Overgenomen (citaten geweigerd)',
+        `Lege/verzonnen of AD-als-medisch citaten zijn niet overgenomen: ${refusedQuotes.join('; ')}.`,
+      );
+    } else {
+      showSuccess('Overgenomen', 'Het voorstel is in de rapportage gezet. Controleer en pas aan waar nodig.');
+    }
   };
 
   const reject = () => {
@@ -112,8 +171,14 @@ function VgrAiPanelInner({
           size="sm"
           variant="ghost"
           className="h-7 gap-1 px-2 text-xs text-[#702A90] hover:bg-[#702A90]/10"
-          disabled={busy || fieldCount === 0}
-          title={fieldCount === 0 ? 'Vink eerst interventies aan' : 'Genereer voorstel op basis van de brondocumenten'}
+          disabled={busy || !canGenerate || !writable}
+          title={
+            !canGenerate
+              ? 'Geen AI-velden voor dit onderdeel'
+              : !writable
+                ? gapQuestion || 'Preflight: niet schrijfbaar'
+                : 'Genereer voorstel op basis van de brondocumenten'
+          }
           onClick={() => (open || instruction ? void generate() : setOpen(true))}
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
@@ -130,6 +195,13 @@ function VgrAiPanelInner({
             </button>
           </div>
 
+          {!writable && gapQuestion ? (
+            <div className="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
+              <span className="font-semibold">Preflight: </span>
+              {gapQuestion}
+            </div>
+          ) : null}
+
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Extra instructie (optioneel)</label>
           <Textarea
             rows={2}
@@ -139,7 +211,7 @@ function VgrAiPanelInner({
             onChange={(e) => setInstruction(e.target.value)}
           />
           <div className="mb-3 flex items-center gap-2">
-            <Button type="button" size="sm" className="h-7 gap-1 bg-[#702A90] text-xs hover:bg-[#5a1f75]" disabled={busy} onClick={() => void generate()}>
+            <Button type="button" size="sm" className="h-7 gap-1 bg-[#702A90] text-xs hover:bg-[#5a1f75]" disabled={busy || !writable} onClick={() => void generate()}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
               {proposal ? 'Opnieuw genereren' : 'Genereren'}
             </Button>
@@ -167,11 +239,15 @@ function VgrAiPanelInner({
 
               {Object.values(suggesties).some(Boolean) ? (
                 <div className="rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
-                  <span className="font-semibold">Suggesties (zelf instellen): </span>
-                  {Object.entries(suggesties)
-                    .filter(([, v]) => v)
-                    .map(([k, v]) => `${labelForField(k)}: ${v}`)
-                    .join(' · ')}
+                  <span className="font-semibold">Wordt meegenomen bij Overnemen: </span>
+                  {describeVgrAiSuggesties(suggesties).join(' · ')}
+                </div>
+              ) : null}
+
+              {zoekConfirm ? (
+                <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 text-xs text-amber-950">
+                  Dit AI-concept wijzigt het zoekprofiel. Bevestig als deskundige dat je de wijziging wilt overnemen
+                  (FML-impact gecontroleerd). Zonder bevestiging blijft het oude zoekprofiel leidend.
                 </div>
               ) : null}
 
@@ -192,9 +268,15 @@ function VgrAiPanelInner({
                 <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={reject}>
                   Verwerpen
                 </Button>
-                <Button type="button" size="sm" className="h-7 gap-1 text-xs" disabled={!hasContent} onClick={apply}>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  disabled={!hasContent && !Object.values(suggesties).some(Boolean)}
+                  onClick={apply}
+                >
                   <Check className="h-3.5 w-3.5" aria-hidden />
-                  Overnemen
+                  {zoekConfirm ? 'Zoekprofiel wijzigen' : 'Overnemen'}
                 </Button>
               </div>
             </div>

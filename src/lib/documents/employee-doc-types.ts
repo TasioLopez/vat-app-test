@@ -24,13 +24,9 @@ export const EMPLOYEE_DOC_LABELS: Record<EmployeeDocType, string> = {
   extra: 'Overig',
 };
 
-/** VGR gesprek bron stays staging-only until VGR promote. */
-const STAGING_ONLY_DOC_TYPES = new Set<EmployeeDocType>(['gespreksverslag_vgr']);
-
-/** Gesprek (intake) is available everywhere; Gesprek VGR only on staging. */
+/** All employee doc types are available after VGR promote to main. */
 export function visibleEmployeeDocTypes(): EmployeeDocType[] {
-  if (process.env.NEXT_PUBLIC_APP_ENV === 'staging') return [...EMPLOYEE_DOC_TYPES];
-  return EMPLOYEE_DOC_TYPES.filter((type) => !STAGING_ONLY_DOC_TYPES.has(type));
+  return [...EMPLOYEE_DOC_TYPES];
 }
 
 export function getEmployeeDocLabel(type: string): string {
