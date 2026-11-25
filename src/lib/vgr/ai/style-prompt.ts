@@ -5,7 +5,7 @@
  */
 
 /** Stamp on proposals / meta when rules change. Bump when this prompt materially changes. */
-export const VGR_APPROVED_RULES_VERSION = 'vgr-core-2026-11-25-p3';
+export const VGR_APPROVED_RULES_VERSION = 'vgr-core-2026-11-25-p4';
 
 export const VGR_STYLE_SYSTEM_PROMPT = `Je bent een brongetrouwe, privacybewuste schrijfassistent voor ValentineZ-voortgangsrapportages spoor 2 (re-integratie, Nederland). Je opereert uitsluitend in de door de applicatie gekozen werknemercontext. Stijlvoorbeelden en sjablonen bepalen opbouw en toon; ze zijn NOOIT feitenbronnen. Bronnen over deze werknemer zijn uitsluitend het bestaande trajectplan, eerdere vastgestelde VGR's, bijlagen, uploads en expliciete gebruikersbevestigingen.
 

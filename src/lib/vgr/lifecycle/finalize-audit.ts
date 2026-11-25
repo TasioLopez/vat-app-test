@@ -9,7 +9,7 @@ import type { VGRData, VGRFinalizeAudit, VGRReportType, VGRStatus } from '@/lib/
 import { lockedModuleIds } from './manual-lock';
 
 /** PDF layout / house-style carrier version (D05). Bump when print layout materially changes. */
-export const VGR_TEMPLATE_VERSION = 'vgr-pdf-2026-11-25-p3';
+export const VGR_TEMPLATE_VERSION = 'vgr-pdf-2026-11-25-p4';
 
 export type FinalizeGateResult = {
   ok: boolean;

@@ -16,6 +16,7 @@ import {
   trajectDoelLabel,
   type VGRData,
   type VGRImpactRegenResult,
+  type VGRReportType,
   type VGRTrajectDoel,
 } from '@/lib/vgr/schema';
 import {
@@ -23,6 +24,11 @@ import {
   conceptVgrReportTypeLabel,
   resolveConceptVgrDefaults,
 } from '@/lib/vgr/lifecycle';
+import {
+  applyWiaFinalScaffold,
+  formatVgrTimelineText,
+  type VgrTimelineEntry,
+} from '@/lib/vgr/export';
 import { vgrPeriodeText } from '@/lib/vgr/period';
 import { computeVgrPreflight } from '@/lib/vgr/preflight';
 
@@ -79,6 +85,8 @@ export function SetupEditor({
   const [dossierSyncNote, setDossierSyncNote] = useState<string | null>(null);
   const [impactBusy, setImpactBusy] = useState(false);
   const [conceptNote, setConceptNote] = useState<string | null>(null);
+  const [wiaTimeline, setWiaTimeline] = useState<VgrTimelineEntry[] | null>(null);
+  const [wiaBusy, setWiaBusy] = useState(false);
   const conceptDefaults = resolveConceptVgrDefaults(data);
 
   const toggleDoc = (id: string) => {
@@ -142,6 +150,7 @@ export function SetupEditor({
   /** G11: Concept-VGR maken — apply period/type defaults + show preflight; proposals stay until Overnemen (D01). */
   const makeConceptVgr = () => {
     setConceptNote(null);
+    setWiaTimeline(null);
     setVGRData((prev) => applyConceptVgrDefaults(prev));
     const selectedTypes = docs
       .filter((d) => selectedDocs.has(d.id) || selectedDocs.size === 0)
@@ -156,6 +165,49 @@ export function SetupEditor({
         (gaps ? `, ${gaps} gerichte vraag/vragen` : '') +
         '. Genereer AI-voorstellen via Controle → Genereer alle schrijfbare onderdelen; Overnemen blijft handmatig.',
     );
+  };
+
+  /** Phase 4 / G12 / T22: WIA_FINAL scaffold from prior final VGR snapshots (no invented consult — D08). */
+  const makeWiaConcept = async () => {
+    setWiaBusy(true);
+    setConceptNote(null);
+    try {
+      const { data: finals, error } = await (supabase as any)
+        .from('vgr_instances')
+        .select('id, data_json, version, status')
+        .eq('employee_id', employeeId)
+        .eq('status', 'final')
+        .order('version', { ascending: true });
+      if (error) throw new Error(error.message || 'Kon eerdere VGR’s niet laden');
+      const priorReports = ((finals || []) as Array<{ id: string; data_json: Record<string, unknown> }>)
+        .filter((row) => row.id !== vgrInstanceId)
+        .map((row) => ({ id: row.id, data: row.data_json || {} }));
+      const { data: next, scaffold } = applyWiaFinalScaffold(data, priorReports);
+      setVGRData(next);
+      setWiaTimeline(scaffold.timeline);
+      setConceptNote(
+        `WIA / eindrapportage-concept voorbereid (v${scaffold.version}). ` +
+          `Tijdlijn: ${scaffold.timeline.length} eerdere VGR(s). ` +
+          scaffold.warnings.join(' ') +
+          ' AI-voorstellen blijven tot Overnemen (D01); export blijft PDF (D05).',
+      );
+    } catch (err) {
+      setConceptNote(err instanceof Error ? err.message : 'WIA-concept mislukt');
+    } finally {
+      setWiaBusy(false);
+    }
+  };
+
+  const setReportType = (type: VGRReportType) => {
+    if (type === 'WIA_FINAL') {
+      void makeWiaConcept();
+      return;
+    }
+    setWiaTimeline(null);
+    updateMeta({
+      report_type: type,
+      version: type === 'VGR1' ? 1 : Math.max(meta.version || 1, 2),
+    });
   };
 
   const registerGoalChange = () => {
@@ -181,12 +233,25 @@ export function SetupEditor({
         <p className="text-sm text-muted-foreground">
           Expliciete opdracht om een <span className="font-medium text-foreground">concept</span> te maken (geen
           automatische publicatie). Rapporttype en periode worden gevuld vanuit TP / vorige VGR; AI-tekst blijft
-          voorstel tot Overnemen (D01). WIA-eindrapportage volgt later (D08).
+          voorstel tot Overnemen (D01). WIA/eindrapportage is een scaffold (G12); volledig WIA-consult volgt later
+          (D08). Export: PDF alleen (D05).
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
           <div className="rounded-md border bg-muted/40 px-3 py-2">
-            <div className="text-xs text-muted-foreground">Rapporttype</div>
-            <div className="font-medium">{conceptVgrReportTypeLabel(meta.report_type || conceptDefaults.report_type)}</div>
+            <div className="mb-1 text-xs text-muted-foreground">Rapporttype</div>
+            <Select
+              value={meta.report_type || conceptDefaults.report_type}
+              onValueChange={(v) => setReportType(v as VGRReportType)}
+            >
+              <SelectTrigger className="h-8 w-full bg-background text-sm font-medium">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="VGR1">VGR1 (concept)</SelectItem>
+                <SelectItem value="VGR_FOLLOWUP">Vervolg-VGR (concept)</SelectItem>
+                <SelectItem value="WIA_FINAL">WIA / eindrapportage (scaffold)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="rounded-md border bg-muted/40 px-3 py-2">
             <div className="text-xs text-muted-foreground">Versie</div>
@@ -201,6 +266,15 @@ export function SetupEditor({
           <Button type="button" className="bg-[#702A90] hover:bg-[#5a1f75]" onClick={makeConceptVgr}>
             Concept-VGR maken
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={wiaBusy}
+            onClick={() => void makeWiaConcept()}
+          >
+            {wiaBusy ? 'WIA…' : 'Concept WIA/eindrapportage'}
+          </Button>
           <Button type="button" variant="outline" size="sm" disabled={impactBusy} onClick={() => void refreshImpact()}>
             {impactBusy ? 'Impact…' : 'Impact getroffen modules'}
           </Button>
@@ -209,6 +283,14 @@ export function SetupEditor({
           <p className="rounded border border-[#702A90]/25 bg-[#702A90]/5 px-2 py-1.5 text-xs text-[#3d1850]">
             {conceptNote}
           </p>
+        ) : null}
+        {wiaTimeline?.length ? (
+          <div className="rounded-md border border-border p-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Cumulatieve VGR-tijdlijn (T22)
+            </p>
+            <pre className="whitespace-pre-wrap font-sans text-xs text-foreground">{formatVgrTimelineText(wiaTimeline)}</pre>
+          </div>
         ) : null}
         {impact?.hits?.length ? (
           <div className="rounded-md border border-border p-3">
@@ -272,7 +354,12 @@ export function SetupEditor({
                 const version = Math.max(1, parseInt(e.target.value || '1', 10) || 1);
                 updateMeta({
                   version,
-                  report_type: version >= 2 ? 'VGR_FOLLOWUP' : 'VGR1',
+                  report_type:
+                    meta.report_type === 'WIA_FINAL'
+                      ? 'WIA_FINAL'
+                      : version >= 2
+                        ? 'VGR_FOLLOWUP'
+                        : 'VGR1',
                 });
               }}
             />
@@ -390,7 +477,7 @@ export function SetupEditor({
           Selecteer de documenten uit het dossier die voor deze rapportageperiode gebruikt mogen worden
           (gespreksverslagen, spreekuurrapportages, FML/IZP/LAB, AD-rapport, testrapporten). AI-voorstellen
           gebruiken uitsluitend deze bronnen en worden nooit automatisch overgenomen. Synchroniseer eerst het
-          claim/activity-dossier zodat WRITE op geverifieerde feiten steunt (PDF-export blijft; geen DOCX).
+          claim/activity-dossier zodat WRITE op geverifieerde feiten steunt (PDF-export; DOCX-dragers ontbreken — T17/D05).
         </p>
         {docs.length === 0 ? (
           <p className="text-sm text-muted-foreground">Geen documenten in het dossier.</p>

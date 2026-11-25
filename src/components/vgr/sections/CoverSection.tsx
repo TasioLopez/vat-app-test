@@ -14,6 +14,7 @@ import { formatEmployeeName } from '@/lib/utils';
 import { useVGRPageNumber } from '@/context/VGRPageNumberContext';
 import { VGR_COVER_PAGE_COUNT } from '@/lib/vgr/page-numbering';
 import { VGR_COVER_TITLE } from '@/lib/vgr/content';
+import { vgrCoverTitleForType } from '@/lib/vgr/export';
 import type { VGRData } from '@/lib/vgr/schema';
 
 /**
@@ -123,7 +124,7 @@ export function CoverA4({ data }: { data: VGRData }) {
                 fontWeight: 900,
               }}
             >
-              {VGR_COVER_TITLE}
+              {vgrCoverTitleForType(data.vgr_meta.report_type) || VGR_COVER_TITLE}
             </h1>
             <div style={{ rowGap: COVER_LAYOUT.fields.rowGap }} className="grid text-[#702A90] leading-tight">
               <CoverInfoLine label="Voor" value={employeeName} />

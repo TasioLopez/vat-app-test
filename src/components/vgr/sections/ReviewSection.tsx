@@ -180,8 +180,9 @@ export function ReviewEditor({
         <h3 className="mb-2 text-sm font-semibold text-[#702A90]">Definitief vaststellen</h3>
         <p className="mb-3 text-xs text-muted-foreground">
           Afzonderlijke gecontroleerde handeling. Bij definitief wordt een audittrail opgeslagen (prompt-/templateversie,
-          bronnen, vergrendelde modules). Export blijft PDF-only (D05). Een definitieve rapportage wordt bij de volgende
-          voortgangsrapportage als basis gebruikt.
+          bronnen, vergrendelde modules). Export: PDF-carrier beschikbaar; officiële DOCX-dragers ontbreken — geen vals
+          “huisstijl exact”-label (T17 / D05). Een definitieve rapportage wordt bij de volgende voortgangsrapportage of
+          WIA-scaffold als basis gebruikt.
         </p>
         {!canFinalize ? (
           <p className="mb-3 rounded border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-900">
