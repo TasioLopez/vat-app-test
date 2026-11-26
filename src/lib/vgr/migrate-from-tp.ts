@@ -64,6 +64,7 @@ export const VGR_GEGEVENS_KEYS_FROM_TP = [
   'dutch_speaking',
   'dutch_writing',
   'dutch_reading',
+  'languages',
   'has_computer',
   'computer_skills',
   'computer_skills_description',

@@ -17,6 +17,7 @@ export const GEGEVENS_EMPLOYEE_KEYS = [
   'dutch_speaking',
   'dutch_writing',
   'dutch_reading',
+  'languages',
   'has_computer',
   'computer_skills',
   'computer_skills_description',

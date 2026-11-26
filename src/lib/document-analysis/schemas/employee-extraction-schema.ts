@@ -66,6 +66,24 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
       enum: DUTCH_LEVEL_ENUM,
       description: 'Nederlands lezen',
     },
+    languages: {
+      type: 'array',
+      description:
+        'Andere talen dan Nederlands met overall niveau (Goed|Voldoende|Matig). Geen Nederlands-rij; leeg als geen.',
+      items: {
+        type: 'object',
+        properties: {
+          language: { type: 'string', description: 'Taalnaam, bijv. Turks of Engels' },
+          level: {
+            type: ['string', 'null'] as const,
+            enum: DUTCH_LEVEL_ENUM,
+            description: 'Overall niveau; null als onbekend',
+          },
+        },
+        required: ['language', 'level'],
+        additionalProperties: false,
+      },
+    },
     has_computer: nullableBoolean('Heeft PC of laptop'),
     computer_skills: {
       type: ['string', 'null'] as const,
@@ -98,6 +116,7 @@ export const EMPLOYEE_EXTRACTION_JSON_SCHEMA = {
     'dutch_speaking',
     'dutch_writing',
     'dutch_reading',
+    'languages',
     'has_computer',
     'computer_skills',
     'computer_skills_description',

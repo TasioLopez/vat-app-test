@@ -1,3 +1,4 @@
+import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
 import {
   DRIVERS_LICENSE_TYPE_OPTIONS,
   DRIVERS_LICENSE_TYPE_VALUES,
@@ -104,6 +105,24 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
       enum: DUTCH_LEVEL_ENUM,
       description: 'Nederlands lezen G/R/O',
     },
+    languages: {
+      type: 'array',
+      description:
+        'Andere talen (Engels/Duits/Overig …) met overall niveau Goed|Voldoende|Matig uit G/R/O; geen Nederlands; leeg als geen.',
+      items: {
+        type: 'object',
+        properties: {
+          language: { type: 'string', description: 'Taalnaam' },
+          level: {
+            type: ['string', 'null'] as const,
+            enum: DUTCH_LEVEL_ENUM,
+            description: 'Overall niveau uit G/R/O of null',
+          },
+        },
+        required: ['language', 'level'],
+        additionalProperties: false,
+      },
+    },
     has_computer: nullableBoolean('PC/laptop aangevinkt'),
     computer_skills: {
       type: ['string', 'null'] as const,
@@ -126,6 +145,7 @@ export const INTAKE_ALGEMENE_INFO_JSON_SCHEMA = {
     'dutch_speaking',
     'dutch_writing',
     'dutch_reading',
+    'languages',
     'has_computer',
     'computer_skills',
     'computer_skills_description',
@@ -199,6 +219,11 @@ export function parseIntakeAlgemeneInfoExtractionResult(
       continue;
     }
     if (key === 'drivers_license' && hasLicenseCheckboxFields) {
+      continue;
+    }
+    if (key === 'languages') {
+      const languages = normalizeLanguageProficiencyList(value);
+      if (languages.length > 0) out.languages = languages;
       continue;
     }
     if (!isPresent(value)) continue;

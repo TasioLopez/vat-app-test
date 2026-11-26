@@ -194,6 +194,7 @@ describe('intake project + tp hydrate', () => {
     data.s17.dutch_speaking = 'Goed';
     data.s17.dutch_writing = 'Voldoende';
     data.s17.dutch_reading = 'Matig';
+    data.s17.languages = [{ language: 'Turks', level: 'Voldoende' }];
     data.s17.computer_skills = '3';
     data.s17.computer_skills_extra = 'Word, Excel';
 
@@ -207,6 +208,7 @@ describe('intake project + tp hydrate', () => {
     assert.equal(flat.dutch_speaking, 'Goed');
     assert.equal(flat.dutch_writing, 'Voldoende');
     assert.equal(flat.dutch_reading, 'Matig');
+    assert.deepEqual(flat.languages, [{ language: 'Turks', level: 'Voldoende' }]);
     assert.equal(flat.computer_skills, '3');
     assert.equal(flat.computer_skills_description, 'Word, Excel');
   });

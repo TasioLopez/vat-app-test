@@ -20,6 +20,7 @@ Conflict: wat het intake duidelijk aangeeft (bijv. ☒ Auto ☐ Fiets ☐ OV) wi
 
 TAAL / RIJBEWIJS:
 - Als de bron zegt dat de werknemer Nederlands spreekt én schrijft, en lezen niet zwakker vermeldt, zet dutch_speaking, dutch_writing én dutch_reading op hetzelfde niveau (meestal "Goed").
+- Andere talen (Turks, Engels, Arabisch, …) → languages: [{language, level}] met overall Goed|Voldoende|Matig wanneer genoemd; geen Nederlands in languages; geen niveaus verzinnen.
 - Rijbewijs: alleen zetten bij expliciete vermelding of aangevinkte rijbewijs-checkbox (☒ B / BE / …). NOOIT afleiden uit vervoer Auto alleen wanneer een intakeformulier met rijbewijs-checkboxes aanwezig is (ook als alle ☐). Zonder intake-PDF en zonder genoemd type mag Auto als zwakke hint voor B — liever weglaten dan gissen.
 
 ${INTAKE_LAYOUT_V75_HINT}
@@ -40,6 +41,7 @@ other_employers (alleen echte werkgeversnamen uit "Andere werkgever:"; weglaten 
 transport_type (array: "Auto"|"Fiets"|"OV"|"Lopend" — alleen aangevinkt),
 drivers_license (boolean), drivers_license_type (array bijv. ["B"]),
 dutch_speaking, dutch_writing, dutch_reading ("Goed"|"Voldoende"|"Matig"|"Geen"),
+languages (array van {language, level} voor niet-Nederlands; level Goed|Voldoende|Matig of null),
 has_computer (boolean), computer_skills ("1"-"5": 1=Geen … 5=Expert),
 computer_skills_description (tekst tussen haakjes bij niveau en/of "Aanvullende programma's", bijv. "SAP ERP, WMS"),
 referent_first_name, referent_last_name, referent_function, referent_phone, referent_email, referent_gender.

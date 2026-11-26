@@ -2,6 +2,10 @@ import { parseContractHours } from '@/lib/employee/contract-hours';
 import { isEmptyGegevensField } from '@/lib/tp2026/gegevens-autofill';
 import { buildDoctorOrg } from '@/lib/intake/project';
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import {
+  languagesToOtherLanguagesString,
+  normalizeLanguageProficiencyList,
+} from '@/lib/languages/proficiency';
 import { normalizeStringArrayField } from '@/lib/utils';
 
 /** Shared facts that round-trip between the intake form and the worker record. */
@@ -45,6 +49,7 @@ export function intakeSharedFacts(raw: unknown): Record<string, unknown> {
   const data = ensureIntakeShape(raw);
   const drivers = data.s17.drivers_license_types;
   const transport = data.s17.transport_types;
+  const languages = normalizeLanguageProficiencyList(data.s17.languages);
   const facts: Record<string, unknown> = {
     contract_hours: parseContractHours(data.s2.contract_hours),
     is_ex_werknemer: data.s6.is_ex_werknemer,
@@ -52,6 +57,7 @@ export function intakeSharedFacts(raw: unknown): Record<string, unknown> {
     drivers_license: drivers.length > 0,
     drivers_license_type: drivers,
     transport_type: transport.length > 0 ? transport : null,
+    languages,
     has_computer: data.s17.has_pc || Boolean(data.s17.computer_skills),
     ad_report_concept: data.s6.ad_report_concept,
     fml_izp_lab_kind: data.s6.fml_izp_lab_kind || null,
@@ -180,6 +186,10 @@ export function overlayIntakeWithWorkerFacts(raw: unknown, facts: Record<string,
   if (hasFact(facts, 'transport_type')) {
     data.s17.transport_types = asStringArray(facts.transport_type);
   }
+  if (hasFact(facts, 'languages')) {
+    data.s17.languages = normalizeLanguageProficiencyList(facts.languages);
+    data.s17.other_languages = languagesToOtherLanguagesString(data.s17.languages);
+  }
   if (hasFact(facts, 'has_computer')) data.s17.has_pc = facts.has_computer === true;
   const name = [facts.first_name, facts.last_name]
     .filter((part) => typeof part === 'string' && part.trim())
@@ -207,6 +217,7 @@ export function blankIntakeSharedFacts(raw: unknown): IntakeData {
     dutch_speaking: null,
     dutch_writing: null,
     dutch_reading: null,
+    languages: [],
     first_sick_day: null,
     intake_date: null,
     registration_date: null,

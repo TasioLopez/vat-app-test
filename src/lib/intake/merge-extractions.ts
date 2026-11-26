@@ -1,4 +1,9 @@
 import { ensureIntakeShape, type IntakeData } from '@/lib/intake/schema';
+import {
+  languagesToOtherLanguagesString,
+  mergeLanguageProficiencyLists,
+  normalizeLanguageProficiencyList,
+} from '@/lib/languages/proficiency';
 
 function str(v: unknown): string {
   if (v == null) return '';
@@ -187,6 +192,15 @@ export function mergeExtractionsIntoIntake(
   data.s17.dutch_speaking = fillIfEmpty(data.s17.dutch_speaking, alg.dutch_speaking);
   data.s17.dutch_writing = fillIfEmpty(data.s17.dutch_writing, alg.dutch_writing);
   data.s17.dutch_reading = fillIfEmpty(data.s17.dutch_reading, alg.dutch_reading);
+  if (Array.isArray(alg.languages) && alg.languages.length > 0) {
+    data.s17.languages = mergeLanguageProficiencyLists(
+      data.s17.languages,
+      normalizeLanguageProficiencyList(alg.languages)
+    );
+    if (data.s17.languages.length > 0) {
+      data.s17.other_languages = languagesToOtherLanguagesString(data.s17.languages);
+    }
+  }
   data.s17.computer_skills = fillIfEmpty(data.s17.computer_skills, alg.computer_skills);
   data.s17.computer_skills_extra = fillIfEmpty(
     data.s17.computer_skills_extra,

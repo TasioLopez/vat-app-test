@@ -363,6 +363,7 @@ export type Database = {
           has_transport: boolean | null
           id: string
           is_ex_werknemer: boolean | null
+          languages: Json
           other_employers: string | null
           phone: string | null
           transport_type: string[] | null
@@ -392,6 +393,7 @@ export type Database = {
           has_transport?: boolean | null
           id?: string
           is_ex_werknemer?: boolean | null
+          languages?: Json
           other_employers?: string | null
           phone?: string | null
           transport_type?: string[] | null
@@ -421,6 +423,7 @@ export type Database = {
           has_transport?: boolean | null
           id?: string
           is_ex_werknemer?: boolean | null
+          languages?: Json
           other_employers?: string | null
           phone?: string | null
           transport_type?: string[] | null

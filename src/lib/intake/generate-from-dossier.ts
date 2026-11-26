@@ -363,7 +363,21 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         dutch_speaking: nullableString('Goed|Voldoende|Matig|Geen of null'),
         dutch_writing: nullableString('Goed|Voldoende|Matig|Geen of null'),
         dutch_reading: nullableString('Goed|Voldoende|Matig|Geen of null'),
-        other_languages: nullableString('Andere talen'),
+        languages: {
+          type: 'array',
+          description:
+            'Andere talen dan Nederlands: [{language, level}] met level Goed|Voldoende|Matig of leeg',
+          items: {
+            type: 'object',
+            properties: {
+              language: { type: 'string' },
+              level: nullableString('Goed|Voldoende|Matig of null'),
+            },
+            required: ['language', 'level'],
+            additionalProperties: false,
+          },
+        },
+        other_languages: nullableString('Legacy free-text; liever languages[] gebruiken'),
       },
       required: [
         'bijzonderheden',
@@ -384,6 +398,7 @@ export const INTAKE_GENERATE_JSON_SCHEMA = {
         'dutch_speaking',
         'dutch_writing',
         'dutch_reading',
+        'languages',
         'other_languages',
       ],
       additionalProperties: false,

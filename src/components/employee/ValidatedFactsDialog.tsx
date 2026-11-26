@@ -21,6 +21,7 @@ const LABELS: Record<string, string> = {
   dutch_speaking: 'Spreekvaardigheid',
   dutch_writing: 'Schrijfvaardigheid',
   dutch_reading: 'Leesvaardigheid',
+  languages: 'Andere talen',
   has_computer: 'Beschikking over een PC',
   computer_skills: 'Computervaardigheden',
   computer_skills_description: 'Toelichting computervaardigheden',

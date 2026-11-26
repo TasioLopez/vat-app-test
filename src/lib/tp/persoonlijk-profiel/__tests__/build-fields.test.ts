@@ -260,6 +260,15 @@ describe('assembleAlinea2FromProfileFacts', () => {
     assert.doesNotMatch(text, /goed genoeg/);
   });
 
+  it('prefers structured languages[] over legacy andere_talen free text', () => {
+    const text = assembleAlinea2FromProfileFacts({
+      languages: [{ language: 'Turks', level: 'Voldoende' }],
+      andere_talen: 'Engels goed',
+    });
+    assert.match(text, /De Turkse taal beheerst werknemer voldoende/);
+    assert.doesNotMatch(text, /Engels/);
+  });
+
   it('groups unequal Dutch levels and names a missing skill on its own', () => {
     const text = assembleAlinea2FromProfileFacts({
       nederlands_spreken: 'Goed',

@@ -4,6 +4,10 @@ import {
   type EmployeeDetailFieldKey,
   type EmployeeFieldReviewStatus,
 } from '@/lib/employee/field-review';
+import {
+  formatLanguageProficiencyList,
+  normalizeLanguageProficiencyList,
+} from '@/lib/languages/proficiency';
 import { formatPhoneForDisplay } from '@/lib/phone/format-dutch-display';
 import { formatComputerSkills, isAbsentText, normalizeStringArrayField } from '@/lib/utils';
 
@@ -382,6 +386,17 @@ export function buildEmployeeProfileView(input: ProfileViewInput): EmployeeProfi
       text: languageParts.join(' · '),
       chips: [],
       ...reviewState(languageFields),
+    });
+  }
+
+  const otherLanguages = normalizeLanguageProficiencyList(details.languages);
+  if (otherLanguages.length > 0) {
+    taalDigitaal.push({
+      id: 'languages',
+      label: 'Andere talen',
+      text: formatLanguageProficiencyList(otherLanguages),
+      chips: [],
+      ...reviewState(['languages']),
     });
   }
 

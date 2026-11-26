@@ -1,6 +1,10 @@
 import { filterAllowedDriversLicenseTypes } from '@/lib/document-analysis/intakeCheckboxText';
 import { normalizeDutchLevel } from '@/lib/document-analysis/nullSafeDetails';
 import {
+  languagesToOtherLanguagesString,
+  normalizeLanguageProficiencyList,
+} from '@/lib/languages/proficiency';
+import {
   COMPUTER_SKILLS_OPTIONS,
   DRIVERS_LICENSE_TYPE_VALUES,
   filterAllowedTransportTypes,
@@ -85,6 +89,8 @@ export function normalizeIntakeControlledFields(raw: IntakeData): IntakeData {
   s17.dutch_speaking = normalizeDutchLevel(s17.dutch_speaking) || '';
   s17.dutch_writing = normalizeDutchLevel(s17.dutch_writing) || '';
   s17.dutch_reading = normalizeDutchLevel(s17.dutch_reading) || '';
+  s17.languages = normalizeLanguageProficiencyList(s17.languages);
+  s17.other_languages = languagesToOtherLanguagesString(s17.languages) || s17.other_languages;
 
   const computer = normalizeComputerFields(s17.computer_skills, s17.computer_skills_extra);
   s17.computer_skills = computer.computer_skills;
@@ -112,6 +118,10 @@ export function normalizeWorkerFactValues(facts: Record<string, unknown>): Recor
     if (Object.prototype.hasOwnProperty.call(out, key)) {
       out[key] = normalizeDutchLevel(out[key]) ?? null;
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(out, 'languages')) {
+    out.languages = normalizeLanguageProficiencyList(out.languages);
   }
 
   const levelRaw = typeof out.computer_skills === 'string' ? out.computer_skills : '';

@@ -49,6 +49,7 @@ Gecontroleerde waarden (exact, anders leeg):
 - education_level: Praktijkonderwijs | VMBO | Huishoudschool | LTS | LHNO | HAVO | VWO | MBO 1 | MBO 2 | MTS | MBO 3 | MBO 4 | HBO | WO (hoofdletters zoals hier; niet "Hbo")
 - computer_skills: alleen "1" | "2" | "3" | "4" | "5" (1=Geen, 2=Basis, 3=Gemiddeld/Word+Excel, 4=Geavanceerd, 5=Expert). Programma's en toelichting → computer_skills_extra, nooit in computer_skills
 - dutch_speaking / dutch_writing / dutch_reading: alleen Goed | Voldoende | Matig | Geen; onbekend → leeg (niet raden)
+- languages: array [{language, level}] voor andere talen dan Nederlands (bijv. Turks, Engels). level alleen Goed | Voldoende | Matig wanneer genoemd; onbekend → rij weglaten of level leeg. Geen Nederlands-rij. Geen niveaus verzinnen.
 - drivers_license_types: alleen toegestane codes (AM, A1, A2, A, B, BE, B+, C1, C1E, C, CE, D1, D1E, D, DE, T, Code 95). Alleen bij expliciete vermelding in het dossier. NOOIT afleiden uit vervoer Auto alleen
 - transport_types: alleen Auto | Fiets | OV | Lopend
 - praktische_belemmeringen: alleen aantoonbare praktische (niet-medische) belemmeringen die de werknemer noemde. Zijn er geen of niet benoemd: laat het veld LEGE STRING (geen standaardzin of boilerplate verzinnen; TP vult de standaardzin later).

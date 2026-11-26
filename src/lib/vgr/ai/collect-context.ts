@@ -157,6 +157,20 @@ function gegevensBlock(data: VGRData): string {
     line('Rijbewijs', data.has_drivers_license === true ? 'ja' : data.has_drivers_license === false ? 'nee' : ''),
     line('Eigen vervoer', data.has_transport === true ? 'ja' : data.has_transport === false ? 'nee' : ''),
     line('Taalniveau Nederlands', data.dutch_speaking || data.language_level),
+    line(
+      'Andere talen',
+      Array.isArray(data.languages)
+        ? (data.languages as { language?: string; level?: string }[])
+            .map((row) => {
+              const language = String(row?.language ?? '').trim();
+              const level = String(row?.level ?? '').trim();
+              if (!language) return '';
+              return level ? `${language} (${level})` : language;
+            })
+            .filter(Boolean)
+            .join('; ')
+        : ''
+    ),
     line('FML/IZP/LAB datum', formatNLDate(data.fml_izp_lab_date)),
     line('AD-rapport datum', formatNLDate(data.ad_report_date)),
     line('Bedrijfsarts', data.occupational_doctor_name),
