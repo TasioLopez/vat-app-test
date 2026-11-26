@@ -45,6 +45,9 @@ const employeeDetailsSchema = z.object({
   dutch_speaking: z.string().optional(),
   dutch_writing: z.string().optional(),
   dutch_reading: z.string().optional(),
+  languages: z
+    .array(z.object({ language: z.string(), level: z.string() }))
+    .optional(),
 });
 
 export const employeeValidation = {

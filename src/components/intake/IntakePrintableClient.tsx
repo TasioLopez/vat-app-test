@@ -189,6 +189,19 @@ export default function IntakePrintableClient({ data }: { data: unknown }) {
         <Row label="NL spreken" value={intake.s17.dutch_speaking} />
         <Row label="NL schrijven" value={intake.s17.dutch_writing} />
         <Row label="NL lezen" value={intake.s17.dutch_reading} />
+        <Row
+          label="Andere talen"
+          value={
+            intake.s17.languages.length > 0
+              ? intake.s17.languages
+                  .map((row) =>
+                    row.level ? `${row.language} (${row.level})` : row.language
+                  )
+                  .filter(Boolean)
+                  .join('; ')
+              : intake.s17.other_languages
+          }
+        />
       </SectionBlock>
     </div>
   );

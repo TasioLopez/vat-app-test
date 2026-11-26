@@ -1,5 +1,9 @@
 import { isIntakeDocumentType } from '@/lib/document-analysis/storage';
 import type { IntakeData, IntakeEducationRow, IntakeWorkExperienceRow } from '@/lib/intake/schema';
+import {
+  formatLanguageProficiencyList,
+  normalizeLanguageProficiencyList,
+} from '@/lib/languages/proficiency';
 import { formatComputerSkillsOption } from '@/lib/tp2026/gegevens-field-options';
 import type { IntakeSectie3Content } from '@/lib/tp/intake-sectie3/schema';
 import type { IntakeSectie5Content } from '@/lib/tp/intake-sectie5/schema';
@@ -115,7 +119,10 @@ function profileSections(intake: IntakeData): string[] {
       field('Nederlands spreken', intake.s17.dutch_speaking),
       field('Nederlands schrijven', intake.s17.dutch_writing),
       field('Nederlands lezen', intake.s17.dutch_reading),
-      field('Andere talen', intake.s17.other_languages),
+      field(
+        'Andere talen',
+        formatLanguageProficiencyList(intake.s17.languages) || intake.s17.other_languages
+      ),
     ]),
   ];
 }
@@ -158,7 +165,10 @@ export function intakeTextForSociale(intake: IntakeData): string {
       field('Nederlands spreken', intake.s17.dutch_speaking),
       field('Nederlands schrijven', intake.s17.dutch_writing),
       field('Nederlands lezen', intake.s17.dutch_reading),
-      field('Andere talen', intake.s17.other_languages),
+      field(
+        'Andere talen',
+        formatLanguageProficiencyList(intake.s17.languages) || intake.s17.other_languages
+      ),
     ]),
   ]);
 }
@@ -211,7 +221,14 @@ export function intakeFactsForPersoonlijkProfiel(intake: IntakeData): Record<str
   putPersoonlijkFact(facts, 'nederlands_spreken', s17.dutch_speaking);
   putPersoonlijkFact(facts, 'nederlands_schrijven', s17.dutch_writing);
   putPersoonlijkFact(facts, 'nederlands_lezen', s17.dutch_reading);
-  putPersoonlijkFact(facts, 'andere_talen', s17.other_languages);
+  const languages = normalizeLanguageProficiencyList(s17.languages);
+  putPersoonlijkFact(facts, 'languages', languages);
+  // Legacy free-text bridge for older consumers / fallback parser.
+  putPersoonlijkFact(
+    facts,
+    'andere_talen',
+    formatLanguageProficiencyList(languages) || s17.other_languages
+  );
   return facts;
 }
 
@@ -244,6 +261,9 @@ export function workerFactsForPersoonlijkProfiel(
   putPersoonlijkFact(facts, 'nederlands_spreken', workerFacts.dutch_speaking);
   putPersoonlijkFact(facts, 'nederlands_schrijven', workerFacts.dutch_writing);
   putPersoonlijkFact(facts, 'nederlands_lezen', workerFacts.dutch_reading);
+  const languages = normalizeLanguageProficiencyList(workerFacts.languages);
+  putPersoonlijkFact(facts, 'languages', languages);
+  putPersoonlijkFact(facts, 'andere_talen', formatLanguageProficiencyList(languages));
   return facts;
 }
 

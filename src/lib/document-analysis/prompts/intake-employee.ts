@@ -32,6 +32,7 @@ Vervoer:
 Talen (Nederlands, G/R/O):
 - dutch_speaking, dutch_writing, dutch_reading: exact "Goed", "Voldoende", "Matig", of "Geen" alleen als dat vakje expliciet is aangevinkt
   (G → "Goed", R → "Voldoende", O → "Matig"; geen vakje / onbekend → weglaten of null — nooit fake "Geen")
+- languages: [{language, level}] voor Engels/Duits/Overig en andere genoemde talen (niet Nederlands). Overall niveau Goed|Voldoende|Matig wanneer G/R/O of niveau genoemd is; anders weglaten. Geen rijen verzinnen.
 
 Computer:
 - has_computer: true/false (PC/Laptop aangevinkt)

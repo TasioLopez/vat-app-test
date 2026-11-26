@@ -5,6 +5,10 @@ import {
   formatCvComputerSkills,
   formatCvDutchLanguageLevels,
 } from '@/lib/cv/format-display';
+import {
+  normalizeLanguageProficiencyList,
+  type LanguageProficiency,
+} from '@/lib/languages/proficiency';
 import { normalizeEducationLevel } from '@/lib/tp2026/gegevens-field-options';
 
 type EmployeeRow = {
@@ -27,6 +31,7 @@ type DetailsRow = {
   dutch_speaking?: string | null;
   dutch_writing?: string | null;
   dutch_reading?: string | null;
+  languages?: LanguageProficiency[] | null;
   drivers_license?: boolean | null;
   /** DB may return string[] or legacy string / JSON string */
   drivers_license_type?: string | string[] | null;
@@ -190,19 +195,27 @@ function seedDigitalSkills(details: DetailsRow): string | undefined {
 }
 
 function seedLanguages(details: DetailsRow): CvLanguageItem[] {
-  const level = formatCvDutchLanguageLevels(
+  const rows: CvLanguageItem[] = [];
+  const dutchLevel = formatCvDutchLanguageLevels(
     details.dutch_speaking,
     details.dutch_writing,
     details.dutch_reading
   );
-  if (!level) return [];
-  return [
-    {
+  if (dutchLevel) {
+    rows.push({
       id: newCvId(),
       language: 'Nederlands',
-      level,
-    },
-  ];
+      level: dutchLevel,
+    });
+  }
+  for (const row of normalizeLanguageProficiencyList(details.languages)) {
+    rows.push({
+      id: newCvId(),
+      language: row.language,
+      level: row.level,
+    });
+  }
+  return rows;
 }
 
 function seedInterests(details: DetailsRow): CvListItem[] {

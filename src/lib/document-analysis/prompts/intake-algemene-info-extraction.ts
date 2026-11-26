@@ -53,6 +53,7 @@ RIJBEWIJS — beoordeel ELK vakje apart (geen array raden):
 
 TALEN / COMPUTER:
 - dutch_speaking, dutch_writing, dutch_reading: "Goed", "Voldoende", "Matig", "Geen" alleen als dat vakje expliciet is aangevinkt; geen vakje / onbekend → null (nooit fake "Geen")
+- languages: array van {language, level} voor andere talen (Engels, Duits, Overig: Turks, …). Overall niveau uit G/R/O (spreken wint; anders eerste aangevinkte skill). Geen Nederlands-rij. Onbekend niveau → level null of rij weglaten. Geen rijen verzinnen.
 - has_computer: PC/laptop aangevinkt
 - computer_skills: "1" t/m "5" (aangevinkt niveau)
 - computer_skills_description: haakjestekst bij niveau en/of "Aanvullende programma's" (null indien leeg)

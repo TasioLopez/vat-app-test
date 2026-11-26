@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   detectComputerFromIntakeText,
   detectDutchLevelsFromIntakeText,
+  detectOtherLanguagesFromIntakeText,
 } from '../intakeSectie17Text';
 
 describe('detectComputerFromIntakeText', () => {
@@ -63,5 +64,35 @@ Engels
 `;
     const result = detectDutchLevelsFromIntakeText(text);
     assert.equal(result, null);
+  });
+});
+
+describe('detectOtherLanguagesFromIntakeText', () => {
+  it('reads Engels G/R/O as a single overall level', () => {
+    const text = `
+Nederlands
+Spreken ☒ ☐ ☐
+Schrijven ☒ ☐ ☐
+Lezen ☒ ☐ ☐
+Engels
+Spreken ☐ ☒ ☐
+Schrijven ☐ ☐ ☒
+Lezen ☐ ☐ ☐
+Duits
+`;
+    const result = detectOtherLanguagesFromIntakeText(text);
+    assert.deepEqual(result, [{ language: 'Engels', level: 'Voldoende' }]);
+  });
+
+  it('reads Overig: Turks with glyphs', () => {
+    const text = `
+Overig: Turks
+Spreken ☒ ☐ ☐
+Schrijven ☐ ☐ ☐
+Lezen ☐ ☐ ☐
+Belangrijke
+`;
+    const result = detectOtherLanguagesFromIntakeText(text);
+    assert.deepEqual(result, [{ language: 'Turks', level: 'Goed' }]);
   });
 });

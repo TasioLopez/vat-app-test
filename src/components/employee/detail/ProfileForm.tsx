@@ -33,6 +33,8 @@ import {
   removeTransportType,
   splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
+import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
+import { OtherLanguagesEditor } from '@/components/languages/OtherLanguagesEditor';
 import { cn, isAbsentText, normalizeStringArrayField } from '@/lib/utils';
 import {
   CARD_CLASS,
@@ -723,6 +725,25 @@ export function ProfileForm({
               </ValidatableField>
             </Field>
           ))}
+        </div>
+
+        <div
+          className={cn(
+            'rounded-md border border-transparent p-1',
+            statusSurfaceClass(getStatus('languages'))
+          )}
+        >
+          <OtherLanguagesEditor
+            value={normalizeLanguageProficiencyList(details?.languages)}
+            onChange={(languages) => onDetailChange('languages', languages)}
+          />
+          <div className="mt-2 flex justify-end">
+            <FieldValidateButton
+              onClick={() => onValidate('languages')}
+              disabled={!canValidate('languages')}
+              label="Valideer andere talen"
+            />
+          </div>
         </div>
 
         <Field label="Computervaardigheden" htmlFor="employee-computer-skills">

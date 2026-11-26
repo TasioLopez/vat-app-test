@@ -1,6 +1,7 @@
 import { normalizePhoneForStorage } from '@/lib/phone/format-dutch-display';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
 import { parseContractHours } from '@/lib/employee/contract-hours';
+import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
 import { normalizeStringArrayField } from '@/lib/utils';
 
 export type EmployeeFieldReviewStatus = 'review' | 'validated';
@@ -23,6 +24,7 @@ export type EmployeeDetailFieldKey =
   | 'dutch_speaking'
   | 'dutch_writing'
   | 'dutch_reading'
+  | 'languages'
   | 'has_computer'
   | 'computer_skills'
   | 'computer_skills_description'
@@ -44,6 +46,7 @@ export const EMPLOYEE_DETAIL_FIELD_KEYS: EmployeeDetailFieldKey[] = [
   'dutch_speaking',
   'dutch_writing',
   'dutch_reading',
+  'languages',
   'has_computer',
   'computer_skills',
   'computer_skills_description',
@@ -69,6 +72,7 @@ const FIELD_KEY_SET = new Set<string>([
   'dutch_speaking',
   'dutch_writing',
   'dutch_reading',
+  'languages',
   'has_computer',
   'computer_skills',
   'computer_skills_description',
@@ -129,6 +133,9 @@ function normalizeFieldValue(
     case 'transport_type':
     case 'drivers_license_type': {
       return normalizeStringArray(value);
+    }
+    case 'languages': {
+      return normalizeLanguageProficiencyList(value);
     }
     case 'contract_hours': {
       return parseContractHours(value);

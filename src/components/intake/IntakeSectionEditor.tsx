@@ -11,6 +11,8 @@ import {
   getComputerSkillsDefaultDescription,
   nextComputerSkillsDescriptionOnLevelChange,
 } from '@/lib/tp2026/gegevens-field-options';
+import { languagesToOtherLanguagesString } from '@/lib/languages/proficiency';
+import { OtherLanguagesEditor } from '@/components/languages/OtherLanguagesEditor';
 import { IntakeDossierHeader } from '@/components/intake/IntakeDossierHeader';
 import {
   IntakeField,
@@ -422,6 +424,15 @@ export function IntakeSectionEditor({ data, onChange }: Props) {
                 options={DUTCH_LANGUAGE_OPTIONS}
               />
             </div>
+            <OtherLanguagesEditor
+              value={data.s17.languages}
+              onChange={(languages) =>
+                patch('s17', {
+                  languages,
+                  other_languages: languagesToOtherLanguagesString(languages),
+                })
+              }
+            />
           </div>
         );
       default:

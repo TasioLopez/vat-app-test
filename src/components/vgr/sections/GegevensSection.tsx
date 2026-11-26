@@ -418,6 +418,22 @@ function Page2({ data, pageNumber, includeLegenda }: { data: VGRData; pageNumber
             <DataRow label="Spreekvaardigheid NL-taal" value={data.dutch_speaking || '—'} />
             <DataRow label="Schrijfvaardigheid NL-taal" value={data.dutch_writing || '—'} />
             <DataRow label="Leesvaardigheid NL-taal" value={data.dutch_reading || '—'} />
+            <DataRow
+              label="Andere talen"
+              value={
+                Array.isArray(data.languages) && data.languages.length > 0
+                  ? (data.languages as { language?: string; level?: string }[])
+                      .map((row) => {
+                        const language = String(row?.language ?? '').trim();
+                        const level = String(row?.level ?? '').trim();
+                        if (!language) return '';
+                        return level ? `${language} (${level})` : language;
+                      })
+                      .filter(Boolean)
+                      .join('; ')
+                  : '—'
+              }
+            />
             <DataRow label="Beschikt over een PC" value={boolToJaNee(data.has_computer)} />
             <DataRow label="PC-vaardigheden" value={pc} />
             <DataRow label="Aantal contracturen" value={data.contract_hours ? `${data.contract_hours} uur per week` : '—'} />

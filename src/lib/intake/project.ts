@@ -1,6 +1,7 @@
 import type { IntakeData } from '@/lib/intake/schema';
 import { ensureIntakeShape } from '@/lib/intake/schema';
 import { parseContractHours } from '@/lib/employee/contract-hours';
+import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
 import { resolvePraktischeBelemmeringenValue } from '@/lib/tp2026/mapping';
 
 function splitReferentName(full: string): { first: string; last: string } {
@@ -59,6 +60,7 @@ export function intakeToGegevensFields(raw: unknown): Record<string, unknown> {
     dutch_speaking: data.s17.dutch_speaking || null,
     dutch_writing: data.s17.dutch_writing || null,
     dutch_reading: data.s17.dutch_reading || null,
+    languages: normalizeLanguageProficiencyList(data.s17.languages),
     has_computer: data.s17.has_pc || data.s17.computer_skills ? true : null,
     computer_skills: data.s17.computer_skills || null,
     computer_skills_description: data.s17.computer_skills_extra || null,

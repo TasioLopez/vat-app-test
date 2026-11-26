@@ -1,6 +1,14 @@
 /** Intake document layout key and empty/shaped data_json for sections 1–17. */
 
+import {
+  languagesToOtherLanguagesString,
+  normalizeLanguageProficiencyList,
+  parseOtherLanguagesFreeText,
+  type LanguageProficiency,
+} from '@/lib/languages/proficiency';
 import { normalizeStringArrayField } from '@/lib/utils';
+
+export type { LanguageProficiency };
 
 export const INTAKE_LAYOUT_KEY = 'intake_v1' as const;
 export type IntakeLayoutKey = typeof INTAKE_LAYOUT_KEY;
@@ -200,6 +208,9 @@ export type IntakeSection17 = {
   dutch_speaking: string;
   dutch_writing: string;
   dutch_reading: string;
+  /** Non-Dutch languages with a single overall level. Nederlands stays in dutch_*. */
+  languages: LanguageProficiency[];
+  /** Legacy free-text; dual-written from `languages` when structured rows exist. */
   other_languages: string;
 };
 
@@ -331,6 +342,7 @@ export function createEmptyIntakeData(): IntakeData {
       dutch_speaking: '',
       dutch_writing: '',
       dutch_reading: '',
+      languages: [],
       other_languages: '',
     },
   };
@@ -513,10 +525,24 @@ export function ensureIntakeShape(raw: unknown): IntakeData {
       has_pc: bool(asRecord(src.s17).has_pc, false),
       has_smartphone: bool(asRecord(src.s17).has_smartphone, false),
       has_tablet: bool(asRecord(src.s17).has_tablet, false),
+      languages: normalizeS17Languages(asRecord(src.s17)),
+      other_languages: str(asRecord(src.s17).other_languages),
     } as IntakeSection17,
   };
 
+  // Keep legacy free-text in sync when structured rows exist.
+  if (shaped.s17.languages.length > 0) {
+    shaped.s17.other_languages = languagesToOtherLanguagesString(shaped.s17.languages);
+  }
+
   return shaped;
+}
+
+/** Prefer structured `languages`; migrate legacy `other_languages` when empty. */
+function normalizeS17Languages(s17: Record<string, unknown>): LanguageProficiency[] {
+  const structured = normalizeLanguageProficiencyList(s17.languages);
+  if (structured.length > 0) return structured;
+  return parseOtherLanguagesFreeText(str(s17.other_languages));
 }
 
 /** Lucide icon keys rendered in the intake left nav. */

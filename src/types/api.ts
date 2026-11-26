@@ -40,6 +40,7 @@ export interface EmployeeDetails {
   dutch_speaking?: string;
   dutch_writing?: string;
   dutch_reading?: string;
+  languages?: { language: string; level: string }[];
   created_at: string;
   updated_at: string;
 }
@@ -128,6 +129,7 @@ export interface EmployeeFormData {
   dutch_speaking?: string;
   dutch_writing?: string;
   dutch_reading?: string;
+  languages?: { language: string; level: string }[];
 }
 
 export interface ClientFormData {

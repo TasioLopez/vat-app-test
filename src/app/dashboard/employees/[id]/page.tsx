@@ -21,6 +21,7 @@ import {
     repairEmployeeEducationFields,
 } from '@/lib/tp2026/gegevens-field-options';
 import { normalizeWorkExperienceTitles } from '@/lib/tp2026/intake-algemene-info';
+import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
 import { trackAccess } from '@/lib/tracking';
 import { ReferentEditDialog } from '@/components/employee/ReferentEditDialog';
 import { type AutofillProgressState } from '@/components/ui/AutofillProgressOverlay';
@@ -100,6 +101,7 @@ type EmployeeDetails = {
     dutch_speaking?: string;
     dutch_writing?: string;
     dutch_reading?: string;
+    languages?: { language: string; level: string }[] | null;
     has_computer?: boolean;
     computer_skills?: string;
     computer_skills_description?: string;
@@ -419,6 +421,9 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
                     dutch_speaking: data.dutch_speaking ?? undefined,
                     dutch_writing: data.dutch_writing ?? undefined,
                     dutch_reading: data.dutch_reading ?? undefined,
+                    languages: normalizeLanguageProficiencyList(
+                      (data as { languages?: unknown }).languages
+                    ),
                     has_computer: data.has_computer ?? undefined,
                     computer_skills: data.computer_skills ?? undefined,
                     computer_skills_description: data.computer_skills_description ?? undefined,

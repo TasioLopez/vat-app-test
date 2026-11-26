@@ -1,3 +1,8 @@
+import {
+  languageProficiencySentences,
+  normalizeLanguageProficiencyList,
+  type LanguageProficiency,
+} from '@/lib/languages/proficiency';
 import { getComputerSkillsLabel } from '@/lib/tp2026/gegevens-field-options';
 import { isComputerSkillsMetaDescription, normalizeStringArrayField } from '@/lib/utils';
 import {
@@ -263,6 +268,7 @@ const OTHER_LANGUAGE_SUBJECT: Record<string, string> = {
   spaans: 'De Spaanse taal',
 };
 
+/** Legacy free-text parser — used only when structured `languages` is absent. */
 function otherLanguageSentences(raw: string): string[] {
   return raw
     .split(/\s*;\s*|\n+/)
@@ -279,6 +285,13 @@ function otherLanguageSentences(raw: string): string[] {
       const subject = OTHER_LANGUAGE_SUBJECT[name.toLowerCase()] ?? `Het ${name}`;
       return `${subject} beheerst werknemer ${level}.`;
     });
+}
+
+function resolveOtherLanguageSentences(facts: PersoonlijkProfileFacts): string[] {
+  const structured = normalizeLanguageProficiencyList(facts.languages as LanguageProficiency[]);
+  if (structured.length > 0) return languageProficiencySentences(structured);
+  const otherLang = String(facts.andere_talen ?? '').trim();
+  return otherLang ? otherLanguageSentences(otherLang) : [];
 }
 
 function computerSentence(facts: PersoonlijkProfileFacts): string | null {
@@ -327,12 +340,11 @@ function computerSentence(facts: PersoonlijkProfileFacts): string | null {
  * Only emits clauses for facts that are present, written as report sentences.
  */
 export function assembleAlinea2FromProfileFacts(facts: PersoonlijkProfileFacts): string {
-  const otherLang = String(facts.andere_talen ?? '').trim();
   const computer = computerSentence(facts);
   return joinSentences([
     ...mobilitySentence(facts),
     ...dutchSentence(facts),
-    ...(otherLang ? otherLanguageSentences(otherLang) : []),
+    ...resolveOtherLanguageSentences(facts),
     ...(computer ? [computer] : []),
   ]);
 }

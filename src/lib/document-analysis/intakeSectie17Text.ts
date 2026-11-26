@@ -1,4 +1,8 @@
 import {
+  normalizeLanguageProficiencyList,
+  type LanguageProficiency,
+} from '@/lib/languages/proficiency';
+import {
   detectDriversLicenseFromIntakeText,
   detectTransportFromIntakeText,
 } from './intakeCheckboxText';
@@ -22,6 +26,13 @@ function levelFromGlyphTriple(glyphs: string[]): string | null {
   if (CHECKED.test(o!)) return 'Matig';
   // All three unchecked → unknown (not fake "Geen")
   return null;
+}
+
+function overallLevelFromSkillGlyphs(glyphs: string[]): string | null {
+  const speaking = levelFromGlyphTriple(glyphs.slice(0, 3));
+  const writing = levelFromGlyphTriple(glyphs.slice(3, 6));
+  const reading = levelFromGlyphTriple(glyphs.slice(6, 9));
+  return speaking || writing || reading || null;
 }
 
 /**
@@ -58,6 +69,55 @@ export function detectDutchLevelsFromIntakeText(
   return Object.keys(out).length > 0 ? out : null;
 }
 
+/**
+ * Non-Dutch paper rows (Engels / Duits / Overig …) → single overall level each.
+ * Prefer Spreken when present; otherwise first available skill of the G/R/O triple.
+ */
+export function detectOtherLanguagesFromIntakeText(
+  text: string | null | undefined
+): LanguageProficiency[] {
+  if (!text) return [];
+  const normalized = normalizeIntakeText(text);
+  const out: LanguageProficiency[] = [];
+
+  const namedRows: { name: string; pattern: RegExp }[] = [
+    {
+      name: 'Engels',
+      pattern: /Engels\s+([\s\S]{0,120}?)(?=Duits\b|Overig\b|Belangrijke\b|Computervaardigheden\b|$)/i,
+    },
+    {
+      name: 'Duits',
+      pattern: /Duits\s+([\s\S]{0,120}?)(?=Engels\b|Overig\b|Belangrijke\b|Computervaardigheden\b|$)/i,
+    },
+  ];
+
+  for (const { name, pattern } of namedRows) {
+    const row = normalized.match(pattern)?.[1] ?? '';
+    const glyphs = [...row.matchAll(/[☒☑✓✔☐□]/g)].map((m) => m[0]!);
+    const level = overallLevelFromSkillGlyphs(glyphs);
+    if (level) out.push({ language: name, level });
+  }
+
+  // "Overig: Turks" / "Overig Turks" with optional G/R/O glyphs after
+  const overigMatches = [
+    ...normalized.matchAll(
+      /Overig(?:e)?(?:\s+talen?)?\s*[:\-–—]?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-]{1,40}?)(?=\s*(?:[☒☑✓✔☐□]|Spreken|Schrijven|Lezen|Engels|Duits|Belangrijke|Computervaardigheden|$))/gi
+    ),
+  ];
+  for (const match of overigMatches) {
+    const language = String(match[1] ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/[,:;]+$/, '');
+    if (!language || /^(nederlands|engels|duits)$/i.test(language)) continue;
+    const after = normalized.slice(match.index! + match[0].length, match.index! + match[0].length + 120);
+    const glyphs = [...after.matchAll(/[☒☑✓✔☐□]/g)].map((m) => m[0]!);
+    const level = overallLevelFromSkillGlyphs(glyphs);
+    if (level) out.push({ language, level });
+  }
+
+  return normalizeLanguageProficiencyList(out);
+}
 /**
  * Computervaardigheden block + PC/laptop checkbox.
  */
@@ -173,6 +233,18 @@ export function fillEmployeeDetailsFromIntakeText(
         filled.push(key);
       }
     }
+  }
+
+  const otherLanguages = detectOtherLanguagesFromIntakeText(text);
+  if (otherLanguages.length > 0) {
+    const existing = normalizeLanguageProficiencyList(mapped.languages);
+    const byKey = new Map(existing.map((row) => [row.language.toLowerCase(), row]));
+    for (const row of otherLanguages) {
+      const key = row.language.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, row);
+    }
+    mapped.languages = [...byKey.values()];
+    filled.push('languages');
   }
 
   const computer = detectComputerFromIntakeText(text);

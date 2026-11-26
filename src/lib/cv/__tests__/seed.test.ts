@@ -39,4 +39,20 @@ describe('seedCvModelFromEmployee', () => {
     assert.equal(model.languages[0].language, 'Nederlands');
     assert.ok(model.languages[0].level?.includes('spreek'));
   });
+
+  it('seeds Nederlands plus structured other languages', () => {
+    const model = seedCvModelFromEmployee(
+      { first_name: 'Jan' },
+      {
+        dutch_speaking: 'Goed',
+        dutch_writing: 'Goed',
+        dutch_reading: 'Goed',
+        languages: [{ language: 'Turks', level: 'Voldoende' }],
+      }
+    );
+    assert.equal(model.languages.length, 2);
+    assert.equal(model.languages[0].language, 'Nederlands');
+    assert.equal(model.languages[1].language, 'Turks');
+    assert.equal(model.languages[1].level, 'Voldoende');
+  });
 });
