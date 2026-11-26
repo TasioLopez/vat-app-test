@@ -101,6 +101,7 @@ type EmployeeDetails = {
     dutch_speaking?: string;
     dutch_writing?: string;
     dutch_reading?: string;
+    languages?: { language: string; level: string }[] | null;
     has_computer?: boolean;
     computer_skills?: string;
     computer_skills_description?: string;
