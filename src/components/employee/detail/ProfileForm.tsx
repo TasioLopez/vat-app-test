@@ -33,7 +33,7 @@ import {
   removeTransportType,
   splitTransportTypes,
 } from '@/lib/tp2026/gegevens-field-options';
-import { normalizeLanguageProficiencyList } from '@/lib/languages/proficiency';
+import { coerceLanguageProficiencyListForUi } from '@/lib/languages/proficiency';
 import { OtherLanguagesEditor } from '@/components/languages/OtherLanguagesEditor';
 import { cn, isAbsentText, normalizeStringArrayField } from '@/lib/utils';
 import {
@@ -734,7 +734,7 @@ export function ProfileForm({
           )}
         >
           <OtherLanguagesEditor
-            value={normalizeLanguageProficiencyList(details?.languages)}
+            value={coerceLanguageProficiencyListForUi(details?.languages)}
             onChange={(languages) => onDetailChange('languages', languages)}
           />
           <div className="mt-2 flex justify-end">

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  coerceLanguageProficiencyListForUi,
   languageProficiencySentences,
   mergeLanguageProficiencyLists,
   normalizeLanguageProficiencyList,
@@ -87,5 +88,45 @@ describe('normalizeLanguageProficiencyList', () => {
       ]),
       [{ language: 'Engels', level: 'Goed' }]
     );
+  });
+
+  it('drops empty draft rows (persist path)', () => {
+    assert.deepEqual(
+      normalizeLanguageProficiencyList([{ language: '', level: 'Voldoende' }]),
+      []
+    );
+  });
+});
+
+describe('coerceLanguageProficiencyListForUi', () => {
+  it('keeps empty draft rows from Taal toevoegen', () => {
+    assert.deepEqual(
+      coerceLanguageProficiencyListForUi([{ language: '', level: 'Voldoende' }]),
+      [{ language: '', level: 'Voldoende' }]
+    );
+  });
+
+  it('keeps drafts alongside completed languages', () => {
+    assert.deepEqual(
+      coerceLanguageProficiencyListForUi([
+        { language: 'Turks', level: 'Goed' },
+        { language: '', level: 'Voldoende' },
+      ]),
+      [
+        { language: 'Turks', level: 'Goed' },
+        { language: '', level: 'Voldoende' },
+      ]
+    );
+  });
+});
+
+describe('ensureIntakeShape language drafts', () => {
+  it('preserves empty language rows so manual add is not a no-op', () => {
+    const shaped = ensureIntakeShape({
+      s17: {
+        languages: [{ language: '', level: 'Voldoende' }],
+      },
+    });
+    assert.deepEqual(shaped.s17.languages, [{ language: '', level: 'Voldoende' }]);
   });
 });
