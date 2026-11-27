@@ -1,8 +1,8 @@
 /** Intake document layout key and empty/shaped data_json for sections 1–17. */
 
 import {
+  coerceLanguageProficiencyListForUi,
   languagesToOtherLanguagesString,
-  normalizeLanguageProficiencyList,
   parseOtherLanguagesFreeText,
   type LanguageProficiency,
 } from '@/lib/languages/proficiency';
@@ -538,9 +538,12 @@ export function ensureIntakeShape(raw: unknown): IntakeData {
   return shaped;
 }
 
-/** Prefer structured `languages`; migrate legacy `other_languages` when empty. */
+/**
+ * Prefer structured `languages` (including empty draft rows for the editor);
+ * migrate legacy `other_languages` only when there are no structured rows.
+ */
 function normalizeS17Languages(s17: Record<string, unknown>): LanguageProficiency[] {
-  const structured = normalizeLanguageProficiencyList(s17.languages);
+  const structured = coerceLanguageProficiencyListForUi(s17.languages);
   if (structured.length > 0) return structured;
   return parseOtherLanguagesFreeText(str(s17.other_languages));
 }

@@ -99,6 +99,41 @@ export function normalizeLanguageProficiencyList(raw: unknown): LanguageProficie
 }
 
 /**
+ * Soft coerce for live editors: keep incomplete draft rows (empty language)
+ * so "Taal toevoegen" can show a blank row. Strict
+ * `normalizeLanguageProficiencyList` still drops drafts at persist/project/AI.
+ */
+export function coerceLanguageProficiencyListForUi(raw: unknown): LanguageProficiency[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LanguageProficiency[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const o = asRecord(item);
+    const language = str(o.language ?? o.name ?? o.taal);
+    if (language && isDutchLanguageName(language)) continue;
+
+    const levelRaw = o.level ?? o.niveau ?? o.vaardigheid;
+    const level = normalizeOtherLanguageLevel(levelRaw);
+
+    // Manual add starts as { language: '', level: 'Voldoende' }.
+    if (!language) {
+      out.push({
+        language: '',
+        level: level && level !== 'Geen' ? level : 'Voldoende',
+      });
+      continue;
+    }
+
+    if (!level || level === 'Geen') continue;
+    const key = language.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ language, level });
+  }
+  return out;
+}
+
+/**
  * Best-effort parse of legacy free-text `other_languages`
  * (e.g. "Berbers goed; Turks matig" or "Engels verstaanbaar, schriftelijk minder goed").
  */
